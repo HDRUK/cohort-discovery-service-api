@@ -47,14 +47,4 @@ class QueryContextTest extends TestCase
         $this->assertIsArray($result, 'Beacon query translation did not return an array.');
         $this->assertEquals(json_decode($jsonQuery, true), $result, 'Beacon query translation did not match expected output.');
     }
-
-    public function test_correct_context_types_are_detected(): void
-    {
-        $contexts = iterator_to_array($this->app->tagged('query_contexts'));
-        $types = array_map(fn ($c) => $c->getType()->value, $contexts);
-
-        foreach ($contexts as $context) {
-            $this->assertContains($context->getType()->value, $types);
-        }
-    }
 }

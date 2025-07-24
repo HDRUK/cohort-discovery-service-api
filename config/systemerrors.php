@@ -11,7 +11,7 @@
  * - 2000: Errors related to translation issues.
  * - 3000: Errors related to database operations.
  * - 4000: Errors related to API interactions.
- * - 5000: Errors related to authentication and authorization.
+ * - 5000: Errors related to authentication and authorisation.
  *
  * ...this provides us with 1000 unique error codes to work with for each category.
  */
