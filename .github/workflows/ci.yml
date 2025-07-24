@@ -1,0 +1,42 @@
+name: Run quality checks
+run-name: ${{ github.actor }} triggered quality check pipeline
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - main
+      - dev
+      # - release
+jobs:
+  test:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup PHP with PECL extension
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Composer install
+        run: "composer install"
+
+      - name: Run code sniffer
+        run: "composer run lint"
+
+    #   - name: Run swagger check
+    #     run: php artisan l5-swagger:generate
+
+    #   - name: Run static analysis
+    #     run: "composer run phpstan"
+
+      - name: Run unit tests
+        env:
+          APP_ENV: "testing"
+        run: "composer run test"
