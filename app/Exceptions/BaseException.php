@@ -17,7 +17,6 @@ class BaseException extends Exception
     {
         parent::__construct($message);
         $this->errorCode = $errorCode;
-        $this->statusCode = $statusCode;
         $this->data = $data;
     }
 
