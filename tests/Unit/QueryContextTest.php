@@ -52,8 +52,6 @@ class QueryContextTest extends TestCase
 
     public function test_application_can_translate_via_manager(): void
     {
-        // dd($this->app->tagged('query_contexts'));
-
         $manager = $this->app->make(QueryContextManager::class);
         
         $jsonQuery = '{"query": "SELECT * FROM little_fluffy_bunnies"}';
