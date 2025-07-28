@@ -27,7 +27,11 @@ class BunnyQueryContext implements QueryContextInterface
                     'type' => 'TEXT'
                 ],
             ];
-            return $fieldMap[$field] ?? ['varname' => 'UNKNOWN', 'varcat' => 'UNKNOWN', 'type' => 'TEXT'];
+            return $fieldMap[$field] ?? [
+                'varname' => 'UNKNOWN',
+                'varcat' => 'UNKNOWN',
+                'type' => 'TEXT'
+            ];
         };
 
         $groups = [];
@@ -45,7 +49,6 @@ class BunnyQueryContext implements QueryContextInterface
 
             foreach ($node['rules'] as $rule) {
                 if (isset($rule['rules'])) {
-                    // Nested group
                     $processGroup($rule);
                 } elseif (isset($rule['field'], $rule['operator'], $rule['value'])) {
                     $mapped = $mapField($rule['field']);
@@ -59,13 +62,11 @@ class BunnyQueryContext implements QueryContextInterface
                 }
             }
 
-            // Always add if there are rules collected
             if (!empty($group['rules'])) {
                 $groups[] = $group;
             }
         };
 
-        // Safely process root
         $processGroup($definition);
 
         return [
