@@ -7,11 +7,9 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 
 class BeaconQueryContext implements QueryContextInterface
 {
-    public function translate(string $jsonQuery): mixed
+    public function translate(array $query): array
     {
-        // Implementation for translating a query in the context of Beacon
-        // This is a placeholder to demonstrate the calling of the translate method.
-        return json_decode($jsonQuery, true);
+        return $query;
     }
 
     public function getType(): QueryContextType

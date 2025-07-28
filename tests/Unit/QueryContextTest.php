@@ -53,9 +53,9 @@ class QueryContextTest extends TestCase
     public function test_application_can_translate_via_manager(): void
     {
         $manager = $this->app->make(QueryContextManager::class);
-        
+
         $jsonQuery = '{"query": "SELECT * FROM little_fluffy_bunnies"}';
-        
+
         $result = $manager->handle($jsonQuery, QueryContextType::Bunny);
         $this->assertIsArray($result, 'Bunny query translation via manager did not return an array.');
         $this->assertEquals(json_decode($jsonQuery, true), $result, 'Bunny query via manager did not match expected output.');

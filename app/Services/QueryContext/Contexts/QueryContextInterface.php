@@ -12,6 +12,6 @@ interface QueryContextInterface
      * @param mixed $queryContext
      * @return mixed
      */
-    public function translate(string $jsonQuery): mixed;
+    public function translate(array $query): array;
     public function getType(): QueryContextType;
 }
