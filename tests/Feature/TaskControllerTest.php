@@ -56,6 +56,28 @@ class TaskControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
+    public function it_only_creates_tasks_for_filtered_collections()
+    {
+        $included = Collection::factory()->bunny()->create();
+        $excluded = Collection::factory()->bunny()->count(2)->create();
+
+        $payload = [
+            'name' => 'Filtered Query',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => [$included->pid],
+        ];
+
+        $response = $this->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.task_count', 1)
+            ->assertJsonCount(1, 'data.task_pids');
+
+        $this->assertDatabaseCount(Task::class, 1);
+        $this->assertDatabaseHas(Query::class, ['name' => 'Filtered Query']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_not_found_for_invalid_collection_pid_in_next_job()
     {
         $response = $this->getJson(self::BASE_URL . '/nextjob/invalid-id');
