@@ -24,6 +24,11 @@ trait Responses
         ], Response::HTTP_OK);
     }
 
+    public function OKResponseSimple(mixed $data): JsonResponse
+    {
+        return response()->json($data, Response::HTTP_OK);
+    }
+
     public function CreatedResponse(mixed $data): JsonResponse
     {
         return response()->json([
@@ -113,4 +118,16 @@ trait Responses
         ], Response::HTTP_BAD_REQUEST);
     }
 
+    public function NoContentResponse(): Response
+    {
+        return response()->noContent();
+    }
+
+    public function ValidationErrorResponse(array $errors): JsonResponse
+    {
+        return response()->json([
+            'message' => 'validation failed',
+            'errors' => $errors,
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
 }

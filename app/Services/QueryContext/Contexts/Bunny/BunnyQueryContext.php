@@ -18,8 +18,8 @@ class BunnyQueryContext implements QueryContextInterface
                 ],
                 'age' => [
                     'varname' => 'OMOP',
-                    'varcat' => 'Age',
-                    'type' => 'NUMBER'
+                    'varcat' => 'Person',
+                    'type' => 'NUM'
                 ],
                 'condition' => [
                     'varname' => 'OMOP',
@@ -52,12 +52,51 @@ class BunnyQueryContext implements QueryContextInterface
                     $processGroup($rule);
                 } elseif (isset($rule['field'], $rule['operator'], $rule['value'])) {
                     $mapped = $mapField($rule['field']);
+                    $type = $mapped['type'];
+
+                    $operator = $rule['operator'];
+                    $value = $rule['value'];
+
+                    if ($type === 'NUM') {
+                        if (!in_array($operator, ['=', '!='])) {
+                            switch ($operator) {
+                                case '>':
+                                    $operator = '=';
+                                    $value = "{$value}..null";
+                                    break;
+                                case '>=':
+                                    $operator = '=';
+                                    $value = "{$value}..null";
+                                    break;
+                                case '<':
+                                    $operator = '=';
+                                    $value = "null..{$value}";
+                                    break;
+                                case '<=':
+                                    $operator = '=';
+                                    $value = "null..{$value}";
+                                    break;
+                                default:
+                                    // fallback or throw error?
+                                    $operator = '=';
+                                    $value = "{$value}..null";
+                                    break;
+                            }
+                        } elseif (is_numeric($value)) {
+                            $value = "{$value}..{$value}";
+                        } else {
+                            $value = (string) $value;
+                        }
+                    } else {
+                        $value = (string) $value;
+                    }
+
                     $group['rules'][] = [
                         'varname' => $mapped['varname'],
                         'varcat' => $mapped['varcat'],
-                        'type'    => $mapped['type'],
-                        'oper'    => $rule['operator'],
-                        'value'   => $rule['value'],
+                        'type'    => $type,
+                        'oper'    => $operator,
+                        'value'   => $value,
                     ];
                 }
             }

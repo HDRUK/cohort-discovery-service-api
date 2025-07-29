@@ -12,27 +12,6 @@ class QuerySeeder extends Seeder
      */
     public function run(): void
     {
-
-        /*
-        [
-                'groups' => [
-                    [
-                        'rules' => [
-                            [
-                                'varname' => 'OMOP',
-                                'varcat' => 'Person',
-                                'type' => 'TEXT',
-                                'oper' => '=',
-                                'value' => '8507',
-                            ]
-                        ],
-                        'rules_oper' => 'AND',
-                    ]
-                ],
-                'groups_oper' => 'OR',
-            ],
-            */
-
         Query::create([
             'name' => 'Example: get men',
             'definition' => [

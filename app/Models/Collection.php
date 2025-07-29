@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\QueryContext\QueryContextType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * @property int $id
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Collection extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'name',
         'pid',
