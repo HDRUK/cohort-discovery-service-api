@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use Carbon\CarbonInterval;
 use Illuminate\Support\ServiceProvider;
+
+use App\Models\User;
+use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        /**
+         * Configure what token scopes are available to request.
+         * 
+         * Contains a few 'demo' scopes to test oauth2, client
+         * creation and code requests.
+         */
+        Passport::tokensCan(User::CLIENT_TOKEN_SCOPES);
+
+        Passport::tokensExpireIn(CarbonInterval::days(30));
+        Passport::refreshTokensExpireIn(CarbonInterval::days(60));
+        Passport::personalAccessTokensExpireIn(CarbonInterval::months(6));
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 trait RefreshDatabaseLite
 {
     protected static bool $migrated = false;
-    protected static $databaseConnection;
+    protected static $databaseConnection = null;
 
     public function liteSetUp(): void
     {
