@@ -59,7 +59,7 @@ class TaskControllerTest extends TestCase
     public function it_only_creates_tasks_for_filtered_collections()
     {
         $included = Collection::factory()->bunny()->create();
-        $excluded = Collection::factory()->bunny()->count(2)->create();
+        Collection::factory()->bunny()->count(2)->create();
 
         $payload = [
             'name' => 'Filtered Query',
