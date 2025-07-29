@@ -27,11 +27,10 @@ jobs:
       #   - name: Run swagger check
       #     run: php artisan l5-swagger:generate
 
-      - name: Copy .env
-        run: cp .env.example .env
-
-      - name: Generate key
-        run: php artisan key:generate
+      # LS - Very temporary while early days. Safe enough as Action containers
+      # are ephemeral
+      - name: Install Passport keys
+        run: php artisan passport:install
 
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
