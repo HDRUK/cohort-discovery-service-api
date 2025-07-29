@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\Query;
@@ -11,10 +12,14 @@ use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use App\Traits\Responses;
+use App\Traits\HelperFunctions;
+use Illuminate\Validation\Rules\Enum;
+
 
 class TaskController extends Controller
 {
     use Responses;
+    use HelperFunctions;
 
     public function submitQueryAndCreateTasks(Request $request)
     {
@@ -24,6 +29,7 @@ class TaskController extends Controller
                 'name' => 'required|string',
                 'definition' => 'required|array',
                 'collection_filter' => 'nullable|array',
+                'task_type' => ['required', new Enum(TaskType::class)],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -50,6 +56,7 @@ class TaskController extends Controller
                 'query_id' => $query->id,
                 'collection_id' => $collectionId,
                 'created_at' => now(),
+                'task_type' => $validated['task_type'],
             ]);
         }
 
@@ -62,8 +69,17 @@ class TaskController extends Controller
 
     public function nextJob($collection_id, QueryContextManager $contextManager)
     {
-        $parsed_id = explode('.', $collection_id)[0];
-        //to-do, implement handling task type ([1] in collection_id array)
+        $parts = explode('.', $collection_id);
+        $parsed_id = $parts[0];
+        $raw_type = $parts[1] ?? 'a';
+
+        try {
+            $task_type = TaskType::from($raw_type);
+        } catch (\ValueError $e) {
+            return $this->BadRequestResponseExtended("Invalid task type: '{$raw_type}'. Allowed types are: 'a', 'b'.");
+        }
+
+
         $collection = Collection::where('pid', $parsed_id)->first();
 
         if (!$collection) {
@@ -71,6 +87,7 @@ class TaskController extends Controller
         }
 
         $query = Task::where([
+            'task_type' => $task_type,
             'completed_at' => null,
             'collection_id' => $collection->id
         ]);
@@ -84,6 +101,28 @@ class TaskController extends Controller
 
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
+
+
+        if ($task_type === TaskType::B) {
+            $code = $rawQuery['code'] ?? 'DEMOGRAPHICS';
+            $allowedCodes = ['DEMOGRAPHICS', 'GENERIC', 'ICD-MAIN'];
+
+            if (!in_array($code, $allowedCodes)) {
+                return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
+            }
+
+            return $this->OKResponseSimple([
+                'task_id' => $task->id,
+                'uuid' => $task->pid,
+                'owner' => $rawQuery['owner'] ?? 'user1',
+                'code' => $code,
+                'analysis' => 'DISTRIBUTION',
+                'collection' => $collection->pid,
+                'protocol_version' => 'v2',
+            ]);
+        }
+
+
 
         $translatedQuery = null;
         try {
@@ -99,7 +138,6 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
-        error_log(json_encode($translatedQuery, JSON_PRETTY_PRINT));
 
         // response needed by Bunny 
         return $this->OKResponseSimple([
@@ -134,12 +172,45 @@ class TaskController extends Controller
 
         $task->update(['completed_at' => now()]);
 
+        $metadata = collect($queryResult)->except('count')->toArray();
+
+        $parsedFiles = [];
+
+        foreach ($metadata['files'] ?? [] as $file) {
+            if (!isset($file['file_data'])) {
+                continue;
+            }
+
+            $fileDataBase64 = $file['file_data'];
+            $decodedContent = base64_decode($fileDataBase64);
+
+            if (!$decodedContent) {
+                continue;
+            }
+
+            $parsed = $this->tsvToArray($decodedContent);
+
+            $parsedFiles[] = [
+                'file_name' => $file['file_name'] ?? 'unknown',
+                'file_type' => $file['file_type'] ?? null,
+                'file_description' => $file['file_description'] ?? null,
+                'parsed_data' => $parsed,
+            ];
+        }
+
+        $resultMetadata = [];
+
+        if (!empty($parsedFiles)) {
+            $resultMetadata['parsed_files'] = $parsedFiles;
+        } else {
+            $resultMetadata = $metadata;
+        }
+
         Result::create([
             'task_id' => $task->id,
             'count' => $count,
-            'metadata' => [],
+            'metadata' => $resultMetadata,
         ]);
-
         return $this->CreatedResponse([
             'message' => 'Result received successfully.',
         ]);

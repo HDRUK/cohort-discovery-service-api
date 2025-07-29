@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
+use App\Enums\TaskType;
+
 
 
 /**
@@ -22,12 +24,14 @@ class Task extends Model
         'query_id',
         'collection_id',
         'created_at',
-        'completed_at'
+        'completed_at',
+        'task_type'
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'completed_at' => 'datetime',
+        'task_type' => TaskType::class,
     ];
 
     protected static function booted(): void
