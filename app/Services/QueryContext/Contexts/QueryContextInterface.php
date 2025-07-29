@@ -9,9 +9,15 @@ interface QueryContextInterface
     /**
      * Translate the given query context to a specific format.
      *
-     * @param mixed $queryContext
-     * @return mixed
+     * @param array $array
+     * @return array
      */
     public function translate(array $query): array;
+
+    /**
+     * Return the type of this QueryContentInterface.
+     * 
+     * @return QueryContextType
+     */
     public function getType(): QueryContextType;
 }

@@ -58,6 +58,9 @@
         ],
         "lint": [
             "vendor/bin/pint --preset psr12"
+        ],
+        "phpstan": [
+            "vendor/bin/phpstan analyse --level 5 app"
         ]
     },
     "extra": {
