@@ -21,6 +21,26 @@ class TaskController extends Controller
     use Responses;
     use HelperFunctions;
 
+
+    public function getTasks()
+    {
+        //to-do: only get user tasks...
+        $tasks = Task::all();
+        return $this->OKResponse($tasks);
+    }
+
+
+    public function getTask($task_pid)
+    {
+        $task = Task::with(['submittedQuery', 'collection'])->where('pid', $task_pid)->first();
+
+        if (!$task) {
+            return $this->NotFoundResponse();
+        }
+
+        return $this->OKResponse($task);
+    }
+
     public function submitQueryAndCreateTasks(Request $request)
     {
         $validated = [];
@@ -172,7 +192,6 @@ class TaskController extends Controller
         $task->update(['completed_at' => now()]);
         $task->save();
 
-        // BCP ABSOLUTE NONSENSE BELOW... 
         $metadata = collect($queryResult)->except('count')->toArray();
         $parsedFiles = [];
 
