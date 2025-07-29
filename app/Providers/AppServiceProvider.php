@@ -31,8 +31,8 @@ class AppServiceProvider extends ServiceProvider
          */
         Passport::tokensCan(User::CLIENT_TOKEN_SCOPES);
 
-        Passport::tokensExpireIn(CarbonInterval::days(30));
-        Passport::refreshTokensExpireIn(CarbonInterval::days(60));
-        Passport::personalAccessTokensExpireIn(CarbonInterval::months(6));
+        Passport::tokensExpireIn(CarbonInterval::days(config('passport.token_expire')));
+        Passport::refreshTokensExpireIn(CarbonInterval::days(config('passport.refresh_expire')));
+        Passport::personalAccessTokensExpireIn(CarbonInterval::months(config('passport.access_expire')));
     }
 }

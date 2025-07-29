@@ -43,4 +43,8 @@ return [
 
     'connection' => env('PASSPORT_CONNECTION'),
 
+    'token_expire' => env('PASSPORT_TOKEN_EXPIRES_IN_DAYS', 30),
+    'refresh_expire' => env('PASSPORT_REFRESH_TOKEN_EXPIRES_IN_DAYS', 60),
+    'access_expire' => env('PASSPORT_ACCESS_TOKEN_EXPIRES_IN_MONTHS', 6),
+
 ];
