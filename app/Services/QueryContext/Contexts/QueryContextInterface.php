@@ -9,11 +9,11 @@ interface QueryContextInterface
     /**
      * Translate the given query context to a specific format.
      *
-     * @param string $jsonQuery
-     * @return mixed
+     * @param array $query
+     * @return array
      */
-    public function translate(string $jsonQuery): mixed;
-    
+    public function translate(array $query): array;
+
     /**
      * Return the type of this QueryContentInterface.
      * 

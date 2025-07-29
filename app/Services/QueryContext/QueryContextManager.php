@@ -3,7 +3,6 @@
 namespace App\Services\QueryContext;
 
 use App\Services\QueryContext\Contexts\QueryContextInterface;
-use App\Services\QueryContext\QueryContextType;
 use App\Exceptions\Errors_1xxx\UnsupportedContextTypeException;
 use Illuminate\Container\Container;
 
@@ -22,13 +21,13 @@ class QueryContextManager
         }
     }
 
-    public function handle(string $jsonQuery, QueryContextType $contextType): mixed
+    public function handle(array $query, QueryContextType $contextType): array
     {
         $context = $this->contexts[$contextType->value] ?? null;
         if (!$context) {
             throw new UnsupportedContextTypeException($contextType->value);
         }
 
-        return $context->translate($jsonQuery);
+        return $context->translate($query);
     }
 }

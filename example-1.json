@@ -1,0 +1,55 @@
+{
+    "combinator": "and",
+    "rules": [
+        {
+            "combinator": "and",
+            "rules": [
+                {
+                    "field": "sex",
+                    "operator": "=",
+                    "value": "Female",
+                    "id": "56ecf58e-de34-4fe2-9e3c-b28da2599f33"
+                },
+                {
+                    "field": "age",
+                    "operator": ">",
+                    "value": 50,
+                    "id": "ca612473-e068-45dd-99d0-8f0e3cb35cbf"
+                },
+                {
+                    "field": "condition",
+                    "operator": "=",
+                    "value": "cancer",
+                    "id": "791428a0-dfb1-4ce2-8e2c-8c9ca12f3523"
+                }
+            ],
+            "id": "3a97cd6e-31c1-4034-b8ce-a708a42c6746"
+        },
+        {
+            "not": true,
+            "combinator": "and",
+            "rules": [
+                {
+                    "field": "sex",
+                    "operator": "=",
+                    "value": "Female",
+                    "id": "7e9ab780-47b8-497a-bfe1-d1c602fc7800"
+                },
+                {
+                    "field": "age",
+                    "operator": ">",
+                    "value": 70,
+                    "id": "a4180cb9-5a4f-41a1-b8c7-fab51fc6179e"
+                },
+                {
+                    "field": "condition",
+                    "operator": "=",
+                    "value": "diabetes",
+                    "id": "e119ac47-f0a8-49a0-a7c1-fedc55e48f72"
+                }
+            ],
+            "id": "73ea0fdb-ef2d-45f4-8761-5cccca319555"
+        }
+    ],
+    "id": "05625da3-6be9-4440-8484-f05e669eb21e"
+}
