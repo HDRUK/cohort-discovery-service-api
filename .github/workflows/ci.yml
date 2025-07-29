@@ -28,7 +28,7 @@ jobs:
       #     run: php artisan l5-swagger:generate
 
       - name: Run static analysis
-        run: "composer run phpstan"
+        run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
       - name: Run unit tests
         env:
