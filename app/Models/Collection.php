@@ -32,7 +32,7 @@ class Collection extends Model
         'updated_at' => 'datetime',
     ];
 
-    /** @return HasMany<Task> */
+
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);

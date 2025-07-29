@@ -9,7 +9,7 @@ interface QueryContextInterface
     /**
      * Translate the given query context to a specific format.
      *
-     * @param array $array
+     * @param array $query
      * @return array
      */
     public function translate(array $query): array;

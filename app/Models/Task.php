@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 
+/**
+ * @property \App\Models\Query $submittedQuery
+ */
 class Task extends Model
 {
     use HasFactory;
