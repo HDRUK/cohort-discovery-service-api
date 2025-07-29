@@ -15,7 +15,7 @@ class ApplicationTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function test_example(): void
+    public function test_the_application_can_create_applications(): void
     {
         User::factory(1)->create();
         $user = User::find(1)->first();
