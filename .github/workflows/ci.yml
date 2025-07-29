@@ -27,10 +27,13 @@ jobs:
       #   - name: Run swagger check
       #     run: php artisan l5-swagger:generate
 
+      - name: Ensure storage directory exists
+        run: mkdir -p storage
+
       - name: Setup Passport OAuth keys
         run: |
-          echo "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
-          echo "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
+          printf "%s" "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
+          printf "%s" "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
           chmod 600 storage/oauth-private.key storage/oauth-public.key
 
 
@@ -38,8 +41,4 @@ jobs:
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
       - name: Run unit tests
-        env:
-          APP_ENV: "testing"
-          DB_CONNECTION: "sqlite"
-          DB_DATABASE: ":memory:"
         run: "composer run test"
