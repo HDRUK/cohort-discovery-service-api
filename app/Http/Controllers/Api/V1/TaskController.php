@@ -172,8 +172,8 @@ class TaskController extends Controller
 
         $task->update(['completed_at' => now()]);
 
+        // BCP ABSOLUTE NONSENSE BELOW... 
         $metadata = collect($queryResult)->except('count')->toArray();
-
         $parsedFiles = [];
 
         foreach ($metadata['files'] ?? [] as $file) {
