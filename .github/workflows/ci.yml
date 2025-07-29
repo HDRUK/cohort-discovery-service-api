@@ -36,6 +36,4 @@ jobs:
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
       - name: Run unit tests
-        env:
-          APP_ENV: "testing"
         run: "composer run test"
