@@ -27,10 +27,12 @@ jobs:
       #   - name: Run swagger check
       #     run: php artisan l5-swagger:generate
 
-      # LS - Very temporary while early days. Safe enough as Action containers
-      # are ephemeral
-      - name: Install Passport keys
-        run: php artisan passport:install --force
+      - name: Setup Passport OAuth keys
+        run: |
+          echo "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
+          echo "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
+          chmod 600 storage/oauth-private.key storage/oauth-public.key
+
 
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
