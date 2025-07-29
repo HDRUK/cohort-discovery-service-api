@@ -99,6 +99,8 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
+        error_log(json_encode($translatedQuery, JSON_PRETTY_PRINT));
+
         // response needed by Bunny 
         return $this->OKResponseSimple([
             'task_id' => $task->id,

@@ -17,7 +17,7 @@ class BunnyQueryContext implements QueryContextInterface
                     'type' => 'TEXT'
                 ],
                 'age' => [
-                    'varname' => 'OMOP',
+                    'varname' => 'AGE',
                     'varcat' => 'Person',
                     'type' => 'NUM'
                 ],
@@ -61,29 +61,33 @@ class BunnyQueryContext implements QueryContextInterface
                         if (!in_array($operator, ['=', '!='])) {
                             switch ($operator) {
                                 case '>':
-                                    $operator = '=';
-                                    $value = "{$value}..null";
-                                    break;
                                 case '>=':
                                     $operator = '=';
-                                    $value = "{$value}..null";
+                                    $value = "{$value}|";
                                     break;
+
                                 case '<':
-                                    $operator = '=';
-                                    $value = "null..{$value}";
-                                    break;
                                 case '<=':
                                     $operator = '=';
-                                    $value = "null..{$value}";
+                                    $value = "|{$value}";
                                     break;
+
+                                case 'between':
+                                    if (is_array($value) && count($value) === 2) {
+                                        [$min, $max] = $value;
+                                        $operator = '=';
+                                        $value = "{$min}|{$max}";
+                                    }
+                                    break;
+
                                 default:
-                                    // fallback or throw error?
+                                    // fallback to >= style
                                     $operator = '=';
-                                    $value = "{$value}..null";
+                                    $value = "{$value}|";
                                     break;
                             }
                         } elseif (is_numeric($value)) {
-                            $value = "{$value}..{$value}";
+                            $value = "{$value}|";
                         } else {
                             $value = (string) $value;
                         }
