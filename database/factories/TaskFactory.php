@@ -20,6 +20,7 @@ class TaskFactory extends Factory
             'collection_id' => Collection::factory(),
             'completed_at' => null,
             'created_at' => now(),
+            'task_type' => 'a'
         ];
     }
 }

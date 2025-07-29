@@ -123,7 +123,6 @@ class TaskController extends Controller
         }
 
 
-
         $translatedQuery = null;
         try {
             $contextType = $collection->type;
@@ -171,6 +170,7 @@ class TaskController extends Controller
         }
 
         $task->update(['completed_at' => now()]);
+        $task->save();
 
         // BCP ABSOLUTE NONSENSE BELOW... 
         $metadata = collect($queryResult)->except('count')->toArray();
@@ -211,6 +211,7 @@ class TaskController extends Controller
             'count' => $count,
             'metadata' => $resultMetadata,
         ]);
+
         return $this->CreatedResponse([
             'message' => 'Result received successfully.',
         ]);

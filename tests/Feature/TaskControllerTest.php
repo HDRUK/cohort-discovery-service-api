@@ -37,6 +37,7 @@ class TaskControllerTest extends TestCase
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => 'a'
         ];
 
         $response = $this->postJson(self::BASE_URL, $payload);
@@ -65,6 +66,7 @@ class TaskControllerTest extends TestCase
             'name' => 'Filtered Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => [$included->pid],
+            'task_type' => 'a'
         ];
 
         $response = $this->postJson(self::BASE_URL, $payload);
@@ -100,10 +102,11 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
         $query = Query::factory()->create();
-        $task = Task::factory()->create(
+        Task::factory()->create(
             [
                 'collection_id' => $collection->id,
-                'query_id' => $query->id
+                'query_id' => $query->id,
+                'task_type' => 'a'
             ]
         );
 
@@ -135,7 +138,7 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
         $query = Query::factory()->create(['definition' => ['some' => 'query']]);
-        $task = Task::factory()->create(['collection_id' => $collection->id, 'query_id' => $query->id]);
+        Task::factory()->create(['collection_id' => $collection->id, 'query_id' => $query->id]);
 
         $mock = $this->createMock(QueryContextManager::class);
         $mock->expects($this->once())
