@@ -43,6 +43,9 @@ jobs:
           head -n 5 storage/oauth-private.key
           head -n 5 storage/oauth-public.key
 
+      - name: .env
+        run: cp .env.example .env
+
       - name: Generate application key
         run: php artisan key:generate
 
