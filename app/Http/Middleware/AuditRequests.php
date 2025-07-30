@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +34,7 @@ class AuditRequests
             'user_id' => Auth::id(),
             'method' => $request->method(),
             'uri' => $request->getRequestUri(),
-            'status' => $response->status(),
+            'status' => $response->getStatusCode(),
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'payload' => json_encode($this->safePayload($request)),
