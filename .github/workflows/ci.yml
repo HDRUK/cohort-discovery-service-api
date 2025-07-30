@@ -6,6 +6,7 @@ on:
 
 jobs:
   test:
+    environment: dev
     timeout-minutes: 20
     runs-on: ubuntu-latest
 
