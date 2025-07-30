@@ -14,3 +14,10 @@ Route::post('/applications', [ApplicationController::class, 'store']);
 Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob']);
 Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'receiveResult']);
 Route::post('/v1/task', [TaskController::class, 'submitQueryAndCreateTasks']);
+
+
+Route::get('/status', function (Request $request) {
+    return response()->json([
+        'message' => 'alive',
+    ], 200);
+});
