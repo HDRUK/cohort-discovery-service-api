@@ -34,7 +34,7 @@ jobs:
         run: |
           printf "%s" "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
           printf "%s" "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
-          chmod 600 storage/oauth-private.key storage/oauth-public.key
+          chmod 644 storage/oauth-private.key storage/oauth-public.key
 
 
       - name: Run static analysis
