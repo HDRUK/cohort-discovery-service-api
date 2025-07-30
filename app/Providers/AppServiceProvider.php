@@ -6,6 +6,11 @@ use Carbon\CarbonInterval;
 use Illuminate\Support\ServiceProvider;
 
 use App\Models\User;
+use App\Models\Collection;
+use App\Observers\CollectionObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,5 +39,11 @@ class AppServiceProvider extends ServiceProvider
         Passport::tokensExpireIn(CarbonInterval::days(config('passport.token_expire')));
         Passport::refreshTokensExpireIn(CarbonInterval::days(config('passport.refresh_expire')));
         Passport::personalAccessTokensExpireIn(CarbonInterval::months(config('passport.access_expire')));
+
+        Collection::observe(CollectionObserver::class);
+
+        RateLimiter::for('polling', function (Request $request) {
+            return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
+        });
     }
 }

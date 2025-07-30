@@ -91,7 +91,7 @@ class TaskController extends Controller
     {
         $parts = explode('.', $collection_id);
         $parsed_id = $parts[0];
-        $raw_type = $parts[1] ?? 'a';
+        $raw_type = $parts[1] ?? TaskType::A;
 
         try {
             $task_type = TaskType::from($raw_type);
@@ -141,6 +141,7 @@ class TaskController extends Controller
                 'protocol_version' => 'v2',
             ]);
         }
+
 
 
         $translatedQuery = null;
