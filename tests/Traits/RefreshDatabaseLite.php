@@ -16,7 +16,7 @@ trait RefreshDatabaseLite
 
         if (!static::$migrated) {
             Artisan::call('migrate');
-            // Artisan::call('db:seed', ['--class' => 'BaseDemoSeeder']);
+            Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
             static::$migrated = true;
 
             // Store the connection (for SQLite in-memory)

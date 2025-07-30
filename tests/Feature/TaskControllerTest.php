@@ -51,7 +51,7 @@ class TaskControllerTest extends TestCase
             ]);
 
 
-        $this->assertDatabaseCount(Task::class, 3);
+        $this->assertDatabaseCount(Task::class, 4);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
     }
 
@@ -73,7 +73,7 @@ class TaskControllerTest extends TestCase
             ->assertJsonPath('data.task_count', 1)
             ->assertJsonCount(1, 'data.task_pids');
 
-        $this->assertDatabaseCount(Task::class, 1);
+        $this->assertDatabaseCount(Task::class, 2);
         $this->assertDatabaseHas(Query::class, ['name' => 'Filtered Query']);
     }
 

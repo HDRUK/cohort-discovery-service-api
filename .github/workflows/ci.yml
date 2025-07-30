@@ -6,6 +6,7 @@ on:
 
 jobs:
   test:
+    environment: dev
     timeout-minutes: 20
     runs-on: ubuntu-latest
 
@@ -27,10 +28,29 @@ jobs:
       #   - name: Run swagger check
       #     run: php artisan l5-swagger:generate
 
+      - name: Ensure storage directory exists
+        run: mkdir -p storage
+
+      - name: Setup Passport OAuth keys
+        run: |
+          printf "%s" "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
+          printf "%s" "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
+          chmod 600 storage/oauth-private.key storage/oauth-public.key
+
+      - name: Debug key files
+        run: |
+          ls -l storage
+          head -n 5 storage/oauth-private.key
+          head -n 5 storage/oauth-public.key
+
+      - name: .env
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
       - name: Run unit tests
-        env:
-          APP_ENV: "testing"
         run: "composer run test"
