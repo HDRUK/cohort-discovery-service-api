@@ -43,6 +43,9 @@ jobs:
           head -n 5 storage/oauth-private.key
           head -n 5 storage/oauth-public.key
 
+      - name: Generate application key
+        run: php artisan generate:key
+
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
