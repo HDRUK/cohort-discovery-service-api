@@ -13,7 +13,7 @@ class QuerySeeder extends Seeder
     public function run(): void
     {
         Query::create([
-            'name' => 'Example: get men',
+            'name' => 'example-1',
             'definition' => [
                 'combinator' => 'and',
                 'rules' => [

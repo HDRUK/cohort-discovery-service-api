@@ -6,6 +6,7 @@ use App\Services\QueryContext\QueryContextType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -36,5 +37,17 @@ class Collection extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function demographics(): HasOne
+    {
+        return $this->hasOne(Task::class)
+            ->where('task_type', 'b')
+            ->whereNotNull('completed_at')
+            ->whereHas('submittedQuery', function ($query) {
+                $query->where('definition->code', 'DEMOGRAPHICS');
+            })
+            ->with(['submittedQuery', 'result'])
+            ->latest('created_at');
     }
 }

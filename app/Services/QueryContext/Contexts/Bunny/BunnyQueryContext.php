@@ -38,6 +38,22 @@ class BunnyQueryContext implements QueryContextInterface
 
 
         $processGroup = function (array $node) use (&$groups, &$processGroup, $mapField) {
+
+            $invertOperator = function ($operator, $type) {
+                $map = [
+                    '='  => '!=',
+                    '!=' => '=',
+                    '>'  => '<=',
+                    '>=' => '<',
+                    '<'  => '>=',
+                    '<=' => '>',
+                    'between' => 'not_between',
+                    'not_between' => 'between',
+                ];
+
+                return $map[$operator] ?? $operator;
+            };
+
             $group = [
                 'rules_oper' => strtoupper($node['combinator'] ?? 'AND'),
                 'rules' => [],
@@ -57,19 +73,24 @@ class BunnyQueryContext implements QueryContextInterface
                     $operator = $rule['operator'];
                     $value = $rule['value'];
 
+
+                    if (!empty($node['not'])) {
+                        $operator = $invertOperator($operator, $type);
+                    }
+
                     if ($type === 'NUM') {
                         if (!in_array($operator, ['=', '!='])) {
                             switch ($operator) {
                                 case '>':
                                 case '>=':
                                     $operator = '=';
-                                    $value = "{$value}|";
+                                    $value = "{$value}|Inf";
                                     break;
 
                                 case '<':
                                 case '<=':
                                     $operator = '=';
-                                    $value = "|{$value}";
+                                    $value = "-Inf|{$value}";
                                     break;
 
                                 case 'between':
@@ -80,10 +101,18 @@ class BunnyQueryContext implements QueryContextInterface
                                     }
                                     break;
 
+                                case 'not_between':
+                                    if (is_array($value) && count($value) === 2) {
+                                        [$min, $max] = $value;
+                                        $operator = '!=';
+                                        $value = "{$min}|{$max}";
+                                    }
+                                    break;
+
                                 default:
                                     // fallback to >= style
                                     $operator = '=';
-                                    $value = "{$value}|";
+                                    $value = "{$value}|Inf";
                                     break;
                             }
                         } elseif (is_numeric($value)) {

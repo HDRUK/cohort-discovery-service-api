@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
@@ -14,7 +15,7 @@ class TaskSeeder extends Seeder
      */
     public function run(): void
     {
-        $query = Query::first();
+        $query = Query::where('name', 'example-1')->first();
         $collections = Collection::all()->pluck('id');
 
         foreach ($collections as $collectionId) {
