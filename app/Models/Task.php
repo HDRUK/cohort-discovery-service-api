@@ -12,6 +12,7 @@ use App\Enums\TaskType;
 
 
 /**
+ * @property int $id
  * @property \App\Models\Query $submittedQuery
  */
 class Task extends Model
