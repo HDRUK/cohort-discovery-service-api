@@ -2,18 +2,30 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+
+use App\Models\Workgroup;
+use App\Models\UserHasWorkgroup;
 
 class User extends Authenticatable implements OAuthenticatable
 {
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory;
+    use Notifiable;
+    use HasApiTokens;
+    use HasRoles;
+
     public const CLIENT_TOKEN_SCOPES = [
-        'cohorts:view' => 'View queries',
+        'cohorts:read' => 'View queries',
         'cohorts:create' => 'Create new queries',
+        'cohorts:update' => 'Update',
+        'cohorts:delete' => 'Delete',
         'cohorts:query' => 'Query counts',
         'concepts:read' => 'Read ontology/vocabulary concepts',
         'users:create' => 'Create user data',
@@ -25,11 +37,6 @@ class User extends Authenticatable implements OAuthenticatable
         'apis:update' => 'Update operations for open APIs',
         'apis:delete' => 'Delete operations for open APIs', 
     ];
-
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory;
-    use Notifiable;
-    use HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -63,5 +70,13 @@ class User extends Authenticatable implements OAuthenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function workgroups(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Workgroup::class,
+            'user_has_workgroups'
+        )->using(UserHasWorkgroup::class);
     }
 }

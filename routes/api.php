@@ -30,3 +30,10 @@ Route::get('/v1/queries', [QueryController::class, 'getQueries']);
 
 Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
 Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+
+
+Route::get('/status', function (Request $request) {
+    return response()->json([
+        'message' => 'alive',
+    ], 200);
+});
