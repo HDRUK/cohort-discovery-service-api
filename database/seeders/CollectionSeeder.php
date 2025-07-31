@@ -37,12 +37,12 @@ class CollectionSeeder extends Seeder
         ]);
 
         $distributions = [
-            ['name' => 'M', 'description' => 'Male', 'count' => $maleCount],
-            ['name' => 'F', 'description' => 'Female', 'count' => $femaleCount],
-            ['name' => 'ALL', 'description' => 'all', 'count' => $maleCount + $femaleCount],
+            ['name' => 'Male', 'description' => 'count of males', 'count' => $maleCount],
+            ['name' => 'Female', 'description' => 'count of females', 'count' => $femaleCount],
+            ['name' => 'ALL', 'description' => 'total count', 'count' => $maleCount + $femaleCount],
         ];
 
-        return;
+
         foreach ($distributions as $dist) {
             Distribution::create([
                 'collection_id' => $collection->id,
