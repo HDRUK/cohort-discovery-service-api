@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Result;
@@ -31,13 +32,16 @@ class TaskControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_creates_query_and_tasks_correctly()
     {
-        $collections = Collection::factory()->bunny()->count(3)->create();
+        $n = 3;
+        $collections = Collection::factory()->bunny()->count($n)->create();
+
+        Task::truncate();
 
         $payload = [
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => 'a'
+            'task_type' => TaskType::A
         ];
 
         $response = $this->postJson(self::BASE_URL, $payload);
@@ -52,7 +56,7 @@ class TaskControllerTest extends TestCase
             ]);
 
 
-        $this->assertDatabaseCount(Task::class, 4);
+        $this->assertDatabaseCount(Task::class, $n);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
     }
 
@@ -61,6 +65,8 @@ class TaskControllerTest extends TestCase
     {
         $included = Collection::factory()->bunny()->create();
         Collection::factory()->bunny()->count(2)->create();
+
+        Task::truncate();
 
         $payload = [
             'name' => 'Filtered Query',
@@ -75,7 +81,7 @@ class TaskControllerTest extends TestCase
             ->assertJsonPath('data.task_count', 1)
             ->assertJsonCount(1, 'data.task_pids');
 
-        $this->assertDatabaseCount(Task::class, 2);
+        $this->assertDatabaseCount(Task::class, 1);
         $this->assertDatabaseHas(Query::class, ['name' => 'Filtered Query']);
     }
 

@@ -91,7 +91,7 @@ class TaskController extends Controller
     {
         $parts = explode('.', $collection_id);
         $parsed_id = $parts[0];
-        $raw_type = $parts[1] ?? TaskType::A;
+        $raw_type = $parts[1] ?? 'a';
 
         try {
             $task_type = TaskType::from($raw_type);
