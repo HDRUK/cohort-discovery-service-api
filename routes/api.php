@@ -1,17 +1,20 @@
 <?php
 
-use App\Http\Controllers\Api\V1\QueryController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Api\V1\QueryController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\CollectionController;
-use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ApplicationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:api');
 
-Route::post('/applications', [ApplicationController::class, 'store']);
+Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
 
 Route::middleware('throttle:polling')->group(function () {

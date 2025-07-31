@@ -12,7 +12,9 @@ use App\Models\RequestAudit;
 
 class AuditRequests
 {
-    protected array $ignorePatterns = [];
+    protected array $ignorePatterns = [
+        'auth/callback*',
+    ];
 
     /**
      * Handle an incoming request.

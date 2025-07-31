@@ -21,6 +21,7 @@ class RolesAndPermissionsSeeder extends Seeder
     ];
 
     private array $roles = [
+        'default' => [],
         'admin' => [
             'cohorts:create',
             'cohorts:read',
