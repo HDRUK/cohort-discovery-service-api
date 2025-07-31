@@ -37,20 +37,21 @@ class AuthController extends Controller
         $tokenString = session('token');
 
         $signer = new Sha256();
-        $key = InMemory::plainText(env('GW_JWT_SECRET'));
+        $key = InMemory::plainText(config('gateway.jwt_secret'));
 
         // Configure the parser. No validation needed, just parsing.
         $config = Configuration::forSymmetricSigner($signer, $key);
         $token = $config->parser()->parse($tokenString);
 
+        /** @phpstan-ignore-next-line */
         $user = $token->claims()->get('user');
         
         $response = Http::withHeaders([
             'Accept' => 'application/json',
             'Authorization' => 'bearer ' . $tokenString,
-        ])->get(env('GW_API_URI') . 'users/' . $user['id']);
+        ])->get(config('gateway.api_uri') . 'users/' . $user['id']);
 
-        if (!$response->json()['message'] === 'success') {
+        if ($response->json()['message'] !== 'success') {
             return $this->UnauthorisedResponse();
         }
 
@@ -63,7 +64,7 @@ class AuthController extends Controller
         [
             'name' => $user['name'],
             'email' => $user['email'],
-            'password' => Hash::make(env('OAUTH_PLACEHOLDER_PASSWORD')),
+            'password' => Hash::make(config('gateway.placeholder_password')),
         ]);
 
         return $this->OKResponse([
@@ -74,18 +75,18 @@ class AuthController extends Controller
         ]);
     }
 
-    public function callbackForAuthToken(Request $request): RedirectResponse
+    public function callbackForAuthToken(Request $request): JsonResponse|RedirectResponse
     {
         $code = $request->input('code');
         if (!$code) {
             return $this->UnauthorisedResponse();
         }
 
-        $response = Http::asForm()->post(env('GW_AUTHORISATION_URI'), [
+        $response = Http::asForm()->post(config('gateway.auth_uri'), [
             'grant_type' => 'authorization_code',
-            'client_id' => env('GW_CLIENT_ID'),
-            'client_secret' => env('GW_CLIENT_SECRET'),
-            'redirect_uri' => 'http://localhost:8200/auth/callback',
+            'client_id' => config('gateway.client_id'),
+            'client_secret' => config('gateway.client_secret'),
+            'redirect_uri' => config('gateway.internal_oauth_callback_uri'),
             'code' => $code,
         ]);
 
