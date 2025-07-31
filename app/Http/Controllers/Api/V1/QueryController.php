@@ -20,7 +20,7 @@ class QueryController extends Controller
     public function getQueries()
     {
         $queries = Query::with([
-            'tasks.collection.demographics',
+            'tasks.collection.size',
             'tasks.result'
         ])
             ->whereHas('tasks', function ($query) {
@@ -33,7 +33,7 @@ class QueryController extends Controller
 
     public function getQuery($query_pid)
     {
-        $query = Query::with(['tasks.collection.demographics', 'tasks.result'])->where('pid', $query_pid)->first();
+        $query = Query::with(['tasks.collection.size', 'tasks.result'])->where('pid', $query_pid)->first();
 
         if (!$query) {
             return $this->NotFoundResponse();
