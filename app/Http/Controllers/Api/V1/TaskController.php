@@ -282,7 +282,5 @@ class TaskController extends Controller
         return $this->CreatedResponse([
             'message' => 'Result received successfully.',
         ]);
-
-        //return $this->ErrorResponse()
     }
 }

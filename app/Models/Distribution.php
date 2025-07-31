@@ -5,6 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $collection_id
+ * @property int $task_id
+ * @property string $name
+ * @property string $description
+ * @property number $count
+ */
 class Distribution extends Model
 {
     protected $fillable = [
