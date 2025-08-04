@@ -215,48 +215,55 @@ class TaskController extends Controller
             $fileType = $file['file_type'] ?? null;
             $fileDescription = $file['file_description'] ?? null;
 
-            if ($fileName === 'demographics.distribution') {
-                foreach ($parsed as $row) {
-                    if (is_null($row['CODE']) || !isset($row['COUNT'])) {
-                        continue;
-                    }
-                    Distribution::create([
-                        'collection_id' => $task->collection->id,
-                        'task_id'       => $task->id,
-                        'category'      => $row['CATEGORY'],
-                        'name'          => $row['CODE'],
-                        'description'   => $row['DESCRIPTION'] ?? null,
-                        'count'         => $row['COUNT'],
-                        'q1'            => $row['Q1'] ?? null,
-                        'q3'            => $row['Q3'] ?? null,
-                        'min'           => $row['MIN'] ?? null,
-                        'max'           => $row['MAX'] ?? null,
-                        'mean'          => $row['MEAN'] ?? null,
-                        'median'        => $row['MEDIAN'] ?? null,
-                    ]);
+            $codeField = 'CODE';
+            $descriptionField = 'DESCRIPTION';
 
-                    if (!isset($row['ALTERNATIVES'])) {
-                        continue;
-                    }
-                    $alternatives = $row['ALTERNATIVES'];
-                    $segments = explode('^', trim($alternatives, '^'));
+            if ($fileName === 'code.distribution') {
+                $codeField = 'OMOP';
+                $descriptionField = 'OMOP_DESCR';
+            }
 
-                    foreach ($segments as $segment) {
-                        if (strpos($segment, '|') !== false) {
-                            [$name, $count] = explode('|', $segment);
+            foreach ($parsed as $row) {
+                if (!isset($row['CODE']) || !isset($row['COUNT']) || is_null($row['CODE'])) {
+                    continue;
+                }
+                Distribution::create([
+                    'collection_id' => $task->collection->id,
+                    'task_id'       => $task->id,
+                    'category'      => $row['CATEGORY'],
+                    'name'          => $row[$codeField],
+                    'description'   => $row[$descriptionField] ?? null,
+                    'count'         => $row['COUNT'],
+                    'q1'            => $row['Q1'] ?? null,
+                    'q3'            => $row['Q3'] ?? null,
+                    'min'           => $row['MIN'] ?? null,
+                    'max'           => $row['MAX'] ?? null,
+                    'mean'          => $row['MEAN'] ?? null,
+                    'median'        => $row['MEDIAN'] ?? null,
+                ]);
 
-                            Distribution::create([
-                                'collection_id'  => $task->collection->id,
-                                'task_id'        => $task->id,
-                                'category'       => $row['CATEGORY'],
-                                'name'           => (string) $name,
-                                'description'    => (string) $name,
-                                'count'          => (int) $count,
-                            ]);
-                        }
+                if (!isset($row['ALTERNATIVES'])) {
+                    continue;
+                }
+                $alternatives = $row['ALTERNATIVES'];
+                $segments = explode('^', trim($alternatives, '^'));
+
+                foreach ($segments as $segment) {
+                    if (strpos($segment, '|') !== false) {
+                        [$name, $count] = explode('|', $segment);
+
+                        Distribution::create([
+                            'collection_id'  => $task->collection->id,
+                            'task_id'        => $task->id,
+                            'category'       => $row['CATEGORY'],
+                            'name'           => (string) $name,
+                            'description'    => (string) $name,
+                            'count'          => (int) $count,
+                        ]);
                     }
                 }
             }
+            //}
 
             $parsedFiles[] = [
                 'file_name' => $fileName,

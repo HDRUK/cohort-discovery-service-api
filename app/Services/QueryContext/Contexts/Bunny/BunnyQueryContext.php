@@ -26,6 +26,21 @@ class BunnyQueryContext implements QueryContextInterface
                     'varcat' => 'Condition',
                     'type' => 'TEXT'
                 ],
+                'measurement' => [
+                    'varname' => 'OMOP',
+                    'varcat' => 'Measurement',
+                    'type' => 'TEXT'
+                ],
+                'drug' => [
+                    'varname' => 'OMOP',
+                    'varcat' => 'Drug',
+                    'type' => 'TEXT'
+                ],
+                'observation' => [
+                    'varname' => 'OMOP',
+                    'varcat' => 'Observation',
+                    'type' => 'TEXT'
+                ]
             ];
             return $fieldMap[$field] ?? [
                 'varname' => 'UNKNOWN',

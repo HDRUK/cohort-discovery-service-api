@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\QueryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,9 @@ Route::get('/v1/queries', [QueryController::class, 'getQueries']);
 
 Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
 Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+
+Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
+
 
 
 Route::get('/status', function (Request $request) {

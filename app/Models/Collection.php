@@ -50,6 +50,17 @@ class Collection extends Model
             ->whereIn('id', $sub);
     }
 
+    public function codes(): HasMany
+    {
+        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+            ->where('category', '!=', 'DEMOGRAPHICS')
+            ->groupBy('name');
+
+        return $this->hasMany(Distribution::class)
+            ->whereIn('id', $sub);
+    }
+
+
     public function size(): HasOne
     {
         return $this->hasOne(Distribution::class)
