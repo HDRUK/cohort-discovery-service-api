@@ -10,7 +10,7 @@ use App\Models\User;
 
 class ApplicationTest extends TestCase
 {
-    private string $url = '/api/applications';
+    private string $url = '/api/v1/applications';
 
     /**
      * A basic feature test example.

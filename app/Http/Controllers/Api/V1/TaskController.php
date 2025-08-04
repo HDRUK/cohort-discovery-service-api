@@ -224,7 +224,7 @@ class TaskController extends Controller
             }
 
             foreach ($parsed as $row) {
-                if (!isset($row['CODE']) || !isset($row['COUNT']) || is_null($row['CODE'])) {
+                if (!isset($row['CODE']) || !isset($row['COUNT'])) {
                     continue;
                 }
                 Distribution::create([
