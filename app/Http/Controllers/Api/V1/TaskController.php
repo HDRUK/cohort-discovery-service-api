@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
+use App\Models\Distribution;
 use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
@@ -210,11 +211,62 @@ class TaskController extends Controller
 
             $parsed = $this->tsvToArray($decodedContent);
 
+            $fileName = $file['file_name'] ?? 'unknown';
+            $fileType = $file['file_type'] ?? null;
+            $fileDescription = $file['file_description'] ?? null;
+
+            $codeField = 'CODE';
+            $descriptionField = 'DESCRIPTION';
+
+            if ($fileName === 'code.distribution') {
+                $codeField = 'OMOP';
+                $descriptionField = 'OMOP_DESCR';
+            }
+
+            foreach ($parsed as $row) {
+                if (!isset($row['CODE']) || !isset($row['COUNT'])) {
+                    continue;
+                }
+                Distribution::create([
+                    'collection_id' => $task->collection->id,
+                    'task_id'       => $task->id,
+                    'category'      => $row['CATEGORY'],
+                    'name'          => $row[$codeField],
+                    'description'   => $row[$descriptionField] ?? null,
+                    'count'         => $row['COUNT'],
+                    'q1'            => $row['Q1'] ?? null,
+                    'q3'            => $row['Q3'] ?? null,
+                    'min'           => $row['MIN'] ?? null,
+                    'max'           => $row['MAX'] ?? null,
+                    'mean'          => $row['MEAN'] ?? null,
+                    'median'        => $row['MEDIAN'] ?? null,
+                ]);
+
+                if (!isset($row['ALTERNATIVES'])) {
+                    continue;
+                }
+                $alternatives = $row['ALTERNATIVES'];
+                $segments = explode('^', trim($alternatives, '^'));
+
+                foreach ($segments as $segment) {
+                    if (strpos($segment, '|') !== false) {
+                        [$name, $count] = explode('|', $segment);
+
+                        Distribution::create([
+                            'collection_id'  => $task->collection->id,
+                            'task_id'        => $task->id,
+                            'category'       => $row['CATEGORY'],
+                            'name'           => (string) $name,
+                            'description'    => (string) $name,
+                            'count'          => (int) $count,
+                        ]);
+                    }
+                }
+            }
             $parsedFiles[] = [
-                'file_name' => $file['file_name'] ?? 'unknown',
-                'file_type' => $file['file_type'] ?? null,
-                'file_description' => $file['file_description'] ?? null,
-                'parsed_data' => $parsed,
+                'file_name' => $fileName,
+                'file_type' => $fileType,
+                'file_description' => $fileDescription,
             ];
         }
 

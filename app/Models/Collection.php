@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -39,15 +40,34 @@ class Collection extends Model
         return $this->hasMany(Task::class);
     }
 
-    public function demographics(): HasOne
+    public function demographics(): HasMany
     {
-        return $this->hasOne(Task::class)
-            ->where('task_type', 'b')
-            ->whereNotNull('completed_at')
-            ->whereHas('submittedQuery', function ($query) {
-                $query->where('definition->code', 'DEMOGRAPHICS');
-            })
-            ->with(['submittedQuery', 'result'])
+        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+            ->where('category', 'DEMOGRAPHICS')
+            ->groupBy('name');
+
+        return $this->hasMany(Distribution::class)
+            ->whereIn('id', $sub);
+    }
+
+    public function codes(): HasMany
+    {
+        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+            ->where('category', '!=', 'DEMOGRAPHICS')
+            ->groupBy('name');
+
+        return $this->hasMany(Distribution::class)
+            ->whereIn('id', $sub);
+    }
+
+
+    public function size(): HasOne
+    {
+        return $this->hasOne(Distribution::class)
+            ->where([
+                "category" => "DEMOGRAPHICS",
+                "name" => "SEX"
+            ])
             ->latest('created_at');
     }
 }

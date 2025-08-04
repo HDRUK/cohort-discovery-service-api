@@ -18,9 +18,8 @@ class CollectionController extends Controller
     public function getCollection($pid)
     {
         $collection = Collection::where('pid', $pid)
-            ->with('demographics')
+            ->with('size')
             ->first();
-
 
         if (!$collection) {
             return $this->NotFoundResponse();

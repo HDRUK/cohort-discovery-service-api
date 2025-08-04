@@ -12,7 +12,9 @@ use App\Enums\TaskType;
 
 
 /**
+ * @property int $id
  * @property \App\Models\Query $submittedQuery
+ * @property \App\Models\Collection $collection
  */
 class Task extends Model
 {

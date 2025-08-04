@@ -24,5 +24,19 @@ class CollectionObserver
             'created_at' => now(),
             'task_type' => TaskType::B
         ]);
+
+        $query = Query::create([
+            'name' => 'initial-omop-concept-job-' . $collection->name,
+            'definition' => [
+                'code' => 'GENERIC',
+            ],
+        ]);
+
+        Task::create([
+            'query_id' => $query->id,
+            'collection_id' => $collection->id,
+            'created_at' => now(),
+            'task_type' => TaskType::B
+        ]);
     }
 }
