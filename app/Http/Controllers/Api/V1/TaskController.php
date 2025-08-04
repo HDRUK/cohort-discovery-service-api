@@ -263,8 +263,6 @@ class TaskController extends Controller
                     }
                 }
             }
-            //}
-
             $parsedFiles[] = [
                 'file_name' => $fileName,
                 'file_type' => $fileType,
