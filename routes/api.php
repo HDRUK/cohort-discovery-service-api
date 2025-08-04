@@ -19,10 +19,10 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
-Route::post('/v1/users/{id}/workgroup/add', [UserController::class, 'addToWorkgroup']);
-Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFromWorkgroup']);
+Route::post('/v1/users/{id}/workgroup/add', [UserController::class, 'addToWorkgroup'])->middleware('cbac:admin');
+Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFromWorkgroup'])->middleware('cbac:admin');
 
-Route::middleware('auth:api')->group(function () {
+Route::middleware('cbac:admin')->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
     Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
