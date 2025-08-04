@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 
 use App\Models\Workgroup;
 use App\Models\UserHasWorkgroup;
@@ -20,6 +21,7 @@ class User extends Authenticatable implements OAuthenticatable
     use Notifiable;
     use HasApiTokens;
     use HasRoles;
+    use HasScopedClaims;
 
     public const CLIENT_TOKEN_SCOPES = [
         'cohorts:read' => 'View queries',
