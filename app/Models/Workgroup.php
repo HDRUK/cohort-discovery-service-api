@@ -8,4 +8,9 @@ class Workgroup extends Model
 {
     public $timestamps = true;
 
+    protected $fillable = [
+        'name',
+        'active',
+    ];
+
 }

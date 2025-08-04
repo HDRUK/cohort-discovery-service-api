@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\ApplicationController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WorkgroupController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -17,6 +19,16 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
+Route::post('/v1/users/{id}/workgroup/add', [UserController::class, 'addToWorkgroup']);
+Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFromWorkgroup']);
+
+Route::middleware('auth:api')->group(function () {
+    Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
+    Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
+    Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
+    Route::put('/v1/workgroups/{id}', [WorkgroupController::class, 'update']);
+    Route::delete('/v1/workgroups/{id}', [WorkgroupController::class, 'destroy']);
+});
 
 Route::middleware('throttle:polling')->group(function () {
     Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob']);
