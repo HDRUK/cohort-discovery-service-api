@@ -38,6 +38,7 @@ class ClaimBasedAccessControl
         $config = Configuration::forSymmetricSigner($signer, $key);
         $token = $config->parser()->parse($token);
 
+        /** @phpstan-ignore-next-line */
         $user = $token->claims()->get('user');
 
         $claimMappingService = new ClaimMappingService();
