@@ -12,6 +12,10 @@ use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
+use App\Http\Controllers\Api\V1\CustodianController;
+use App\Http\Controllers\Api\V1\CollectionHostController;
+
+use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -30,10 +34,34 @@ Route::middleware('cbac:admin')->group(function () {
     Route::delete('/v1/workgroups/{id}', [WorkgroupController::class, 'destroy']);
 });
 
-Route::middleware('throttle:polling')->group(function () {
-    Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob']);
-    Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'receiveResult']);
+Route::middleware('cbac:admin')->group(function () {
+    Route::get('/v1/custodians', [CustodianController::class, 'index']);
+    Route::get('/v1/custodians/{id}', [CustodianController::class, 'show']);
+    Route::post('/v1/custodians', [CustodianController::class, 'store']);
+    Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
+    Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);
 });
+
+Route::middleware('cbac:admin')->group(function () {
+    Route::get('/v1/collection_hosts', [CollectionHostController::class, 'index']);
+    Route::get('/v1/collection_hosts/{id}', [CollectionHostController::class, 'show']);
+    Route::post('/v1/collection_hosts', [CollectionHostController::class, 'store']);
+    Route::put('/v1/collection_hosts/{id}', [CollectionHostController::class, 'update']);
+    Route::delete('/v1/collection_hosts/{id}', [CollectionHostController::class, 'destroy']);
+});
+
+Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob'])
+    ->name('task.nextjob')
+    ->middleware([
+        'throttle:polling',
+        CollectionHostBasicAuth::class,
+    ]);
+Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'receiveResult'])
+    ->name('task.result')
+    ->middleware([
+        'throttle:polling',
+        CollectionHostBasicAuth::class,
+    ]);
 
 Route::post('/v1/task', [TaskController::class, 'submitQueryAndCreateTasks']);
 Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);

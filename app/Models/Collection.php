@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -69,5 +70,15 @@ class Collection extends Model
                 "name" => "SEX"
             ])
             ->latest('created_at');
+    }
+
+    public function host(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            CollectionHost::class,
+            'collection_host_has_collections',
+            'collection_id',
+            'collection_host_id'
+        )->limit(1);
     }
 }
