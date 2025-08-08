@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 use App\Models\Custodian;
+use App\Models\CollectionHost;
 
 class CustodianTest extends TestCase
 {
@@ -43,9 +44,10 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_show_a_custodian(): void
     {
-        Custodian::factory(5)->create();
-
-        $custodian = Custodian::all()->random();
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
 
         $response = $this->get($this->url . '/' . $custodian->id);
         $response->assertStatus(200);
