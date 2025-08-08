@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -59,6 +60,8 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_create_a_custodian(): void
     {
+        DB::table('custodians')->truncate();
+
         $response = $this->post($this->url, $this->payload);
         $response->assertStatus(201);
 
