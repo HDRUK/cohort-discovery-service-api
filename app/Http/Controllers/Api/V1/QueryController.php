@@ -19,6 +19,7 @@ class QueryController extends Controller
 
     public function getQueries()
     {
+        $perPage = $this->resolvePerPage();
         $queries = Query::with([
             'tasks.collection.size',
             'tasks.result'
@@ -27,9 +28,23 @@ class QueryController extends Controller
                 $query->where('task_type', TaskType::A);
             })
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPage);
         return $this->OKResponse($queries);
     }
+
+    public function getLatestQuery()
+    {
+        $query = Query::with(['tasks.collection.size', 'tasks.result'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$query) {
+            return $this->NotFoundResponse();
+        }
+
+        return $this->OKResponse($query);
+    }
+
 
     public function getQuery($query_pid)
     {
