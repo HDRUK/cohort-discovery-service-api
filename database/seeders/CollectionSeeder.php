@@ -12,41 +12,63 @@ class CollectionSeeder extends Seeder
     public function run(): void
     {
         $this->seedCollectionWithDemographics(
-            name: 'Test Omop Collection - Small',
+            name: 'Bunny Example',
             pid: 'db6d9b451b818ccc9a449383f2f0c450',
+            url: null,
             type: QueryContextType::Bunny,
             maleCount: 560,
             femaleCount: 570
         );
 
         $this->seedCollectionWithDemographics(
-            name: 'Synthea 1k',
+            name: 'OMOP Synthea 1k',
             pid: '9de96ebd8d30dd931f9b90d2615c4b9d',
+            url: null,
             type: QueryContextType::Bunny,
             maleCount: 200,
             femaleCount: 1000
         );
+
+        $this->seedCollectionWithDemographics(
+            name: 'Mock Dataset 250k',
+            pid: '196b0f14eba66e10fba74dbf9e99c22f',
+            url: null,
+            type: QueryContextType::Bunny,
+            maleCount: 0,
+            femaleCount: 0
+        );
+
+
+        $this->seedCollectionWithDemographics(
+            name: 'Mock Covid Dataset 5M',
+            pid: '43874274f7be1df2959b29c4b5afba47',
+            url: null,
+            type: QueryContextType::Bunny,
+            maleCount: 0,
+            femaleCount: 0
+        );
     }
 
-    private function seedCollectionWithDemographics(string $name, string $pid, QueryContextType $type, int $maleCount, int $femaleCount): void
+    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount): void
     {
         $collection = Collection::create([
             'name' => $name,
             'pid' => $pid,
+            'url' => $url,
             'type' => $type,
         ]);
 
         $distributions = [
             ['name' => 'Male', 'description' => 'count of males', 'count' => $maleCount],
             ['name' => 'Female', 'description' => 'count of females', 'count' => $femaleCount],
-            ['name' => 'ALL', 'description' => 'total count', 'count' => $maleCount + $femaleCount],
+            ['name' => 'SEX', 'description' => 'total count', 'count' => $maleCount + $femaleCount],
         ];
 
 
         foreach ($distributions as $dist) {
             Distribution::create([
                 'collection_id' => $collection->id,
-                'category' => 'demographics',
+                'category' => 'DEMOGRAPHICS',
                 ...$dist
             ]);
         }

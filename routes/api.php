@@ -41,12 +41,14 @@ Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
 
 
 Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
+Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
 Route::get('/v1/queries', [QueryController::class, 'getQueries']);
 
 
 Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
 Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
 
+Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
 Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
 
 

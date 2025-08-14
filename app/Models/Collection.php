@@ -24,6 +24,7 @@ class Collection extends Model
     use HasFactory;
     protected $fillable = [
         'name',
+        'url',
         'pid',
         'type',
     ];
@@ -44,7 +45,7 @@ class Collection extends Model
     {
         $sub = Distribution::select(DB::raw('MAX(id) as id'))
             ->where('category', 'DEMOGRAPHICS')
-            ->groupBy('name');
+            ->groupBy('name', 'collection_id');
 
         return $this->hasMany(Distribution::class)
             ->whereIn('id', $sub);
@@ -54,7 +55,7 @@ class Collection extends Model
     {
         $sub = Distribution::select(DB::raw('MAX(id) as id'))
             ->where('category', '!=', 'DEMOGRAPHICS')
-            ->groupBy('name');
+            ->groupBy('name', 'collection_id');
 
         return $this->hasMany(Distribution::class)
             ->whereIn('id', $sub);
