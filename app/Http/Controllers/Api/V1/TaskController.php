@@ -8,6 +8,7 @@ use App\Models\Collection;
 use App\Models\Distribution;
 use App\Models\Query;
 use App\Models\Result;
+use App\Models\ResultFile;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Support\Facades\Storage;
 
 
 class TaskController extends Controller
@@ -195,25 +197,57 @@ class TaskController extends Controller
         $task->save();
 
         $metadata = collect($queryResult)->except('count')->toArray();
-        $parsedFiles = [];
+        $storedFiles = [];
 
         foreach ($metadata['files'] ?? [] as $file) {
+
             if (!isset($file['file_data'])) {
                 continue;
             }
 
+            $fileName = $file['file_name'] ?? 'unknown';
+            $fileType = $file['file_type'] ?? null;
+            $fileDescription = $file['file_description'] ?? null;
             $fileDataBase64 = $file['file_data'];
-            $decodedContent = base64_decode($fileDataBase64);
+
+            $decodedContent = base64_decode($fileDataBase64, true);
 
             if (!$decodedContent) {
                 continue;
             }
 
+            $hash = hash('sha256', $decodedContent);
+
+            $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
+
+            //note: need to change this storage to a bucket??
+            Storage::disk('local')->put($path, $decodedContent);
+
+            $resultFile = ResultFile::create([
+                'pid'             => $hash,
+                'task_id'         => $task->id,
+                'collection_id'   => $task->collection->id,
+                'path'            => $path,
+                'file_name'       => $fileName,
+                'file_type'       => $fileType,
+                'file_description' => $fileDescription,
+                'status'          => ResultFile::STATUS_QUEUED,
+
+            ]);
+
+            //do something with resultFile
+
+            $storedFiles[] = [
+                'file_name' => $fileName,
+                'file_type' => $fileType,
+                'file_description' => $fileDescription,
+                'path' => $path,
+            ];
+
+            /*
             $parsed = $this->tsvToArray($decodedContent);
 
-            $fileName = $file['file_name'] ?? 'unknown';
-            $fileType = $file['file_type'] ?? null;
-            $fileDescription = $file['file_description'] ?? null;
+
 
             $codeField = 'CODE';
             $descriptionField = 'DESCRIPTION';
@@ -224,6 +258,7 @@ class TaskController extends Controller
             }
 
             foreach ($parsed as $row) {
+
                 if (!isset($row['CODE']) || !isset($row['COUNT'])) {
                     continue;
                 }
@@ -268,19 +303,15 @@ class TaskController extends Controller
                 'file_type' => $fileType,
                 'file_description' => $fileDescription,
             ];
+            */
         }
 
-        $resultMetadata = [];
+        $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
 
-        if (!empty($parsedFiles)) {
-            $resultMetadata['parsed_files'] = $parsedFiles;
-        } else {
-            $resultMetadata = $metadata;
-        }
 
         Result::create([
             'task_id' => $task->id,
-            'count' => $count,
+            'count' => (int) $count,
             'metadata' => $resultMetadata,
         ]);
 
