@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessDistributionFile;
 use App\Models\Collection;
 use App\Models\Distribution;
 use App\Models\Query;
@@ -193,9 +194,6 @@ class TaskController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $task->update(['completed_at' => now()]);
-        $task->save();
-
         $metadata = collect($queryResult)->except('count')->toArray();
         $storedFiles = [];
 
@@ -235,7 +233,7 @@ class TaskController extends Controller
 
             ]);
 
-            //do something with resultFile
+            ProcessDistributionFile::dispatch($resultFile->id);
 
             $storedFiles[] = [
                 'file_name' => $fileName,
@@ -243,77 +241,18 @@ class TaskController extends Controller
                 'file_description' => $fileDescription,
                 'path' => $path,
             ];
-
-            /*
-            $parsed = $this->tsvToArray($decodedContent);
-
-
-
-            $codeField = 'CODE';
-            $descriptionField = 'DESCRIPTION';
-
-            if ($fileName === 'code.distribution') {
-                $codeField = 'OMOP';
-                $descriptionField = 'OMOP_DESCR';
-            }
-
-            foreach ($parsed as $row) {
-
-                if (!isset($row['CODE']) || !isset($row['COUNT'])) {
-                    continue;
-                }
-                Distribution::create([
-                    'collection_id' => $task->collection->id,
-                    'task_id'       => $task->id,
-                    'category'      => $row['CATEGORY'],
-                    'name'          => $row[$codeField],
-                    'description'   => $row[$descriptionField] ?? null,
-                    'count'         => $row['COUNT'],
-                    'q1'            => $row['Q1'] ?? null,
-                    'q3'            => $row['Q3'] ?? null,
-                    'min'           => $row['MIN'] ?? null,
-                    'max'           => $row['MAX'] ?? null,
-                    'mean'          => $row['MEAN'] ?? null,
-                    'median'        => $row['MEDIAN'] ?? null,
-                ]);
-
-                if (!isset($row['ALTERNATIVES'])) {
-                    continue;
-                }
-                $alternatives = $row['ALTERNATIVES'];
-                $segments = explode('^', trim($alternatives, '^'));
-
-                foreach ($segments as $segment) {
-                    if (strpos($segment, '|') !== false) {
-                        [$name, $count] = explode('|', $segment);
-
-                        Distribution::create([
-                            'collection_id'  => $task->collection->id,
-                            'task_id'        => $task->id,
-                            'category'       => $row['CATEGORY'],
-                            'name'           => (string) $name,
-                            'description'    => (string) $name,
-                            'count'          => (int) $count,
-                        ]);
-                    }
-                }
-            }
-            $parsedFiles[] = [
-                'file_name' => $fileName,
-                'file_type' => $fileType,
-                'file_description' => $fileDescription,
-            ];
-            */
         }
 
         $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
-
 
         Result::create([
             'task_id' => $task->id,
             'count' => (int) $count,
             'metadata' => $resultMetadata,
         ]);
+
+        $task->update(['completed_at' => now()]);
+        $task->save();
 
         return $this->CreatedResponse([
             'message' => 'Result received successfully.',
