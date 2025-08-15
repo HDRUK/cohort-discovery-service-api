@@ -52,10 +52,7 @@ class ProcessDistributionFile implements ShouldQueue
                     $header = preg_split("/\t/", $line);
                     if (!$header) continue;
 
-                    // handle UTF-8 BOM on first header cell
-                    if (isset($header[0])) {
-                        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
-                    }
+                    $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
                     continue;
                 }
 
@@ -71,7 +68,7 @@ class ProcessDistributionFile implements ShouldQueue
                     'category'      => $row['CATEGORY'] ?? null,
                     'name'          => $row[$codeField] ?? $row['CODE'] ?? null,
                     'description'   => $row[$descField] ?? null,
-                    'count'         => (int) ($row['COUNT'] ?? 0),
+                    'count'         => (int) $row['COUNT'],
                     'q1'            => $row['Q1'] ?? null,
                     'q3'            => $row['Q3'] ?? null,
                     'min'           => $row['MIN'] ?? null,
