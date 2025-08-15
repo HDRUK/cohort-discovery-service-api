@@ -2,12 +2,19 @@
 
 namespace Tests\Feature\Api\V1;
 
+use Config;
+
 use App\Enums\TaskType;
+use App\Models\Custodian;
 use App\Models\Collection;
+use App\Models\CollectionHost;
 use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
+
+use Illuminate\Support\Facades\Route;
+
 use Tests\TestCase;
 
 class TaskControllerTest extends TestCase
@@ -207,5 +214,54 @@ class TaskControllerTest extends TestCase
                 'message' => 'bad request',
                 'data' => 'Invalid or missing count in queryResult.',
             ]);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_calls_when_a_client_fails_to_provide_basic_auth(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $route = Route::getRoutes()->getByName('task.nextjob');
+        $this->assertNotNull($route);
+
+        $middleware = $route->gatherMiddleware();
+        $this->assertContains('App\Http\Middleware\CollectionHostBasicAuth', $middleware);
+        $this->assertContains('throttle:polling', $middleware);
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+
+        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid);
+        $response->assertStatus(401);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_allows_calls_when_a_client_provides_basic_auth(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'test-client',
+            'client_secret' => 'test-secret',
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+
+        $this->assertNotNull($collectionHost);
+
+        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}")
+        ]);
+        $response->assertStatus(200);
+
+        // muddle the keys to ensure the middleware is working with invalid credentials too
+        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode("{$collectionHost->client_id}:wrong-secret")
+        ]);
+
+        $response->assertStatus(401);
     }
 }
