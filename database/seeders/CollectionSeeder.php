@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Collection;
+use App\Models\CollectionHost;
+use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
 use App\Services\QueryContext\QueryContextType;
@@ -51,12 +53,20 @@ class CollectionSeeder extends Seeder
 
     private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount): void
     {
+        $custodianId = Custodian::first()->id;
         $collection = Collection::create([
             'name' => $name,
             'pid' => $pid,
             'url' => $url,
             'type' => $type,
-            'custodian_id' => Custodian::first()->id,
+            'custodian_id' => $custodianId,
+        ]);
+
+        $collectionHost = CollectionHost::where('custodian_id', $custodianId)->first();
+
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $collectionHost->id,
+            'collection_id' => $collection->id
         ]);
 
         $distributions = [

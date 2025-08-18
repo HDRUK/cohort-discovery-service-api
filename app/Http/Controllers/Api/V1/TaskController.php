@@ -110,18 +110,29 @@ class TaskController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $query = Task::where([
+        $task = Task::where([
             'task_type' => $task_type,
             'completed_at' => null,
             'collection_id' => $collection->id
-        ]);
-
-        $task = $query->with('submittedQuery')->first();
+        ])
+            ->where('attempts', '<', 3)
+            ->first();
 
         if (!$task) {
             error_log('returning no content');
             return $this->NoContentResponse();
         }
+
+        $nextAttempts = $task->attempts + 1;
+        $task->attempts     = $nextAttempts;
+        $task->attempted_at = now();
+
+        if ($nextAttempts === 3) {
+            $task->failed_at = now();
+        }
+
+        $task->save();
+        $task->refresh()->load('submittedQuery');
 
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
@@ -251,7 +262,10 @@ class TaskController extends Controller
             'metadata' => $resultMetadata,
         ]);
 
-        $task->update(['completed_at' => now()]);
+        $task->update([
+            'completed_at' => now(),
+            'failed_at' => NULL
+        ]);
         $task->save();
 
         return $this->CreatedResponse([
