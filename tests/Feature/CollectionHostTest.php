@@ -24,7 +24,7 @@ class CollectionHostTest extends TestCase
         Collection::truncate();
         CollectionHost::truncate();
     }
-    
+
     public function test_it_can_list_collection_hosts()
     {
         $host = CollectionHost::factory()->create();
@@ -45,7 +45,7 @@ class CollectionHostTest extends TestCase
         $this->assertNotEmpty($content['data'][0]['collections']);
     }
 
-    
+
     public function test_it_can_show_a_collection_host()
     {
         $host = CollectionHost::factory()->create();
@@ -53,17 +53,17 @@ class CollectionHostTest extends TestCase
         $response = $this->getJson($this->url . '/' . $host->id);
 
         $response->assertStatus(200)
-                 ->assertJsonFragment(['id' => $host->id]);
+            ->assertJsonFragment(['id' => $host->id]);
     }
 
-    
+
     public function test_it_returns_404_for_missing_collection_host()
     {
         $response = $this->getJson($this->url . '/9999');
         $response->assertStatus(404);
     }
 
-    
+
     public function test_it_can_create_a_collection_host()
     {
         $data = [
@@ -81,10 +81,10 @@ class CollectionHostTest extends TestCase
         $response = $this->postJson($this->url, $data);
 
         $response->assertStatus(201)
-                 ->assertJsonFragment(['name' => 'Host Test']);
+            ->assertJsonFragment(['name' => 'Host Test']);
     }
 
-    
+
     public function test_it_can_update_a_collection_host()
     {
         $host = CollectionHost::factory()->create();
@@ -94,10 +94,10 @@ class CollectionHostTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonFragment(['name' => 'Updated Host']);
+            ->assertJsonFragment(['name' => 'Updated Host']);
     }
 
-    
+
     public function test_it_can_delete_a_collection_host()
     {
         $host = CollectionHost::factory()->create();
