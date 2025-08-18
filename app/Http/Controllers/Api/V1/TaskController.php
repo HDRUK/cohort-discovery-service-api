@@ -115,7 +115,7 @@ class TaskController extends Controller
             'completed_at' => null,
             'collection_id' => $collection->id
         ])
-            ->where('attempts', '<', 3)
+            ->where('attempts', '<', config('api.default_max_attemps', 3))
             ->first();
 
         if (!$task) {
