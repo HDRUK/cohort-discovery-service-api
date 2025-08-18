@@ -66,7 +66,7 @@ class OAuthClientTest extends TestCase
         $this->assertArrayHasKey('interval', $content);
     }
 
-        public function test_the_application_can_create_public_clients(): void
+    public function test_the_application_can_create_public_clients(): void
     {
         User::factory(1)->create()->first();
         $user = User::find(1)->first();
@@ -92,8 +92,7 @@ class OAuthClientTest extends TestCase
 
     public function test_a_device_client_can_request_device_code(): void
     {
-        User::factory(1)->create()->first();
-        $user = User::find(1)->first();
+        $user = User::factory()->create();
 
         $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
             user: $user,
@@ -103,10 +102,12 @@ class OAuthClientTest extends TestCase
             enableDeviceFlow: true,
         );
 
+        $this->withoutExceptionHandling();
         $response = $this->postJson('/oauth/device/code', [
             'client_id' => $client->id,
             'scope' => 'cohorts:query',
         ]);
+        $response->dump();
 
         $response->assertStatus(200);
 
