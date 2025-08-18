@@ -92,7 +92,8 @@ class OAuthClientTest extends TestCase
 
     public function test_a_device_client_can_request_device_code(): void
     {
-        $user = User::factory()->create();
+        User::factory(1)->create()->first();
+        $user = User::find(1)->first();
 
         $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
             user: $user,
@@ -102,12 +103,10 @@ class OAuthClientTest extends TestCase
             enableDeviceFlow: true,
         );
 
-        $this->withoutExceptionHandling();
         $response = $this->postJson('/oauth/device/code', [
             'client_id' => $client->id,
             'scope' => 'cohorts:query',
         ]);
-        $response->dump();
 
         $response->assertStatus(200);
 
