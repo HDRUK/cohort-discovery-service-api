@@ -27,12 +27,17 @@ class Task extends Model
         'collection_id',
         'created_at',
         'completed_at',
+        'attempted_at',
+        'failed_at',
+        'attempts',
         'task_type'
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'completed_at' => 'datetime',
+        'attempted_at' => 'datetime',
+        'failed_at' => 'datetime',
         'task_type' => TaskType::class,
     ];
 
