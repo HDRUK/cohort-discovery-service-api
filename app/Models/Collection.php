@@ -42,6 +42,11 @@ class Collection extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function resultFiles()
+    {
+        return $this->hasMany(ResultFile::class);
+    }
+
     public function demographics(): HasMany
     {
         $sub = Distribution::select(DB::raw('MAX(id) as id'))

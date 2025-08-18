@@ -57,4 +57,9 @@ class Task extends Model
     {
         return $this->hasOne(Result::class);
     }
+
+    public function resultFiles()
+    {
+        return $this->hasMany(ResultFile::class);
+    }
 }

@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessDistributionFile;
 use App\Models\Collection;
 use App\Models\Distribution;
 use App\Models\Query;
 use App\Models\Result;
+use App\Models\ResultFile;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Support\Facades\Storage;
 
 
 class TaskController extends Controller
@@ -191,98 +194,65 @@ class TaskController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $task->update(['completed_at' => now()]);
-        $task->save();
-
         $metadata = collect($queryResult)->except('count')->toArray();
-        $parsedFiles = [];
+        $storedFiles = [];
 
         foreach ($metadata['files'] ?? [] as $file) {
+
             if (!isset($file['file_data'])) {
                 continue;
             }
 
+            $fileName = $file['file_name'] ?? 'unknown';
+            $fileType = $file['file_type'] ?? null;
+            $fileDescription = $file['file_description'] ?? null;
             $fileDataBase64 = $file['file_data'];
-            $decodedContent = base64_decode($fileDataBase64);
+
+            $decodedContent = base64_decode($fileDataBase64, true);
 
             if (!$decodedContent) {
                 continue;
             }
 
-            $parsed = $this->tsvToArray($decodedContent);
+            $hash = hash('sha256', $decodedContent);
 
-            $fileName = $file['file_name'] ?? 'unknown';
-            $fileType = $file['file_type'] ?? null;
-            $fileDescription = $file['file_description'] ?? null;
+            $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
 
-            $codeField = 'CODE';
-            $descriptionField = 'DESCRIPTION';
+            //note: need to change this storage to a bucket??
+            Storage::disk('local')->put($path, $decodedContent);
 
-            if ($fileName === 'code.distribution') {
-                $codeField = 'OMOP';
-                $descriptionField = 'OMOP_DESCR';
-            }
+            $resultFile = ResultFile::create([
+                'pid'             => $hash,
+                'task_id'         => $task->id,
+                'collection_id'   => $task->collection->id,
+                'path'            => $path,
+                'file_name'       => $fileName,
+                'file_type'       => $fileType,
+                'file_description' => $fileDescription,
+                'status'          => ResultFile::STATUS_QUEUED,
 
-            foreach ($parsed as $row) {
-                if (!isset($row['CODE']) || !isset($row['COUNT'])) {
-                    continue;
-                }
-                Distribution::create([
-                    'collection_id' => $task->collection->id,
-                    'task_id'       => $task->id,
-                    'category'      => $row['CATEGORY'],
-                    'name'          => $row[$codeField],
-                    'description'   => $row[$descriptionField] ?? null,
-                    'count'         => $row['COUNT'],
-                    'q1'            => $row['Q1'] ?? null,
-                    'q3'            => $row['Q3'] ?? null,
-                    'min'           => $row['MIN'] ?? null,
-                    'max'           => $row['MAX'] ?? null,
-                    'mean'          => $row['MEAN'] ?? null,
-                    'median'        => $row['MEDIAN'] ?? null,
-                ]);
+            ]);
 
-                if (!isset($row['ALTERNATIVES'])) {
-                    continue;
-                }
-                $alternatives = $row['ALTERNATIVES'];
-                $segments = explode('^', trim($alternatives, '^'));
+            ProcessDistributionFile::dispatch($resultFile->id);
 
-                foreach ($segments as $segment) {
-                    if (strpos($segment, '|') !== false) {
-                        [$name, $count] = explode('|', $segment);
-
-                        Distribution::create([
-                            'collection_id'  => $task->collection->id,
-                            'task_id'        => $task->id,
-                            'category'       => $row['CATEGORY'],
-                            'name'           => (string) $name,
-                            'description'    => (string) $name,
-                            'count'          => (int) $count,
-                        ]);
-                    }
-                }
-            }
-            $parsedFiles[] = [
+            $storedFiles[] = [
                 'file_name' => $fileName,
                 'file_type' => $fileType,
                 'file_description' => $fileDescription,
+                'path' => $path,
             ];
         }
 
-        $resultMetadata = [];
-
-        if (!empty($parsedFiles)) {
-            $resultMetadata['parsed_files'] = $parsedFiles;
-        } else {
-            $resultMetadata = $metadata;
-        }
+        $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
 
         Result::create([
             'task_id' => $task->id,
-            'count' => $count,
+            'count' => (int) $count,
             'metadata' => $resultMetadata,
         ]);
+
+        $task->update(['completed_at' => now()]);
+        $task->save();
 
         return $this->CreatedResponse([
             'message' => 'Result received successfully.',

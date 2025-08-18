@@ -38,7 +38,6 @@ class CollectionSeeder extends Seeder
             femaleCount: 0
         );
 
-
         $this->seedCollectionWithDemographics(
             name: 'Mock Covid Dataset 5M',
             pid: '43874274f7be1df2959b29c4b5afba47',
