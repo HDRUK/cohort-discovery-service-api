@@ -77,6 +77,7 @@ Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection'
 Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
 
 Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
+Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
 Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
 
 
