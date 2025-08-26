@@ -21,7 +21,10 @@ class DecodeJwt
         try {
             // ⚠️ If you don’t have the secret/public key, use decode with null key (no signature verification)
             // DO NOT do this in production unless you trust the source 100%
-            $key = env('JWT_SECRET');
+            $key = config('gateway_jwt_secret');
+            if (!$key) {
+                throw new \Exception('No gateway jwt secret provided, cant decode safely');
+            }
             $claims = JWT::decode($token, new Key($key, 'HS256'));
 
             // Make claims available later

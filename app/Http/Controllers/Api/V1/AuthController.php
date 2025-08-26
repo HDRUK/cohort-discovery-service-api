@@ -69,6 +69,7 @@ class AuthController extends Controller
             ]
         );
 
+        /** @phpstan-ignore-next-line */
         $redirectUrl = $token->claims()->get('cohort_discovery_url');
 
         return redirect()->to($redirectUrl)
@@ -78,14 +79,6 @@ class AuthController extends Controller
                 'federated_user_id' => $user['id'],
                 'local_user_id' => $localUser->id,
             ]);
-
-        /*return $this->OKResponse([
-            'federated_token' => $tokenString,
-            'type' => 'bearer',
-            'federated_user_id' => $user['id'],
-            'local_user_id' => $localUser->id,
-            'redirect_url' => $redirectUrl,
-        ]);*/
     }
 
     public function callbackForAuthToken(Request $request): JsonResponse|RedirectResponse
