@@ -6,17 +6,15 @@ use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDistributionFile;
 use App\Models\Collection;
-use App\Models\Distribution;
-use App\Models\Query;
+
 use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-use Illuminate\Validation\Rules\Enum;
+
 use Illuminate\Support\Facades\Storage;
 
 
@@ -45,52 +43,6 @@ class TaskController extends Controller
         return $this->OKResponse($task);
     }
 
-    public function submitQueryAndCreateTasks(Request $request)
-    {
-        $validated = [];
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string',
-                'definition' => 'required|array',
-                'collection_filter' => 'nullable|array',
-                'task_type' => ['required', new Enum(TaskType::class)],
-            ]);
-        } catch (ValidationException $e) {
-            return $this->ValidationErrorResponse($e->errors());
-        }
-
-        $query = Query::create([
-            'name' => $validated['name'],
-            'definition' => $validated['definition'],
-        ]);
-
-
-        $collections = Collection::query();
-
-        if (!empty($validated['collection_filter'])) {
-            $collections->whereIn('pid', $validated['collection_filter']);
-        }
-
-        $collections = $collections->pluck('id');
-
-        $tasks = [];
-
-        foreach ($collections as $collectionId) {
-            $tasks[] = Task::create([
-                'query_id' => $query->id,
-                'collection_id' => $collectionId,
-                'created_at' => now(),
-                'task_type' => $validated['task_type'],
-            ]);
-        }
-
-        return $this->CreatedResponse([
-            'query_pid' => $query->pid,
-            'task_count' => count($tasks),
-            'task_pids' => collect($tasks)->pluck('pid'),
-        ]);
-    }
-
     public function nextJob($collection_id, QueryContextManager $contextManager)
     {
         $parts = explode('.', $collection_id);
@@ -110,18 +62,30 @@ class TaskController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $query = Task::where([
+        $nattemps = config('api.default_max_attemps', 3);
+        $task = Task::where([
             'task_type' => $task_type,
             'completed_at' => null,
             'collection_id' => $collection->id
-        ]);
-
-        $task = $query->with('submittedQuery')->first();
+        ])
+            ->where('attempts', '<', $nattemps)
+            ->first();
 
         if (!$task) {
             error_log('returning no content');
             return $this->NoContentResponse();
         }
+
+        $nextAttempts = $task->attempts + 1;
+        $task->attempts     = $nextAttempts;
+        $task->attempted_at = now();
+
+        if ($nextAttempts === $nattemps) {
+            $task->failed_at = now();
+        }
+
+        $task->save();
+        $task->refresh()->load('submittedQuery');
 
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
@@ -251,7 +215,10 @@ class TaskController extends Controller
             'metadata' => $resultMetadata,
         ]);
 
-        $task->update(['completed_at' => now()]);
+        $task->update([
+            'completed_at' => now(),
+            'failed_at' => NULL
+        ]);
         $task->save();
 
         return $this->CreatedResponse([

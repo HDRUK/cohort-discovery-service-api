@@ -66,7 +66,7 @@ class OAuthClientTest extends TestCase
         $this->assertArrayHasKey('interval', $content);
     }
 
-        public function test_the_application_can_create_public_clients(): void
+    public function test_the_application_can_create_public_clients(): void
     {
         User::factory(1)->create()->first();
         $user = User::find(1)->first();

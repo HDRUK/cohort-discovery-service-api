@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Collection;
+use App\Models\Custodian;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use App\Services\QueryContext\QueryContextType;
@@ -22,6 +23,7 @@ class CollectionFactory extends Factory
             ]),
             'created_at' => now(),
             'updated_at' => now(),
+            'custodian_id' => Custodian::first()->id
         ];
     }
 

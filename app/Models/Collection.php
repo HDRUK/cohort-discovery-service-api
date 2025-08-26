@@ -28,6 +28,7 @@ class Collection extends Model
         'url',
         'pid',
         'type',
+        'custodian_id'
     ];
 
     protected $casts = [

@@ -24,11 +24,11 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            CustodianSeeder::class,
+            CollectionHostSeeder::class,
             CollectionSeeder::class,
             QuerySeeder::class,
             TaskSeeder::class,
-            CustodianSeeder::class,
-            CollectionHostSeeder::class,
         ]);
     }
 }
