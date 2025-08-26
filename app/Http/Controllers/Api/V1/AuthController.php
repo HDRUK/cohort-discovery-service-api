@@ -32,7 +32,7 @@ class AuthController extends Controller
 {
     use Responses;
 
-    public function callbackForUser(Request $request): JsonResponse
+    public function callbackForUser(Request $request): JsonResponse|RedirectResponse
     {
         $tokenString = session('token');
 
@@ -45,7 +45,7 @@ class AuthController extends Controller
 
         /** @phpstan-ignore-next-line */
         $user = $token->claims()->get('user');
-        
+
         $response = Http::withHeaders([
             'Accept' => 'application/json',
             'Authorization' => 'bearer ' . $tokenString,
@@ -58,21 +58,34 @@ class AuthController extends Controller
         $user = $response->json()['data'];
 
         // Create user locally if not already available
-        $localUser = User::firstOrCreate([
-            'email' => $user['email'],
-        ],
-        [
-            'name' => $user['name'],
-            'email' => $user['email'],
-            'password' => Hash::make(config('gateway.placeholder_password')),
-        ]);
+        $localUser = User::firstOrCreate(
+            [
+                'email' => $user['email'],
+            ],
+            [
+                'name' => $user['name'],
+                'email' => $user['email'],
+                'password' => Hash::make(config('gateway.placeholder_password')),
+            ]
+        );
 
-        return $this->OKResponse([
+        $redirectUrl = $token->claims()->get('cohort_discovery_url');
+
+        return redirect()->to($redirectUrl)
+            ->with([
+                'federated_token' => $tokenString,
+                'type' => 'bearer',
+                'federated_user_id' => $user['id'],
+                'local_user_id' => $localUser->id,
+            ]);
+
+        /*return $this->OKResponse([
             'federated_token' => $tokenString,
             'type' => 'bearer',
             'federated_user_id' => $user['id'],
             'local_user_id' => $localUser->id,
-        ]);
+            'redirect_url' => $redirectUrl,
+        ]);*/
     }
 
     public function callbackForAuthToken(Request $request): JsonResponse|RedirectResponse
@@ -89,6 +102,7 @@ class AuthController extends Controller
             'redirect_uri' => config('gateway.internal_oauth_callback_uri'),
             'code' => $code,
         ]);
+
 
         if ($response->failed()) {
             return $this->UnauthorisedResponse();

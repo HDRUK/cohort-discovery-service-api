@@ -17,9 +17,9 @@ use App\Http\Controllers\Api\V1\CollectionHostController;
 
 use App\Http\Middleware\CollectionHostBasicAuth;
 
-Route::get('/user', function (Request $request) {
+Route::get('v1/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:api');
+})->middleware('decode.jwt');
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
