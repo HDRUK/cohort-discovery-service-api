@@ -29,7 +29,6 @@ class OmopController extends Controller
         }
 
         $ancestors = ConceptAncestor::where(['descendant_concept_id' => $concept_id])
-            ->where('min_levels_of_separation', '>', 0)
             ->where('max_levels_of_separation', '<', $nup + 1)
             ->pluck('ancestor_concept_id');
 
