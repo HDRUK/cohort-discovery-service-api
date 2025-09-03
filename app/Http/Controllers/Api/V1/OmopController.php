@@ -22,6 +22,8 @@ class OmopController extends Controller
         $standardOnly = request()->boolean('standard_only', false);
         $sameDomain   = request()->boolean('same_domain', false);
         $sameVocab    = request()->boolean('same_vocabulary', false);
+        $full    = request()->boolean('full', false);
+
 
         $start = null;
         if ($sameDomain || $sameVocab) {
@@ -46,8 +48,16 @@ class OmopController extends Controller
             ->when($sameVocab && $start, function ($q) use ($start) {
                 $q->whereHas('descendant', fn($c) => $c->where('vocabulary_id', $start->vocabulary_id));
             })
-            ->with('descendant')
+            ->with(['descendant' => function ($q) use ($full) {
+                if (!$full) {
+                    $q = $q->select(['concept_id', 'concept_name']);
+                }
+            }])
             ->get();
+
+        if (!$full) {
+            $desc = $desc->pluck('descendant')->filter()->values();
+        }
 
 
         return response()->json($desc);
