@@ -3,8 +3,14 @@
 namespace App\Models\Omop;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-
+/**
+ * @property int $ancestor_concept_id
+ * @property int $descendant_concept_id
+ * @property \App\Models\Omop\Concept $ancestor
+ * @property \App\Models\Omop\Concept $descendant
+ */
 class ConceptAncestor extends Model
 {
     protected $connection = 'omop';
@@ -19,18 +25,12 @@ class ConceptAncestor extends Model
         'max_levels_of_separation',
     ];
 
-    /**
-     * The ancestor concept.
-     */
-    public function ancestor()
+    public function ancestor(): BelongsTo
     {
         return $this->belongsTo(Concept::class, 'ancestor_concept_id');
     }
 
-    /**
-     * The descendant concept.
-     */
-    public function descendant()
+    public function descendant(): BelongsTo
     {
         return $this->belongsTo(Concept::class, 'descendant_concept_id');
     }
