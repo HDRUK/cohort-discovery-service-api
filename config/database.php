@@ -61,6 +61,25 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
+        'omop' => [
+            'driver' => 'mysql',
+            'url' => env('DB_OMOP_URL'),
+            'host' => env('DB_OMOP_HOST', '127.0.0.1'),
+            'port' => env('DB_OMOP_PORT', '3306'),
+            'database' => env('DB_OMOP_DATABASE', 'laravel'),
+            'username' => env('DB_OMOP_USERNAME', 'root'),
+            'password' => env('DB_OMOP_PASSWORD', ''),
+            'unix_socket' => env('DB_OMOP_SOCKET', ''),
+            'charset' => env('DB_OMOP_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_OMOP_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
 
         'mariadb' => [
             'driver' => 'mariadb',
@@ -147,7 +166,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
