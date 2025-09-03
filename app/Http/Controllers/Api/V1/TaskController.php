@@ -110,8 +110,6 @@ class TaskController extends Controller
             ]);
         }
 
-
-
         $translatedQuery = null;
         try {
             $contextType = $collection->type;

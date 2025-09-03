@@ -14,12 +14,10 @@ use App\Traits\HelperFunctions;
 use Illuminate\Validation\Rules\Enum;
 
 
-
 class QueryController extends Controller
 {
     use Responses;
     use HelperFunctions;
-
 
     public function getQueries()
     {

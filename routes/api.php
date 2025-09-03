@@ -14,12 +14,12 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
-
+use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
-Route::get('/user', function (Request $request) {
+Route::get('v1/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:api');
+})->middleware('decode.jwt');
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
@@ -77,9 +77,10 @@ Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection'
 Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
 
 Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
+Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
 Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
 
-
+Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
 
 Route::get('/status', function (Request $request) {
     return response()->json([

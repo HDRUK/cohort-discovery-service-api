@@ -73,5 +73,4 @@ class ClaimBasedAccessControl
 
         return ['workgroups' => [config('claims-access.default_system') => $normalised]];
     }
-
 }

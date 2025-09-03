@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DecodeJwt;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         //     'cbac' => \App\Http\Middleware\ClaimBasedAccessControl::class,
         //     'client_basic_auth' => \App\Http\Middleware\CollectionHostBasicAuth::class,
         // ]);
-
+        $middleware->alias([
+            'decode.jwt' => DecodeJwt::class,
+        ]);
         $middleware->append(\App\Http\Middleware\LogHttpRequests::class);
         $middleware->append(\App\Http\Middleware\AuditRequests::class);
     })
