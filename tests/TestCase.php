@@ -19,10 +19,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
         $this->liteSetUp();
 
-        // Use a known secret for tests so we can mint real tokens
         Config::set('api.gateway_jwt_secret', Config::get('api.gateway_jwt_secret', 'test_secret'));
 
-        $this->disableMiddleware(); // enable in tests that actually exercise DecodeJwt
+        $this->disableMiddleware();
         $this->disableObservers();
     }
 
@@ -47,10 +46,8 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Create a signed JWT compatible with DecodeJwt middleware.
-     *
-     * @param  \App\Models\User|array|string|null  $user  User model, array with ['email'=>...], or raw email
-     * @param  array  $overrides  Extra/override claims (merged into top-level payload)
+     * @param  \App\Models\User $user  
+     * @param  array  $overrides  
      */
     protected function makeJwtToken($user = null, array $overrides = []): string
     {
@@ -68,7 +65,6 @@ abstract class TestCase extends BaseTestCase
             'exp'  => $now + 3600,
             'user' => array_filter([
                 'email' => $email,
-                // add any other fields your app expects here, e.g. 'id' => $user->id ?? null
             ]),
         ], $overrides);
 
@@ -77,18 +73,13 @@ abstract class TestCase extends BaseTestCase
         return JWT::encode($payload, $secret, 'HS256');
     }
 
-    /**
-     * Attach a Bearer token to subsequent requests in this test.
-     */
     protected function withJwt(string $token): static
     {
         return $this->withHeader('Authorization', "Bearer {$token}");
     }
 
     /**
-     * Convenience: mint a JWT for a given user (or email) and attach it.
-     *
-     * @param  \App\Models\User|array|string  $user
+     * @param  \App\Models\User $user
      */
     protected function actingAsJwt($user, array $overrides = []): static
     {
