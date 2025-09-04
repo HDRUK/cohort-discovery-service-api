@@ -19,8 +19,6 @@ class DecodeJwt
         }
 
         try {
-            // ⚠️ If you don’t have the secret/public key, use decode with null key (no signature verification)
-            // DO NOT do this in production unless you trust the source 100%
             $key = config('api.gateway_jwt_secret');
 
             if (!$key) {
@@ -28,7 +26,6 @@ class DecodeJwt
             }
             $claims = JWT::decode($token, new Key($key, 'HS256'));
 
-            // Make claims available later
             $request->attributes->set('jwt_claims', (array) $claims);
 
             $jwtUser = $claims->user ?? null;
