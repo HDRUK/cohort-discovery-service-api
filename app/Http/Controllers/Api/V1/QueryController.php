@@ -7,10 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum;
 
 
@@ -26,6 +29,7 @@ class QueryController extends Controller
             'tasks.collection.size',
             'tasks.result'
         ])
+            ->where('user_id', Auth::id())
             ->whereHas('tasks', function ($query) {
                 $query->where('task_type', TaskType::A);
             })
@@ -37,6 +41,7 @@ class QueryController extends Controller
     public function getLatestQuery()
     {
         $query = Query::with(['tasks.collection.size', 'tasks.result'])
+            ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -50,10 +55,16 @@ class QueryController extends Controller
 
     public function getQuery($query_pid)
     {
-        $query = Query::with(['tasks.collection.size', 'tasks.result'])->where('pid', $query_pid)->first();
+        $query = Query::with(['tasks.collection.size', 'tasks.result'])
+            ->where('pid', $query_pid)
+            ->first();
 
         if (!$query) {
             return $this->NotFoundResponse();
+        }
+
+        if (Gate::denies('view', $query)) {
+            return  $this->ForbiddenResponse();
         }
 
         return $this->OKResponse($query);
@@ -76,6 +87,7 @@ class QueryController extends Controller
         $query = Query::create([
             'name' => $validated['name'],
             'definition' => $validated['definition'],
+            'user_id' => Auth::id(),
         ]);
 
         $collections = Collection::query();
