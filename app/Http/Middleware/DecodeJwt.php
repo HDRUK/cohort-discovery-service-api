@@ -19,25 +19,26 @@ class DecodeJwt
         }
 
         try {
-            // ⚠️ If you don’t have the secret/public key, use decode with null key (no signature verification)
-            // DO NOT do this in production unless you trust the source 100%
-            $key = config('gateway_jwt_secret');
+            $key = config('api.gateway_jwt_secret');
+
             if (!$key) {
                 throw new \Exception('No gateway jwt secret provided, cant decode safely');
             }
             $claims = JWT::decode($token, new Key($key, 'HS256'));
 
-            // Make claims available later
             $request->attributes->set('jwt_claims', (array) $claims);
 
             $jwtUser = $claims->user ?? null;
             $userEmail = $jwtUser->email;
+
 
             if ($userEmail) {
                 $user = User::where('email', $userEmail)->first();
 
                 if ($user) {
                     Auth::setUser($user);
+                } else {
+                    return response()->json(['error' => 'Cannot find token user in local database'], 401);
                 }
             }
         } catch (\Exception $e) {

@@ -56,6 +56,7 @@ Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob'
         'throttle:polling',
         CollectionHostBasicAuth::class,
     ]);
+
 Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'receiveResult'])
     ->name('task.result')
     ->middleware([
@@ -63,14 +64,18 @@ Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'r
         CollectionHostBasicAuth::class,
     ]);
 
-Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
-Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
+Route::middleware(['decode.jwt'])->group(function () {
+    Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
+    Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
+});
 
 
-Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
-Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
-Route::get('/v1/queries', [QueryController::class, 'getQueries']);
-Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+Route::middleware(['decode.jwt'])->group(function () {
+    Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
+    Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
+    Route::get('/v1/queries', [QueryController::class, 'getQueries']);
+    Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+});
 
 
 Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);

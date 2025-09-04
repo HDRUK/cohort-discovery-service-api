@@ -20,6 +20,7 @@ class Query extends Model
     protected $fillable = [
         'pid',
         'name',
+        'user_id',
         'definition',
         'created_at',
     ];

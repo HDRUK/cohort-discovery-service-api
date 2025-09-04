@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Query;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class QuerySeeder extends Seeder
@@ -14,6 +15,7 @@ class QuerySeeder extends Seeder
     {
         Query::create([
             'name' => 'example-1',
+            'user_id' => User::first()->id,
             'definition' => [
                 'combinator' => 'and',
                 'rules' => [

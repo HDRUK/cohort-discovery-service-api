@@ -14,7 +14,8 @@ use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Http\Request;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 
@@ -26,18 +27,25 @@ class TaskController extends Controller
 
     public function getTasks()
     {
-        //to-do: only get user tasks...
-        $tasks = Task::all();
+        $tasks = Task::whereHas('submittedQuery', function ($query) {
+            $query->where('user_id', Auth::id());
+        });
         return $this->OKResponse($tasks);
     }
 
 
     public function getTask($task_pid)
     {
-        $task = Task::with(['submittedQuery', 'collection'])->where('pid', $task_pid)->first();
+        $task = Task::with(['submittedQuery', 'collection'])
+            ->where('pid', $task_pid)
+            ->first();
 
         if (!$task) {
             return $this->NotFoundResponse();
+        }
+
+        if (Gate::denies('view', $task)) {
+            return  $this->ForbiddenResponse();
         }
 
         return $this->OKResponse($task);
