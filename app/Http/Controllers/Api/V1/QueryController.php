@@ -35,6 +35,7 @@ class QueryController extends Controller
             })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
+
         return $this->OKResponse($queries);
     }
 
