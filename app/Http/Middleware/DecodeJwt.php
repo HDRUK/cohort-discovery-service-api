@@ -22,6 +22,7 @@ class DecodeJwt
             // ⚠️ If you don’t have the secret/public key, use decode with null key (no signature verification)
             // DO NOT do this in production unless you trust the source 100%
             $key = config('api.gateway_jwt_secret');
+            dump("key=" . $key);
 
             if (!$key) {
                 throw new \Exception('No gateway jwt secret provided, cant decode safely');

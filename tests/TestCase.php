@@ -74,6 +74,8 @@ abstract class TestCase extends BaseTestCase
 
         $secret = Config::get('api.gateway_jwt_secret', 'test_secret');
 
+        dump($secret);
+
         return JWT::encode($payload, $secret, 'HS256');
     }
 

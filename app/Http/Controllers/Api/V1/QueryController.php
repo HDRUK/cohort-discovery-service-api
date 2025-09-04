@@ -85,8 +85,6 @@ class QueryController extends Controller
             return $this->ValidationErrorResponse($e->errors());
         }
 
-        dump(Auth::id());
-
         $query = Query::create([
             'name' => $validated['name'],
             'definition' => $validated['definition'],
