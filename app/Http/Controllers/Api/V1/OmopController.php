@@ -21,7 +21,8 @@ class OmopController extends Controller
         $standardOnly = request()->boolean('standard_only', false);
         $sameDomain   = request()->boolean('same_domain', false);
         $sameVocab    = request()->boolean('same_vocabulary', false);
-        $full    = request()->boolean('full', false);
+        $slim    = request()->boolean('slim', true);
+        $fullOmop    = request()->boolean('fullOmop', false);
 
 
         $start = null;
@@ -47,16 +48,24 @@ class OmopController extends Controller
             ->when($sameVocab && $start, function ($q) use ($start) {
                 $q->whereHas('descendant', fn($c) => $c->where('vocabulary_id', $start->vocabulary_id));
             })
-            ->with(['descendant' => function ($q) use ($full) {
-                if (!$full) {
-                    $q = $q->select(['concept_id', 'concept_name']);
+            ->with(['descendant' => function ($q) use ($slim, $fullOmop) {
+                if (!$fullOmop) {
+                    $q->inDistribution();
                 }
+                if ($slim) {
+                    $q->select(['concept_id', 'concept_name']);
+                }
+                $q->distinct();
             }])
             ->get();
 
-        if (!$full) {
-            $desc = $desc->pluck('descendant')->filter()->values();
-        }
+        $desc = $desc->pluck('descendant')
+            ->filter()
+            ->unique('concept_id')
+            ->sortBy(function ($item) use ($concept_id) {
+                return $item->concept_id == $concept_id ? 0 : 1;
+            })
+            ->values();
 
 
         return response()->json($desc);

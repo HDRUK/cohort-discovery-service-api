@@ -2,8 +2,10 @@
 
 namespace App\Models\Omop;
 
+use App\Models\Distribution;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $concept_id 
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property int $vocabulary_id
  * @property \App\Models\Omop\Concept $ancestors
  * @property \App\Models\Omop\Concept $descendants
+ * @property \App\Models\Distribution $distributions
  */
 class Concept extends Model
 {
@@ -49,5 +52,20 @@ class Concept extends Model
             'ancestor_concept_id',
             'descendant_concept_id'
         )->withPivot('min_levels_of_separation', 'max_levels_of_separation');
+    }
+
+    public function distributions(): HasMany
+    {
+        return $this->hasMany(Distribution::class, 'concept_id', 'concept_id');
+    }
+
+    public function scopeInDistribution($query)
+    {
+        $conceptIds = Distribution::distinct()
+            ->whereNotNull('concept_id')
+            ->pluck('concept_id')
+            ->all();
+
+        return $query->whereIn('concept_id', $conceptIds);
     }
 }
