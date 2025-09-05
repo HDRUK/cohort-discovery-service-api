@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('category');
             $table->string('description');
+            $table->unsignedBigInteger('concept_id')->nullable();
             $table->unsignedInteger('count');
 
             $table->string('q1')->nullable();

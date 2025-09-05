@@ -62,12 +62,17 @@ class ProcessDistributionFile implements ShouldQueue
                 $row = array_combine($header, $cols);
                 if (!isset($row['COUNT'])) continue;
 
+
+                $conceptId = $row[$codeField] ?? $row['CODE'] ?? null;
+                $conceptId = $conceptId !== null && $conceptId !== '' ? (int) $conceptId : null;
+
                 $base = [
                     'collection_id' => $file->collection_id,
                     'task_id'       => $file->task_id,
                     'category'      => $row['CATEGORY'] ?? null,
                     'name'          => $row[$codeField] ?? $row['CODE'] ?? null,
                     'description'   => $row[$descField] ?? null,
+                    'concept_id'    => $conceptId,
                     'count'         => (int) $row['COUNT'],
                     'q1'            => $row['Q1'] ?? null,
                     'q3'            => $row['Q3'] ?? null,

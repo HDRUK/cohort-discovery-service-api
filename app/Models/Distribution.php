@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Config;
 
 /**
  * @property int $id
@@ -15,12 +16,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Distribution extends Model
 {
+    public function getConnectionName()
+    {
+        return Config::get('database.default');
+    }
+
     protected $fillable = [
         'collection_id',
         'task_id',
         'category',
         'name',
         'description',
+        'concept_id',
         'count',
         'q1',
         'q3',
