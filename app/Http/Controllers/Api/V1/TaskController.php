@@ -148,6 +148,8 @@ class TaskController extends Controller
 
     public function receiveResult(Request $request, $task_pid, $collection_pid)
     {
+        $status = $request->get('status');
+        $message = $request->get('message');
         $queryResult = $request->get('queryResult');
 
         if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
@@ -156,7 +158,8 @@ class TaskController extends Controller
 
         $count = $queryResult['count'];
 
-        error_log("\033[32m[RESULT RECEIVED]\033[0m Count: {$count}, Task PID: {$task_pid}");
+
+        error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
 
         $task = Task::where(['pid' => $task_pid])->first();
 
@@ -219,6 +222,8 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'count' => (int) $count,
             'metadata' => $resultMetadata,
+            'status' => $status,
+            'message' => $message
         ]);
 
         $task->update([

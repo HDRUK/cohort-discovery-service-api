@@ -12,6 +12,8 @@ class Result extends Model
         'task_id',
         'count',
         'metadata',
+        'status',
+        'message'
     ];
 
     protected $casts = [
