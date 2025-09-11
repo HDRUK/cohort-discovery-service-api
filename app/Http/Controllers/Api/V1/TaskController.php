@@ -36,7 +36,7 @@ class TaskController extends Controller
 
     public function getTask($task_pid)
     {
-        $task = Task::with(['submittedQuery', 'collection'])
+        $task = Task::with(['submittedQuery', 'collection', 'result'])
             ->where('pid', $task_pid)
             ->first();
 
