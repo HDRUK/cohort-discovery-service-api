@@ -12,6 +12,7 @@ use App\Models\UserHasWorkgroup;
 use App\Http\Controllers\Controller;
 
 use App\Traits\Responses;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -47,6 +48,12 @@ class UserController extends Controller
         return $this->OKResponse([]);
     }
 
+    function getMe(Request $request)
+    {
+        $user = User::with('workgroups')->findOrFail(Auth::id());
+        return $this->OKResponse($user);
+    }
+
     public function addToWorkgroup(Request $request, int $id): JsonResponse
     {
         $input = $request->validate([
@@ -69,7 +76,7 @@ class UserController extends Controller
             'user_id' => $user->id,
             'workgroup_id' => $input['workgroup_id'],
         ]);
-        
+
         return $this->OKResponse([$userHasWorkgroup]);
     }
 

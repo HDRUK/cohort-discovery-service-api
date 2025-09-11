@@ -17,9 +17,9 @@ use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
-Route::get('v1/user', function (Request $request) {
-    return $request->user();
-})->middleware('decode.jwt');
+Route::middleware(['decode.jwt'])->group(function () {
+    Route::get('v1/user', [UserController::class, 'getMe']);
+});
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
