@@ -139,16 +139,19 @@ class BunnyQueryContext implements QueryContextInterface
                         $value = (string) $value;
                     }
 
-                    $time = $rule['time'];
-
-                    $group['rules'][] = [
+                    $ruleArray = [
                         'varname' => $mapped['varname'],
-                        'varcat' => $mapped['varcat'],
+                        'varcat'  => $mapped['varcat'],
                         'type'    => $type,
                         'oper'    => $operator,
                         'value'   => $value,
-                        'time'    => $time,
                     ];
+
+                    if (isset($rule['time'])) {
+                        $ruleArray['time'] = $rule['time'];
+                    }
+
+                    $group['rules'][] = $ruleArray;
                 }
             }
 
