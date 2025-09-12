@@ -44,20 +44,12 @@ class ClaimBasedAccessControl
         $claimMappingService = new ClaimMappingService();
         $claimResolverService = new ClaimResolverService($claimMappingService);
 
-
-        error_log(json_encode($user['workgroups']));
-
-        return $next($request);
-
         // normalise the workgroup claims to determine access
         $newArr = $this->normaliseWorkgroups($user['workgroups']);
         unset($user['workgroups']);
         $user['workgroups'] = $newArr['workgroups'];
 
-        error_log('here i am');
-        error_log(json_encode($claims));
         foreach ($claims as $claim) {
-            error_log(json_encode($claim));
             $resolution = $claimResolverService->hasWorkgroup($user, config('claims-access.default_system'), $claim);
 
             if ($resolution) {
