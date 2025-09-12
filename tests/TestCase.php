@@ -63,9 +63,10 @@ abstract class TestCase extends BaseTestCase
             'iss'  => 'test-suite',
             'iat'  => $now,
             'exp'  => $now + 3600,
-            'user' => array_filter([
+            'user' => [
                 'email' => $email,
-            ]),
+                'teams' => []
+            ],
         ], $overrides);
 
         $secret = Config::get('api.gateway_jwt_secret', 'test_secret');

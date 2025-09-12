@@ -92,14 +92,8 @@ class CustodianController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'pid' => 'nullable|string',
             'name' => 'required|string|max:255',
-            'street_address' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
-            'postal_code' => 'required|string|max:20',
-            'country' => 'required|string|max:100',
-            'url' => 'nullable|url',
-            'email' => 'nullable|email',
-            'phone' => 'nullable|string|max:20',
         ]);
 
         $custodian = Custodian::create($data);

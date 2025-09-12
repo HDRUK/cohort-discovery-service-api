@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
+use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
@@ -76,6 +77,17 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/queries', [QueryController::class, 'getQueries']);
     Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
 });
+
+Route::middleware(['decode.jwt'])->group(function () {
+    Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
+    Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
+    Route::get('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'show']);
+    Route::put('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'update']);
+    Route::delete('/v1/concept_sets/{conceptSet}/clear', [ConceptSetController::class, 'clear']);
+    Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
+    Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
+});
+
 
 
 Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);

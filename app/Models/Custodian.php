@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * @OA\Schema(
@@ -34,16 +35,20 @@ class Custodian extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'pid',
         'name',
-        'street_address',
-        'city',
-        'postal_code',
-        'country',
-        'url',
-        'email',
-        'phone',
-        'user_id',
+        'gateway_team_id',
+        'gateway_team_name',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function (Custodian $custodian) {
+            if (empty($custodian->pid)) {
+                $custodian->pid = (string) Str::uuid();
+            }
+        });
+    }
 
     public function hosts(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

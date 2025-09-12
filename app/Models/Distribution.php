@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Config;
  */
 class Distribution extends Model
 {
+    protected $hidden = ['pivot'];
+
     public function getConnectionName()
     {
         return Config::get('database.default');
