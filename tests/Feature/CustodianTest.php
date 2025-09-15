@@ -6,7 +6,7 @@ use DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-
+use Illuminate\Support\Str;
 use App\Models\Custodian;
 use App\Models\CollectionHost;
 
@@ -21,15 +21,8 @@ class CustodianTest extends TestCase
         parent::setUp();
 
         $this->payload = [
+            'pid' => (string)Str::uuid(),
             'name' => fake()->company,
-            'street_address' => fake()->streetAddress,
-            'city' => fake()->city,
-            'postal_code' => fake()->postcode,
-            'phone' => fake()->phoneNumber,
-            'country' => fake()->country,
-            'url' => fake()->url,
-            'email' => fake()->unique()->safeEmail,
-            'user_id' => null,
         ];
     }
 
@@ -40,7 +33,7 @@ class CustodianTest extends TestCase
 
         $content = $response->json();
         $this->assertIsArray($content['data']);
-        $this->assertNotEmpty($content['data'][count($content['data']) -1]['hosts']);
+        $this->assertNotEmpty($content['data'][count($content['data']) - 1]['hosts']);
     }
 
     public function test_the_application_can_show_a_custodian(): void
@@ -61,7 +54,6 @@ class CustodianTest extends TestCase
     public function test_the_application_can_create_a_custodian(): void
     {
         DB::table('custodians')->truncate();
-
         $response = $this->post($this->url, $this->payload);
         $response->assertStatus(201);
 

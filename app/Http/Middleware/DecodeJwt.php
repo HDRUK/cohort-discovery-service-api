@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Custodian;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class DecodeJwt
 {
@@ -30,7 +32,17 @@ class DecodeJwt
 
             $jwtUser = $claims->user ?? null;
             $userEmail = $jwtUser->email;
-
+            $teams = $jwtUser->teams;
+            foreach ($teams as $team) {
+                Custodian::firstOrCreate(
+                    ['gateway_team_id' => $team->id],
+                    [
+                        'pid' => Str::uuid(),
+                        'name' => $team->name,
+                        'gateway_team_name' => $team->name,
+                    ]
+                );
+            }
 
             if ($userEmail) {
                 $user = User::where('email', $userEmail)->first();
