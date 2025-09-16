@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Passport\Passport;
 
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
+use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +23,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(ClaimMappingService::class);
+        $this->app->singleton(ClaimMappingService::class, function () {
+            return (new ClaimMappingService())
+                ->setMap(config('claimsaccesscontrol.workgroup_mappings'));
+        });
+
+        $this->app->singleton(ClaimResolverService::class, function ($app) {
+            return new ClaimResolverService(
+                $app->make(ClaimMappingService::class)
+            );
+        });
     }
 
     /**
@@ -47,10 +57,5 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
         });
-
-        // Register our custom workgroup mappings
-        app(ClaimMappingService::class)
-            ->setMap(config('claimsaccesscontrol.workgroup_mappings'));
-        // ->setMap(config('claimsaccesscontrol.gateway_mappings'));
     }
 }

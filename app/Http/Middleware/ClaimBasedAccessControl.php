@@ -13,7 +13,6 @@ use Lcobucci\JWT\Signer\Key\InMemory;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 
 use App\Traits\Responses;
@@ -42,9 +41,7 @@ class ClaimBasedAccessControl
             /** @phpstan-ignore-next-line */
             $user = $token->claims()->get('user');
 
-            $claimMappingService = app(ClaimMappingService::class);
-            $claimResolverService = new ClaimResolverService($claimMappingService);
-
+            $claimResolverService = app(ClaimResolverService::class);
 
             // normalise the workgroup claims to determine access
             $newArr = $this->normaliseWorkgroups($user['workgroups']);
