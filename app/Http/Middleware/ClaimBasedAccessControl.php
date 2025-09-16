@@ -41,17 +41,23 @@ class ClaimBasedAccessControl
         /** @phpstan-ignore-next-line */
         $user = $token->claims()->get('user');
 
-        $claimMappingService = new ClaimMappingService();
+        $claimMappingService = app(ClaimMappingService::class);
+
+        $claimMappingService->setMap(config('claimsaccesscontrol.workgroup_mappings'));
+        $claimMappingService->setMap(config('claimsaccesscontrol.gateway_mappings'));
         $claimResolverService = new ClaimResolverService($claimMappingService);
+
 
         // normalise the workgroup claims to determine access
         $newArr = $this->normaliseWorkgroups($user['workgroups']);
-        unset($user['workgroups']);
         $user['workgroups'] = $newArr['workgroups'];
 
         foreach ($claims as $claim) {
-            $resolution = $claimResolverService->hasWorkgroup($user, config('claims-access.default_system'), $claim);
-
+            $resolution = $claimResolverService->hasWorkgroup(
+                $user,
+                config('claims-access.default_system'),
+                $claim
+            );
             if ($resolution) {
                 return $next($request);
             }

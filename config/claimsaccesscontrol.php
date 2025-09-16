@@ -24,4 +24,7 @@ return [
         'uk-research' => 'internal-uk-research',
         'nhs-sde' => 'internal-nhs-sde',
     ],
+    'gateway_mappings' => [
+        'admin' => 'cohort-admin',
+    ],
 ];

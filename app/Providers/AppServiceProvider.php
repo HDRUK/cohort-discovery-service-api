@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ClaimMappingService::class);
     }
 
     /**
@@ -49,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Register our custom workgroup mappings
-        app(ClaimMappingService::class)->setMap(config('claimsaccesscontrol.workgroup_mappings'));
+        app(ClaimMappingService::class)
+            ->setMap(config('claimsaccesscontrol.workgroup_mappings'));
+        // ->setMap(config('claimsaccesscontrol.gateway_mappings'));
     }
 }

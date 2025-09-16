@@ -27,23 +27,19 @@ Route::post('/v1/applications', [ApplicationController::class, 'store']);
 Route::post('/v1/users/{id}/workgroup/add', [UserController::class, 'addToWorkgroup'])->middleware('cbac:admin');
 Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFromWorkgroup'])->middleware('cbac:admin');
 
-Route::middleware('cbac:admin')->group(function () {
+Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
     Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
     Route::put('/v1/workgroups/{id}', [WorkgroupController::class, 'update']);
     Route::delete('/v1/workgroups/{id}', [WorkgroupController::class, 'destroy']);
-});
 
-Route::middleware('cbac:admin')->group(function () {
     Route::get('/v1/custodians', [CustodianController::class, 'index']);
     Route::get('/v1/custodians/{id}', [CustodianController::class, 'show']);
     Route::post('/v1/custodians', [CustodianController::class, 'store']);
     Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
     Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);
-});
 
-Route::middleware('cbac:admin')->group(function () {
     Route::get('/v1/collection_hosts', [CollectionHostController::class, 'index']);
     Route::get('/v1/collection_hosts/{id}', [CollectionHostController::class, 'show']);
     Route::post('/v1/collection_hosts', [CollectionHostController::class, 'store']);
