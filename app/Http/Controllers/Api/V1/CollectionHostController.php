@@ -44,7 +44,6 @@ class CollectionHostController extends Controller
     {
         $custodian = Custodian::where('pid', $custodianPid)->first();
         $custodianId = $custodian->id;
-        error_log('here i am');
         return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)->with('collections')->get());
     }
 
