@@ -59,13 +59,13 @@ abstract class TestCase extends BaseTestCase
         };
 
         $now = time();
-        $payload = array_merge([
+        $payload = array_replace_recursive([
             'iss'  => 'test-suite',
             'iat'  => $now,
             'exp'  => $now + 3600,
             'user' => [
                 'email' => $email,
-                'teams' => []
+                'admin_teams' => []
             ],
         ], $overrides);
 

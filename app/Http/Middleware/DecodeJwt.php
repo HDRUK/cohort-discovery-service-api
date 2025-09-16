@@ -56,7 +56,6 @@ class DecodeJwt
         } catch (\Exception $e) {
             return response()->json(['error' => 'Invalid token: ' . $e->getMessage()], 401);
         }
-
         return $next($request);
     }
 }

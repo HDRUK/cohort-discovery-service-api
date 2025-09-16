@@ -14,7 +14,7 @@ return [
      * unknown to ClaimsBasedAccessControl package.
      */
     'workgroup_mappings' => [
-        'admin' => 'internal-highest',
+        'admin' => 'cohort-admin',
         'default' => 'internal-lowest',
         'custodian' => 'internal-owner',
         'non-uk-industry' => 'internal-non-uk-industry',
@@ -23,8 +23,5 @@ return [
         'uk-industry' => 'internal-uk-industry',
         'uk-research' => 'internal-uk-research',
         'nhs-sde' => 'internal-nhs-sde',
-    ],
-    'gateway_mappings' => [
-        'admin' => 'cohort-admin',
-    ],
+    ]
 ];
