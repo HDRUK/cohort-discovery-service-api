@@ -1,8 +1,5 @@
 <?php
 
-use App\Http\Middleware\DecodeJwt;
-use App\Http\Middleware\ClaimBasedAccessControl;
-use App\Http\Middleware\CollectionHostBasicAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,11 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'decode.jwt' => DecodeJwt::class,
-            'cbac' => ClaimBasedAccessControl::class,
-            //'client_basic_auth' => CollectionHostBasicAuth::class,
-        ]);
+        // $middleware->aliasRouteMiddleware([
+        //     'cbac' => \App\Http\Middleware\ClaimBasedAccessControl::class,
+        //     'client_basic_auth' => \App\Http\Middleware\CollectionHostBasicAuth::class,
+        // ]);
+
         $middleware->append(\App\Http\Middleware\LogHttpRequests::class);
         $middleware->append(\App\Http\Middleware\AuditRequests::class);
     })
