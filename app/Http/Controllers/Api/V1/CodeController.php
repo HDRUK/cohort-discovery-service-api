@@ -42,7 +42,8 @@ class CodeController extends Controller
 
         $codes = Distribution::query()
             ->whereRaw("name REGEXP '^[0-9]+$'")
-            ->whereRaw("CAST(name AS UNSIGNED) != 0")
+            ->where("concept_id", ">", 0)
+            ->whereNotNull('concept_id')
             ->when($collectionPid, function ($query, $collectionPid) {
                 $query->where('collection_id', $collectionPid);
             })
@@ -68,7 +69,8 @@ class CodeController extends Controller
 
             $codes = Distribution::query()
                 ->whereRaw("name REGEXP '^[0-9]+$'")
-                ->whereRaw("CAST(name AS UNSIGNED) != 0")
+                ->where("concept_id", ">", 0)
+                ->whereNotNull('concept_id')
                 ->where('collection_id', Collection::where(['pid' => $collectionPid])->first()->id)
                 ->select([
                     'name',
