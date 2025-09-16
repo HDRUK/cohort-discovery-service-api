@@ -32,7 +32,7 @@ class DecodeJwt
 
             $jwtUser = $claims->user ?? null;
             $userEmail = $jwtUser->email;
-            $teams = $jwtUser->teams;
+            $teams = $jwtUser->admin_teams;
             foreach ($teams as $team) {
                 Custodian::firstOrCreate(
                     ['gateway_team_id' => $team->id],

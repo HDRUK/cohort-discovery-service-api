@@ -49,6 +49,11 @@ Route::middleware('cbac:admin')->group(function () {
     Route::post('/v1/collection_hosts', [CollectionHostController::class, 'store']);
     Route::put('/v1/collection_hosts/{id}', [CollectionHostController::class, 'update']);
     Route::delete('/v1/collection_hosts/{id}', [CollectionHostController::class, 'destroy']);
+
+    Route::get('/v1/custodians/{custodianPid}/collection_hosts', [CollectionHostController::class, 'indexByCustodian']);
+
+    Route::get('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'indexByCustodian']);
+    Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
 });
 
 Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob'])
@@ -68,17 +73,13 @@ Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'r
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
-});
 
-
-Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
     Route::get('/v1/queries', [QueryController::class, 'getQueries']);
     Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
-});
 
-Route::middleware(['decode.jwt'])->group(function () {
+
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
     Route::get('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'show']);
@@ -86,18 +87,18 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/concept_sets/{conceptSet}/clear', [ConceptSetController::class, 'clear']);
     Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
+
+
+    Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+    Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
+    Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
+
+    Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
+    Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
+    Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
+
+    Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
 });
-
-
-
-Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
-Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
-
-Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
-Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
-Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
-
-Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
 
 Route::get('/status', function (Request $request) {
     return response()->json([

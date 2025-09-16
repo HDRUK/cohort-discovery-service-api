@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Traits\Responses;
 
 use App\Models\CollectionHost;
+use App\Models\Custodian;
 
 /**
  * @OA\Tag(
@@ -37,6 +38,14 @@ class CollectionHostController extends Controller
     public function index(Request $request): JsonResponse
     {
         return $this->OKResponse(CollectionHost::with('collections')->get());
+    }
+
+    public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
+    {
+        $custodian = Custodian::where('pid', $custodianPid)->first();
+        $custodianId = $custodian->id;
+        error_log('here i am');
+        return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)->with('collections')->get());
     }
 
     /**
