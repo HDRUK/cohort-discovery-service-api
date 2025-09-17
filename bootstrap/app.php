@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'decode.jwt' => DecodeJwt::class,
-            //'cbac' => ClaimBasedAccessControl::class,
+            'cbac' => ClaimBasedAccessControl::class,
             //'client_basic_auth' => CollectionHostBasicAuth::class,
         ]);
         $middleware->append(\App\Http\Middleware\LogHttpRequests::class);

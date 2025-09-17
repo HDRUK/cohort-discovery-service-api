@@ -13,7 +13,6 @@ use Lcobucci\JWT\Signer\Key\InMemory;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 
 use App\Traits\Responses;
@@ -28,37 +27,42 @@ class ClaimBasedAccessControl
      */
     public function handle(Request $request, Closure $next, ...$claims): Response
     {
-        // Decode JWT token and check claims
-        $request->header('Authorization');
-        $token = $request->bearerToken();
+        try {
+            // Decode JWT token and check claims
+            $request->header('Authorization');
+            $token = $request->bearerToken();
 
-        $signer = new Sha256();
-        $key = InMemory::plainText(config('gateway.jwt_secret'));
+            $signer = new Sha256();
+            $key = InMemory::plainText(config('gateway.jwt_secret'));
 
-        $config = Configuration::forSymmetricSigner($signer, $key);
-        $token = $config->parser()->parse($token);
+            $config = Configuration::forSymmetricSigner($signer, $key);
+            $token = $config->parser()->parse($token);
 
-        /** @phpstan-ignore-next-line */
-        $user = $token->claims()->get('user');
+            /** @phpstan-ignore-next-line */
+            $user = $token->claims()->get('user');
 
-        $claimMappingService = new ClaimMappingService();
-        $claimResolverService = new ClaimResolverService($claimMappingService);
+            $claimResolverService = app(ClaimResolverService::class);
 
-        // normalise the workgroup claims to determine access
-        $newArr = $this->normaliseWorkgroups($user['workgroups']);
-        unset($user['workgroups']);
-        $user['workgroups'] = $newArr['workgroups'];
+            // normalise the workgroup claims to determine access
+            $newArr = $this->normaliseWorkgroups($user['workgroups']);
+            $user['workgroups'] = $newArr['workgroups']; #cohort-admin
 
-        foreach ($claims as $claim) {
-            $resolution = $claimResolverService->hasWorkgroup($user, config('claims-access.default_system'), $claim);
-
-            if ($resolution) {
-                return $next($request);
+            foreach ($claims as $claim) {
+                $resolution = $claimResolverService->hasWorkgroup(
+                    $user,
+                    config('claims-access.default_system'),
+                    $claim
+                );
+                if ($resolution) {
+                    return $next($request);
+                }
             }
-        }
 
-        // Return unauthorized response if claim is not found
-        return $this->UnauthorisedResponse();
+            // Return unauthorized response if claim is not found
+            return $this->UnauthorisedResponse();
+        } catch (\Exception $e) {
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     public function normaliseWorkgroups(array $data): array

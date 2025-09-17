@@ -32,7 +32,7 @@ class DecodeJwt
 
             $jwtUser = $claims->user ?? null;
             $userEmail = $jwtUser->email;
-            $teams = $jwtUser->teams;
+            $teams = $jwtUser->admin_teams;
             foreach ($teams as $team) {
                 Custodian::firstOrCreate(
                     ['gateway_team_id' => $team->id],
@@ -56,7 +56,6 @@ class DecodeJwt
         } catch (\Exception $e) {
             return response()->json(['error' => 'Invalid token: ' . $e->getMessage()], 401);
         }
-
         return $next($request);
     }
 }

@@ -38,16 +38,22 @@ class CodeController extends Controller
     {
         $perPage = $this->resolvePerPage();
         $totalCollections = Collection::count();
+        $collectionPid = $request->input('collection_pid');
 
         $codes = Distribution::query()
             ->whereRaw("name REGEXP '^[0-9]+$'")
-            ->whereRaw("CAST(name AS UNSIGNED) != 0")
+            ->where("concept_id", ">", 0)
+            ->whereNotNull('concept_id')
+            ->when($collectionPid, function ($query, $collectionPid) {
+                $query->where('collection_id', $collectionPid);
+            })
             ->select([
                 'name',
                 'description',
                 'category',
                 DB::raw('COUNT(DISTINCT collection_id) AS collections_count'),
-                DB::raw('ROUND(COUNT(DISTINCT collection_id) * 100.0 / ' . (int) $totalCollections . ', 2) AS collections_pct')
+                DB::raw('ROUND(COUNT(DISTINCT collection_id) * 100.0 / ' . (int) $totalCollections . ', 2) AS collections_pct'),
+                DB::raw('SUM(`count`) AS total_count')
             ])
             ->groupBy('name', 'description', 'category')
             ->orderByDesc('collections_count')
@@ -55,6 +61,32 @@ class CodeController extends Controller
 
         return $this->OKResponse($codes);
     }
+
+    public function getCollectionCodeStats(Request $request, string $collectionPid)
+    {
+        try {
+            $perPage = $this->resolvePerPage();
+
+            $codes = Distribution::query()
+                ->whereRaw("name REGEXP '^[0-9]+$'")
+                ->where("concept_id", ">", 0)
+                ->whereNotNull('concept_id')
+                ->where('collection_id', Collection::where(['pid' => $collectionPid])->first()->id)
+                ->select([
+                    'name',
+                    'description',
+                    'category',
+                    'count'
+                ])
+                ->orderByDesc('count')
+                ->paginate($perPage);
+
+            return $this->OKResponse($codes);
+        } catch (\Exception $e) {
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
 
 
     public function getCodes(Request $request, string $domain)
