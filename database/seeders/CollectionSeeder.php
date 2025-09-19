@@ -14,36 +14,10 @@ class CollectionSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedCollectionWithDemographics(
-            name: 'Bunny Example',
-            pid: 'db6d9b451b818ccc9a449383f2f0c450',
-            url: null,
-            type: QueryContextType::Bunny,
-            maleCount: 560,
-            femaleCount: 570
-        );
 
         $this->seedCollectionWithDemographics(
-            name: 'OMOP Synthea 1k',
-            pid: '9de96ebd8d30dd931f9b90d2615c4b9d',
-            url: null,
-            type: QueryContextType::Bunny,
-            maleCount: 200,
-            femaleCount: 1000
-        );
-
-        $this->seedCollectionWithDemographics(
-            name: 'Mock Dataset 250k',
-            pid: '196b0f14eba66e10fba74dbf9e99c22f',
-            url: null,
-            type: QueryContextType::Bunny,
-            maleCount: 0,
-            femaleCount: 0
-        );
-
-        $this->seedCollectionWithDemographics(
-            name: 'Mock Covid Dataset 5M',
-            pid: '43874274f7be1df2959b29c4b5afba47',
+            name: 'COVID-19 Antibody CKD dataset',
+            pid: 'a6c4f998-b837-4177-8e42-b941433abf44',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
@@ -62,7 +36,13 @@ class CollectionSeeder extends Seeder
             'custodian_id' => $custodianId,
         ]);
 
-        $collectionHost = CollectionHost::where('custodian_id', $custodianId)->first();
+        $collectionHost = CollectionHost::firstOrCreate([
+            'name' => 'default-seeded-collection-host',
+            'query_context_type' => 'bunny',
+            'client_id' => 'ada604e0a5102c99e1cc989a97ae5da7cecd1edb01ca9d4b76be625dacad1107',
+            'client_secret' => '00b261878aaf222f23becaec888b8b2907488bf3b4cfc5088482c68a841a6eb8',
+            'custodian_id' => $custodianId
+        ]);
 
         CollectionHostHasCollection::create([
             'collection_host_id' => $collectionHost->id,
@@ -77,6 +57,7 @@ class CollectionSeeder extends Seeder
 
 
         foreach ($distributions as $dist) {
+            if ($dist['count'] < 1) continue;
             Distribution::create([
                 'collection_id' => $collection->id,
                 'category' => 'DEMOGRAPHICS',

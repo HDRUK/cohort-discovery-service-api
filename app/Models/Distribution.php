@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\SearchManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Config;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Config;
  */
 class Distribution extends Model
 {
+    use SearchManager;
+
     protected $hidden = ['pivot'];
 
     public function getConnectionName()

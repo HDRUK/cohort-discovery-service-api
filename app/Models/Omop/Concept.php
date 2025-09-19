@@ -3,6 +3,7 @@
 namespace App\Models\Omop;
 
 use App\Models\Distribution;
+use App\Traits\SearchManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Concept extends Model
 {
+    use SearchManager;
+
     protected $connection = 'omop';
     protected $table = 'concept';
     protected $primaryKey = 'concept_id';

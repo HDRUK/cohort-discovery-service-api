@@ -4,15 +4,32 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Distribution;
+use App\Models\Collection;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
+use Illuminate\Http\Request;
 
 class OmopController extends Controller
 {
     use Responses;
     use HelperFunctions;
+
+
+    public function getConcept($concept_id)
+    {
+        $concept = Concept::find($concept_id);
+        if (!$concept) {
+            return $this->NotFoundResponse();
+        }
+        $concept->load([
+            'distributions:id,count,concept_id,collection_id',
+            'distributions.collection:id,name'
+        ]);
+
+        return $this->OKResponse($concept);
+    }
 
     public function getPeersAtLevel($concept_id)
     {
@@ -69,5 +86,35 @@ class OmopController extends Controller
 
 
         return response()->json($desc);
+    }
+
+    public function searchConcepts(Request $request)
+    {
+        try {
+            $perPage = $this->resolvePerPage();
+            $collectionPids = $request->input('collections');
+            $domain = $request->input('domain');
+
+
+            $codes = Distribution::query()
+                ->when($collectionPids, function ($q, $pids) {
+                    $collectionIds = Collection::whereIn('pid', $pids)->pluck('id');
+                    $q->whereIn('collection_id', $collectionIds);
+                })
+                ->whereNotNull('concept_id')
+                ->where('concept_id', '>', 0)
+                ->when($domain, function ($q, $domain) {
+                    $q->whereRaw('LOWER(category) = ?', [strtolower($domain)]);
+                })
+                ->select('name', 'concept_id', 'description')
+                ->distinct()
+                ->searchViaRequest($request->only(['concept_id', 'description']))
+                ->paginate($perPage);
+
+            return $this->OKResponse($codes);
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 }
