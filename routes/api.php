@@ -80,6 +80,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
     Route::get('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'show']);
     Route::put('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'update']);
+    Route::delete('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'destroy']);
     Route::delete('/v1/concept_sets/{conceptSet}/clear', [ConceptSetController::class, 'clear']);
     Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
@@ -93,7 +94,10 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
     Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
 
+
+    Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
+    Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 });
 
 Route::get('/status', function (Request $request) {

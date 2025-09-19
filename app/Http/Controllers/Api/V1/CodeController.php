@@ -88,23 +88,26 @@ class CodeController extends Controller
     }
 
 
-
     public function getCodes(Request $request, string $domain)
     {
-        $collectionPids = $request->input('collections');
-        $collectionsQuery = Collection::query();
+        try {
+            $collectionPids = $request->input('collections');
+            $codes = Distribution::query()
+                ->when($collectionPids, function ($q, $pids) {
+                    $collectionIds = Collection::whereIn('pid', $pids)->pluck('id');
+                    $q->whereIn('collection_id', $collectionIds);
+                })
+                ->whereNotNull('concept_id')
+                ->where('concept_id', '>', 0)
+                ->whereRaw('LOWER(category) = ?', [strtolower($domain)])
+                ->select('name', 'description')
+                ->distinct()
+                ->get();
 
-        if (is_array($collectionPids) && count($collectionPids)) {
-            $collectionsQuery->whereIn('pid', $collectionPids);
+            return $this->OKResponse($codes);
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
         }
-
-        $collectionIds = $collectionsQuery->pluck('id');
-        $codes = Distribution::whereIn('collection_id', $collectionIds)
-            ->whereRaw('LOWER(category) = ?', [strtolower($domain)])
-            ->select('name', 'description')
-            ->distinct()
-            ->get();
-
-        return $this->OKResponse($codes);
     }
 }

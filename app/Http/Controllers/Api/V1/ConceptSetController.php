@@ -96,6 +96,16 @@ class ConceptSetController extends Controller
         }
     }
 
+    public function destroy(ConceptSet $conceptSet)
+    {
+        try {
+            $conceptSet->delete();
+            return $this->OKResponse([]);
+        } catch (\Exception $e) {
+            return $this->ErrorResponse('Unable to delete concept set.');
+        }
+    }
+
     public function attachConcept(Request $request, ConceptSet $conceptSet, int $conceptId)
     {
         if (Gate::denies('view', $conceptSet)) {

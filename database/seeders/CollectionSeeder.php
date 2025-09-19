@@ -14,7 +14,7 @@ class CollectionSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedCollectionWithDemographics(
+        /*$this->seedCollectionWithDemographics(
             name: 'Bunny Example',
             pid: 'db6d9b451b818ccc9a449383f2f0c450',
             url: null,
@@ -39,11 +39,11 @@ class CollectionSeeder extends Seeder
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0
-        );
+        );*/
 
         $this->seedCollectionWithDemographics(
             name: 'Mock Covid Dataset 5M',
-            pid: '43874274f7be1df2959b29c4b5afba47',
+            pid: 'a6c4f998-b837-4177-8e42-b941433abf44',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,

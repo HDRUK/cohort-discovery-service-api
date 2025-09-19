@@ -16,8 +16,6 @@ return new class extends Migration {
             $table->text('description')->nullable();
 
             $table->timestamps();
-
-            $table->unique(['user_id', 'domain', 'name']);
         });
     }
 
