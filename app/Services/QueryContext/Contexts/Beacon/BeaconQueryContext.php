@@ -63,7 +63,7 @@ class BeaconQueryContext implements QueryContextInterface
                     'apiVersion' => '2.0',
                 ],
                 'query' => [
-                    'filters' => array_values($filters),
+                    'filters' => $filters,
                     'includeResultsetResponses' => 'HIT',
                     'testMode' => false,
                     'requestedGranularity' => 'count',
@@ -97,7 +97,7 @@ class BeaconQueryContext implements QueryContextInterface
         return $leaves;
     }
 
-    private function mapConceptToCode(int $conceptId): ?string
+    private function mapConceptToCode(int $conceptId): string
     {
         $concept = Concept::where('concept_id', $conceptId)
             ->select(['concept_code', 'vocabulary_id'])

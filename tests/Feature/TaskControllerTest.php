@@ -12,7 +12,7 @@ use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
-
+use App\Services\QueryContext\QueryContextType;
 use Illuminate\Support\Facades\Route;
 
 use Tests\TestCase;
@@ -107,8 +107,40 @@ class TaskControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_receives_and_stores_query_result()
     {
-        $task = Task::factory()->create();
-        $collection = Collection::find($task->collection_id);
+        $collection = Collection::factory()->create([
+            'type' => QueryContextType::Bunny
+        ]);
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
+
+        $payload = ['queryResult' => ['count' => 42]];
+
+        $response = $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            $payload
+        );
+
+        $response->assertCreated()
+            ->assertJson([
+                'message' => 'success',
+                'data' => [
+                    'message' => 'Result received successfully.',
+                ],
+            ]);
+
+        $this->assertDatabaseHas(Result::class, [
+            'task_id' => $task->id,
+            'count' => 42
+        ]);
+
+        $this->assertNotNull($task->fresh()->completed_at);
+
+
+        $collection = Collection::factory()->create([
+            'type' => QueryContextType::Beacon
+        ]);
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
 
         $payload = ['queryResult' => ['count' => 42]];
 

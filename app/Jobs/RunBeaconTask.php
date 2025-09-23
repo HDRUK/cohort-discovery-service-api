@@ -90,7 +90,7 @@ class RunBeaconTask implements ShouldQueue
             }
         } elseif ($task_type === TaskType::B) {
             try {
-
+                // note: this is discovery work
                 $beaconQuery = null;
 
 
