@@ -85,11 +85,14 @@ class QueryContextTest extends TestCase
 
     public function test_application_can_translate_beacon_query(): void
     {
-        // doesnt do anything yet
         $result = $this->beaconContext->translate(self::INPUT_QUERY);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('query', $result);
+        $this->assertArrayHasKey('filters', $result['query']);
 
-        $this->assertIsArray($result, 'Beacon query translation did not return an array.');
-        $this->assertEquals(self::INPUT_QUERY, $result, 'Beacon translation did not match input.');
+        $firstRule = $result['query']['filters'][0] ?? null;
+        $this->assertIsArray($firstRule);
+        $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
     }
 
     public function test_application_can_translate_via_manager(): void
