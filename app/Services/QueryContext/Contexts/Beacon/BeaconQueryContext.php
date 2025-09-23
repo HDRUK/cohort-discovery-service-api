@@ -5,48 +5,78 @@ namespace App\Services\QueryContext\Contexts\Beacon;
 use App\Models\Omop\Concept;
 use App\Services\QueryContext\QueryContextType;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class BeaconQueryContext implements QueryContextInterface
 {
     public function translate(array $definition): array
     {
-        $filters = [];
+        try {
+            $filters = [];
 
-        foreach ($this->flattenRules($definition) as $rule) {
-            if (!isset($rule['field'], $rule['operator'], $rule['value'])) {
-                continue;
+            foreach ($this->flattenRules($definition) as $rule) {
+                if (!isset($rule['field'], $rule['operator'], $rule['value'])) {
+                    continue;
+                }
+                switch ($rule['field']) {
+                    case 'age':
+                        switch ($rule['operator']) {
+                            case 'between':
+                                $filters[] =    [
+                                    'id' => 'ageOfOnset',
+                                    "scope" => 'individuals.disease.age.iso8601duration',
+                                    'value' => $rule['value'][0],
+                                    'operator' => '>',
+                                ];
+                                $filters[] =    [
+                                    'id' => 'ageOfOnset',
+                                    'scope' => 'individuals.disease.age.iso8601duration',
+                                    'value' => $rule['value'][1],
+                                    'operator' => '<',
+                                ];
+                                break;
+                            default:
+                                $filters[] =    [
+                                    'id' => 'ageOfOnset',
+                                    'scope' => 'individuals.disease.age.iso8601duration',
+                                    'value' => $rule['value'],
+                                    'operator' => (string)$rule['operator']
+                                ];
+                                break;
+                        }
+                        break;
+                    default:
+                        $id = $this->mapConceptToCode((int)$rule['value']);
+                        $filters[] = [
+                            'id' => $id,
+                            'includeDescendantTerms' => true,
+                        ];
+                        break;
+                }
             }
-            switch ($rule['field']) {
-                case 'age':
-                    $filters[] = [
-                        'id' => 'ageOfOnset',
-                        'value' => (string)$rule['value'],
-                        'operator' => (string)$rule['operator'],
-                    ];
-                    break;
+            $out = [
+                'meta' => [
+                    'apiVersion' => '2.0',
+                ],
+                'query' => [
+                    'filters' => array_values($filters),
+                    'includeResultsetResponses' => 'HIT',
+                    'testMode' => false,
+                    'requestedGranularity' => 'count',
+                ],
+            ];
 
-                default:
-                    $id = $this->mapConceptToCode((string)$rule['value']);
-                    $filters[] = [
-                        'id' => $id,
-                        'includeDescendantTerms' => true,
-                    ];
-                    break;
-            }
+            return $out;
+        } catch (Throwable $e) {
+            Log::error('Error in QueryTranslator::translate', [
+                'message'    => $e->getMessage(),
+                'definition' => $definition,
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
-        $out = [
-            'meta' => [
-                'apiVersion' => '2.0',
-            ],
-            'query' => [
-                'filters' => array_values($filters),
-                'includeResultsetResponses' => 'HIT',
-                'testMode' => false,
-                'requestedGranularity' => 'count',
-            ],
-        ];
-
-        return $out;
     }
 
     private function flattenRules(array $node): array
@@ -64,11 +94,12 @@ class BeaconQueryContext implements QueryContextInterface
         return $leaves;
     }
 
-    private function mapConceptToCode(string $conceptId): ?string
+    private function mapConceptToCode(int $conceptId): ?string
     {
         $concept = Concept::where('concept_id', $conceptId)
             ->select(['concept_code', 'vocabulary_id'])
-            ->first();
+            ->firstOrFail();
+
         $vocab = $concept->vocabulary_id;
         $code = $concept->concept_code;
 

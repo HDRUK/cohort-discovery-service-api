@@ -72,7 +72,6 @@ class QueryContextTest extends TestCase
     public function test_application_can_translate_bunny_query(): void
     {
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
-
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
