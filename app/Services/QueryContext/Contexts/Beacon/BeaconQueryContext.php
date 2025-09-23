@@ -12,6 +12,9 @@ class BeaconQueryContext implements QueryContextInterface
 {
     public function translate(array $definition): array
     {
+        // note: this is discovery work
+        // - still a lot to be done and improved upon
+        // - it shows how simple query can be translated to work with beacon
         try {
             $filters = [];
 
@@ -50,7 +53,7 @@ class BeaconQueryContext implements QueryContextInterface
                         $id = $this->mapConceptToCode((int)$rule['value']);
                         $filters[] = [
                             'id' => $id,
-                            'includeDescendantTerms' => true,
+                            'includeDescendantTerms' => true, // revisit
                         ];
                         break;
                 }
