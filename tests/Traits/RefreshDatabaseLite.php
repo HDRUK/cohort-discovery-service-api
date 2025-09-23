@@ -15,37 +15,53 @@ trait RefreshDatabaseLite
     {
         parent::setUp();
 
+        $appDb   = database_path('testing.sqlite');
+        $omopDb  = database_path('omop_testing.sqlite');
+
+        if (! file_exists($appDb))  touch($appDb);
+        if (! file_exists($omopDb)) touch($omopDb);
+
+        config()->set('database.default', 'sqlite');
+        config()->set('database.connections.sqlite.database', $appDb);
+
+        config()->set('database.connections.omop', [
+            'driver' => 'sqlite',
+            'database' => $omopDb,
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]);
+
         if (!static::$migrated) {
-            Artisan::call('migrate');
+            Artisan::call('migrate:fresh');
             Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
 
-            /*Artisan::call('db:seed', [
+            Artisan::call('migrate:fresh', [
+                '--database' => 'omop',
+                '--path'     => 'database/migrations_omop',
+            ]);
+
+            Artisan::call('db:seed', [
                 '--class'    => 'SimpleOmopSeeder',
                 '--database' => 'omop',
             ]);
-*/
 
             static::$migrated = true;
 
             // Store the connection (for SQLite in-memory)
             static::$databaseConnection = DB::connection()->getPdo();
-            //static::$omopConnection     = DB::connection('omop')->getPdo();
         }
 
         // Reuse the same connection across tests (fix for SQLite in-memory)
         DB::connection()->setPdo(static::$databaseConnection);
-        //DB::connection('omop')->setPdo(static::$omopConnection);
 
         // Start a manual transaction
         DB::beginTransaction();
-        //DB::connection('omop')->beginTransaction();
     }
 
     public function tearDown(): void
     {
         // Rollback after each test
         DB::rollBack();
-        //DB::connection('omop')->rollBack();
 
         parent::tearDown();
     }
