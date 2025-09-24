@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
+use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\QueryContext\QueryContextType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use App\Traits\Responses;
@@ -97,17 +99,25 @@ class QueryController extends Controller
             $collections->whereIn('pid', $validated['collection_filter']);
         }
 
-        $collections = $collections->pluck('id');
+        $collections = $collections->select(['id', 'type'])->get();
 
         $tasks = [];
 
-        foreach ($collections as $collectionId) {
-            $tasks[] = Task::create([
+        foreach ($collections as $collection) {
+            $collectionId = $collection->id;
+            $type = $collection->type;
+            $task = Task::create([
                 'query_id' => $query->id,
                 'collection_id' => $collectionId,
                 'created_at' => now(),
                 'task_type' => $validated['task_type'],
             ]);
+
+            if ($type === QueryContextType::Beacon) {
+                RunBeaconTask::dispatch($task);
+            }
+
+            $tasks[] = $task;
         }
 
         return $this->CreatedResponse([

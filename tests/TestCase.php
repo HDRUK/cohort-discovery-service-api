@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use Tests\Traits\RefreshDatabaseLite;
+use Illuminate\Support\Facades\Http;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -23,6 +24,17 @@ abstract class TestCase extends BaseTestCase
 
         $this->disableMiddleware();
         $this->disableObservers();
+
+        Http::fake([
+            'http://localhost:5050/api/*' => Http::response([
+                "responseSummary" => [
+                    "exists" => true,
+                    "numTotalResults" => 1000
+                ],
+            ], 200),
+        ]);
+
+        Http::preventStrayRequests();
     }
 
     protected function disableMiddleware(): void

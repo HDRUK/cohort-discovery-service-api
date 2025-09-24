@@ -94,6 +94,7 @@ class CustodianController extends Controller
         $data = $request->validate([
             'pid' => 'nullable|string',
             'name' => 'required|string|max:255',
+            'url' => 'nullable|url',
         ]);
 
         $custodian = Custodian::create($data);
@@ -141,13 +142,7 @@ class CustodianController extends Controller
 
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'street_address' => 'sometimes|required|string|max:255',
-            'city' => 'sometimes|required|string|max:100',
-            'postal_code' => 'sometimes|required|string|max:20',
-            'country' => 'sometimes|required|string|max:100',
             'url' => 'nullable|url',
-            'email' => 'nullable|email',
-            'phone' => 'nullable|string|max:20',
         ]);
 
         $custodian->update($data);

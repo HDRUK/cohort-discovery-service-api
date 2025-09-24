@@ -34,14 +34,18 @@ class DecodeJwt
             $userEmail = $jwtUser->email;
             $teams = $jwtUser->admin_teams;
             foreach ($teams as $team) {
-                Custodian::firstOrCreate(
+                $custodian = Custodian::updateOrCreate(
                     ['gateway_team_id' => $team->id],
                     [
-                        'pid' => Str::uuid(),
                         'name' => $team->name,
                         'gateway_team_name' => $team->name,
                     ]
                 );
+
+                if ($custodian->wasRecentlyCreated) {
+                    $custodian->pid = Str::uuid();
+                    $custodian->save();
+                }
             }
 
             if ($userEmail) {

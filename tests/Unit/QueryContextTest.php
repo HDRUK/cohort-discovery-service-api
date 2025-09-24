@@ -72,7 +72,6 @@ class QueryContextTest extends TestCase
     public function test_application_can_translate_bunny_query(): void
     {
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
-
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
@@ -85,11 +84,14 @@ class QueryContextTest extends TestCase
 
     public function test_application_can_translate_beacon_query(): void
     {
-        // doesnt do anything yet
         $result = $this->beaconContext->translate(self::INPUT_QUERY);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('query', $result);
+        $this->assertArrayHasKey('filters', $result['query']);
 
-        $this->assertIsArray($result, 'Beacon query translation did not return an array.');
-        $this->assertEquals(self::INPUT_QUERY, $result, 'Beacon translation did not match input.');
+        $firstRule = $result['query']['filters'][0] ?? null;
+        $this->assertIsArray($firstRule);
+        $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
     }
 
     public function test_application_can_translate_via_manager(): void
@@ -102,6 +104,6 @@ class QueryContextTest extends TestCase
         // Beacon query via manager (just echoes JSON back as array)
         $beaconResult = $this->manager->handle(self::INPUT_QUERY, QueryContextType::Beacon);
         $this->assertIsArray($beaconResult);
-        $this->assertEquals(self::INPUT_QUERY, $beaconResult, 'Beacon query via manager did not match input.');
+        $this->assertArrayHasKey('query', $beaconResult);
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $concept_id 
  * @property int $domain_id
+ * @property string|int $concept_code
  * @property int $vocabulary_id
  * @property \App\Models\Omop\Concept $ancestors
  * @property \App\Models\Omop\Concept $descendants
