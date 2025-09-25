@@ -9,23 +9,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Passport\Bridge\User as PassportUser;
-use Laravel\Passport\TokenRepository;
-use Laravel\Passport\RefreshTokenRepository;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Token\Parser;
-use Lcobucci\Clock\SystemClock;
 use Lcobucci\JWT\Signer\Key\InMemory;
-
 use App\Traits\Responses;
 
 class AuthController extends Controller

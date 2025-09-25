@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Traits\SearchManager;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Config;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Config;
  */
 class Distribution extends Model
 {
-    use SearchManager;
+    use Search;
 
     protected $hidden = ['pivot'];
 

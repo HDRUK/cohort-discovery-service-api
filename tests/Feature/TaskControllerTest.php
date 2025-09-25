@@ -3,8 +3,6 @@
 namespace Tests\Feature\Api\V1;
 
 use Config;
-
-use App\Enums\TaskType;
 use App\Models\Custodian;
 use App\Models\Collection;
 use App\Models\CollectionHost;
@@ -14,7 +12,6 @@ use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Illuminate\Support\Facades\Route;
-
 use Tests\TestCase;
 
 class TaskControllerTest extends TestCase

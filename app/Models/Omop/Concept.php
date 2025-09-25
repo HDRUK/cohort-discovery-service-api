@@ -3,13 +3,13 @@
 namespace App\Models\Omop;
 
 use App\Models\Distribution;
-use App\Traits\SearchManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
- * @property int $concept_id 
+ * @property int $concept_id
  * @property int $domain_id
  * @property string|int $concept_code
  * @property int $vocabulary_id
@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Concept extends Model
 {
-    use SearchManager;
+    use Search;
 
     protected $connection = 'omop';
     protected $table = 'concept';
@@ -36,6 +36,15 @@ class Concept extends Model
         'concept_class_id',
         'standard_concept',
         'invalid_reason',
+    ];
+
+    protected static array $searchableColumns = [
+        'concept_name',
+    ];
+
+    protected static array $sortableColumns = [
+        'concept_id',
+        'concept_name',
     ];
 
     public function ancestors(): BelongsToMany

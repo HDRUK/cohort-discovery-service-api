@@ -57,7 +57,9 @@ class CollectionSeeder extends Seeder
 
 
         foreach ($distributions as $dist) {
-            if ($dist['count'] < 1) continue;
+            if ($dist['count'] < 1) {
+                continue;
+            }
             Distribution::create([
                 'collection_id' => $collection->id,
                 'category' => 'DEMOGRAPHICS',

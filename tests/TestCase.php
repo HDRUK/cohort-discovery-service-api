@@ -58,8 +58,8 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * @param  \App\Models\User $user  
-     * @param  array  $overrides  
+     * @param  \App\Models\User $user
+     * @param  array  $overrides
      */
     protected function makeJwtToken($user = null, array $overrides = []): string
     {

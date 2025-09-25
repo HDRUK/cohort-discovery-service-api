@@ -10,7 +10,6 @@ use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-
 class CodeController extends Controller
 {
     use Responses;

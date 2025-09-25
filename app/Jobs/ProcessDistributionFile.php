@@ -14,20 +14,27 @@ use RuntimeException;
 
 class ProcessDistributionFile implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $timeout   = 900;
     public $tries     = 3;
     public $backoff   = [30, 120, 300];
     public $batchSize = 500;
 
-    public function __construct(public int $resultFileId) {}
+    public function __construct(public int $resultFileId)
+    {
+    }
 
     public function handle(): void
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
-        if ($file->status === ResultFile::STATUS_DONE) return;
+        if ($file->status === ResultFile::STATUS_DONE) {
+            return;
+        }
 
         $file->markProcessing();
 
@@ -41,7 +48,7 @@ class ProcessDistributionFile implements ShouldQueue
         $rowsProcessed = 0;
         $now = now();
 
-        $codeField = $file->file_name === 'code.distribution' ? 'OMOP'       : 'CODE';
+        $codeField = $file->file_name === 'code.distribution' ? 'OMOP' : 'CODE';
         $descField = $file->file_name === 'code.distribution' ? 'OMOP_DESCR' : 'DESCRIPTION';
 
         try {
@@ -50,17 +57,23 @@ class ProcessDistributionFile implements ShouldQueue
 
                 if ($header === null) {
                     $header = preg_split("/\t/", $line);
-                    if (!$header) continue;
+                    if (!$header) {
+                        continue;
+                    }
 
                     $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
                     continue;
                 }
 
                 $cols = preg_split("/\t/", $line, -1);
-                if (count($cols) !== count($header)) continue;
+                if (count($cols) !== count($header)) {
+                    continue;
+                }
 
                 $row = array_combine($header, $cols);
-                if (!isset($row['COUNT'])) continue;
+                if (!isset($row['COUNT'])) {
+                    continue;
+                }
 
 
                 $conceptId = $row[$codeField] ?? $row['CODE'] ?? null;

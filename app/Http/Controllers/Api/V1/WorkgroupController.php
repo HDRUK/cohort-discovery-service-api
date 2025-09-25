@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
-
 use App\Models\Workgroup;
-
 use App\Http\Controllers\Controller;
-
 use App\Traits\Responses;
 
 class WorkgroupController extends Controller

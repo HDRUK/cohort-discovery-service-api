@@ -11,9 +11,6 @@ use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 
-use App\Models\Workgroup;
-use App\Models\UserHasWorkgroup;
-
 class User extends Authenticatable implements OAuthenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -37,7 +34,7 @@ class User extends Authenticatable implements OAuthenticatable
         'apis:create' => 'Create operations for open APIs',
         'apis:read' => 'Read operations for open APIs',
         'apis:update' => 'Update operations for open APIs',
-        'apis:delete' => 'Delete operations for open APIs', 
+        'apis:delete' => 'Delete operations for open APIs',
     ];
 
     /**

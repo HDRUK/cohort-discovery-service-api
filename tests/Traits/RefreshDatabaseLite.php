@@ -18,8 +18,12 @@ trait RefreshDatabaseLite
         $appDb   = database_path('testing.sqlite');
         $omopDb  = database_path('omop_testing.sqlite');
 
-        if (! file_exists($appDb))  touch($appDb);
-        if (! file_exists($omopDb)) touch($omopDb);
+        if (! file_exists($appDb)) {
+            touch($appDb);
+        }
+        if (! file_exists($omopDb)) {
+            touch($omopDb);
+        }
 
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', $appDb);
