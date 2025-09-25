@@ -6,10 +6,10 @@ return [
      * Hdruk's ClaimsBasedAccessControl package. This basically allows
      * you to provide local workgroups, that map 1:1 to that of the
      * package.
-     * 
+     *
      * The order is as follows:
      * 'internal-workgroups' => 'external-workgroups'
-     * 
+     *
      * There is currently no scope to provide workgroups that are
      * unknown to ClaimsBasedAccessControl package.
      */

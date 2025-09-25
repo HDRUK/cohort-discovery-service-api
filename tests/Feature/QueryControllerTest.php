@@ -4,9 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\TaskType;
 use App\Models\Collection;
-
 use App\Models\Query;
-
 use App\Models\Task;
 use App\Models\User;
 use Tests\TestCase;

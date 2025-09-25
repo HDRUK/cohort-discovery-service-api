@@ -16,7 +16,7 @@ interface QueryContextInterface
 
     /**
      * Return the type of this QueryContentInterface.
-     * 
+     *
      * @return QueryContextType
      */
     public function getType(): QueryContextType;

@@ -8,7 +8,6 @@ use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
-use App\Models\User;
 use App\Services\QueryContext\QueryContextType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +16,6 @@ use App\Traits\HelperFunctions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum;
-
 
 class QueryController extends Controller
 {

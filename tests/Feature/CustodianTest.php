@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use DB;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use Illuminate\Support\Str;
 use App\Models\Custodian;
@@ -34,6 +32,42 @@ class CustodianTest extends TestCase
         $content = $response->json();
         $this->assertIsArray($content['data']);
         $this->assertNotEmpty($content['data'][count($content['data']) - 1]['hosts']);
+    }
+
+    public function test_the_application_can_list_custodians_sorted(): void
+    {
+        $response = $this->get($this->url . '?sort=name:desc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        rsort($sortedArray, SORT_STRING);
+
+        $this->assertEquals($sortedArray, $content);
+
+        $response = $this->get($this->url . '?sort=name:asc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        sort($sortedArray, SORT_STRING);
+
+        $this->assertEquals($sortedArray, $content);
+    }
+
+    public function test_the_application_can_search_custodians(): void
+    {
+        $cust = Custodian::all()->random(1)->first();
+
+        $response = $this->get($this->url . '?name[]=' . $cust->name);
+        $response->assertStatus(200);
+
+        $content = $response->json();
+        $this->assertIsArray($content['data']);
+        $this->assertTrue(count($content['data']) === 1);
+        $this->assertEquals($content['data'][0]['name'], $cust->name);
     }
 
     public function test_the_application_can_show_a_custodian(): void

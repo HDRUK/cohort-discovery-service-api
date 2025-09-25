@@ -4,13 +4,10 @@ namespace App\Policies;
 
 use App\Models\Custodian;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Auth;
 
 class CustodianPolicy
 {
-
     /**
      * Determine whether the user can access the model.
      */

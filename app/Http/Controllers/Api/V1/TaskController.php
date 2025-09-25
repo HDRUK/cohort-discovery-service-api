@@ -6,7 +6,6 @@ use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDistributionFile;
 use App\Models\Collection;
-
 use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
@@ -17,7 +16,6 @@ use App\Traits\HelperFunctions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-
 
 class TaskController extends Controller
 {
@@ -133,13 +131,13 @@ class TaskController extends Controller
         }
 
 
-        // response needed by Bunny 
+        // response needed by Bunny
         return $this->OKResponseSimple([
             'task_id' => $task->id,
             'uuid' => $task->pid,
             'cohort' => $translatedQuery,
             'project' => 'unknown_project', // ??
-            'owner' => '1', // ?? 
+            'owner' => '1', // ??
             'collection' => $collection->pid,
             'protocol_version' => 'v2', // ??
             'char_salt' => bin2hex(random_bytes(4)), // ??
@@ -228,7 +226,7 @@ class TaskController extends Controller
 
         $task->update([
             'completed_at' => now(),
-            'failed_at' => NULL
+            'failed_at' => null
         ]);
         $task->save();
 

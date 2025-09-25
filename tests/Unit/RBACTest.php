@@ -3,14 +3,8 @@
 namespace Tests\Unit;
 
 use Tests\TestCase;
-
 use App\Models\User;
-use App\Models\Workgroup;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
-
-use Database\Seeders\DatabaseSeeder;
 
 class RBACTest extends TestCase
 {
@@ -33,7 +27,7 @@ class RBACTest extends TestCase
     {
         User::factory(1)->create();
         $user = User::find(1)->first();
-        
+
         $user->assignRole('admin');
 
         $this->assertTrue($user->hasRole('admin'));
@@ -41,7 +35,7 @@ class RBACTest extends TestCase
 
         $user->removeRole('admin');
         $user->assignRole('custodian');
-        
+
         $this->assertTrue($user->hasRole('custodian'));
         $this->assertFalse($user->hasRole('admin'));
         $this->assertFalse($user->can('cohorts:delete'));
@@ -51,7 +45,7 @@ class RBACTest extends TestCase
 
         $this->assertTrue($user->hasRole('researcher'));
         $this->assertFalse($user->hasRole('custodian'));
-        
+
         $this->assertTrue($user->can('cohorts:read'));
         $this->assertTrue($user->can('cohorts:query'));
 

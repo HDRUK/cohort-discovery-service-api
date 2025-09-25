@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
  * @OA\Schema(
@@ -29,6 +30,7 @@ class Custodian extends Model
 {
     /** @use HasFactory<\Database\Factories\CustodianFactory> */
     use HasFactory;
+    use Search;
 
     public $table = 'custodians';
 
@@ -39,6 +41,14 @@ class Custodian extends Model
         'name',
         'gateway_team_id',
         'gateway_team_name',
+    ];
+
+    protected static array $searchableColumns = [
+        'name',
+    ];
+
+    protected static array $sortableColumns = [
+        'name',
     ];
 
     protected static function booted()

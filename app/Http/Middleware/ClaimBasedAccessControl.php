@@ -3,18 +3,12 @@
 namespace App\Http\Middleware;
 
 use Closure;
-
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
-use Lcobucci\JWT\Token\Parser;
-use Lcobucci\Clock\SystemClock;
 use Lcobucci\JWT\Signer\Key\InMemory;
-
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-
 use App\Traits\Responses;
 
 class ClaimBasedAccessControl

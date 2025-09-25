@@ -2,15 +2,11 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use Tests\TestCase;
-
 use App\Models\User;
 use App\Models\Custodian;
 use App\Models\Collection;
 use App\Models\CollectionHost;
-use App\Models\CollectionHostHasCollection;
 
 class CollectionTest extends TestCase
 {

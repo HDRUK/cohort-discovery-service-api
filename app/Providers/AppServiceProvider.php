@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use Carbon\CarbonInterval;
 use Illuminate\Support\ServiceProvider;
-
 use App\Models\User;
 use App\Models\Collection;
 use App\Observers\CollectionObserver;
@@ -12,7 +11,6 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Passport\Passport;
-
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 
@@ -42,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
     {
         /**
          * Configure what token scopes are available to request.
-         * 
+         *
          * Contains a few 'demo' scopes to test oauth2, client
          * creation and code requests.
          */

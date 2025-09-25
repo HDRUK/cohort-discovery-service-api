@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;

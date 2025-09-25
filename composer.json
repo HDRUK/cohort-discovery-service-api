@@ -12,6 +12,7 @@
         "php": "^8.2",
         "firebase/php-jwt": "^6.11",
         "hdruk/claims-based-access-control": "^0.1.11",
+        "hdruk/laravel-search-and-filter": "dev-main",
         "laravel/framework": "^12.4",
         "laravel/horizon": "^5.33",
         "laravel/octane": "^2.12",
@@ -93,6 +94,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/claims-based-access-control"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hdruk/laravel-search-and-filter"
         }
     ],
     "minimum-stability": "dev",

@@ -3,13 +3,9 @@
 namespace Tests\Unit;
 
 use Tests\TestCase;
-
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-
 use App\Models\Workgroup;
-
-use Database\Seeders\DatabaseSeeder;
 
 class CBACTest extends TestCase
 {

@@ -52,5 +52,8 @@ jobs:
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
 
+      - name: Run linting
+        run: "composer run lint"
+
       - name: Run unit tests
         run: "composer run test"

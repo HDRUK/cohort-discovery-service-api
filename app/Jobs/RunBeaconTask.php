@@ -8,19 +8,20 @@ use App\Models\Result;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
-use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RunBeaconTask implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public Task $task;
 
@@ -66,7 +67,7 @@ class RunBeaconTask implements ShouldQueue
 
                 $task->update([
                     'completed_at' => $now,
-                    'failed_at' => NULL
+                    'failed_at' => null
                 ]);
                 $task->save();
             } catch (Throwable $e) {
@@ -175,7 +176,7 @@ class RunBeaconTask implements ShouldQueue
             ->asJson()
             ->timeout(15)
             ->retry(3, 250)
-            // ->withBasicAuth($user, $pass)        
+            // ->withBasicAuth($user, $pass)
             ->post($url, $payload);
 
         $response->throw();

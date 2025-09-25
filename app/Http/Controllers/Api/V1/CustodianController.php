@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-
 use App\Http\Controllers\Controller;
 use App\Models\Custodian;
 use App\Traits\Responses;
@@ -33,7 +32,12 @@ class CustodianController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        return $this->OKResponse(Custodian::with('hosts')->get());
+        return $this->OKResponse(
+            Custodian::with('hosts')
+                ->searchViaRequest()
+                ->applySorting()
+                ->get()
+        );
     }
 
     /**

@@ -9,12 +9,10 @@ use App\Services\QueryContext\QueryContextType;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-
 
 class CollectionController extends Controller
 {
@@ -44,7 +42,9 @@ class CollectionController extends Controller
     public function indexByCustodian(Request $request, string $custodianPid)
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
-        if ($error) return $error;
+        if ($error) {
+            return $error;
+        }
 
         $perPage = $this->resolvePerPage();
         $collections = Collection::query()
@@ -58,7 +58,9 @@ class CollectionController extends Controller
     public function storeByCustodian(Request $request, string $custodianPid)
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
-        if ($error) return $error;
+        if ($error) {
+            return $error;
+        }
 
         try {
             $validated = $request->validate([
@@ -71,7 +73,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
-                        ->where(fn($q) => $q->where('custodian_id', $custodian->id))
+                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id))
                 ],
             ]);
         } catch (ValidationException $e) {

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class RequestAudit extends Model
 {
     public $timestamps = true;
-    
+
     protected $fillable = [
         'user_id',
         'method',

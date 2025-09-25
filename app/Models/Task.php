@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use App\Enums\TaskType;
 
-
-
 /**
  * @property int $id
  * @property \App\Models\Query $submittedQuery

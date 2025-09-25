@@ -4,13 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\UserHasWorkgroup;
-
 use App\Http\Controllers\Controller;
-
 use App\Traits\Responses;
 use Illuminate\Support\Facades\Auth;
 
@@ -48,7 +45,7 @@ class UserController extends Controller
         return $this->OKResponse([]);
     }
 
-    function getMe(Request $request)
+    public function getMe(Request $request)
     {
         $user = User::with('workgroups')->findOrFail(Auth::id());
         return $this->OKResponse($user);
