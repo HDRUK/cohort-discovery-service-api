@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,6 +12,20 @@ use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 
+/**
+ * @OA\Schema(
+ *     schema="User",
+ *     type="object",
+ *     title="User",
+ *     required={"name", "email", "password"},
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Jane Doe"),
+ *     @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
+ *     @OA\Property(property="email_verified_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
+ * )
+ */
 class User extends Authenticatable implements OAuthenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -77,5 +92,37 @@ class User extends Authenticatable implements OAuthenticatable
             Workgroup::class,
             'user_has_workgroups'
         )->using(UserHasWorkgroup::class);
+    }
+
+    public static function withStatus()
+    {
+        return DB::select(
+            '
+                SELECT
+                    u.*,
+                    CASE WHEN COUNT(q.id) > 0 THEN 0 ELSE 1 END AS new_user_status
+                FROM users u
+                LEFT JOIN queries q ON q.user_id = u.id
+                GROUP BY u.id
+            '
+        );
+    }
+
+    public static function findWithStatus(int $id)
+    {
+        return DB::selectOne(
+            '
+                SELECT
+                    u.*,
+                    CASE WHEN COUNT(q.id) > 0 THEN 0 ELSE 1 END AS new_user_status
+                FROM users u
+                LEFT JOIN queries q ON q.user_id = u.id
+                WHERE u.id = ?
+                GROUP BY u.id
+            ',
+            [
+                $id,
+            ]
+        );
     }
 }
