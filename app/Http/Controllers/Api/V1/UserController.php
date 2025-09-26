@@ -18,13 +18,19 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Stub
-        return $this->OKResponse([]);
+        $users = User::withStatus();
+        return $this->OKResponse($users);
     }
 
     public function show(Request $request, int $id): JsonResponse
     {
         // Stub
-        return $this->OKResponse([]);
+        $user = User::findWithStatus($id);
+        if ($user) {
+            return $this->OKResponse($user);
+        }
+
+        return $this->NotFoundResponse();
     }
 
     public function store(Request $request): JsonResponse
