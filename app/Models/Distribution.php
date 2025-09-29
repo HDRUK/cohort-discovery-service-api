@@ -42,6 +42,13 @@ class Distribution extends Model
         'median',
     ];
 
+    protected static $searchableColumns = [
+        'concept_id',
+        'name',
+        'description'
+    ];
+
+
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
