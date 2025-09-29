@@ -51,11 +51,13 @@ class BeaconQueryContext implements QueryContextInterface
                         break;
                     default:
                         $id = $this->mapConceptToCode((int)$rule['value']);
-                        $filters[] = [
-                            'id' => $id,
-                            'includeDescendantTerms' => true, // revisit
-                        ];
-                        break;
+                        if ($id) { // revisit
+                            $filters[] = [
+                                'id' => $id,
+                                'includeDescendantTerms' => true,
+                            ];
+                            break;
+                        }
                 }
             }
             $out = [
@@ -97,11 +99,16 @@ class BeaconQueryContext implements QueryContextInterface
         return $leaves;
     }
 
-    private function mapConceptToCode(int $conceptId): string
+    private function mapConceptToCode(int $conceptId): string|null
     {
         $concept = Concept::where('concept_id', $conceptId)
             ->select(['concept_code', 'vocabulary_id'])
-            ->firstOrFail();
+            ->first();
+
+        if (!$concept) {
+            //revisit - should warn here?
+            return null;
+        }
 
         $vocab = $concept->vocabulary_id;
         $code = $concept->concept_code;
