@@ -123,8 +123,5 @@ class User extends Authenticatable implements OAuthenticatable
                 END AS new_user_status
             ')
         ]);
-        // return $query->selectRaw("users.*, CASE WHEN COUNT(queries.id) > 0 THEN 0 ELSE 1 END AS new_user_status")
-        //     ->leftJoin('queries', 'queries.user_id', '=', 'users.id')
-        //     ->groupBy('users.id', 'queries.id');
     }
 }
