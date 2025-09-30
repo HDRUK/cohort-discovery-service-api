@@ -11,6 +11,8 @@ use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * @OA\Schema(
@@ -34,6 +36,7 @@ class User extends Authenticatable implements OAuthenticatable
     use HasApiTokens;
     use HasRoles;
     use HasScopedClaims;
+    use Search;
 
     public const CLIENT_TOKEN_SCOPES = [
         'cohorts:read' => 'View queries',
@@ -73,6 +76,16 @@ class User extends Authenticatable implements OAuthenticatable
         'remember_token',
     ];
 
+    protected static array $searchableColumns = [
+        'name',
+        'email',
+    ];
+
+    protected static array $sortableColumns = [
+        'id',
+        'name',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -94,35 +107,24 @@ class User extends Authenticatable implements OAuthenticatable
         )->using(UserHasWorkgroup::class);
     }
 
-    public static function withStatus()
+    public function scopeWithStatus(Builder $query): Builder
     {
-        return DB::select(
-            '
-                SELECT
-                    u.*,
-                    CASE WHEN COUNT(q.id) > 0 THEN 0 ELSE 1 END AS new_user_status
-                FROM users u
-                LEFT JOIN queries q ON q.user_id = u.id
-                GROUP BY u.id
-            '
-        );
-    }
-
-    public static function findWithStatus(int $id)
-    {
-        return DB::selectOne(
-            '
-                SELECT
-                    u.*,
-                    CASE WHEN COUNT(q.id) > 0 THEN 0 ELSE 1 END AS new_user_status
-                FROM users u
-                LEFT JOIN queries q ON q.user_id = u.id
-                WHERE u.id = ?
-                GROUP BY u.id
-            ',
-            [
-                $id,
-            ]
-        );
+        return $query->addSelect('users.*')
+            ->addSelect([
+            DB::raw('
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM queries
+                        WHERE queries.user_id = users.id
+                    )
+                    THEN 0
+                    ELSE 1
+                END AS new_user_status
+            ')
+        ]);
+        // return $query->selectRaw("users.*, CASE WHEN COUNT(queries.id) > 0 THEN 0 ELSE 1 END AS new_user_status")
+        //     ->leftJoin('queries', 'queries.user_id', '=', 'users.id')
+        //     ->groupBy('users.id', 'queries.id');
     }
 }

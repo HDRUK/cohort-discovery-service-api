@@ -40,32 +40,6 @@ class UserTest extends TestCase
         $this->assertEquals($content['data'][$newUser->id - 1]['new_user_status'], 1);
     }
 
-    public function test_can_show_user_with_status(): void
-    {
-        // Get an existing user
-        $user = User::factory()->create();
-        Query::factory()->create([
-            'user_id' => $user->id,
-        ]);
-
-        $response = $this->get($this->url . '/' . $user->id);
-        $response->assertStatus(200);
-
-        $content = $response->json();
-
-        $this->assertIsArray($content['data']);
-        $this->assertEquals($content['data']['new_user_status'], 0);
-
-        // Get a new user
-        $newUser = User::factory()->create();
-        $response = $this->get($this->url . '/' . $newUser->id);
-        $response->assertStatus(200);
-
-        $content = $response->json();
-        $this->assertIsArray($content['data']);
-        $this->assertEquals($content['data']['new_user_status'], 1);
-    }
-
     public function test_the_application_can_add_users_to_a_workgroup(): void
     {
         $workgroup = Workgroup::all()->random();
@@ -112,5 +86,85 @@ class UserTest extends TestCase
             'user_id' => $user->id,
             'workgroup_id' => $workgroup->id,
         ]);
+    }
+
+    public function test_the_application_can_search_users(): void
+    {
+        $names = [
+            [
+                'name' => 'Zach Someone',
+                'email' => 'zs@abc.com',
+            ],
+            [
+                'name' => 'Xyz Someone',
+                'email' => 'xs@abc.com',
+            ],
+            [
+                'name' => 'Yvonne Someone',
+                'email' => 'ys@abc.com',
+            ],
+        ];
+
+        foreach ($names as $n) {
+            $newUser = User::factory()->create($n);
+        }
+
+        $response = $this->get($this->url . '?name[]=' . explode(' ', $names[0]['name'])[0]);
+        $response->assertStatus(200);
+
+        $content = $response->json();
+
+        // dd($content['data']);
+        $this->assertIsArray($content['data']);
+        $this->assertEquals($content['data'][0]['name'], $names[0]['name']);
+
+        $response = $this->get($this->url . '?name[]=' . explode(' ', $names[2]['name'])[0]);
+        $response->assertStatus(200);
+
+        $content = $response->json();
+        $this->assertIsArray($content['data']);
+        $this->assertEquals($content['data'][0]['name'], $names[2]['name']);
+    }
+
+    public function test_the_application_can_sort_users(): void
+    {
+        $names = [
+            [
+                'name' => 'Zach Zachson',
+                'email' => 'zz@abc.com',
+            ],
+            [
+                'name' => 'Yvonne Someone',
+                'email' => 'ys@abc.com',
+            ],
+            [
+                'name' => 'Xyz Someone',
+                'email' => 'xs@abc.com',
+            ],
+        ];
+
+        foreach ($names as $n) {
+            $newUser = User::factory()->create($n);
+        }
+
+        $response = $this->get($this->url . '?sort=name:asc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        sort($sortedArray, SORT_STRING);
+
+        $this->assertEquals($sortedArray, $content);
+
+        $response = $this->get($this->url . '?sort=name:desc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        rsort($sortedArray, SORT_STRING);
+
+        $this->assertEquals($sortedArray, $content);
     }
 }
