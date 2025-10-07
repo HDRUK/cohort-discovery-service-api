@@ -10,6 +10,7 @@ use App\Models\Omop\ConceptAncestor;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class OmopController extends Controller
 {
@@ -17,7 +18,7 @@ class OmopController extends Controller
     use HelperFunctions;
 
 
-    public function getConcept($concept_id)
+    public function getConcept($concept_id): JsonResponse
     {
         $concept = Concept::find($concept_id);
         if (!$concept) {
@@ -31,7 +32,7 @@ class OmopController extends Controller
         return $this->OKResponse($concept);
     }
 
-    public function getPeersAtLevel($concept_id)
+    public function getPeersAtLevel($concept_id): JsonResponse
     {
         $nup           = max(1, (int) request()->input('max_up', 1));
         $ndown           = max(1, (int) request()->input('max_down', 1));
@@ -88,7 +89,7 @@ class OmopController extends Controller
         return response()->json($desc);
     }
 
-    public function searchConcepts(Request $request)
+    public function searchConcepts(Request $request): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();

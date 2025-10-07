@@ -28,6 +28,8 @@ Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFr
 Route::get('/v1/users', [UserController::class, 'index']);
 Route::get('/v1/users/{id}', [UserController::class, 'show']);
 
+Route::get('/v1/workgroups/users', [WorkgroupController::class, 'users']);
+
 Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
