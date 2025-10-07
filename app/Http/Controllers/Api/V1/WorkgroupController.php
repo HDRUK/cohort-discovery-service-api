@@ -196,7 +196,7 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function users(Request $request): JsonResponse
+    public function usersByWorkgroup(Request $request): JsonResponse
     {
         $workgroups = Workgroup::searchViaRequest()
             ->with('users')->get();
