@@ -182,8 +182,8 @@ class WorkgroupController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/workgroups/users",
-     *     summary="Get users for workgroups",
+     *     path="/api/v1/workgroups/search/users",
+     *     summary="Get users by workgroups",
      *     tags={"Workgroups"},
      *     @OA\Response(
      *         response=200,
