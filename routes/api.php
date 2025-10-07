@@ -35,6 +35,8 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::put('/v1/workgroups/{id}', [WorkgroupController::class, 'update']);
     Route::delete('/v1/workgroups/{id}', [WorkgroupController::class, 'destroy']);
 
+    Route::get('/v1/workgroups/search/users', [WorkgroupController::class, 'usersByWorkgroup']);
+
     Route::get('/v1/custodians', [CustodianController::class, 'index']);
     Route::get('/v1/custodians/{id}', [CustodianController::class, 'show']);
     Route::post('/v1/custodians', [CustodianController::class, 'store']);

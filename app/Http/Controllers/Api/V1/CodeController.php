@@ -8,6 +8,7 @@ use App\Models\Distribution;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class CodeController extends Controller
@@ -15,7 +16,7 @@ class CodeController extends Controller
     use Responses;
     use HelperFunctions;
 
-    public function getAllCodes(Request $request)
+    public function getAllCodes(Request $request): JsonResponse
     {
         $collectionPids = $request->input('collections');
         $collectionsQuery = Collection::query();
@@ -33,7 +34,7 @@ class CodeController extends Controller
         return $this->OKResponse($codes);
     }
 
-    public function getCodeStats(Request $request)
+    public function getCodeStats(Request $request): JsonResponse
     {
         $perPage = $this->resolvePerPage();
         $totalCollections = Collection::count();
@@ -61,7 +62,7 @@ class CodeController extends Controller
         return $this->OKResponse($codes);
     }
 
-    public function getCollectionCodeStats(Request $request, string $collectionPid)
+    public function getCollectionCodeStats(Request $request, string $collectionPid): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
@@ -87,7 +88,7 @@ class CodeController extends Controller
     }
 
 
-    public function getCodes(Request $request, string $domain)
+    public function getCodes(Request $request, string $domain): JsonResponse
     {
         try {
             $collectionPids = $request->input('collections');

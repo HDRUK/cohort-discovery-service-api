@@ -8,6 +8,7 @@ use App\Models\ConceptSetHasConcept;
 use App\Models\Distribution;
 use App\Traits\Responses;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +17,7 @@ class ConceptSetController extends Controller
 {
     use Responses;
 
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = ConceptSet::with(['concepts' => function ($q) {
             $q->select(
@@ -33,7 +34,7 @@ class ConceptSetController extends Controller
         return $this->OKResponse($query->get());
     }
 
-    public function show(Request $request, ConceptSet $conceptSet)
+    public function show(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
             return  $this->ForbiddenResponse();
@@ -52,7 +53,7 @@ class ConceptSetController extends Controller
         return $this->OKResponse($conceptSet);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -73,7 +74,7 @@ class ConceptSetController extends Controller
         }
     }
 
-    public function update(Request $request, ConceptSet $conceptSet)
+    public function update(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
             return  $this->ForbiddenResponse();
@@ -96,7 +97,7 @@ class ConceptSetController extends Controller
         }
     }
 
-    public function destroy(ConceptSet $conceptSet)
+    public function destroy(ConceptSet $conceptSet): JsonResponse
     {
         try {
             $conceptSet->delete();
@@ -106,7 +107,7 @@ class ConceptSetController extends Controller
         }
     }
 
-    public function attachConcept(Request $request, ConceptSet $conceptSet, int $conceptId)
+    public function attachConcept(Request $request, ConceptSet $conceptSet, int $conceptId): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
             return  $this->ForbiddenResponse();
@@ -138,7 +139,7 @@ class ConceptSetController extends Controller
         }
     }
 
-    public function detachConcept(Request $request, ConceptSet $conceptSet, int $conceptId)
+    public function detachConcept(Request $request, ConceptSet $conceptSet, int $conceptId): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
             return  $this->ForbiddenResponse();
@@ -158,7 +159,7 @@ class ConceptSetController extends Controller
         }
     }
 
-    public function clear(Request $request, ConceptSet $conceptSet)
+    public function clear(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
             return  $this->ForbiddenResponse();
