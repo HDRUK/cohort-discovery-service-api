@@ -28,14 +28,14 @@ Route::post('/v1/users/{id}/workgroup/remove', [UserController::class, 'removeFr
 Route::get('/v1/users', [UserController::class, 'index']);
 Route::get('/v1/users/{id}', [UserController::class, 'show']);
 
-Route::get('/v1/workgroups/users', [WorkgroupController::class, 'users']);
-
 Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
     Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
     Route::put('/v1/workgroups/{id}', [WorkgroupController::class, 'update']);
     Route::delete('/v1/workgroups/{id}', [WorkgroupController::class, 'destroy']);
+
+    Route::get('/v1/workgroups/search/users', [WorkgroupController::class, 'users']);
 
     Route::get('/v1/custodians', [CustodianController::class, 'index']);
     Route::get('/v1/custodians/{id}', [CustodianController::class, 'show']);

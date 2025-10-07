@@ -92,7 +92,7 @@ class WorkgroupTest extends TestCase
             ]);
         }
 
-        $response = $this->get($this->url . '/users?name[]=CUSTODIAN');
+        $response = $this->get($this->url . '/search/users?name[]=CUSTODIAN');
         $response->assertStatus(200);
 
         $content = $response->json();
