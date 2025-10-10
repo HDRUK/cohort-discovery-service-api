@@ -27,7 +27,7 @@ class ClaimBasedAccessControl
             $token = $request->bearerToken();
 
             $signer = new Sha256();
-            $key = InMemory::plainText(config('gateway.jwt_secret'));
+            $key = InMemory::plainText(config('integrated.jwt_secret'));
 
             $config = Configuration::forSymmetricSigner($signer, $key);
             $token = $config->parser()->parse($token);
