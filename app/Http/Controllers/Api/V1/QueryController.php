@@ -10,6 +10,7 @@ use App\Models\Query;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextType;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
@@ -22,7 +23,7 @@ class QueryController extends Controller
     use Responses;
     use HelperFunctions;
 
-    public function getQueries()
+    public function getQueries(): JsonResponse
     {
         $perPage = $this->resolvePerPage();
         $queries = Query::with([
@@ -39,7 +40,7 @@ class QueryController extends Controller
         return $this->OKResponse($queries);
     }
 
-    public function getLatestQuery()
+    public function getLatestQuery(): JsonResponse
     {
         $query = Query::with(['tasks.collection.size', 'tasks.result'])
             ->where('user_id', Auth::id())
@@ -54,7 +55,7 @@ class QueryController extends Controller
     }
 
 
-    public function getQuery($query_pid)
+    public function getQuery($query_pid): JsonResponse
     {
         $query = Query::with(['tasks.collection.size', 'tasks.result'])
             ->where('pid', $query_pid)
@@ -71,7 +72,7 @@ class QueryController extends Controller
         return $this->OKResponse($query);
     }
 
-    public function submitQueryAndCreateTasks(Request $request)
+    public function submitQueryAndCreateTasks(Request $request): JsonResponse
     {
         $validated = [];
         try {

@@ -11,6 +11,8 @@ use App\Models\ResultFile;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +25,7 @@ class TaskController extends Controller
     use HelperFunctions;
 
 
-    public function getTasks()
+    public function getTasks(): JsonResponse
     {
         $tasks = Task::whereHas('submittedQuery', function ($query) {
             $query->where('user_id', Auth::id());
@@ -32,7 +34,7 @@ class TaskController extends Controller
     }
 
 
-    public function getTask($task_pid)
+    public function getTask($task_pid): JsonResponse
     {
         $task = Task::with(['submittedQuery', 'collection', 'result'])
             ->where('pid', $task_pid)
@@ -49,7 +51,7 @@ class TaskController extends Controller
         return $this->OKResponse($task);
     }
 
-    public function nextJob($collection_id, QueryContextManager $contextManager)
+    public function nextJob($collection_id, QueryContextManager $contextManager): JsonResponse|Response
     {
         $parts = explode('.', $collection_id);
         $parsed_id = $parts[0];
@@ -144,7 +146,7 @@ class TaskController extends Controller
         ]);
     }
 
-    public function receiveResult(Request $request, $task_pid, $collection_pid)
+    public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
         $status = $request->get('status');
         $message = $request->get('message');

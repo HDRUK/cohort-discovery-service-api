@@ -9,6 +9,7 @@ use App\Services\QueryContext\QueryContextType;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class CollectionController extends Controller
     use Responses;
     use HelperFunctions;
 
-    public function getCollection($pid)
+    public function getCollection($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
             ->with('size')
@@ -32,14 +33,14 @@ class CollectionController extends Controller
         return $this->OKResponse($collection);
     }
 
-    public function getCollections()
+    public function getCollections(): JsonResponse
     {
         $collections = Collection::with('demographics')->get();
 
         return $this->OKResponse($collections);
     }
 
-    public function indexByCustodian(Request $request, string $custodianPid)
+    public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
         if ($error) {
@@ -55,7 +56,7 @@ class CollectionController extends Controller
         return $this->OKResponse($collections);
     }
 
-    public function storeByCustodian(Request $request, string $custodianPid)
+    public function storeByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
         if ($error) {
@@ -79,6 +80,7 @@ class CollectionController extends Controller
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
         }
+
         try {
             $collection = Collection::create([
                 'name'         => $validated['name'],
