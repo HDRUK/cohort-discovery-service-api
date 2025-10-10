@@ -61,10 +61,10 @@ class OmopController extends Controller
                 });
             })
             ->when($sameDomain && $start, function ($q) use ($start) {
-                $q->whereHas('descendant', fn($c) => $c->where('domain_id', $start->domain_id));
+                $q->whereHas('descendant', fn ($c) => $c->where('domain_id', $start->domain_id));
             })
             ->when($sameVocab && $start, function ($q) use ($start) {
-                $q->whereHas('descendant', fn($c) => $c->where('vocabulary_id', $start->vocabulary_id));
+                $q->whereHas('descendant', fn ($c) => $c->where('vocabulary_id', $start->vocabulary_id));
             })
             ->with(['descendant' => function ($q) use ($slim, $fullOmop) {
                 if (!$fullOmop) {

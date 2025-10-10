@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Distribution;
 use App\Models\LocalConceptAncestor;
-use App\Models\Omop\Concept as OmopConcept;
 use App\Models\Omop\ConceptAncestor as ConceptAncestor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +13,10 @@ use Illuminate\Queue\SerializesModels;
 
 class PopulateLocalConceptAncestors implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public function handle(): void
     {
@@ -46,7 +48,7 @@ class PopulateLocalConceptAncestors implements ShouldQueue
                     ];
                 }
                 $payload = collect($payload)
-                    ->unique(fn($r) => $r['parent_concept_id'] . '-' . $r['child_concept_id'])
+                    ->unique(fn ($r) => $r['parent_concept_id'] . '-' . $r['child_concept_id'])
                     ->values()
                     ->all();
 
