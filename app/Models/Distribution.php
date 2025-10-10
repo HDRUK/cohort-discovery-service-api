@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Omop\Concept;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Config;
 
 /**
@@ -57,5 +59,23 @@ class Distribution extends Model
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function concept()
+    {
+        return $this->belongsTo(Concept::class, 'concept_id', 'concept_id');
+    }
+
+
+    public function children(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            LocalConceptAncestor::class,
+            'parent_concept_id',
+            'child_concept_id',
+            'concept_id',
+            'concept_id'
+        );
     }
 }

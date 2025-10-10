@@ -9,164 +9,128 @@ class BunnyQueryContext implements QueryContextInterface
 {
     public function translate(array $definition): array
     {
-        $mapField = function (string $field): array {
-            $fieldMap = [
-                'sex' => [
-                    'varname' => 'OMOP',
-                    'varcat' => 'Person',
-                    'type' => 'TEXT'
-                ],
-                'age' => [
-                    'varname' => 'AGE',
-                    'varcat' => 'Person',
-                    'type' => 'NUM'
-                ],
-                'condition' => [
-                    'varname' => 'OMOP',
-                    'varcat' => 'Condition',
-                    'type' => 'TEXT'
-                ],
-                'measurement' => [
-                    'varname' => 'OMOP',
-                    'varcat' => 'Measurement',
-                    'type' => 'TEXT'
-                ],
-                'drug' => [
-                    'varname' => 'OMOP',
-                    'varcat' => 'Drug',
-                    'type' => 'TEXT'
-                ],
-                'observation' => [
-                    'varname' => 'OMOP',
-                    'varcat' => 'Observation',
-                    'type' => 'TEXT'
-                ]
-            ];
-            return $fieldMap[$field] ?? [
-                'varname' => 'UNKNOWN',
-                'varcat' => 'UNKNOWN',
-                'type' => 'TEXT'
-            ];
-        };
-
         $groups = [];
 
-
-        $processGroup = function (array $node) use (&$groups, &$processGroup, $mapField) {
-
-            $invertOperator = function ($operator, $type) {
-                $map = [
-                    '='  => '!=',
-                    '!=' => '=',
-                    '>'  => '<=',
-                    '>=' => '<',
-                    '<'  => '>=',
-                    '<=' => '>',
-                    'between' => 'not_between',
-                    'not_between' => 'between',
-                ];
-
-                return $map[$operator] ?? $operator;
-            };
-
-            $group = [
-                'rules_oper' => strtoupper($node['combinator'] ?? 'AND'),
-                'rules' => [],
+        $makeLeafRule = function (array $concept, bool $isExcluded = false): array {
+            $rule = [
+                'varname' => 'OMOP',
+                'varcat'  => $concept['category'] ?? 'UNKNOWN',
+                'type'    => 'TEXT',
+                'oper'    => $isExcluded ? '!=' : '=',
+                'value'   => (string) ($concept['concept_id'] ?? ''),
             ];
 
-            if (!empty($node['not'])) {
-                $group['not'] = true;
+            return $rule;
+        };
+
+        $isOperatorNode = function (array $node): bool {
+            return isset($node['combinator']) && !isset($node['rule']) && !isset($node['rules']);
+        };
+        $isLeafNode = function (array $node): bool {
+            return isset($node['rule']['concept']) && !isset($node['rules']);
+        };
+        $isGroupNode = function (array $node): bool {
+            return isset($node['rules']);
+        };
+
+        /**
+         * Process a node:
+         *  1) Recurse into nested groups so they emit their own groups.
+         *  2) Build a sequential list of leaves and attach a LEFT-edge operator
+         *     to each leaf (operator connecting THIS leaf to the NEXT leaf).
+         *  3) Chunk by runs of identical LEFT-edge operators and emit groups.
+         *     (Excluded leaves stay inline but carry oper "!=".)
+         */
+        $processNode = function (array $node) use (&$groups, &$processNode, $makeLeafRule, $isOperatorNode, $isLeafNode, $isGroupNode): void {
+            $children = $node['rules'] ?? [];
+            if (empty($children)) {
+                return;
             }
 
-            foreach ($node['rules'] as $rule) {
-                if (isset($rule['rules'])) {
-                    $processGroup($rule);
-                } elseif (isset($rule['field'], $rule['operator'], $rule['value'])) {
-                    $mapped = $mapField($rule['field']);
-                    $type = $mapped['type'];
-
-                    $operator = $rule['operator'];
-                    $value = $rule['value'];
-
-
-                    if (!empty($node['not'])) {
-                        $operator = $invertOperator($operator, $type);
-                    }
-
-                    if ($type === 'NUM') {
-                        if (!in_array($operator, ['=', '!='])) {
-                            switch ($operator) {
-                                case '>':
-                                case '>=':
-                                    $operator = '=';
-                                    $value = "{$value}|Inf";
-                                    break;
-
-                                case '<':
-                                case '<=':
-                                    $operator = '=';
-                                    $value = "-Inf|{$value}";
-                                    break;
-
-                                case 'between':
-                                    if (is_array($value) && count($value) === 2) {
-                                        [$min, $max] = $value;
-                                        $operator = '=';
-                                        $value = "{$min}|{$max}";
-                                    }
-                                    break;
-
-                                case 'not_between':
-                                    if (is_array($value) && count($value) === 2) {
-                                        [$min, $max] = $value;
-                                        $operator = '!=';
-                                        $value = "{$min}|{$max}";
-                                    }
-                                    break;
-
-                                default:
-                                    // fallback to >= style
-                                    $operator = '=';
-                                    $value = "{$value}|Inf";
-                                    break;
-                            }
-                        } elseif (is_numeric($value)) {
-                            $value = "{$value}|";
-                        } else {
-                            $value = (string) $value;
-                        }
-                    } else {
-                        $value = (string) $value;
-                    }
-
-                    $ruleArray = [
-                        'varname' => $mapped['varname'],
-                        'varcat'  => $mapped['varcat'],
-                        'type'    => $type,
-                        'oper'    => $operator,
-                        'value'   => $value,
-                    ];
-
-                    if (isset($rule['time'])) {
-                        $ruleArray['time'] = $rule['time'];
-                    }
-
-                    $group['rules'][] = $ruleArray;
+            // 1) Recurse into nested groups first (they stand on their own)
+            foreach ($children as $child) {
+                if ($isGroupNode($child)) {
+                    $processNode($child);
                 }
             }
 
-            if (!empty($group['rules'])) {
-                $groups[] = $group;
+            // 2) Build the leaf sequence and assign LEFT-edge operators
+            //    Each item: ['rule'=>array, 'edge_op'=>string|null]
+            $seq = [];
+            $lastLeafIndex = null;
+            $opBuffer = null;
+
+            foreach ($children as $child) {
+                if ($isOperatorNode($child)) {
+                    $opBuffer = strtoupper($child['combinator'] ?? 'AND');
+                    continue;
+                }
+
+                if ($isLeafNode($child)) {
+                    $isExcluded = (bool)($child['exclude'] ?? false);
+
+                    $leafRule = $makeLeafRule($child['rule']['concept'], $isExcluded);
+
+                    $seq[] = [
+                        'rule'    => $leafRule,
+                        'edge_op' => null,
+                    ];
+                    $thisIndex = count($seq) - 1;
+
+                    if ($lastLeafIndex !== null && $opBuffer !== null) {
+                        $seq[$lastLeafIndex]['edge_op'] = $opBuffer;
+                    }
+
+                    $lastLeafIndex = $thisIndex;
+                    $opBuffer = null;
+                }
+            }
+
+            if (empty($seq)) {
+                return;
+            }
+
+            // 3) Chunk by runs of identical LEFT-edge operator.
+            //    If a leaf lacks edge_op (e.g., last in chain), default to AND.
+            $n = count($seq);
+            $i = 0;
+            while ($i < $n) {
+                $op = strtoupper($seq[$i]['edge_op'] ?? 'AND');
+                $j  = $i;
+
+                while ($j < $n - 1 && strtoupper($seq[$j]['edge_op'] ?? 'AND') === $op) {
+                    $j++;
+                }
+
+                // Collect rules i..j inclusive
+                $groupRules = [];
+                for ($k = $i; $k <= $j; $k++) {
+                    $groupRules[] = $seq[$k]['rule'];
+                }
+
+                if ($groupRules) {
+                    $g = [
+                        'rules_oper' => $op,
+                        'rules'      => $groupRules,
+                    ];
+
+                    $groups[] = $g;
+                }
+
+                $i = $j + 1;
             }
         };
 
-        $processGroup($definition);
+        $processNode($definition);
 
         return [
-            'groups' => $groups,
-            'groups_oper' => strtoupper($definition['combinator'] ?? 'AND')
+            'groups'      => $groups,
+            'groups_oper' => strtoupper($definition['combinator'] ?? 'AND'),
         ];
     }
+
+
+
 
     public function getType(): QueryContextType
     {

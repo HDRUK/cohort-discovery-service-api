@@ -47,6 +47,7 @@ class Concept extends Model
         'concept_name',
     ];
 
+
     public function ancestors(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -70,6 +71,23 @@ class Concept extends Model
     public function distributions(): HasMany
     {
         return $this->hasMany(Distribution::class, 'concept_id', 'concept_id');
+    }
+
+    public function ancestorsInDistribution(?callable $distributionFilter = null)
+    {
+        $distQuery = Distribution::query();
+        if ($distributionFilter) {
+            $distributionFilter($distQuery);
+        }
+        $conceptIdsWithDists = $distQuery
+            ->whereNotNull('concept_id')
+            ->where('concept_id', '>', 0)
+            ->distinct()
+            ->pluck('concept_id');
+
+
+        return $this->ancestors()
+            ->whereIn('concept.concept_id', $conceptIdsWithDists);
     }
 
     public function scopeInDistribution($query)
