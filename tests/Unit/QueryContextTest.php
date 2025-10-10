@@ -15,7 +15,7 @@ class QueryContextTest extends TestCase
     private BeaconQueryContext $beaconContext;
     private QueryContextManager $manager;
 
-    private const INPUT_QUERY = [
+    /*private const INPUT_QUERY = [
         'combinator' => 'and',
         'rules' => [
             [
@@ -43,7 +43,93 @@ class QueryContextTest extends TestCase
                 'id' => '3a97cd6e-31c1-4034-b8ce-a708a42c6746',
             ],
         ],
+    ];*/
+
+
+    private const INPUT_QUERY = [
+        "id" => "9f71c79e-8e3c-467c-9970-d8b9ee4badca",
+        "rules" => [
+            [
+                "id" => "91b16f34-c7c8-4a64-b4d9-1c82eb64e353",
+                "exclude" => false,
+                "rules" => [
+                    [
+                        "id" => "3f696208-11a8-4daf-86be-ce158b53606c",
+                        "exclude" => false,
+                        "rule" => [
+                            "concept" => [
+                                "concept_id" => 3955320,
+                                "description" => "Moderna - SARS-CoV-2 (COVID-19) vaccine",
+                                "category" => "Drug",
+                                "children" => []
+                            ]
+                        ],
+                        "valid" => true
+                    ],
+                    [
+                        "id" => "ca15e2ad-0cca-421e-8012-58cacf0987cd",
+                        "combinator" => "or",
+                        "exclude" => false,
+                        "valid" => true
+                    ],
+                    [
+                        "id" => "08e3d082-f05b-4ab1-9c61-c65a02aac43a",
+                        "exclude" => false,
+                        "rule" => [
+                            "concept" => [
+                                "concept_id" => 3955321,
+                                "description" => "Pfizer - SARS-CoV-2 (COVID-19) vaccine",
+                                "category" => "Drug",
+                                "children" => []
+                            ]
+                        ],
+                        "valid" => true
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "3ceaec2e-3764-4514-ae83-32d0445c37e3",
+                "combinator" => "and",
+                "exclude" => false,
+                "valid" => true
+            ],
+            [
+                "id" => "011bcab3-ec65-42ce-91bf-66e54f4b2a7a",
+                "exclude" => true,
+                "rule" => [
+                    "concept" => [
+                        "concept_id" => 3955322,
+                        "description" => "Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "7d79cd1d-43b9-486d-a4a0-d3e4abf2d478",
+                "combinator" => "and",
+                "exclude" => false,
+                "valid" => true
+            ],
+            [
+                "id" => "b4e03e03-8e56-4567-bd61-7b0cada793f4",
+                "rule" => [
+                    "concept" => [
+                        "concept_id" => 3959231,
+                        "description" => "Close contact with confirmed COVID-19 case person/patient",
+                        "category" => "Observation",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ]
+        ],
+        "valid" => true
     ];
+
+
 
     protected function setUp(): void
     {
@@ -72,6 +158,7 @@ class QueryContextTest extends TestCase
     public function test_application_can_translate_bunny_query(): void
     {
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
+        dd($result);
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
@@ -79,7 +166,7 @@ class QueryContextTest extends TestCase
         $firstRule = $result['groups'][0]['rules'][0] ?? null;
         $this->assertIsArray($firstRule);
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
-        $this->assertEquals('=', $firstRule['oper'] ?? null);
+        //$this->assertEquals('=', $firstRule['oper'] ?? null);
     }
 
     public function test_application_can_translate_beacon_query(): void

@@ -10,6 +10,7 @@ use App\Models\Omop\ConceptAncestor;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OmopController extends Controller
 {
@@ -94,7 +95,7 @@ class OmopController extends Controller
             $perPage = $this->resolvePerPage();
             $collectionPids = $request->input('collections');
             $domain = $request->input('domain');
-
+            $includeAncestors = $request->boolean('include_ancestors', true);
 
             $codes = Distribution::query()
                 ->when($collectionPids, function ($q, $pids) {
@@ -106,6 +107,12 @@ class OmopController extends Controller
                 ->when($domain, function ($q, $domain) {
                     $q->whereRaw('LOWER(category) = ?', [strtolower($domain)]);
                 })
+                ->when(
+                    $includeAncestors,
+                    function ($q) {
+                        $q->with('children:concept_id,description,category');
+                    }
+                )
                 ->select('name', 'concept_id', 'description', 'category')
                 ->distinct()
                 ->searchViaRequest($request->only(['concept_id', 'description']))
