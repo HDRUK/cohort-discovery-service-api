@@ -15,37 +15,6 @@ class QueryContextTest extends TestCase
     private BeaconQueryContext $beaconContext;
     private QueryContextManager $manager;
 
-    /*private const INPUT_QUERY = [
-        'combinator' => 'and',
-        'rules' => [
-            [
-                'combinator' => 'and',
-                'rules' => [
-                    [
-                        'field' => 'sex',
-                        'operator' => '=',
-                        'value' => '8532',
-                        'id' => '56ecf58e-de34-4fe2-9e3c-b28da2599f33',
-                    ],
-                    [
-                        'field' => 'age',
-                        'operator' => '>',
-                        'value' => 50,
-                        'id' => 'ca612473-e068-45dd-99d0-8f0e3cb35cbf',
-                    ],
-                    [
-                        'field' => 'condition',
-                        'operator' => '=',
-                        'value' => '4011930',
-                        'id' => '791428a0-dfb1-4ce2-8e2c-8c9ca12f3523',
-                    ],
-                ],
-                'id' => '3a97cd6e-31c1-4034-b8ce-a708a42c6746',
-            ],
-        ],
-    ];*/
-
-
     private const INPUT_QUERY = [
         "id" => "9f71c79e-8e3c-467c-9970-d8b9ee4badca",
         "rules" => [
@@ -64,7 +33,6 @@ class QueryContextTest extends TestCase
                                 "children" => []
                             ]
                         ],
-                        "valid" => true
                     ],
                     [
                         "id" => "ca15e2ad-0cca-421e-8012-58cacf0987cd",
@@ -83,16 +51,13 @@ class QueryContextTest extends TestCase
                                 "children" => []
                             ]
                         ],
-                        "valid" => true
                     ]
                 ],
-                "valid" => true
             ],
             [
                 "id" => "3ceaec2e-3764-4514-ae83-32d0445c37e3",
                 "combinator" => "and",
                 "exclude" => false,
-                "valid" => true
             ],
             [
                 "id" => "011bcab3-ec65-42ce-91bf-66e54f4b2a7a",
@@ -105,13 +70,11 @@ class QueryContextTest extends TestCase
                         "children" => []
                     ]
                 ],
-                "valid" => true
             ],
             [
                 "id" => "7d79cd1d-43b9-486d-a4a0-d3e4abf2d478",
                 "combinator" => "and",
                 "exclude" => false,
-                "valid" => true
             ],
             [
                 "id" => "b4e03e03-8e56-4567-bd61-7b0cada793f4",
@@ -123,11 +86,10 @@ class QueryContextTest extends TestCase
                         "children" => []
                     ]
                 ],
-                "valid" => true
             ]
         ],
-        "valid" => true
     ];
+
 
 
 
@@ -158,17 +120,26 @@ class QueryContextTest extends TestCase
     public function test_application_can_translate_bunny_query(): void
     {
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
-        dd($result);
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
 
-        $firstRule = $result['groups'][0]['rules'][0] ?? null;
-        $this->assertIsArray($firstRule);
+        $firstGroup = $result['groups'][0];
+        $this->assertIsArray($firstGroup['rules']);
+        $this->assertCount(2, $firstGroup['rules']);
+        $this->assertEquals('OR', $firstGroup['rules_oper'] ?? null);
+
+        $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
-        //$this->assertEquals('=', $firstRule['oper'] ?? null);
+        $this->assertEquals('3955320', $firstRule['value'] ?? null);
+        $secondRule = $firstGroup['rules'][1] ?? null;
+        $this->assertEquals('3955321', $secondRule['value'] ?? null);
     }
 
+    /*
+    note: disabling for now
+          in the future we'll support beacon context translation of our JSON
+          but not now, it's too much work to implement when we wont be using beacon for MVP1
     public function test_application_can_translate_beacon_query(): void
     {
         $result = $this->beaconContext->translate(self::INPUT_QUERY);
@@ -179,7 +150,7 @@ class QueryContextTest extends TestCase
         $firstRule = $result['query']['filters'][0] ?? null;
         $this->assertIsArray($firstRule);
         $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
-    }
+    }*/
 
     public function test_application_can_translate_via_manager(): void
     {
