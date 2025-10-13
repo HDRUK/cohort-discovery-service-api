@@ -4,14 +4,14 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
+use App\Support\Concerns\StreamsCsv;
 
 class MinimalOmopSeeder extends Seeder
 {
-    // Tune for your environment
-    private int $chunkSize = 1000;
+    use StreamsCsv;
+    private int $chunkSize = 500;
 
     public function run(): void
     {
@@ -29,6 +29,8 @@ class MinimalOmopSeeder extends Seeder
         $buffer = [];
         $count = 0;
 
+        $toNull = fn($d) => in_array($d, ['0000-00-00', '0000-00-00 00:00:00', '', null], true) ? null : $d;
+
         foreach ($generator as $row) {
             $buffer[] = [
                 'concept_id'          => (int) $row['concept_id'],
@@ -38,8 +40,8 @@ class MinimalOmopSeeder extends Seeder
                 'concept_class_id'    => $row['concept_class_id'],
                 'standard_concept'    => $row['standard_concept'] ?: null,
                 'concept_code'        => $row['concept_code'] ?: null,
-                'valid_start_date'    => $row['valid_start_date'] ?: null,
-                'valid_end_date'      => $row['valid_end_date'] ?: null,
+                'valid_start_date'    => $toNull($row['valid_start_date']),
+                'valid_end_date'      => $toNull($row['valid_end_date']),
                 'invalid_reason'      => $row['invalid_reason'] ?: null,
             ];
 
@@ -59,7 +61,9 @@ class MinimalOmopSeeder extends Seeder
                         'invalid_reason',
                     ]
                 );
-                $count += count($buffer);
+                $bufferSize = count($buffer);
+                $this->command?->info("Chunk completed. Concepts upserted: {$bufferSize}");
+                $count += $bufferSize;
                 $buffer = [];
             }
         }
@@ -125,46 +129,5 @@ class MinimalOmopSeeder extends Seeder
         }
 
         $this->command?->info("Concept_ancestor upserted: {$count}");
-    }
-
-    /**
-     * Stream rows from a CSV as associative arrays using the header row.
-     *
-     * @return \Generator<array<string,string>>
-     */
-    private function csvRows(string $fullPath): \Generator
-    {
-        if (!is_readable($fullPath)) {
-            throw new \RuntimeException("CSV not readable: {$fullPath}");
-        }
-
-        $fh = fopen($fullPath, 'rb');
-        if ($fh === false) {
-            throw new \RuntimeException("Unable to open CSV: {$fullPath}");
-        }
-
-        try {
-            $header = fgetcsv($fh);
-            if ($header === false) {
-                return;
-            }
-
-            $header = array_map(function ($h) {
-                $h = preg_replace('/^\xEF\xBB\xBF/', '', $h ?? '');
-                return trim((string) $h);
-            }, $header);
-
-            while (($row = fgetcsv($fh)) !== false) {
-                if ($row === [null] || $row === false) {
-                    continue;
-                }
-                if (count($row) < count($header)) {
-                    $row = array_pad($row, count($header), null);
-                }
-                yield array_combine($header, $row);
-            }
-        } finally {
-            fclose($fh);
-        }
     }
 }
