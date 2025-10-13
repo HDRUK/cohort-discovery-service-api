@@ -15,6 +15,7 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
 {
     public function authenticate(Request $request): mixed
     {
+
         $tokenString = $request->bearerToken() ?? session('token');
 
         if (!$tokenString) {
