@@ -2,95 +2,67 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Hash;
-use App\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer\Hmac\Sha256;
-use Lcobucci\JWT\Token\Parser;
-use Lcobucci\JWT\Signer\Key\InMemory;
 use App\Traits\Responses;
+use App\Contracts\AuthenticationServiceInterface;
 
 class AuthController extends Controller
 {
     use Responses;
 
+    protected AuthenticationServiceInterface $authService;
+
+    public function __construct(AuthenticationServiceInterface $authService)
+    {
+        $this->authService = $authService;
+    }
+
     public function callbackForUser(Request $request): JsonResponse|RedirectResponse
     {
-        $tokenString = session('token');
+        $user = $this->authService->authenticate($request);
 
-        $signer = new Sha256();
-        $key = InMemory::plainText(config('gateway.jwt_secret'));
-
-        // Configure the parser. No validation needed, just parsing.
-        $config = Configuration::forSymmetricSigner($signer, $key);
-        $token = $config->parser()->parse($tokenString);
-
-        /** @phpstan-ignore-next-line */
-        $user = $token->claims()->get('user');
-
-        $response = Http::withHeaders([
-            'Accept' => 'application/json',
-            'Authorization' => 'bearer ' . $tokenString,
-        ])->get(config('gateway.api_uri') . 'users/' . $user['id']);
-
-        if ($response->json()['message'] !== 'success') {
+        if (!$user) {
             return $this->UnauthorisedResponse();
         }
 
-        $user = $response->json()['data'];
+        $tokenString = session('token');
+        $redirectUrl = $this->authService->getRedirectUrlFromToken($tokenString);
 
-        // Create user locally if not already available
-        $localUser = User::firstOrCreate(
-            [
-                'email' => $user['email'],
-            ],
-            [
-                'name' => $user['name'],
-                'email' => $user['email'],
-                'password' => Hash::make(config('gateway.placeholder_password')),
-            ]
-        );
-
-        /** @phpstan-ignore-next-line */
-        $redirectUrl = $token->claims()->get('cohort_discovery_url');
-
-        return redirect()->to($redirectUrl)
+        return redirect()->to($redirectUrl ?? '/')
             ->with([
                 'federated_token' => $tokenString,
                 'type' => 'bearer',
-                'federated_user_id' => $user['id'],
-                'local_user_id' => $localUser->id,
+                'federated_user_id' => $user->federated_id ?? null,
+                'local_user_id' => $user->id,
             ]);
     }
 
     public function callbackForAuthToken(Request $request): JsonResponse|RedirectResponse
     {
         $code = $request->input('code');
+
         if (!$code) {
             return $this->UnauthorisedResponse();
         }
 
-        $response = Http::asForm()->post(config('gateway.auth_uri'), [
+        $response = Http::asForm()->post(config('integrated.auth_uri'), [
             'grant_type' => 'authorization_code',
-            'client_id' => config('gateway.client_id'),
-            'client_secret' => config('gateway.client_secret'),
-            'redirect_uri' => config('gateway.internal_oauth_callback_uri'),
+            'client_id' => config('integrated.client_id'),
+            'client_secret' => config('integrated.client_secret'),
+            'redirect_uri' => config('integrated.internal_oauth_callback_uri'),
             'code' => $code,
         ]);
-
 
         if ($response->failed()) {
             return $this->UnauthorisedResponse();
         }
 
         $token = $response->json()['token'];
-
         return redirect()->to('auth/callback2')
             ->with(['token' => $token]);
     }
