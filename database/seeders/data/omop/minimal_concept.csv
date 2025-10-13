@@ -3882,3 +3882,6 @@ concept_id,concept_name,domain_id,vocabulary_id,concept_class_id,standard_concep
 1450600,Hemorrhagic mucosa of large intestine,Condition,SNOMED,Disorder,S,48081000087102,0000-00-00,0000-00-00,
 8507,Male,Gender,Gender,Gender,S,M,2025-09-23,2125-09-23,
 8532,Female,Gender,Gender,Gender,S,F,2025-09-23,2125-09-23,
+3955320,Moderna - SARS-CoV-2 (COVID-19) vaccine,Drug,CO-CONNECT,Ingredient,,CC-VACCINE-002,0000-00-00,0000-00-00,
+3955321,Pfizer - SARS-CoV-2 (COVID-19) vaccine,Drug,CO-CONNECT,Ingredient,,CC-VACCINE-003,0000-00-00,0000-00-00,
+3955322,"Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222",Drug,CO-CONNECT,Ingredient,,CC-VACCINE-004,0000-00-00,0000-00-00,
