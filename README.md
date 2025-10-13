@@ -72,6 +72,16 @@ If you don't want to use BUNNY in development, you can seed some distribution re
 php artisan db:seed  --class MinimalDistributionsSeeder
 ```
 
+### (Optional) [Option A]
+
+If you have used Option A you can also run:
+
+```
+php artisan concepts:populate-ancestors
+```
+
+The purpose of this is that the OMOP model might be in an external location or you have not setup the indexes, so this greatly speeds up concept ancestor/descendant looking up if we copy over the concepts that we actually need - based on what we have locally
+
 ## Setting up BUNNY
 
 ... to be completed....
