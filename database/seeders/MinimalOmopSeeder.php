@@ -21,7 +21,7 @@ class MinimalOmopSeeder extends Seeder
 
     private function seedConcepts(string $relativePath): void
     {
-        $path = Storage::path($relativePath);
+        $path = database_path('seeders/data/' . $relativePath);
         $this->command->info("Seeding concepts from: {$path}");
 
         $generator = $this->csvRows($path);
@@ -92,7 +92,7 @@ class MinimalOmopSeeder extends Seeder
 
     private function seedConceptAncestors(string $relativePath): void
     {
-        $path = Storage::path($relativePath);
+        $path = database_path('seeders/data/' . $relativePath);
         $this->command?->info("Seeding concept_ancestor from: {$path}");
 
         $generator = $this->csvRows($path);

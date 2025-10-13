@@ -14,7 +14,7 @@ class MinimalDistributionsSeeder extends Seeder
 
     public function run(): void
     {
-        $path = Storage::path('minimal_distributions.csv');
+        $path = database_path('seeders/data/minimal_distributions.csv');
         $this->command->info("Seeding concepts from: {$path}");
 
         $generator = $this->csvRows($path);
