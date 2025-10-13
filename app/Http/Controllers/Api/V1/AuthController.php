@@ -63,7 +63,6 @@ class AuthController extends Controller
         }
 
         $token = $response->json()['token'];
-        error_log('token from callback= ' . $token);
         return redirect()->to('auth/callback2')
             ->with(['token' => $token]);
     }
