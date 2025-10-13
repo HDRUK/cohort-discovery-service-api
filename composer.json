@@ -79,7 +79,10 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [],
+            "providers": [
+                "App\\Providers\\ApplicationModeServiceProvider"
+            ]
         }
     },
     "config": {

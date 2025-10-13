@@ -103,6 +103,11 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 });
 
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'login']);
+    Route::post('/logout', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'logout']);
+});
+
 Route::get('/status', function (Request $request) {
     return response()->json([
         'message' => 'alive',
