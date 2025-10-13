@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
-use App\Support\Concerns\StreamsCsv;
+use App\Traits\StreamsCsv;
 
 class MinimalOmopSeeder extends Seeder
 {

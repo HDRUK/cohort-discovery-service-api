@@ -24,7 +24,9 @@ class ProcessDistributionFile implements ShouldQueue
     public $backoff   = [30, 120, 300];
     public $batchSize = 500;
 
-    public function __construct(public int $resultFileId) {}
+    public function __construct(public int $resultFileId)
+    {
+    }
 
     public function handle(): void
     {
@@ -147,8 +149,8 @@ class ProcessDistributionFile implements ShouldQueue
             Distribution::create($data);
         }
         // note - to be revisited
-        //      - this can copy over ancestors locally 
-        //        based on what distributions we have 
+        //      - this can copy over ancestors locally
+        //        based on what distributions we have
         //      - instead of having to use the full concept_ancestor table
         // PopulateLocalConceptAncestors::dispatch();
 

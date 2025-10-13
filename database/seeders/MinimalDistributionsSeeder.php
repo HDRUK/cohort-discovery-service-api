@@ -5,12 +5,12 @@ namespace Database\Seeders;
 use App\Models\Distribution;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
-use App\Support\Concerns\StreamsCsv;
+use App\Traits\StreamsCsv;
 
 class MinimalDistributionsSeeder extends Seeder
 {
-    private int $chunkSize = 500;
     use StreamsCsv;
+    private int $chunkSize = 500;
 
     public function run(): void
     {

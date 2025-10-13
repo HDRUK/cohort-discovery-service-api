@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Support\Concerns;
+namespace App\Traits;
 
+// note - ignoring in phpstan because it is only used in database seeding
+// @phpstan-ignore-next-line
 trait StreamsCsv
 {
     /**
