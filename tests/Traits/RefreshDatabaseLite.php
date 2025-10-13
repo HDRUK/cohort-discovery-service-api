@@ -45,7 +45,7 @@ trait RefreshDatabaseLite
             ]);
 
             Artisan::call('db:seed', [
-                '--class'    => 'SimpleOmopSeeder',
+                '--class'    => 'MinimalOmopSeeder',
                 '--database' => 'omop',
             ]);
 
