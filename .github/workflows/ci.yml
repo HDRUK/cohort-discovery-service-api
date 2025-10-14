@@ -80,6 +80,8 @@ jobs:
           echo "DB_OMOP_USERNAME=root" >> .env
           echo "DB_OMOP_PASSWORD=root" >> .env
 
+          cat .env
+
       - name: Debug key files
         run: |
           ls -l storage
