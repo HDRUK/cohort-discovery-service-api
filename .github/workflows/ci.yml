@@ -10,6 +10,22 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: daphne_test
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: laravel
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -p${MYSQL_ROOT_PASSWORD}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -18,6 +34,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
+          extensions: mbstring, bcmath, pdo_mysql
+          coverage: none
 
       - name: Composer install
         run: "composer install"
@@ -37,6 +55,31 @@ jobs:
           printf "%s" "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
           chmod 600 storage/oauth-private.key storage/oauth-public.key
 
+      - name: Create second OMOP test database
+        run: |
+          sudo apt-get. install -y mysql-client
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS daphne_test;"
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS omop_test;"
+
+      - name: Configure environment
+        run: |
+          cp .env.example .env
+
+          sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+          sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/DB_DATABASE=.*/DB_DATABASE=daphne_test/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=laravel/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=laravel/' .env
+
+          echo "" >> .env
+          echo "DB_OMOP_CONNECTION=omop" >> .env
+          echo "DB_OMOP_HOST=127.0.0.1" >> .env
+          echo "DB_OMOP_PORT=3306" >> .env
+          echo "DB_OMOP_DATABASE=omop_test" >> .env
+          echo "DB_OMOP_USERNAME=laravel" >> .env
+          echo "DB_OMOP_PASSWORD=laravel" >> .env
+
       - name: Debug key files
         run: |
           ls -l storage
@@ -48,6 +91,18 @@ jobs:
 
       - name: Generate application key
         run: php artisan key:generate
+
+      - name: Run main application migrations
+        run: php artisan migrate:fresh
+      
+      - name: Run main application seeding
+        run: php artisan db:seed --class=DatabaseSeeder
+
+      - name: Run omop migrations
+        run: php artisan migrate:fresh --database=omop --path='database/migrations_omop'
+
+      - name: "Run omop seeding"
+        run: php artisan db:seed --class=MinimalOmopSeeder --database=omop
 
       - name: Run static analysis
         run: "./vendor/bin/phpstan analyse app -vvv  --memory-limit 512M"
