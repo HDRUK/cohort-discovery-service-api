@@ -91,11 +91,11 @@ class RuleBuilderService
                 $excludeNext = false;
             }
             // End of group
-            else if ($token === ')') {
+            elseif ($token === ')') {
                 break;
             }
             // Logical combinators
-            else if (in_array($token, $this->combinators, true)) {
+            elseif (in_array($token, $this->combinators, true)) {
                 if ($token === 'followed') {
                     //"followed" -> "followed by" -> "followed_by"
                     array_shift($tokens);
@@ -104,12 +104,12 @@ class RuleBuilderService
                 $rules[] = $this->makeOperator($token);
             }
             // Negation terms
-            else if (in_array($token, $this->exclusionTerms, true)) {
+            elseif (in_array($token, $this->exclusionTerms, true)) {
                 $excludeNext = true;
             }
             // Concept phrase (multi-word)
             else {
-                $phrase = $token;
+                $phrase = trim($token);
                 while (
                     $tokens &&
                     !in_array($tokens[0], $this->combinators, true) &&

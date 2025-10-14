@@ -9,13 +9,11 @@
                     "category": "Drug",
                     "children": []
                 }
-            },
-            "valid": true
+            }
         },
         {
             "combinator": "or",
-            "exclude": false,
-            "valid": true
+            "exclude": false
         },
         {
             "exclude": false,
@@ -26,13 +24,11 @@
                     "category": "Drug",
                     "children": []
                 }
-            },
-            "valid": true
+            }
         },
         {
             "combinator": "and",
-            "exclude": false,
-            "valid": true
+            "exclude": false
         },
         {
             "exclude": true,
@@ -43,13 +39,11 @@
                     "category": "Drug",
                     "children": []
                 }
-            },
-            "valid": true
+            }
         },
         {
             "combinator": "and",
-            "exclude": false,
-            "valid": true
+            "exclude": false
         },
         {
             "exclude": false,
@@ -66,13 +60,11 @@
                         }
                     ]
                 }
-            },
-            "valid": true
+            }
         },
         {
             "combinator": "and",
-            "exclude": false,
-            "valid": true
+            "exclude": false
         },
         {
             "exclude": false,
@@ -89,13 +81,11 @@
                         }
                     ]
                 }
-            },
-            "valid": true
+            }
         },
         {
             "combinator": "and",
-            "exclude": false,
-            "valid": true
+            "exclude": false
         },
         {
             "exclude": false,
@@ -122,8 +112,7 @@
                         }
                     ]
                 }
-            },
-            "valid": true
+            }
         }
     ],
     "valid": true

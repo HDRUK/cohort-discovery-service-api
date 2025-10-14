@@ -12,7 +12,6 @@ trait RuleBuilder
             'id' => Str::uuid()->toString(), // for testing right now
             'rules' => $rules,
             'exclude' => $exclude,
-            'valid' => true, // for testing right now
         ];
     }
 
@@ -24,7 +23,6 @@ trait RuleBuilder
             'rule' => [
                 'concept' => $concept,
             ],
-            'valid' => true, // for testing right now
         ];
     }
 
@@ -34,7 +32,6 @@ trait RuleBuilder
             'id' => Str::uuid()->toString(), // for testing right now
             'combinator' => $combinator,
             'exclude' => false,
-            'valid' => true, // for testing right now
         ];
     }
 }
