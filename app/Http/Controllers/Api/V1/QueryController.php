@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum;
@@ -87,6 +88,7 @@ class QueryController extends Controller
         }
 
         $query = Query::create([
+            'pid' => Str::uuid(),
             'name' => $validated['name'],
             'definition' => $validated['definition'],
             'user_id' => Auth::id(),
@@ -106,6 +108,7 @@ class QueryController extends Controller
             $collectionId = $collection->id;
             $type = $collection->type;
             $task = Task::create([
+                'pid' => Str::uuid(),
                 'query_id' => $query->id,
                 'collection_id' => $collectionId,
                 'created_at' => now(),

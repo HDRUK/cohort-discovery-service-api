@@ -2,8 +2,14 @@
 
 namespace App\Utils;
 
+/**
+ * VerbCategoryMapper maps verbs found in clinical phrases to OMOP domain categories.
+ */
 class VerbCategoryMapper
 {
+    /**
+     * @var array<string, string> Maps verbs to OMOP domain categories.
+     */
     protected array $verbMap = [
         // Drug administration
         'received'      => 'Drug',
@@ -56,15 +62,19 @@ class VerbCategoryMapper
         'with'          => 'Condition',
         'developed'     => 'Condition',
         'experiencing'  => 'Condition',
-        'presented'     => 'Condition',
         'complained'    => 'Condition',
         'reports'       => 'Condition',
-        'found'         => 'Condition',
         'positive'      => 'Condition', // e.g. “tested positive for…”
         'negative'      => 'Condition',
         'indicates'     => 'Condition',
     ];
 
+    /**
+     * Infers the OMOP domain category from a clinical phrase.
+     *
+     * @param string $phrase The phrase to analyze.
+     * @return string The inferred category, or 'Unknown' if not matched.
+     */
     public function inferCategory(string $phrase): string
     {
         $lower = strtolower($phrase);
@@ -78,12 +88,24 @@ class VerbCategoryMapper
         return 'Unknown';
     }
 
+    /**
+     * Adds a new verb-category mapping.
+     *
+     * @param string $verb The verb to map.
+     * @param string $category The category to associate.
+     * @return void
+     */
     public function addMapping(string $verb, string $category): void
     {
         // Allows dynamic addition of verb-category mappings
         $this->verbMap[strtolower($verb)] = $category;
     }
 
+    /**
+     * Returns all verb-category mappings.
+     *
+     * @return array<string, string>
+     */
     public function all(): array
     {
         return $this->verbMap;

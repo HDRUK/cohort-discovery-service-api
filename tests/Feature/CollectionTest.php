@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use DB;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Custodian;
@@ -18,9 +19,11 @@ class CollectionTest extends TestCase
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         User::truncate();
         Collection::truncate();
         CollectionHost::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $this->enableMiddleware();
         $this->user = User::factory()->create();
     }

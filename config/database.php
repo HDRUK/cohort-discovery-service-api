@@ -61,6 +61,7 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
+
         'omop' => [
             'driver' => 'mysql',
             'url' => env('DB_OMOP_URL', env('DB_URL')),
