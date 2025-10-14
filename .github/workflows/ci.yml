@@ -69,16 +69,16 @@ jobs:
           sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
           sed -i 's/DB_DATABASE=.*/DB_DATABASE=daphne_test/' .env
-          sed -i 's/DB_USERNAME=.*/DB_USERNAME=laravel/' .env
-          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=laravel/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=root/' .env
 
           echo "" >> .env
           echo "DB_OMOP_CONNECTION=omop" >> .env
           echo "DB_OMOP_HOST=127.0.0.1" >> .env
           echo "DB_OMOP_PORT=3306" >> .env
           echo "DB_OMOP_DATABASE=omop_test" >> .env
-          echo "DB_OMOP_USERNAME=laravel" >> .env
-          echo "DB_OMOP_PASSWORD=laravel" >> .env
+          echo "DB_OMOP_USERNAME=root" >> .env
+          echo "DB_OMOP_PASSWORD=root" >> .env
 
       - name: Debug key files
         run: |
