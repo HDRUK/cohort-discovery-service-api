@@ -90,27 +90,23 @@ class RuleBuilderService
                 }
                 $excludeNext = false;
             }
-
             // End of group
-            elseif ($token === ')') {
+            else if ($token === ')') {
                 break;
             }
-
             // Logical combinators
-            elseif (in_array($token, $this->combinators, true)) {
+            else if (in_array($token, $this->combinators, true)) {
                 if ($token === 'followed') {
-                    // "followed by" → "followed_by"
+                    //"followed" -> "followed by" -> "followed_by"
                     array_shift($tokens);
                     $token = 'followed_by';
                 }
                 $rules[] = $this->makeOperator($token);
             }
-
             // Negation terms
-            elseif (in_array($token, $this->exclusionTerms, true)) {
+            else if (in_array($token, $this->exclusionTerms, true)) {
                 $excludeNext = true;
             }
-
             // Concept phrase (multi-word)
             else {
                 $phrase = $token;

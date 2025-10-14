@@ -72,8 +72,8 @@ class VerbCategoryMapper
     /**
      * Infers the OMOP domain category from a clinical phrase.
      *
-     * @param string $phrase The phrase to analyze.
-     * @return string The inferred category, or 'Unknown' if not matched.
+     * @param string $phrase The phrase to analyse.
+     * @return string The inferred category, or 'Unknown' if not matched - for now.
      */
     public function inferCategory(string $phrase): string
     {
