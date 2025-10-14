@@ -93,7 +93,7 @@ jobs:
         run: php artisan key:generate
 
       - name: Run main application migrations
-        run: php artisan migrate:fresh
+        run: php artisan migrate:fresh --database=mysql
       
       - name: Run main application seeding
         run: php artisan db:seed --class=DatabaseSeeder
