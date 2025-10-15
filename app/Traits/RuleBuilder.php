@@ -9,7 +9,7 @@ trait RuleBuilder
     protected function makeGroup(array $rules, bool $exclude = false): array
     {
         return [
-            'id' => Str::uuid()->toString(), // for testing right now
+            'id' => Str::uuid()->toString(),
             'rules' => $rules,
             'exclude' => $exclude,
         ];
@@ -18,7 +18,7 @@ trait RuleBuilder
     protected function makeRule(array $concept, bool $exclude = false): array
     {
         return [
-            'id' => Str::uuid()->toString(), // for testing right now
+            'id' => Str::uuid()->toString(),
             'exclude' => $exclude,
             'rule' => [
                 'concept' => $concept,
@@ -29,7 +29,7 @@ trait RuleBuilder
     protected function makeOperator(string $combinator): array
     {
         return [
-            'id' => Str::uuid()->toString(), // for testing right now
+            'id' => Str::uuid()->toString(),
             'combinator' => $combinator,
             'exclude' => false,
         ];

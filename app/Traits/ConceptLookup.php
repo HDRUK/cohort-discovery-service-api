@@ -26,12 +26,13 @@ trait ConceptLookup
     {
         $cleanedTerm = $this->extractConceptPhrase($term);
         $concept = $this->findConcept($cleanedTerm);
-        $category = $this->getMapper()->inferCategory($term);
 
         return [
             'concept_id' => $concept->concept_id ?? null,
             'description' => $concept->concept_name ?? $term,
-            'category' => $category,
+            // Originally this was inferred earlier, but now used as fallback in case
+            // domain_id is invalid/null.
+            'category' => $concept->domain_id ?? $this->getMapper()->inferCategory($term),
             'children' => isset($concept->ancestors) ? $concept->ancestors->map(function ($ancestor) {
                 return [
                     'concept_id' => $ancestor->concept_id,
