@@ -15,44 +15,49 @@ trait RefreshDatabaseLite
     {
         parent::setUp();
 
-        $appDb   = database_path('testing.sqlite');
-        $omopDb  = database_path('omop_testing.sqlite');
+        // $appDb   = database_path('testing.sqlite');
+        // $omopDb  = database_path('omop_testing.sqlite');
 
-        if (! file_exists($appDb)) {
-            touch($appDb);
-        }
-        if (! file_exists($omopDb)) {
-            touch($omopDb);
-        }
+        // if (! file_exists($appDb)) {
+        //     touch($appDb);
+        // }
+        // if (! file_exists($omopDb)) {
+        //     touch($omopDb);
+        // }
 
-        config()->set('database.default', 'sqlite');
-        config()->set('database.connections.sqlite.database', $appDb);
+        // config()->set('database.default', 'sqlite');
+        // config()->set('database.connections.sqlite.database', $appDb);
 
-        config()->set('database.connections.omop', [
-            'driver' => 'sqlite',
-            'database' => $omopDb,
-            'prefix' => '',
-            'foreign_key_constraints' => true,
-        ]);
+        // config()->set('database.connections.omop', [
+        //     'driver' => 'sqlite',
+        //     'database' => $omopDb,
+        //     'prefix' => '',
+        //     'foreign_key_constraints' => true,
+        // ]);
 
         if (!static::$migrated) {
-            Artisan::call('migrate:fresh');
-            Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
+            if (env('APP_ENV') === 'testing') {
+                Artisan::call('migrate:fresh');
+                Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
 
-            Artisan::call('migrate:fresh', [
-                '--database' => 'omop',
-                '--path'     => 'database/migrations_omop',
-            ]);
+                Artisan::call('migrate:fresh', [
+                    '--database' => 'omop',
+                    '--path'     => 'database/migrations_omop',
+                ]);
 
-            Artisan::call('db:seed', [
-                '--class'    => 'MinimalOmopSeeder',
-                '--database' => 'omop',
-            ]);
+                Artisan::call('db:seed', [
+                    '--class'    => 'MinimalOmopSeeder',
+                    '--database' => 'omop',
+                ]);
 
-            static::$migrated = true;
+                // Run the fulltext index on omop concept table
+                Artisan::call('app:add-full-text-index-to-omop-concepts');
 
-            // Store the connection (for SQLite in-memory)
-            static::$databaseConnection = DB::connection()->getPdo();
+                static::$migrated = true;
+
+                // Store the connection (for SQLite in-memory)
+                static::$databaseConnection = DB::connection()->getPdo();
+            }
         }
 
         // Reuse the same connection across tests (fix for SQLite in-memory)

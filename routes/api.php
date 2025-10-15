@@ -14,11 +14,14 @@ use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\OmopController;
+use App\Http\Controllers\Api\V1\QueryParserController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('v1/user', [UserController::class, 'getMe']);
 });
+
+Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 

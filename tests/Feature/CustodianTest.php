@@ -18,6 +18,9 @@ class CustodianTest extends TestCase
     {
         parent::setUp();
 
+        Custodian::truncate();
+        CollectionHost::truncate();
+
         $this->payload = [
             'pid' => (string)Str::uuid(),
             'name' => fake()->company,
@@ -26,6 +29,9 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_list_custodians(): void
     {
+        Custodian::factory(5)->create();
+        CollectionHost::factory(5)->create();
+
         $response = $this->get($this->url);
         $response->assertStatus(200);
 
@@ -59,6 +65,8 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_search_custodians(): void
     {
+        Custodian::factory(5)->create();
+
         $cust = Custodian::all()->random(1)->first();
 
         $response = $this->get($this->url . '?name[]=' . $cust->name);

@@ -1,0 +1,79 @@
+{
+    "rules": [
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": 37154752,
+                    "description": "Monkeypox virus detection result positive",
+                    "category": "Measurement",
+                    "children": [
+                        {
+                            "concept_id": 441840,
+                            "description": "Clinical finding",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": true,
+            "rule": {
+                "concept": {
+                    "concept_id": 602245,
+                    "description": "SARS-CoV-2 (severe acute respiratory syndrome coronavirus 2) anti-spike IgG detection result positive",
+                    "category": "Measurement",
+                    "children": [
+                        {
+                            "concept_id": 441840,
+                            "description": "Clinical finding",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": 4009276,
+                    "description": "Abnormally decreased muscle contraction",
+                    "category": "Measurement",
+                    "children": [
+                        {
+                            "concept_id": 441840,
+                            "description": "Clinical finding",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": null,
+                    "description": "diagnosed with pneumonia",
+                    "category": "Condition",
+                    "children": []
+                }
+            }
+        }
+    ],
+    "valid": true
+}

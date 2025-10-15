@@ -2,6 +2,7 @@
 
 namespace Test\Feature;
 
+use DB;
 use Tests\TestCase;
 use Laravel\Passport\Client;
 use App\Models\User;
@@ -13,6 +14,10 @@ class StandaloneApplicationModeTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         // Ensure we are in standalone mode for these tests
         config(['app.mode' => 'standalone']);

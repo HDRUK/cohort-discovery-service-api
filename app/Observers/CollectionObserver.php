@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use Illuminate\Support\Str;
 use App\Enums\TaskType;
 use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
@@ -21,6 +22,7 @@ class CollectionObserver
         ]);
 
         $task = Task::create([
+            'pid' => Str::uuid(),
             'query_id' => $query->id,
             'collection_id' => $collection->id,
             'created_at' => now(),
@@ -41,6 +43,7 @@ class CollectionObserver
         ]);
 
         $task = Task::create([
+            'pid' => Str::uuid(),
             'query_id' => $query->id,
             'collection_id' => $collection->id,
             'created_at' => now(),

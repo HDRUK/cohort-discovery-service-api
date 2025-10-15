@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use DB;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
@@ -17,6 +18,7 @@ class QueryControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
         $this->enableObservers();
     }
 
@@ -32,10 +34,15 @@ class QueryControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_creates_query_and_tasks_correctly()
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Task::truncate();
+        Collection::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $this->disableObservers();
+
         $n = 3;
         $collections = Collection::factory()->bunny()->count($n)->create();
-
-        Task::truncate();
 
         $payload = [
             'name' => 'Test Query',
@@ -58,15 +65,22 @@ class QueryControllerTest extends TestCase
 
         $this->assertDatabaseCount(Task::class, $n);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
+
+        $this->enableObservers();
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_only_creates_tasks_for_filtered_collections()
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Task::truncate();
+        Collection::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $this->disableObservers();
+
         $included = Collection::factory()->bunny()->create();
         Collection::factory()->bunny()->count(2)->create();
-
-        Task::truncate();
 
         $payload = [
             'name' => 'Filtered Query',
@@ -83,6 +97,8 @@ class QueryControllerTest extends TestCase
 
         $this->assertDatabaseCount(Task::class, 1);
         $this->assertDatabaseHas(Query::class, ['name' => 'Filtered Query']);
+
+        $this->enableObservers();
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -94,7 +110,6 @@ class QueryControllerTest extends TestCase
 
         $n = 3;
         $collections = Collection::factory()->bunny()->count($n)->create();
-        Task::truncate();
 
         $payload = [
             'name' => 'Test Query',

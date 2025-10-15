@@ -10,10 +10,11 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
  * @property int $concept_id
+ * @property string $concept_name
  * @property int $domain_id
  * @property string|int $concept_code
  * @property int $vocabulary_id
- * @property \App\Models\Omop\Concept $ancestors
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Models\Omop\Concept> $ancestors
  * @property \App\Models\Omop\Concept $descendants
  * @property \App\Models\Distribution $distributions
  */

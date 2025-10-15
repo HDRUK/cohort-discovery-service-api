@@ -27,6 +27,7 @@ class DevDatabaseSeeder extends Seeder
 
         $this->call([
             CollectionSeeder::class,
+            CollectionHostSeeder::class,
         ]);
     }
 }

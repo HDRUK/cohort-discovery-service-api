@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Distribution;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Storage;
 use App\Traits\StreamsCsv;
 
 class MinimalDistributionsSeeder extends Seeder
@@ -22,7 +21,7 @@ class MinimalDistributionsSeeder extends Seeder
         $buffer = [];
         $count = 0;
 
-        $toNull = fn($d) => in_array($d, [' ', '', null], true)
+        $toNull = fn ($d) => in_array($d, [' ', '', null], true)
             ? null
             : $d;
 

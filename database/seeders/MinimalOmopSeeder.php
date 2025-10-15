@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
 use App\Traits\StreamsCsv;
@@ -29,7 +28,7 @@ class MinimalOmopSeeder extends Seeder
         $buffer = [];
         $count = 0;
 
-        $toNull = fn($d) => in_array($d, ['0000-00-00', '0000-00-00 00:00:00', '', null], true) ? null : $d;
+        $toNull = fn ($d) => in_array($d, ['0000-00-00', '0000-00-00 00:00:00', '', null], true) ? null : $d;
 
         foreach ($generator as $row) {
             $buffer[] = [

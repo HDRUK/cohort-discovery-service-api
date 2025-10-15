@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use Illuminate\Support\Str;
 use Illuminate\Database\Seeder;
 
 class TaskSeeder extends Seeder
@@ -19,6 +20,7 @@ class TaskSeeder extends Seeder
 
         foreach ($collections as $collectionId) {
             Task::create([
+                'pid' => Str::uuid(),
                 'query_id' => $query->id,
                 'collection_id' => $collectionId,
                 'created_at' => now(),
