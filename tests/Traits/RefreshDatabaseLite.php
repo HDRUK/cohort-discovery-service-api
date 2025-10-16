@@ -15,26 +15,6 @@ trait RefreshDatabaseLite
     {
         parent::setUp();
 
-        // $appDb   = database_path('testing.sqlite');
-        // $omopDb  = database_path('omop_testing.sqlite');
-
-        // if (! file_exists($appDb)) {
-        //     touch($appDb);
-        // }
-        // if (! file_exists($omopDb)) {
-        //     touch($omopDb);
-        // }
-
-        // config()->set('database.default', 'sqlite');
-        // config()->set('database.connections.sqlite.database', $appDb);
-
-        // config()->set('database.connections.omop', [
-        //     'driver' => 'sqlite',
-        //     'database' => $omopDb,
-        //     'prefix' => '',
-        //     'foreign_key_constraints' => true,
-        // ]);
-
         if (!static::$migrated) {
             if (env('APP_ENV') === 'testing') {
                 Artisan::call('migrate:fresh');
