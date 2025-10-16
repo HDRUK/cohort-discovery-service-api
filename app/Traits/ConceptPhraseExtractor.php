@@ -7,7 +7,8 @@ trait ConceptPhraseExtractor
     protected array $stopPhrases = [
         'people who', 'patients who', 'subjects who',
         'individuals who', 'persons who',
-        'with', 'who', 'that', 'had', 'having'
+        'with', 'who', 'that', 'had', 'having',
+        'record of', 'history of', 'status of', 'diagnosed with'
     ];
 
     protected function extractConceptPhrase(string $term): string
@@ -21,7 +22,7 @@ trait ConceptPhraseExtractor
         }
 
         $term = preg_replace(
-            '/^(received|observed|measured|diagnosed)( with| for)?\s*/',
+            '/^(received|observed|measured|diagnosed|tested|found|showed|recorded|detected|administered|given|took|taking|had|has|have|carried|reported|performed|evaluated|collected|assessed|noted|monitored|identified|detected|appeared|presented|described|indicated)( with| for| of)?\s*/i',
             '',
             $term
         );

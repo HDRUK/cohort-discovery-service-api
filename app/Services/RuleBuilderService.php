@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Traits\RuleBuilder;
 use App\Traits\ConceptLookup;
+use App\Traits\ConceptPhraseExtractor;
 use Illuminate\Support\Str;
 
 /**
@@ -18,6 +19,7 @@ class RuleBuilderService
 {
     use RuleBuilder;
     use ConceptLookup;
+    use ConceptPhraseExtractor;
 
     /** @var array<string> Logical combinators supported in queries */
     private array $combinators = ['and', 'or', 'followed', 'followed_by', '(', ')'];
@@ -47,21 +49,24 @@ class RuleBuilderService
     {
         $input = strtolower($input);
 
-        // Protect parenthetical text that is part of a phrase, e.g. "(n)" or "(igg)"
-        $input = preg_replace_callback('/\(([a-z0-9\- ]+)\)/i', function ($m) {
-            return '__PAREN_' . str_replace(' ', '_', $m[1]) . '__';
+        // Protect only small technical parenthetical fragments (like "(igg)" or "(n)")
+        $input = preg_replace_callback('/\(([a-z0-9\-]{1,10})\)/i', function ($m) {
+            return '__PAREN_' . $m[1] . '__';
         }, $input);
 
-        // Standardise grouping parentheses
-        $input = str_replace(['(', ')'], [' ( ', ' ) '], $input);
+        // Surround only actual grouping parentheses with spaces
+        // Avoid splitting parentheses inside phrases
+        $input = preg_replace('/\s*\(\s*/', ' ( ', $input);
+        $input = preg_replace('/\s*\)\s*/', ' ) ', $input);
+
         $input = preg_replace('/\s+/', ' ', $input);
 
         $tokens = explode(' ', trim($input));
 
-        // Replace placeholder tokens back into normal tokens
+        // Restore placeholders
         return array_map(function ($t) {
             if (str_starts_with($t, '__PAREN_')) {
-                return '(' . str_replace('_', ' ', substr($t, 8)) . ')';
+                return '(' . substr($t, 8) . ')';
             }
             return $t;
         }, $tokens);
@@ -97,7 +102,7 @@ class RuleBuilderService
             // Logical combinators
             elseif (in_array($token, $this->combinators, true)) {
                 if ($token === 'followed') {
-                    //"followed" -> "followed by" -> "followed_by"
+                    // "followed" -> "followed by" -> "followed_by"
                     array_shift($tokens);
                     $token = 'followed_by';
                 }
@@ -118,8 +123,17 @@ class RuleBuilderService
                     $phrase .= ' ' . array_shift($tokens);
                 }
 
-                $concept = $this->lookupConcept(trim($phrase));
-                $rules[] = $this->makeRule($concept, $excludeNext || $negateGroup);
+                // Clean phrase using stop phrases and verbs
+                $cleanPhrase = $this->extractConceptPhrase($phrase);
+
+                // Lookup concept using cleaned phrase
+                $concept = $this->lookupConcept($cleanPhrase);
+
+                // Only add if we have something meaningful
+                if (isset($concept['concept_id']) && !empty($concept['concept_id'])) {
+                    $rules[] = $this->makeRule($concept, $excludeNext || $negateGroup);
+                }
+
                 $excludeNext = false;
             }
         }
