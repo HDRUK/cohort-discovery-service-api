@@ -29,8 +29,12 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_list_custodians(): void
     {
-        Custodian::factory(5)->create();
-        CollectionHost::factory(5)->create();
+        $custodians = Custodian::factory(5)->create();
+        foreach ($custodians as $c) {
+            CollectionHost::factory()->create([
+                'custodian_id' => $c->id,
+            ]);
+        }
 
         $response = $this->get($this->url);
         $response->assertStatus(200);

@@ -12,6 +12,7 @@ class CustodianSeeder extends Seeder
      */
     public function run(): void
     {
+        Custodian::truncate();
         Custodian::factory()->count(10)->create();
     }
 }
