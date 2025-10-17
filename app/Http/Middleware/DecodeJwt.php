@@ -37,6 +37,9 @@ class DecodeJwt
             $request->attributes->set('jwt_claims', (array) $claims);
 
             $jwtUser = $claims->user ?? null;
+            if (!$jwtUser) {
+                return response()->json(['error' => 'Invalid token: Unknown user'], 401);
+            }
             $userEmail = $jwtUser->email;
             $teams = $jwtUser->admin_teams;
 
