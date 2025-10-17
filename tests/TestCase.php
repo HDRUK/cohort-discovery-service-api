@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Support\ApplicationMode;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -20,7 +21,11 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
         $this->liteSetUp();
 
-        Config::set('api.gateway_jwt_secret', Config::get('api.gateway_jwt_secret', 'test_secret'));
+        if (ApplicationMode::isStandalone()) {
+            Config::set('api.jwt_secret', Config::get('api.jwt_secret', 'test_secret'));
+        } else {
+            Config::set('api.jwt_secret', Config::get('integrated.jwt_secret', 'test_secret'));
+        }
 
         $this->disableMiddleware();
         $this->disableObservers();
@@ -81,7 +86,7 @@ abstract class TestCase extends BaseTestCase
             ],
         ], $overrides);
 
-        $secret = Config::get('api.gateway_jwt_secret', 'test_secret');
+        $secret = Config::get('api.jwt_secret', 'test_secret');
 
         return JWT::encode($payload, $secret, 'HS256');
     }

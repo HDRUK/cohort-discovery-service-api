@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ApplicationMode;
 use App\Models\Custodian;
 use App\Models\User;
 use Closure;
@@ -21,7 +22,12 @@ class DecodeJwt
         }
 
         try {
-            $key = config('api.gateway_jwt_secret');
+            $key = null;
+            if (ApplicationMode::isStandalone()) {
+                $key = config('api.jwt_secret');
+            } else {
+                $key = config('integrated.jwt_secret');
+            }
 
             if (!$key) {
                 throw new \Exception('No gateway jwt secret provided, cant decode safely');
@@ -31,8 +37,12 @@ class DecodeJwt
             $request->attributes->set('jwt_claims', (array) $claims);
 
             $jwtUser = $claims->user ?? null;
+            if (!$jwtUser) {
+                return response()->json(['error' => 'Invalid token: Unknown user'], 401);
+            }
             $userEmail = $jwtUser->email;
             $teams = $jwtUser->admin_teams;
+
             foreach ($teams as $team) {
                 $custodian = Custodian::updateOrCreate(
                     ['gateway_team_id' => $team->id],
@@ -49,7 +59,7 @@ class DecodeJwt
             }
 
             if ($userEmail) {
-                $user = User::where('email', $userEmail)->first();
+                $user = User::where('email', strtolower($userEmail))->first();
 
                 if ($user) {
                     Auth::setUser($user);
