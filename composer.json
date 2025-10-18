@@ -13,6 +13,7 @@
         "darkaonline/l5-swagger": "^9.0",
         "firebase/php-jwt": "^6.11",
         "hdruk/claims-based-access-control": "^0.1.11",
+        "hdruk/laravel-plugin-core": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
         "laravel/framework": "^12.4",
         "laravel/horizon": "^5.33",
@@ -101,6 +102,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-search-and-filter"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hdruk/laravel-plugin-core"
         }
     ],
     "minimum-stability": "dev",
