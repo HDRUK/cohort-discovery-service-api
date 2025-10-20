@@ -144,7 +144,70 @@ The purpose of this is that the OMOP model might be in an external location or y
 
 ## Setting up BUNNY
 
-... to be completed ...
+### Generating synthetic datasets
+
+If you have no synthetic datasets you can generate some with our Synthetic-OMOP [(SOMOP) package](https://github.com/HDRUK/somop)
+
+There are multiple .yaml files for example synthetic datasets of different varieties and sizes. It's best to run them all to get a feel for the different types of datasets that Cohort Discovery could be used for.
+
+Usage:
+
+```
+somop --config ../configs/<config>.yaml --out-dir <output directory>
+```
+
+You need to also retrieve or create a `CONCEPT.csv` file for each synthetic dataset that you create. You can use the one you have downloaded from athena which is the full OMOP vocab. Otherwise create a table for the Concept and fill it with all the concepts that have been used in the dataset creation (this is quite manual - so it is preferable to use a full OMOP vocab).
+
+E.g. when I have my `CONCEPT.csv` in a `./data` folder, I create four synthetic datasets in the folder `./out`:
+
+```
+#!/bin/bash
+rm -rf out
+for cfg in ckd_antibodies conditions symptoms more_symptoms; do
+  somop --config ../configs/$cfg.yaml --out-dir out/$cfg
+  cp data/CONCEPT.csv out/$cfg/
+done
+```
+
+### Loading synthetic datasets
+
+You can use OMOP-lite with a postgres database in docker to load data. [In this example](https://github.com/HDRUK/somop/blob/main/docker/synthetic-omop.yaml), the four synthetic datasets generated are loaded into postgres on port `5435`.
+
+### Running BUNNY
+
+For setting up 8 BUNNYs (2 per dataset, 1 for availability, one for distribution), you can use [this yaml file](https://github.com/HDRUK/somop/blob/main/docker/run-bunny.yaml)
+
+The general structure of setting up a BUNNY should be:
+
+```
+name: bunny-daphne
+
+services:
+  # --- Dataset 1: COVID-19 Antibody CKD ---
+  covid-ckd-a:
+    image: ghcr.io/health-informatics-uon/hutch/bunny:edge
+    environment:
+      DATASOURCE_DB_USERNAME: postgres
+      DATASOURCE_DB_PASSWORD: postgres
+      DATASOURCE_DB_DATABASE: omop1
+      DATASOURCE_DB_DRIVERNAME: postgresql
+      DATASOURCE_DB_SCHEMA: public
+      DATASOURCE_DB_HOST: host.docker.internal
+      DATASOURCE_DB_PORT: 5435
+      BUNNY_LOGGER_LEVEL: DEBUG
+```
+
+You then need to configure:
+
+| Env variable      | Description                                                                                    | Example                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| TASK_API_BASE_URL | URL of the daphne API                                                                          | `http://host.docker.internal:8100/api/v1` |
+| TASK_API_USERNAME | Client ID of Collection Host                                                                   | <user name string >                       |
+| TASK_API_PASSWORD | Client secret of Collection Host                                                               | <password string >                        |
+| TASK_API_TYPE     | Availability of Distribution task. You need to setup two BUNNYs per dataset for each task type | `a` or `b`                                |
+| COLLECTION_ID     | The collection ID from the daphne-api for this dataset                                         | A `pid` that is a uuid()                  |
+
+For more information [follow the instructions here](https://hutch.health/bunny/config)
 
 # Standalone Integration
 
