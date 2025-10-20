@@ -215,7 +215,7 @@ For more information [follow the instructions here](https://hutch.health/bunny/c
 
 # Gateway Integration
 
-To use DAPHNE with the HDRUK Gateway, follow the next steps to setup this as an integration
+To use DAPHNE with the HDR UK Gateway, follow the next steps to setup this as an integration
 
 Add the following to your .env for the gateway-api:
 
