@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Distribution;
+use App\Models\LocalConceptAncestor;
 use App\Models\Omop\ConceptAncestor as ConceptAncestor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,12 +48,12 @@ class PopulateLocalConceptAncestors implements ShouldQueue
                     ];
                 }
                 $payload = collect($payload)
-                    ->unique(fn($r) => $r['parent_concept_id'] . '-' . $r['child_concept_id'])
+                    ->unique(fn ($r) => $r['parent_concept_id'] . '-' . $r['child_concept_id'])
                     ->values()
                     ->all();
 
                 if (!empty($payload)) {
-                    //LocalConceptAncestor::insertOrIgnore($payload);
+                    LocalConceptAncestor::insertOrIgnore($payload);
                 }
             });
     }
