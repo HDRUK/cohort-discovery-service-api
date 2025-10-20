@@ -199,7 +199,7 @@ services:
 
 You then need to configure:
 
-| Env variable      | Description                                                                                    | Example                                   |
+| Env variable      | Description co                                                                                 | Example                                   |
 | ----------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | TASK_API_BASE_URL | URL of the daphne API                                                                          | `http://host.docker.internal:8100/api/v1` |
 | TASK_API_USERNAME | Client ID of Collection Host                                                                   | <user name string >                       |
