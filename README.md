@@ -63,7 +63,7 @@ Proceed as follows:
 -   Option A - if you already have an OMOP Vocab exported from Athena and running in an SQL database already
 -   Option B - you just need a minimal OMOP `concept` and `concept_ancestor` table to play with
 
-### [Option A] You already have a full OMOP Vocab
+### [Option A] You have a full OMOP Vocab
 
 Point the following env vars to this DB
 
@@ -76,6 +76,33 @@ DB_OMOP_USERNAME=
 DB_OMOP_PASSWORD=
 
 ```
+
+If you want to get a full OMOP Vocab, or you want to update yours, you must:
+
+1. Got to [https://athena.ohdsi.org/search-terms/start](https://athena.ohdsi.org/search-terms/start)
+2. Create an account, if you don't already have one
+3. Navigate to 'Download'
+   <img width="447" height="100" alt="image" src="https://github.com/user-attachments/assets/ed3ef247-2baa-4828-a401-92776fe7be3d" />
+
+4. Select the VOCABS you need
+   <img width="868" height="566" alt="image" src="https://github.com/user-attachments/assets/ca7452fc-d170-4e75-88ab-38039baa8969" />
+
+-   You definitely need 'SNOMED', 'OMOP Gender' and the 'CO-CONNECT' ones
+-   You should likely include 'ICD10' and 'ICD9' (multiple vocabs)
+-   'Read' codes are common too in UK health data
+
+5. Download these
+
+-   it may take a few minutes - you'll receive an email when your download is ready
+
+6. Extract the data from the .zip file
+
+-   The data will come in csv files (though they're also really tab separated)
+
+7. Load the data into your favourite database (`DB_OMOP_CONNECTION`)
+
+-   I'd recommend use [OMOP-lite](https://github.com/health-Informatics-UoN/omop-lite) created by UoN
+-   Otherwise you'll have to do this manually and optimise/set indices etc.
 
 ### [Option B] You need a minimal OMOP Vocab
 
