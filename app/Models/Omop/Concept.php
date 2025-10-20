@@ -23,7 +23,7 @@ class Concept extends Model
     use Search;
 
     protected $connection = 'omop';
-    protected $table = 'concept';
+    protected $table = 'omop.concept';
     protected $primaryKey = 'concept_id';
     public $incrementing = false;
     protected $keyType = 'int';

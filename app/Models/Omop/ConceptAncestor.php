@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ConceptAncestor extends Model
 {
     protected $connection = 'omop';
-    protected $table = 'concept_ancestor';
+    protected $table = 'omop.concept_ancestor';
     public $timestamps = false;
     public $incrementing = false;
 

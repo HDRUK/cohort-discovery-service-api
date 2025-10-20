@@ -4,13 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class() extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('concept_ancestors', function (Blueprint $table) {
+        Schema::create('concept_ancestor', function (Blueprint $table) {
             $table->unsignedBigInteger('parent_concept_id');
             $table->unsignedBigInteger('child_concept_id');
 
@@ -23,7 +23,7 @@ return new class () extends Migration {
      */
     public function down(): void
     {
-        Schema::table('concept_ancestors', function (Blueprint $table) {
+        Schema::table('concept_ancestor', function (Blueprint $table) {
             Schema::dropIfExists('concept_ancestors');
         });
     }
