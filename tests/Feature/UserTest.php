@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use DB;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Query;
@@ -128,6 +129,10 @@ class UserTest extends TestCase
 
     public function test_the_application_can_sort_users(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
         $names = [
             [
                 'name' => 'Zach Zachson',

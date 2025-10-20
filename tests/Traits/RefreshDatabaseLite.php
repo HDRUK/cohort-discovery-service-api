@@ -44,7 +44,7 @@ trait RefreshDatabaseLite
         DB::connection()->setPdo(static::$databaseConnection);
 
         // Start a manual transaction
-        DB::beginTransaction();
+        // DB::beginTransaction();
     }
 
     public function tearDown(): void
