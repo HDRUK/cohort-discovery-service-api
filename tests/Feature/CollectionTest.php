@@ -243,7 +243,6 @@ class CollectionTest extends TestCase
 
     public function test_it_can_search_custodian_name(): void
     {
-        // $this->disableMiddleware();
         $this->disableObservers();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
@@ -261,8 +260,6 @@ class CollectionTest extends TestCase
         Collection::factory(1)->create([
             'custodian_id' => $custodian->id,
         ]);
-
-        // dd(Collection::where('custodian_id', $custodian->id)->first());
 
         $response = $this->actingAsJwt(
             $this->user,
