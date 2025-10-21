@@ -24,11 +24,12 @@ class CollectionTest extends TestCase
         Collection::truncate();
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
         $this->enableMiddleware();
         $this->user = User::factory()->create();
     }
 
-    public function test_it_can_list_collections()
+    public function test_it_can_list_collections(): void
     {
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
@@ -81,7 +82,7 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_it_cannot_list_collections_without_correct_workgroups()
+    public function test_it_cannot_list_collections_without_correct_workgroups(): void
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
@@ -116,7 +117,7 @@ class CollectionTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_it_cannot_list_collections_without_correct_team_admin()
+    public function test_it_cannot_list_collections_without_correct_team_admin(): void
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
@@ -144,5 +145,135 @@ class CollectionTest extends TestCase
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
 
         $response->assertStatus(403);
+    }
+
+    public function test_it_can_get_by_status(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            Collection::factory()->create([
+                'status' => ($i % 2 ? 1 : 0),
+            ]);
+        }
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('collections', [
+            'status' => 1,
+        ]);
+
+        $this->assertDatabaseHas('collections', [
+            'status' => 0,
+        ]);
+
+        $content = $response->json('data');
+
+        foreach ($content['data'] as $c) {
+            $this->assertTrue($c['status'] === 1);
+        }
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_INACTIVE);
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        foreach ($content['data'] as $c) {
+            $this->assertTrue($c['status'] === 0);
+        }
+    }
+
+    public function test_it_can_search_by_name(): void
+    {
+        Collection::factory(10)->create();
+        $coll = Collection::inRandomOrder()->first();
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '?name[]=' . $coll->name);
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertNotNull($content);
+        $this->assertTrue(count($content) === 1);
+        $this->assertTrue($content[0]['id'] === $coll->id);
+        $this->assertTrue($content[0]['name'] === $coll->name);
+    }
+
+    public function test_it_can_sort(): void
+    {
+        Collection::factory(10)->create();
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '?sort=name:asc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        sort($sortedArray, SORT_STRING);
+        $this->assertEquals($sortedArray, $content);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '?sort=name:desc');
+        $response->assertStatus(200);
+
+        $content = $response->json('data.*.name');
+        $sortedArray = $content;
+
+        rsort($sortedArray, SORT_STRING);
+
+        $this->assertEquals($sortedArray, $content);
+    }
+
+    public function test_it_can_search_custodian_name(): void
+    {
+        // $this->disableMiddleware();
+        $this->disableObservers();
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Custodian::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $custodian = Custodian::factory()->create([
+            'name' => 'Custodian For Testing',
+        ]);
+
+        Custodian::factory(1)->create([
+            'name' => 'Not A Custodian For Testing',
+        ]);
+
+        Collection::factory(1)->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        // dd(Collection::where('custodian_id', $custodian->id)->first());
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '?custodian_name=Custodian%20For%20Testing');
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertTrue(count($content) > 0);
+        $this->assertTrue($content[0]['id'] === $custodian->id);
     }
 }

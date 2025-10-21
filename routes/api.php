@@ -93,6 +93,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 
 
     Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+    Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
 
