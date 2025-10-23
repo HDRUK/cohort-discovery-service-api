@@ -50,6 +50,7 @@ class CollectionConfig extends Model implements ValidatableModel
         'enabled',
         // Can be either: A - Query, or B - Distribution
         'type',
+        'last_run_at',
     ];
 
     protected $casts = [

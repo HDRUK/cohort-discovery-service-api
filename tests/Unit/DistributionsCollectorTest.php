@@ -10,9 +10,11 @@ use App\Models\Task;
 use App\Models\Query;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
+use App\Models\CollectionConfigRun;
 use App\Console\Commands\DistributionsCollector;
 use App\Enums\TaskType;
 use App\Enums\QueryType;
+use App\Enums\FrequencyMode;
 
 class DistributionsCollectorTest extends TestCase
 {
@@ -25,6 +27,7 @@ class DistributionsCollectorTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Collection::truncate();
         CollectionConfig::truncate();
+        CollectionConfigRun::truncate();
         Task::truncate();
         Query::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -45,7 +48,7 @@ class DistributionsCollectorTest extends TestCase
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
-            'frequency_mode' => 2,
+            'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
             'type' => TaskType::A->value,
@@ -55,7 +58,7 @@ class DistributionsCollectorTest extends TestCase
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
-            'frequency_mode' => 2,
+            'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
             'type' => TaskType::A->value,
@@ -66,10 +69,24 @@ class DistributionsCollectorTest extends TestCase
         $command = new DistributionsCollector();
         $result = $command->handle([]);
 
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'DistributionsCollector starting:'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'running per monthly schedule'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'DistributionsCollector generating queries and tasks for'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'created Task'));
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'DistributionsCollector starting:')
+        );
+        // Log::shouldNotHaveReceived('info')->withArgs(
+        //     function (string $message) {
+        //         dd($message);
+        //         return str_contains($message, 'already ran this month, skipping');
+        //     } 
+        // );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'running per monthly schedule')
+        );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'DistributionsCollector generating queries and tasks for')
+        );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'created Task')
+        );
 
         $this->assertDatabaseCount('queries', 1);
         $this->assertDatabaseCount('tasks', 1);
@@ -102,8 +119,8 @@ class DistributionsCollectorTest extends TestCase
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
-            'frequency_mode' => 1,
-            'run_time_frequency' => $now->day,
+            'frequency_mode' => FrequencyMode::WEEKLY->value,
+            'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
             'type' => TaskType::A->value,
         ]);
@@ -112,8 +129,8 @@ class DistributionsCollectorTest extends TestCase
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
-            'frequency_mode' => 1,
-            'run_time_frequency' => $now->day,
+            'frequency_mode' => FrequencyMode::WEEKLY->value,
+            'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
             'type' => TaskType::A->value,
         ]);
@@ -123,10 +140,24 @@ class DistributionsCollectorTest extends TestCase
         $command = new DistributionsCollector();
         $result = $command->handle([]);
 
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'DistributionsCollector starting:'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'running per weekly schedule'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'DistributionsCollector generating queries and tasks for'));
-        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, 'created Task'));
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'DistributionsCollector starting:')
+        );
+        // Log::shouldNotHaveReceived('info')->withArgs(
+        //     function (string $message) {
+        //         dd($message);
+        //         return str_contains($message, 'already ran this week, skipping');
+        //     } 
+        // );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'running per weekly schedule')
+        );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'DistributionsCollector generating queries and tasks for')
+        );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn ($message) => str_contains($message, 'created Task')
+        );
 
         $this->assertDatabaseCount('queries', 1);
         $this->assertDatabaseCount('tasks', 1);

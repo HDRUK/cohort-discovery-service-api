@@ -20,6 +20,7 @@ return new class () extends Migration {
             $table->tinyInteger('run_time_frequency')->default(1); // Default to Sunday's
             $table->tinyInteger('enabled')->default(1);
             $table->string('type', 1);
+            $table->timestamp('last_run_at')->nullable();
 
             $table->index('type', 'idx_collection_config_type');
             $table->index('frequency_mode', 'idx_collection_config_frequency_mode');
