@@ -103,7 +103,9 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $this->belongsToMany(
             Workgroup::class,
-            'user_has_workgroups'
+            'user_has_workgroups',
+            'user_id',
+            'workgroup_id'
         )->using(UserHasWorkgroup::class);
     }
 

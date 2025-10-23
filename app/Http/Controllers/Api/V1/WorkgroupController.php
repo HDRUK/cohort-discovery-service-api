@@ -51,8 +51,11 @@ class WorkgroupController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Workgroup::class)->getValidationRules('show'));
+
         try {
-            $workgroup = Workgroup::findOrFail($id);
+            $workgroup = Workgroup::findOrFail($validated['id']);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
@@ -86,14 +89,15 @@ class WorkgroupController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validate(app(Workgroup::class)->getValidationRules('store'));
 
-        $workgroup = Workgroup::create($data);
-
-        return $this->CreatedResponse($workgroup);
+        try {
+            $workgroup = Workgroup::create($validated);
+            return $this->CreatedResponse($workgroup);
+        } catch (\Throwable $e) {
+            \Log::error('WorkgroupController@store - failed: ' . json_encode($validated));
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
@@ -132,19 +136,19 @@ class WorkgroupController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Workgroup::class)->getValidationRules('update'));
+
         try {
-            $workgroup = Workgroup::findOrFail($id);
+            $workgroup = Workgroup::findOrFail($validated['id']);
+            $workgroup->update($validated);
+
+            return $this->OKResponse($workgroup);
         } catch (\Exception $e) {
+            \Log::error('WorkgroupController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
-
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'active' => 'sometimes|boolean',
-        ]);
-
-        $workgroup->update($data);
-        return $this->OKResponse($workgroup);
     }
 
     /**
@@ -170,14 +174,21 @@ class WorkgroupController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Workgroup::class)->getValidationRules('delete'));
+
         try {
-            $workgroup = Workgroup::findOrFail($id);
-            $workgroup->delete();
+            $workgroup = Workgroup::findOrFail($validated['id']);
+            if ($workgroup->delete()) {
+                return $this->OKResponse([]);
+            }
+
+            return $this->ErrorResponse();
         } catch (\Exception $e) {
+            \Log::error('WorkgroupController@destroy/' . $validated['id'] . ' - failed: ' .
+                $e->getMessage());
             return $this->NotFoundResponse();
         }
-
-        return $this->OKResponse([]);
     }
 
     /**
@@ -199,7 +210,8 @@ class WorkgroupController extends Controller
     public function usersByWorkgroup(Request $request): JsonResponse
     {
         $workgroups = Workgroup::searchViaRequest()
-            ->with('users')->get();
+            ->with('users')
+            ->get();
 
         if ($workgroups->isEmpty()) {
             return $this->NotFoundResponse();

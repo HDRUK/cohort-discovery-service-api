@@ -58,6 +58,8 @@ class Collection extends Model
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
 
+    public $table = 'collections';
+
     protected $fillable = [
         'name',
         'url',
@@ -87,7 +89,6 @@ class Collection extends Model
     {
         return $this->belongsTo(Custodian::class);
     }
-
 
     public function tasks(): HasMany
     {
@@ -138,5 +139,10 @@ class Collection extends Model
             'collection_id',
             'collection_host_id'
         )->limit(1);
+    }
+
+    public function config(): HasOne
+    {
+        return $this->hasOne(CollectionConfig::class);
     }
 }

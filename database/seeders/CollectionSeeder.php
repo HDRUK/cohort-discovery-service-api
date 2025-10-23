@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CollectionConfig;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
@@ -62,6 +64,27 @@ class CollectionSeeder extends Seeder
             'type' => $type,
             'custodian_id' => $custodianId,
         ]);
+
+        // Create two CollectionConfig records for the above Collection
+        // to mimic the distribution and generic query types
+        $types = [TaskType::A, TaskType::B];
+        $frequencyMode = 1; // Weekly
+        $frequencyRun = 7; // ...on Sunday's
+        foreach ($types as $t) {
+            CollectionConfig::create([
+                'collection_id' => $collection->id,
+                'run_time_hour' => 23,
+                'run_time_minute' => 59,
+                'frequency_mode' => $frequencyMode,
+                'run_time_frequency' => $frequencyRun,
+                'enabled' => 1,
+                'type' => $t,
+            ]);
+
+            $frequencyMode++; // Add another in monthly mode
+            $frequencyRun = 1; // First week of the month
+        }
+
 
         $collectionHost = CollectionHost::firstOrCreate([
             'name' => 'default-seeded-collection-host',
