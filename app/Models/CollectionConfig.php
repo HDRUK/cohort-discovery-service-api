@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Contracts\ValidatableModel;
-use App\Traits\HasValidationRules;
 
 /**
  * @OA\Schema(
@@ -30,7 +29,6 @@ class CollectionConfig extends Model implements ValidatableModel
 {
     /** @use HasFactory<\Database\Factories\CollectionConfigFactory> */
     use HasFactory;
-    use HasValidationRules;
 
     public $table = 'collection_config';
     public $timestamps = true;
@@ -58,12 +56,6 @@ class CollectionConfig extends Model implements ValidatableModel
         'enabled' => 'boolean',
     ];
 
-    /**
-     * Per my comment in: App\Traits\HasValidationRules, the definition
-     * of validation rules now lives on the model. Reducing the need to
-     * create hundreds of additional files for dependency injection
-     * across all controllers for validation.
-     */
     public function getValidationRules(string $context): array
     {
         return match(strtolower($context)) {

@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use App\Contracts\ValidatableModel;
-use App\Traits\HasValidationRules;
 
 /**
  * @OA\Schema(
@@ -24,7 +23,6 @@ use App\Traits\HasValidationRules;
 class Workgroup extends Model implements ValidatableModel
 {
     use Search;
-    use HasValidationRules;
 
     public $timestamps = true;
 
