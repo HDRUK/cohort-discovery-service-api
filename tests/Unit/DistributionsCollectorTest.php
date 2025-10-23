@@ -72,12 +72,6 @@ class DistributionsCollectorTest extends TestCase
         Log::shouldHaveReceived('info')->withArgs(
             fn ($message) => str_contains($message, 'DistributionsCollector starting:')
         );
-        // Log::shouldNotHaveReceived('info')->withArgs(
-        //     function (string $message) {
-        //         dd($message);
-        //         return str_contains($message, 'already ran this month, skipping');
-        //     } 
-        // );
         Log::shouldHaveReceived('info')->withArgs(
             fn ($message) => str_contains($message, 'running per monthly schedule')
         );
@@ -143,12 +137,6 @@ class DistributionsCollectorTest extends TestCase
         Log::shouldHaveReceived('info')->withArgs(
             fn ($message) => str_contains($message, 'DistributionsCollector starting:')
         );
-        // Log::shouldNotHaveReceived('info')->withArgs(
-        //     function (string $message) {
-        //         dd($message);
-        //         return str_contains($message, 'already ran this week, skipping');
-        //     } 
-        // );
         Log::shouldHaveReceived('info')->withArgs(
             fn ($message) => str_contains($message, 'running per weekly schedule')
         );
