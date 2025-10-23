@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use App\Contracts\ValidatableModel;
+use App\Traits\HasValidationRules;
 
 /**
  * @OA\Schema(
@@ -19,9 +21,10 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
  * )
  */
-class Workgroup extends Model
+class Workgroup extends Model implements ValidatableModel
 {
     use Search;
+    use HasValidationRules;
 
     public $timestamps = true;
 
@@ -39,8 +42,36 @@ class Workgroup extends Model
         'name',
     ];
 
+    public function getValidationRules(string $context): array
+    {
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'id' => 'required|integer|exists:workgroups,id',
+            ],
+            'store' => [
+                'name' => 'required|string|min:3|max:255',
+                'active' => 'required|boolean',
+            ],
+            'update' => [
+                'id' => 'required|integer|exists:workgroups,id',
+                'name' => 'sometimes|string|min:3|max:255',
+                'active' => 'sometimes|boolean',
+            ],
+            'delete' => [
+                'id' => 'required|integer|exists:workgroups,id',
+            ],
+            default => [],
+        };
+    }
+
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'user_has_workgroups', 'workgroup_id', 'user_id');
+        return $this->belongsToMany(
+            User::class,
+            'user_has_workgroups',
+            'workgroup_id',
+            'user_id'
+        );
     }
 }

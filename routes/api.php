@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryParserController;
+use App\Http\Controllers\Api\V1\CollectionConfigController;
+use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::middleware(['decode.jwt'])->group(function () {
@@ -97,6 +99,12 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
 
+    Route::get('/v1/collection_config', [CollectionConfigController::class, 'index']);
+    Route::get('/v1/collection_config/{id}', [CollectionConfigController::class, 'show']);
+    Route::put('/v1/collection_config/{id}', [CollectionConfigController::class, 'update']);
+    Route::post('/v1/collection_config', [CollectionConfigController::class, 'store']);
+    Route::delete('/v1/collection_config/{id}', [CollectionConfigController::class, 'destroy']);
+
     Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
     Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
     Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
@@ -117,3 +125,5 @@ Route::get('/status', function (Request $request) {
         'message' => 'alive',
     ], 200);
 });
+
+Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch']);

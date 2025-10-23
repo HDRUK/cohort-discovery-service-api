@@ -4,6 +4,6 @@ namespace App\Enums;
 
 enum TaskType: string
 {
-    case A = 'a';
-    case B = 'b';
+    case A = 'a'; // Denotes this task is a cohort query job
+    case B = 'b'; // Denotes this task is a distributions job
 }
