@@ -94,7 +94,12 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
 
 
-    Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+    Route::get('/v1/collections', [CollectionController::class, 'index']);
+    Route::get('/v1/collections/{id}', [CollectionController::class, 'show']);
+    Route::post('/v1/collections', [CollectionController::class, 'store']);
+    Route::put('/v1/collections/{id}', [CollectionController::class, 'update']);
+    Route::delete('/v1/collections/{id}', [CollectionController::class, 'destroy']);
+
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);

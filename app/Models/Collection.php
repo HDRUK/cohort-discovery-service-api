@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use App\Services\QueryContext\QueryContextType;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -50,10 +52,11 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
  *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
  */
-class Collection extends Model
+class Collection extends Model implements ValidatableModel
 {
     use HasFactory;
     use Search;
+    use Filter;
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
@@ -84,6 +87,48 @@ class Collection extends Model
     protected static array $sortableColumns = [
         'name',
     ];
+
+    protected static array $filterableColumns = [
+        'created_at',
+        'updated_at',
+        'status',
+        'type',
+    ];
+
+    protected static array $groupableColumns = [
+        'custodian',
+    ];
+
+    public function getValidationRules(string $context): array
+    {
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'id' => 'required|integer|exists:collections,id',
+            ],
+            'store' => [
+                'name' => 'required|string|min:3|max:255',
+                'url' => 'required|string|max:255',
+                'pid' => 'required|string',
+                'type' => 'required|string',
+                'custodian_id' => 'required|integer|exists:custodians,id',
+                'status' => 'required|boolean',
+            ],
+            'update' => [
+                'id' => 'required|integer|exists:collections,id',
+                'name' => 'sometimes|string|min:3|max:255',
+                'url' => 'sometimes|string|max:255',
+                'pid' => 'sometimes|string',
+                'type' => 'sometimes|string',
+                'custodian_id' => 'sometimes|integer|exists:custodians,id',
+                'status' => 'sometimes|boolean',
+            ],
+            'destroy' => [
+                'id' => 'required|integer|exists:collections,id',
+            ],
+            default => [],
+        };
+    }
 
     public function custodian(): BelongsTo
     {

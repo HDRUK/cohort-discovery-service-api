@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use DB;
+use Str;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Custodian;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Services\QueryContext\QueryContextType;
 
 class CollectionTest extends TestCase
 {
@@ -273,4 +275,117 @@ class CollectionTest extends TestCase
         $this->assertTrue(count($content) > 0);
         $this->assertTrue($content[0]['id'] === $custodian->id);
     }
+
+    public function test_it_can_filter_collections(): void
+    {
+        $collections = [
+            [
+                'name' => 'Collection One',
+                'url' => fake()->url,
+                'pid' => Str::uuid(),
+                'type' => QueryContextType::Bunny,
+                'custodian_id' => 1,
+                'status' => 1,
+            ],
+            [
+                'name' => 'Collection Two',
+                'url' => fake()->url,
+                'pid' => Str::uuid(),
+                'type' => QueryContextType::Bunny,
+                'custodian_id' => 1,
+                'status' => 0,
+            ],
+            [
+                'name' => 'Collection Three',
+                'url' => fake()->url,
+                'pid' => Str::uuid(),
+                'type' => QueryContextType::Bunny,
+                'custodian_id' => 1,
+                'status' => 1,
+            ],
+            [
+                'name' => 'Collection Four',
+                'url' => fake()->url,
+                'pid' => Str::uuid(),
+                'type' => QueryContextType::Bunny,
+                'custodian_id' => 1,
+                'status' => 0,
+            ],
+        ];
+
+        foreach ($collections as $c) {
+            Collection::factory()->create($c);
+        }
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->get(self::BASE_URL . '?status__gt=0');
+        $response->assertStatus(200);
+
+        $content = $response->json();
+
+        $this->assertIsArray($content['data']);
+        $this->assertCount(2, $content['data']);
+        foreach ($content['data'] as $d) {
+            $this->assertEquals(1, $d['status']);
+        }
+    }
+
+    // public function test_the_application_can_group_by_custodian(): void
+    // {
+    //     $custodians = Custodian::factory()->count(2)->create();
+
+    //     $collections = [
+    //         [
+    //             'name' => 'Collection One',
+    //             'url' => fake()->url,
+    //             'pid' => Str::uuid(),
+    //             'type' => QueryContextType::Bunny,
+    //             'custodian_id' => $custodians[0]->id,
+    //             'status' => 1,
+    //         ],
+    //         [
+    //             'name' => 'Collection Two',
+    //             'url' => fake()->url,
+    //             'pid' => Str::uuid(),
+    //             'type' => QueryContextType::Bunny,
+    //             'custodian_id' => $custodians[0]->id,
+    //             'status' => 0,
+    //         ],
+    //         [
+    //             'name' => 'Collection Three',
+    //             'url' => fake()->url,
+    //             'pid' => Str::uuid(),
+    //             'type' => QueryContextType::Bunny,
+    //             'custodian_id' => $custodians[0]->id,
+    //             'status' => 1,
+    //         ],
+    //         [
+    //             'name' => 'Collection Four',
+    //             'url' => fake()->url,
+    //             'pid' => Str::uuid(),
+    //             'type' => QueryContextType::Bunny,
+    //             'custodian_id' => $custodians[1]->id,
+    //             'status' => 0,
+    //         ],
+    //     ];
+
+    //     $response = $this->actingAsJwt(
+    //         $this->user,
+    //         []
+    //     )
+    //         ->getJson(self::BASE_URL . '?group_by=custodian.id');
+    //     $response->assertStatus(200);
+
+    //     $content = $response->json();
+
+    //     $this->assertCount(2, $content['data']);
+    //     $this->assertEqualsCanonicalizing(
+    //         [3, 1],
+    //         array_column($content['data'], 'total')
+    //     );
+    // }
+
 }
