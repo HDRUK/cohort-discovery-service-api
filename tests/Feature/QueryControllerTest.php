@@ -15,11 +15,21 @@ class QueryControllerTest extends TestCase
     private const BASE_URL = '/api/v1/queries';
     private const QUERY_URL = '/api/v1/query';
 
+    private User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        User::truncate();
+        Task::truncate();
+        Collection::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $this->enableObservers();
+
+        $this->user = User::factory()->create();
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -34,11 +44,6 @@ class QueryControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_creates_query_and_tasks_correctly()
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        Collection::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
         $this->disableObservers();
 
         $n = 3;
@@ -72,11 +77,6 @@ class QueryControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_only_creates_tasks_for_filtered_collections()
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        Collection::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
         $this->disableObservers();
 
         $included = Collection::factory()->bunny()->create();
@@ -89,7 +89,10 @@ class QueryControllerTest extends TestCase
             'task_type' => 'a'
         ];
 
-        $response = $this->postJson(self::BASE_URL, $payload);
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        dd($response);
 
         $response->assertCreated()
             ->assertJsonPath('data.task_count', 1)
@@ -105,7 +108,7 @@ class QueryControllerTest extends TestCase
     public function it_creates_and_views_with_correct_auth()
     {
         $this->enableMiddleware();
-        $user = User::factory()->create();
+
         $altUser = User::factory()->create();
 
         $n = 3;
@@ -118,7 +121,7 @@ class QueryControllerTest extends TestCase
             'task_type' => TaskType::A
         ];
 
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->postJson(self::BASE_URL, $payload);
 
         $response->assertCreated();
@@ -126,7 +129,7 @@ class QueryControllerTest extends TestCase
         $pid = $response->decodeResponseJson()['data']['query_pid'];
 
 
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->get(self::QUERY_URL . "/" . $pid);
 
         $response->assertSuccessful();
@@ -135,7 +138,7 @@ class QueryControllerTest extends TestCase
             ->get(self::QUERY_URL . "/" . $pid);
         $response->assertForbidden();
 
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->get(self::BASE_URL);
         $response->assertSuccessful();
 

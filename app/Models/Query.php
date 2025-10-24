@@ -6,6 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Enum;
+
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+
+use App\Rules\IdOrUuid;
+use App\Enums\TaskType;
+use App\Contracts\ValidatableModel;
 
 /**
  * @property int $id
@@ -15,6 +23,9 @@ use Illuminate\Support\Str;
 class Query extends Model
 {
     use HasFactory;
+    use Search;
+    use Filter;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -29,6 +40,50 @@ class Query extends Model
         'definition' => 'array',
         'created_at' => 'datetime',
     ];
+
+    protected static array $searchableColumns = [
+        'pid',
+        'name',
+        'definition',
+    ];
+
+    protected static array $sortableColumns = [
+        'name',
+        'created_at',
+    ];
+
+    public function getValidationRules(string $context): array
+    {
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'key' => [
+                    'required',
+                    new IdOUuid
+                ],
+            ],
+            'store' => [
+                'name' => 'required|string|min:3|max:255',
+                'definition' => 'required|array',
+                'collection_filter' => 'nullable|array',
+                'task_type' => [
+                    'required',
+                    new Enum(TaskType::class),
+                ],
+            ],
+            'update' => [
+                'name' => 'sometimes|string|min:3|max:255',
+                'definition' => 'sometimes|array',                
+            ],
+            'delete' => [
+                'key' => [
+                    'required',
+                    new IdOUuid
+                ],
+            ],
+            default => [],
+        };
+    }
 
     protected static function booted(): void
     {
