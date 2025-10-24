@@ -8,15 +8,12 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-
-
 use App\Models\Collection;
 use App\Models\Custodian;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-
+use App\Http\Requests\ModelBackedRequest;
 use App\Services\QueryContext\QueryContextType;
-
 use App\Http\Controllers\Controller;
 
 class CollectionController extends Controller
@@ -24,7 +21,7 @@ class CollectionController extends Controller
     use Responses;
     use HelperFunctions;
 
-    public function index(Request $request): JsonResponse
+    public function index(ModelBackedRequest $request): JsonResponse
     {
         $collections = Collection::with('demographics')
             ->searchViaRequest()
@@ -34,10 +31,10 @@ class CollectionController extends Controller
         return $this->OKResponse($collections);
     }
 
-    public function show(Request $request, int $id): JsonResponse
+    public function show(ModelBackedRequest $request, int $id): JsonResponse
     {
         $request->merge(['id' => $id]);
-        $validated = $request->validate(app(Collection::class)->getValidationRules('show'));
+        $validated = $request->validated();
 
         try {
             $collection = Collection::findOrFail($validated['id']);
@@ -47,9 +44,9 @@ class CollectionController extends Controller
         }
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(ModelBackedRequest $request): JsonResponse
     {
-        $validated = $request->validate(app(Collection::class)->getValidationRules('store'));
+        $validated = $request->validated();
 
         try {
             $collection = Collection::create($validated);
@@ -61,10 +58,10 @@ class CollectionController extends Controller
         }
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(ModelBackedRequest $request, int $id): JsonResponse
     {
         $request->merge(['id' => $id]);
-        $validated = $request->validate(app(Collection::class)->getValidationRules('update'));
+        $validated = $request->validated();
 
         try {
             $collection = Collection::findOrFail($validated['id']);
@@ -80,10 +77,10 @@ class CollectionController extends Controller
         return $this->ErrorResponse();
     }
 
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
         $request->merge(['id' => $id]);
-        $validated = $request->validate(app(Collection::class)->getValidationRules('delete'));
+        $validated = $request->validated();
 
         try {
             $collection = Collection::findOrFail($validated['id']);

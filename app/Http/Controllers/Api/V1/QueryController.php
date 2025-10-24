@@ -9,7 +9,7 @@ use Illuminate\Validation\Rules\Enum;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-
+use App\Http\Requests\ModelBackedRequest;
 use App\Enums\TaskType;
 use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
@@ -19,7 +19,6 @@ use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use App\Services\QueryContext\QueryContextType;
 use App\Services\Submitters\QuerySubmissionService;
-
 use App\Http\Controllers\Controller;
 
 class QueryController extends Controller
@@ -27,38 +26,46 @@ class QueryController extends Controller
     use Responses;
     use HelperFunctions;
 
-    public function index(Request $request): JsonResponse
+    public function index(ModelBackedRequest $request): JsonResponse
     {
         $perPage = $this->resolvePerPage();
 
-        $queries = Query::paginate($perPage);
+        $queries = Query::with([
+            'tasks.collection.size',
+            'tasks.result'
+        ])
+            ->where('user_id', Auth::id())
+            ->whereHas('tasks', function ($query) {
+                $query->where('task_type', TaskType::A);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
         return $this->OKResponse($queries);
     }
 
-    public function show(Request $request, int $id = null, int $pid = null): JsonResponse
+    public function show(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
-        if ($id && $pid) {
-            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
-        }
-
-        $key = $id ?? $pid;
-
-        $request->merge(['key' => $key]);
-        $validated = $request->validate(app(Query::class)->getValidationRules('show'));
+        $validated = $request->validated();
 
         try {
-            $query = Query::where('id', $key)
+            $query = Query::with(['tasks.collection.size', 'tasks.result'])
+                ->where('id', $key)
                 ->orWhere('pid', $key)
                 ->firstOrFail();
+
+            if (Gate::denies('view', $query)) {
+                return  $this->ForbiddenResponse();
+            }
+
             return $this->OKResponse($query);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
         }
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(ModelBackedRequest $request): JsonResponse
     {
-        $validated = $request->validate(app(Query::class)->getValidationRules('store'));
+        $validated = $request->validated();
 
         try {
             $query = Query::create([
@@ -71,28 +78,21 @@ class QueryController extends Controller
             $result = app(QuerySubmissionService::class)
                 ->handle($validated, Auth::id());
 
-            return $this->CreatedResponse($query);
+            return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
             \Log::error('QueryController@store - failed: ' . json_encode($validated));
             return $this->ErrorResponse($e->getMessage());
         }
     }
 
-    public function update(Request $request, int $id = null, int $pid = null): JsonResponse
+    public function update(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
-        if ($id && $pid) {
-            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
-        }
-
-        $key = $id ?? $pid;
-
-        $request->merge(['key' => $key]);
-        $validated = $request->validate(app(Query::class)->getValidationRules('update'));
+        $validated = $request->validated();
 
         try {
             $query = Query::where('id', $key)
                 ->orWhere('pid', $key)
-                ->firtOrFail();
+                ->firstOrFail();
             if ($query->update($validated)) {
                 return $this->OKResponse($query);
             }
@@ -100,22 +100,15 @@ class QueryController extends Controller
             return $this->ErrorResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@update - failed: ' .
-                json_encode($validated) . ' (exception: ' . 
+                json_encode($validated) . ' (exception: ' .
                 $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
     }
 
-    public function destroy(Request $request, int $id = null, int $pid = null): JsonResponse
+    public function destroy(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
-        if ($id && $pid) {
-            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
-        }
-
-        $key = $id ?? $pid;
-
-        $request->merge(['key' => $key]);
-        $validated = $request->validate(app(Query::class)->getValidationRules('delete'));
+        $validated = $request->validated();
 
         try {
             $query = Query::where('id', $key)
@@ -127,26 +120,26 @@ class QueryController extends Controller
 
             return $this->ErrorResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@destroy/' . $validated['id'] . ' - failed: ' . 
+            \Log::error('QueryController@destroy/' . $validated['id'] . ' - failed: ' .
                 json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
     }
 
-    public function duplicateAndReRun(Request $request, int $id): JsonResponse
-    {
-        $request->merge(['id' => $id]);
-        $validated = $request->validate(app(Query::class)->getValidationRules('duplicate-and-rerun'));
+    // public function duplicateAndReRun(ModelBackedRequest $request, int $id): JsonResponse
+    // {
+    //     $request->merge(['id' => $id]);
+    //     $validated = $request->validated();
 
-        try {
-            $query = Query::findOrFail($validated['id']);
+    //     try {
+    //         $query = Query::findOrFail($validated['id']);
 
-        } catch (\Throwable $e) {
-            \Log::error('QueryController@duplicateAndReRun/' . $validated['id'] . ' - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
-                return $this->NotFoundResponse();
-        }
-    }
+    //     } catch (\Throwable $e) {
+    //         \Log::error('QueryController@duplicateAndReRun/' . $validated['id'] . ' - failed: ' .
+    //             json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+    //         return $this->NotFoundResponse();
+    //     }
+    // }
 
     // OLD
 

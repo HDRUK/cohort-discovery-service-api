@@ -4,9 +4,7 @@ namespace Tests\Unit;
 
 use DB;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
 use Tests\TestCase;
-
 use App\Services\Submitters\QuerySubmissionService;
 use App\Models\Query;
 use App\Models\Collection;

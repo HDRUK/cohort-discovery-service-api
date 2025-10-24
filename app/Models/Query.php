@@ -7,13 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
-
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
-
 use App\Rules\IdOrUuid;
 use App\Enums\TaskType;
-use App\Contracts\ValidatableModel;
 
 /**
  * @property int $id
@@ -59,7 +56,7 @@ class Query extends Model
             'show' => [
                 'key' => [
                     'required',
-                    new IdOUuid
+                    new IdOrUuid()
                 ],
             ],
             'store' => [
@@ -73,12 +70,12 @@ class Query extends Model
             ],
             'update' => [
                 'name' => 'sometimes|string|min:3|max:255',
-                'definition' => 'sometimes|array',                
+                'definition' => 'sometimes|array',
             ],
             'delete' => [
                 'key' => [
                     'required',
-                    new IdOUuid
+                    new IdOrUuid()
                 ],
             ],
             default => [],

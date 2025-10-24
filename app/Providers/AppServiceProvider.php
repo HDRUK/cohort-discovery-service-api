@@ -7,11 +7,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-
 use Laravel\Passport\Passport;
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-
 use App\Models\User;
 use App\Models\Task;
 use App\Models\Collection;

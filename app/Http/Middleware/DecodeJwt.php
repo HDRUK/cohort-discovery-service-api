@@ -17,6 +17,7 @@ class DecodeJwt
     public function handle(Request $request, Closure $next)
     {
         $token = $request->bearerToken();
+
         if (! $token) {
             return response()->json(['error' => 'No token'], 401);
         }

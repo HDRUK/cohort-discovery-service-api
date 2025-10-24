@@ -24,6 +24,7 @@ class QueryControllerTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
         Task::truncate();
+        Query::truncate();
         Collection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
@@ -45,6 +46,7 @@ class QueryControllerTest extends TestCase
     public function it_creates_query_and_tasks_correctly()
     {
         $this->disableObservers();
+        $this->enableMiddleware();
 
         $n = 3;
         $collections = Collection::factory()->bunny()->count($n)->create();
@@ -56,7 +58,8 @@ class QueryControllerTest extends TestCase
             'task_type' => TaskType::A
         ];
 
-        $response = $this->postJson(self::BASE_URL, $payload);
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
 
         $response->assertCreated()
             ->assertJsonStructure([
@@ -78,6 +81,7 @@ class QueryControllerTest extends TestCase
     public function it_only_creates_tasks_for_filtered_collections()
     {
         $this->disableObservers();
+        $this->enableMiddleware();
 
         $included = Collection::factory()->bunny()->create();
         Collection::factory()->bunny()->count(2)->create();
@@ -92,8 +96,6 @@ class QueryControllerTest extends TestCase
         $response = $this->actingAsJwt($this->user)
             ->postJson(self::BASE_URL, $payload);
 
-        dd($response);
-
         $response->assertCreated()
             ->assertJsonPath('data.task_count', 1)
             ->assertJsonCount(1, 'data.task_pids');
@@ -107,6 +109,7 @@ class QueryControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_creates_and_views_with_correct_auth()
     {
+        $this->disableObservers();
         $this->enableMiddleware();
 
         $altUser = User::factory()->create();
@@ -127,7 +130,6 @@ class QueryControllerTest extends TestCase
         $response->assertCreated();
 
         $pid = $response->decodeResponseJson()['data']['query_pid'];
-
 
         $response = $this->actingAsJwt($this->user)
             ->get(self::QUERY_URL . "/" . $pid);
