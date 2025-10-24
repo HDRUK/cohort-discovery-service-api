@@ -37,6 +37,10 @@ class QueryController extends Controller
 
     public function show(Request $request, int $id = null, int $pid = null): JsonResponse
     {
+        if ($id && $pid) {
+            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
+        }
+
         $key = $id ?? $pid;
 
         $request->merge(['key' => $key]);
@@ -76,6 +80,10 @@ class QueryController extends Controller
 
     public function update(Request $request, int $id = null, int $pid = null): JsonResponse
     {
+        if ($id && $pid) {
+            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
+        }
+
         $key = $id ?? $pid;
 
         $request->merge(['key' => $key]);
@@ -100,7 +108,12 @@ class QueryController extends Controller
 
     public function destroy(Request $request, int $id = null, int $pid = null): JsonResponse
     {
+        if ($id && $pid) {
+            return $this->BadRequestResponseExtended('Bad request, cannot request on both ID and PID');
+        }
+
         $key = $id ?? $pid;
+
         $request->merge(['key' => $key]);
         $validated = $request->validate(app(Query::class)->getValidationRules('delete'));
 
