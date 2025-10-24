@@ -210,7 +210,7 @@ class DistributionsCollector implements ApiCommand
                     $c->update([
                         'last_run_at' => Carbon::now($this->timezone),
                     ]);
-                    
+
                     return;
                 default:
                     $errorMsg = $this->tag . ' attempting to createQueriesAndTasks with unknown TaskType: ' . $c->type .

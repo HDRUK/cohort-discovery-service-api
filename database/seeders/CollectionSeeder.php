@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Enums\TaskType;
+use App\Enums\FrequencyMode;
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CollectionConfig;
@@ -23,7 +24,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -32,7 +34,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -41,7 +44,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -50,11 +54,12 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
     }
 
-    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount): void
+    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount, int $status): void
     {
         $custodianId = Custodian::first()->id;
         $collection = Collection::create([
@@ -63,12 +68,13 @@ class CollectionSeeder extends Seeder
             'url' => $url,
             'type' => $type,
             'custodian_id' => $custodianId,
+            'status' => $status,
         ]);
 
         // Create two CollectionConfig records for the above Collection
         // to mimic the distribution and generic query types
         $types = [TaskType::A, TaskType::B];
-        $frequencyMode = 1; // Weekly
+        $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
         $frequencyRun = 7; // ...on Sunday's
         foreach ($types as $t) {
             CollectionConfig::create([

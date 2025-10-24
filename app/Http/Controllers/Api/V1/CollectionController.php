@@ -14,13 +14,86 @@ use App\Models\Custodian;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 class CollectionController extends Controller
 {
     use Responses;
     use HelperFunctions;
-    use Search;
+
+    public function index(Request $request): JsonResponse
+    {
+        $collections = Collection::with('demographics')
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting()
+            ->get();
+        return $this->OKResponse($collections);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Collection::class)->getValidationRules('show'));
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            return $this->OKResponse($collection);
+        } catch (\Throwable $e) {
+            return $this->NotFoundResponse();
+        }
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate(app(Collection::class)->getValidationRules('store'));
+
+        try {
+            $collection = Collection::create($validated);
+            return $this->CreatedResponse($collection);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@store - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Collection::class)->getValidationRules('update'));
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            if ($collection->update($validated)) {
+                return $this->OKResponse($collection);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            return $this->NotFoundResponse();
+        }
+
+        return $this->ErrorResponse();
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validate(app(Collection::class)->getValidationRules('delete'));
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            if ($collection->delete()) {
+                $this->OKResponse([]);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@destroy - failed: ' .
+                $e->getMessage());
+            return $this->NotFoundResponse();
+        }
+
+        return $this->ErrorResponse();
+    }
 
     public function getCollection($pid): JsonResponse
     {
@@ -35,25 +108,6 @@ class CollectionController extends Controller
         return $this->OKResponse($collection);
     }
 
-    public function getCollections(Request $request): JsonResponse
-    {
-        $input = $request->query('custodian_name', null);
-
-        $collections = Collection::with('demographics')
-            ->whereHas('custodian', function ($query) use ($input) {
-                if (empty($input)) {
-                    return;
-                }
-
-                $query->where('name', 'LIKE', '%' . $input . '%');
-            })
-            ->searchViaRequest()
-            ->applySorting()
-            ->get();
-
-        return $this->OKResponse($collections);
-    }
-
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
@@ -66,6 +120,7 @@ class CollectionController extends Controller
             ->with(['host'])
             ->where('custodian_id', $custodian->id)
             ->searchViaRequest()
+            ->filterViaRequest()
             ->applySorting()
             ->paginate($perPage);
 
