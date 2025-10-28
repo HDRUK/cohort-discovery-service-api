@@ -93,6 +93,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::put('/v1/query/{pid}', [QueryController::class, 'update'])->whereUuid('pid');
     Route::delete('/v1/query/{id}', [QueryController::class, 'destroy'])->whereNumber('id');
     Route::delete('/v1/query/{pid}', [QueryController::class, 'destroy'])->whereUuid('pid');
+    Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);

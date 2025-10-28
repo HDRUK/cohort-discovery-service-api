@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\ModelBackedRequest;
 use App\Enums\TaskType;
@@ -30,7 +32,9 @@ class QueryController extends Controller
     {
         $perPage = $this->resolvePerPage();
 
-        $queries = Query::with([
+        $queries = Query::searchViaRequest()
+            ->filterViaRequest()
+            ->with([
             'tasks.collection.size',
             'tasks.result'
         ])
@@ -123,6 +127,26 @@ class QueryController extends Controller
             \Log::error('QueryController@destroy/' . $validated['id'] . ' - failed: ' .
                 json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
+        }
+    }
+
+    public function download(Request $request, string $pid, string $format='csv'): StreamedResponse|BinaryFileResponse|JsonResponse
+    {
+        try {
+            return Query::searchViaRequest()
+                ->filterViaRequest()
+                ->with([
+                    'tasks.collection.size',
+                    'tasks.result'
+                ])
+                ->where('pid', $pid)
+                ->orderBy('created_at', 'desc')
+                ->download($format);
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@download/' . $format . ' - failed' .
+                ' (exception: ' . $e->getMessage() . ')');
+            dd($e->getMessage());
+            return $this->ErrorResponse();
         }
     }
 

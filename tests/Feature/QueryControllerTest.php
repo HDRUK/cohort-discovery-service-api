@@ -34,7 +34,47 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_validates_input_when_submitting_query()
+    public function it_can_search_queries(): void
+    {
+        $this->enableMiddleware();
+        $collections = Collection::factory(3)->create();
+
+        $payload = [
+            'name' => 'Test Query',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated()
+            ->assertJsonStructure([
+                'data' => [
+                    'query_pid',
+                    'task_count',
+                    'task_pids',
+                ],
+            ]);
+
+        $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
+        
+        $response = $this->getJson(self::BASE_URL . '?name[]=Test%20Query');
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertTrue(count($content['data']) === 1);
+        $this->assertTrue($content['data'][0]['name'] === $payload['name']);
+
+        foreach ($content['data'][0]['tasks'] as $t) {
+            $this->assertEquals($t['query_id'], $content['data'][0]['id']);
+        }
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_validates_input_when_submitting_query(): void
     {
         $response = $this->postJson(self::BASE_URL, []);
 
@@ -43,7 +83,7 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_creates_query_and_tasks_correctly()
+    public function it_creates_query_and_tasks_correctly(): void
     {
         $this->disableObservers();
         $this->enableMiddleware();
@@ -78,7 +118,7 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_only_creates_tasks_for_filtered_collections()
+    public function it_only_creates_tasks_for_filtered_collections(): void
     {
         $this->disableObservers();
         $this->enableMiddleware();
@@ -107,7 +147,7 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_creates_and_views_with_correct_auth()
+    public function it_creates_and_views_with_correct_auth(): void
     {
         $this->disableObservers();
         $this->enableMiddleware();

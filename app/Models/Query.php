@@ -12,6 +12,8 @@ use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use App\Rules\IdOrUuid;
 use App\Enums\TaskType;
 
+use App\Traits\Downloadable;
+
 /**
  * @property int $id
  * @property string $name
@@ -22,6 +24,7 @@ class Query extends Model
     use HasFactory;
     use Search;
     use Filter;
+    use Downloadable;
 
     public $timestamps = false;
 
@@ -48,6 +51,17 @@ class Query extends Model
         'name',
         'created_at',
     ];
+
+    public static function downloadableFields(): array
+    {
+        return [
+            'id',
+            'pid',
+            'name',
+            'definition',
+            'created_at',
+        ];
+    }
 
     public function getValidationRules(string $context): array
     {
