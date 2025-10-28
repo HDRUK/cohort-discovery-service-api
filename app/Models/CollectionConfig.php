@@ -43,7 +43,7 @@ class CollectionConfig extends Model implements ValidatableModel
         'frequency_mode',
         // Can switch between frequency_mode:
         // When weekly:
-        //    - (1-7 Sunday to Saturday)
+        //    - (1-7 Monday to Sunday)
         // When monthly:
         //    - (1-5 week number of the month)
         'run_time_frequency',

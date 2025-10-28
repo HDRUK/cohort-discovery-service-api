@@ -4,15 +4,17 @@ namespace App\Providers;
 
 use Carbon\CarbonInterval;
 use Illuminate\Support\ServiceProvider;
-use App\Models\User;
-use App\Models\Collection;
-use App\Observers\CollectionObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Passport\Passport;
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
+use App\Models\User;
+use App\Models\Task;
+use App\Models\Collection;
+use App\Observers\CollectionObserver;
+use App\Observers\TaskObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -51,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::personalAccessTokensExpireIn(CarbonInterval::months(config('passport.access_expire')));
 
         Collection::observe(CollectionObserver::class);
+        Task::observe(TaskObserver::class);
 
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());

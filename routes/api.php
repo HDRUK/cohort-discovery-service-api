@@ -78,10 +78,24 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
 
-    Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
+    // OLD //
+    //Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
-    Route::get('/v1/queries', [QueryController::class, 'getQueries']);
-    Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+    //Route::get('/v1/queries', [QueryController::class, 'getQueries']);
+    //Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+
+    // NEW //
+    Route::get('/v1/queries', [QueryController::class, 'index']);
+    Route::get('/v1/query/{id}', [QueryController::class, 'show'])->whereNumber('id');
+    Route::get('/v1/query/{pid}', [QueryController::class, 'show'])->whereUuid('pid');
+    Route::get('/v1/query/re-run/{id}', [QueryController::class, 'duplicateAndReRun'])->whereNumber('id');
+    Route::get('/v1/query/re-run/{pid}', [QueryController::class, 'duplicateAndReRun'])->whereUuid('pid');
+    Route::post('/v1/queries', [QueryController::class, 'store']);
+    Route::put('/v1/query/{id}', [QueryController::class, 'update'])->whereNumber('id');
+    Route::put('/v1/query/{pid}', [QueryController::class, 'update'])->whereUuid('pid');
+    Route::delete('/v1/query/{id}', [QueryController::class, 'destroy'])->whereNumber('id');
+    Route::delete('/v1/query/{pid}', [QueryController::class, 'destroy'])->whereUuid('pid');
+    Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
