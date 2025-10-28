@@ -30,6 +30,18 @@ trait RefreshDatabaseLite
                     '--database' => 'omop',
                 ]);
 
+                // LS - Removed for now, as I'm not sure where best placed to put it
+                //
+                // Artisan::call('db:seed', [
+                //     '--class' => 'MinimalDistributionSeeder',
+                //     '--database' => 'omop',
+                // ]);
+
+                // Artisan::call('db:seed', [
+                //     '--class' => 'DistributionConceptViewSeeder',
+                //     '--database' => config('database.connections.database') ?? 'omop',
+                // ]);
+
                 // Run the fulltext index on omop concept table
                 Artisan::call('app:add-full-text-index-to-omop-concepts');
 
