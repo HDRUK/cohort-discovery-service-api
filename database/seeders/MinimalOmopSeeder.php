@@ -16,6 +16,12 @@ class MinimalOmopSeeder extends Seeder
     {
         $this->seedConcepts('omop/minimal_concept.csv');
         $this->seedConceptAncestors('omop/minimal_concept_ancestor.csv');
+
+        // LS - Removed for now as I'm not sure where best placed to put it
+        //
+        // $this->call([
+        //     DistributionConceptViewSeeder::class,
+        // ]);
     }
 
     private function seedConcepts(string $relativePath): void
