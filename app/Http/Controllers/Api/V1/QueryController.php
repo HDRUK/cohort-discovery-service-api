@@ -63,7 +63,7 @@ class QueryController extends Controller
      *         )
      *     )
      * )
-     */    
+     */
     public function index(ModelBackedRequest $request): JsonResponse
     {
         $perPage = $this->resolvePerPage();
@@ -272,7 +272,7 @@ class QueryController extends Controller
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function download(Request $request, string $pid, string $format='csv'): StreamedResponse|BinaryFileResponse|JsonResponse
+    public function download(Request $request, string $pid, string $format = 'csv'): StreamedResponse|BinaryFileResponse|JsonResponse
     {
         try {
             return Query::searchViaRequest()
@@ -308,7 +308,7 @@ class QueryController extends Controller
     //     }
     // }
 
-    
+
     // LS - Old endpoints left in for reference.
     //
     // public function getQueries(): JsonResponse

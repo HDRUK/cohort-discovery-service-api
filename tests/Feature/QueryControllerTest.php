@@ -59,7 +59,7 @@ class QueryControllerTest extends TestCase
             ]);
 
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
-        
+
         $response = $this->getJson(self::BASE_URL . '?name[]=Test%20Query');
         $response->assertStatus(200);
 

@@ -11,7 +11,6 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use App\Rules\IdOrUuid;
 use App\Enums\TaskType;
-
 use App\Traits\Downloadable;
 
 /**
