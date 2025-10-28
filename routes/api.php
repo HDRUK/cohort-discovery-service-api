@@ -88,6 +88,8 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/queries', [QueryController::class, 'index']);
     Route::get('/v1/query/{id}', [QueryController::class, 'show'])->whereNumber('id');
     Route::get('/v1/query/{pid}', [QueryController::class, 'show'])->whereUuid('pid');
+    Route::get('/v1/query/re-run/{id}', [QueryController::class, 'duplicateAndReRun'])->whereNumber('id');
+    Route::get('/v1/query/re-run/{pid}', [QueryController::class, 'duplicateAndReRun'])->whereUuid('pid');
     Route::post('/v1/queries', [QueryController::class, 'store']);
     Route::put('/v1/query/{id}', [QueryController::class, 'update'])->whereNumber('id');
     Route::put('/v1/query/{pid}', [QueryController::class, 'update'])->whereUuid('pid');

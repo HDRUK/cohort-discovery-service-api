@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use DB;
+use Str;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
@@ -37,7 +38,9 @@ class QueryControllerTest extends TestCase
     public function it_can_search_queries(): void
     {
         $this->enableMiddleware();
-        $collections = Collection::factory(3)->create();
+        $this->disableObservers();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
 
         $payload = [
             'name' => 'Test Query',
@@ -191,5 +194,48 @@ class QueryControllerTest extends TestCase
         $response->assertSuccessful();
 
         $this->assertEquals(0, count($response->json('data.data')));
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_duplicate_and_rerun_a_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pid = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now duplicate and re-run
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::QUERY_URL . '/re-run/' . $pid);
+
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $query = Query::where('pid', $content['query_pid'])->first();
+        $tasks = Task::where('query_id', $query->id)->get();
+
+        $this->assertTrue(Str::contains($query->name, 'ReRun'));
+        $this->assertTrue($query->pid === $content['query_pid']);
+        $this->assertTrue(count($tasks) === 3);
+
+        foreach ($tasks as $t) {
+            $this->assertEquals($t->query_id, $query->id);
+            $this->assertEquals($t->completed_at, null);
+        }
     }
 }
