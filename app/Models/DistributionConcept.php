@@ -33,6 +33,6 @@ class DistributionConcept extends Model
         'mean',
         'median',
         'created_at',
-        'updated_at',        
+        'updated_at',
     ];
 }

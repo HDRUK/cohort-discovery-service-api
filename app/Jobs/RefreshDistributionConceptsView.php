@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use DB;
-
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 

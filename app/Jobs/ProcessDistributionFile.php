@@ -4,8 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Distribution;
 use App\Models\ResultFile;
-use App\Jobs\RefreshDistributionConceptsView;
-
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

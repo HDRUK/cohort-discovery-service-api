@@ -3,8 +3,6 @@
 namespace Database\Seeders;
 
 use DB;
-
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DistributionConceptViewSeeder extends Seeder
@@ -46,6 +44,6 @@ class DistributionConceptViewSeeder extends Seeder
                 FROM {$distributionTable} d
                 LEFT JOIN {$conceptTable} c
                     ON d.concept_id = c.concept_id;
-        ");        
+        ");
     }
 }
