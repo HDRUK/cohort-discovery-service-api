@@ -23,11 +23,47 @@ use App\Services\QueryContext\QueryContextType;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Http\Controllers\Controller;
 
+/**
+ * @OA\Tag(
+ *     name="Queries",
+ *     description="Endpoints for managing saved queries and query downloads"
+ * )
+ */
 class QueryController extends Controller
 {
     use Responses;
     use HelperFunctions;
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/queries",
+     *     summary="List queries for the authenticated user",
+     *     tags={"Queries"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Results per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of queries",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Query")),
+     *             @OA\Property(property="meta", type="object")
+     *         )
+     *     )
+     * )
+     */    
     public function index(ModelBackedRequest $request): JsonResponse
     {
         $perPage = $this->resolvePerPage();
@@ -47,6 +83,27 @@ class QueryController extends Controller
         return $this->OKResponse($queries);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/queries/{key}",
+     *     summary="Get a single query by id or pid",
+     *     tags={"Queries"},
+     *     @OA\Parameter(
+     *         name="key",
+     *         in="path",
+     *         description="Database id or public pid of the query",
+     *         required=true,
+     *         @OA\Schema(type="string", example="1")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Query record",
+     *         @OA\JsonContent(ref="#/components/schemas/Query")
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function show(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
         $validated = $request->validated();
@@ -67,6 +124,24 @@ class QueryController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/v1/queries",
+     *     summary="Create and submit a new query",
+     *     tags={"Queries"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Query")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Created and submitted query result",
+     *         @OA\JsonContent(ref="#/components/schemas/Query")
+     *     ),
+     *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=500, description="Server error")
+     * )
+     */
     public function store(ModelBackedRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -89,6 +164,27 @@ class QueryController extends Controller
         }
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/v1/queries/{key}",
+     *     summary="Update an existing query (by id or pid)",
+     *     tags={"Queries"},
+     *     @OA\Parameter(
+     *         name="key",
+     *         in="path",
+     *         description="Database id or public pid of the query",
+     *         required=true,
+     *         @OA\Schema(type="string", example="col_abc123")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Query")
+     *     ),
+     *     @OA\Response(response=200, description="Updated query", @OA\JsonContent(ref="#/components/schemas/Query")),
+     *     @OA\Response(response=404, description="Not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function update(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
         $validated = $request->validated();
@@ -110,6 +206,22 @@ class QueryController extends Controller
         }
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/queries/{key}",
+     *     summary="Delete a query by id or pid",
+     *     tags={"Queries"},
+     *     @OA\Parameter(
+     *         name="key",
+     *         in="path",
+     *         description="Database id or public pid of the query",
+     *         required=true,
+     *         @OA\Schema(type="string", example="1")
+     *     ),
+     *     @OA\Response(response=200, description="Deleted"),
+     *     @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function destroy(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
         $validated = $request->validated();
@@ -130,6 +242,36 @@ class QueryController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/queries/{pid}/download",
+     *     summary="Download query results for a saved query",
+     *     tags={"Queries"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         description="Public pid of the saved query",
+     *         required=true,
+     *         @OA\Schema(type="string", example="qry_abc123")
+     *     ),
+     *     @OA\Parameter(
+     *         name="format",
+     *         in="query",
+     *         description="Output format (csv|json)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="csv")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Streamed file download (binary)",
+     *         @OA\MediaType(
+     *             mediaType="application/octet-stream"
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Not found"),
+     *     @OA\Response(response=500, description="Server error")
+     * )
+     */
     public function download(Request $request, string $pid, string $format='csv'): StreamedResponse|BinaryFileResponse|JsonResponse
     {
         try {
@@ -145,11 +287,12 @@ class QueryController extends Controller
         } catch (\Throwable $e) {
             \Log::error('QueryController@download/' . $format . ' - failed' .
                 ' (exception: ' . $e->getMessage() . ')');
-            dd($e->getMessage());
             return $this->ErrorResponse();
         }
     }
 
+    // LS - Removed for now, until design questions are answered.
+    //
     // public function duplicateAndReRun(ModelBackedRequest $request, int $id): JsonResponse
     // {
     //     $request->merge(['id' => $id]);
@@ -165,110 +308,111 @@ class QueryController extends Controller
     //     }
     // }
 
-    // OLD
+    
+    // LS - Old endpoints left in for reference.
+    //
+    // public function getQueries(): JsonResponse
+    // {
+    //     $perPage = $this->resolvePerPage();
+    //     $queries = Query::with([
+    //         'tasks.collection.size',
+    //         'tasks.result'
+    //     ])
+    //         ->where('user_id', Auth::id())
+    //         ->whereHas('tasks', function ($query) {
+    //             $query->where('task_type', TaskType::A);
+    //         })
+    //         ->orderBy('created_at', 'desc')
+    //         ->paginate($perPage);
 
-    public function getQueries(): JsonResponse
-    {
-        $perPage = $this->resolvePerPage();
-        $queries = Query::with([
-            'tasks.collection.size',
-            'tasks.result'
-        ])
-            ->where('user_id', Auth::id())
-            ->whereHas('tasks', function ($query) {
-                $query->where('task_type', TaskType::A);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+    //     return $this->OKResponse($queries);
+    // }
 
-        return $this->OKResponse($queries);
-    }
+    // public function getLatestQuery(): JsonResponse
+    // {
+    //     $query = Query::with(['tasks.collection.size', 'tasks.result'])
+    //         ->where('user_id', Auth::id())
+    //         ->orderBy('created_at', 'desc')
+    //         ->first();
 
-    public function getLatestQuery(): JsonResponse
-    {
-        $query = Query::with(['tasks.collection.size', 'tasks.result'])
-            ->where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
-            ->first();
+    //     if (!$query) {
+    //         return $this->NotFoundResponse();
+    //     }
 
-        if (!$query) {
-            return $this->NotFoundResponse();
-        }
-
-        return $this->OKResponse($query);
-    }
+    //     return $this->OKResponse($query);
+    // }
 
 
-    public function getQuery($query_pid): JsonResponse
-    {
-        $query = Query::with(['tasks.collection.size', 'tasks.result'])
-            ->where('pid', $query_pid)
-            ->first();
+    // public function getQuery($query_pid): JsonResponse
+    // {
+    //     $query = Query::with(['tasks.collection.size', 'tasks.result'])
+    //         ->where('pid', $query_pid)
+    //         ->first();
 
-        if (!$query) {
-            return $this->NotFoundResponse();
-        }
+    //     if (!$query) {
+    //         return $this->NotFoundResponse();
+    //     }
 
-        if (Gate::denies('view', $query)) {
-            return  $this->ForbiddenResponse();
-        }
+    //     if (Gate::denies('view', $query)) {
+    //         return  $this->ForbiddenResponse();
+    //     }
 
-        return $this->OKResponse($query);
-    }
+    //     return $this->OKResponse($query);
+    // }
 
-    public function submitQueryAndCreateTasks(Request $request): JsonResponse
-    {
-        $validated = [];
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string',
-                'definition' => 'required|array',
-                'collection_filter' => 'nullable|array',
-                'task_type' => ['required', new Enum(TaskType::class)],
-            ]);
-        } catch (ValidationException $e) {
-            return $this->ValidationErrorResponse($e->errors());
-        }
+    // public function submitQueryAndCreateTasks(Request $request): JsonResponse
+    // {
+    //     $validated = [];
+    //     try {
+    //         $validated = $request->validate([
+    //             'name' => 'required|string',
+    //             'definition' => 'required|array',
+    //             'collection_filter' => 'nullable|array',
+    //             'task_type' => ['required', new Enum(TaskType::class)],
+    //         ]);
+    //     } catch (ValidationException $e) {
+    //         return $this->ValidationErrorResponse($e->errors());
+    //     }
 
-        $query = Query::create([
-            'pid' => Str::uuid(),
-            'name' => $validated['name'],
-            'definition' => $validated['definition'],
-            'user_id' => Auth::id(),
-        ]);
+    //     $query = Query::create([
+    //         'pid' => Str::uuid(),
+    //         'name' => $validated['name'],
+    //         'definition' => $validated['definition'],
+    //         'user_id' => Auth::id(),
+    //     ]);
 
-        $collections = Collection::query();
+    //     $collections = Collection::query();
 
-        if (!empty($validated['collection_filter'])) {
-            $collections->whereIn('pid', $validated['collection_filter']);
-        }
+    //     if (!empty($validated['collection_filter'])) {
+    //         $collections->whereIn('pid', $validated['collection_filter']);
+    //     }
 
-        $collections = $collections->select(['id', 'type'])->get();
+    //     $collections = $collections->select(['id', 'type'])->get();
 
-        $tasks = [];
+    //     $tasks = [];
 
-        foreach ($collections as $collection) {
-            $collectionId = $collection->id;
-            $type = $collection->type;
-            $task = Task::create([
-                'pid' => Str::uuid(),
-                'query_id' => $query->id,
-                'collection_id' => $collectionId,
-                'created_at' => now(),
-                'task_type' => $validated['task_type'],
-            ]);
+    //     foreach ($collections as $collection) {
+    //         $collectionId = $collection->id;
+    //         $type = $collection->type;
+    //         $task = Task::create([
+    //             'pid' => Str::uuid(),
+    //             'query_id' => $query->id,
+    //             'collection_id' => $collectionId,
+    //             'created_at' => now(),
+    //             'task_type' => $validated['task_type'],
+    //         ]);
 
-            if ($type === QueryContextType::Beacon) {
-                RunBeaconTask::dispatch($task);
-            }
+    //         if ($type === QueryContextType::Beacon) {
+    //             RunBeaconTask::dispatch($task);
+    //         }
 
-            $tasks[] = $task;
-        }
+    //         $tasks[] = $task;
+    //     }
 
-        return $this->CreatedResponse([
-            'query_pid' => $query->pid,
-            'task_count' => count($tasks),
-            'task_pids' => collect($tasks)->pluck('pid'),
-        ]);
-    }
+    //     return $this->CreatedResponse([
+    //         'query_pid' => $query->pid,
+    //         'task_count' => count($tasks),
+    //         'task_pids' => collect($tasks)->pluck('pid'),
+    //     ]);
+    // }
 }
