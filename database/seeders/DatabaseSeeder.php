@@ -2,8 +2,11 @@
 
 namespace Database\Seeders;
 
+use Str;
+
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Laravel\Passport\Client;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,6 +25,19 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        if (!Client::where('provider', 'users')->exists()) {
+            $client = Client::create([
+                'owner_type' => null,
+                'owner_id' => null,
+                'secret' => Str::random(40),
+                'name' => 'ProjectDaphne',
+                'provider' => 'users',
+                'redirect_uris' => [],
+                'grant_types' => ['personal_access'],
+                'revoked' => 0,
+            ]);
+        }
 
         $this->call([
             CustodianSeeder::class,

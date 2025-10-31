@@ -13,13 +13,16 @@ class CustodianPolicy
      */
     public function access(User $user, Custodian $custodian): bool
     {
-        $claims = request()->attributes->get('jwt_claims', []);
-        $userObject = $claims['user'] ?? null;
-        if (! $userObject || ($userObject->email ?? null) !== $user->email) {
+        $userObject = null;
+
+        $claims = $this->toArray(request()->attributes->get('jwt_claims', []));
+        $userObject = $this->toArray($claims['user'] ?? []);
+
+        if (!$userObject || ($userObject['email'] ?? null) !== $user->email) {
             return false;
         }
 
-        $adminTeamIds = Arr::pluck($userObject->admin_teams ?? [], 'id');
+        $adminTeamIds = Arr::pluck($userObject['admin_teams'] ?? [], 'id');
         //note: this is currently quite specific to the gateway
         // - we map a custodian to a gateway 'team'
         // - we check if this user is a team admin on this gateway team
@@ -28,4 +31,12 @@ class CustodianPolicy
         // - access is granted based on this
         return in_array($custodian->gateway_team_id, $adminTeamIds, true);
     }
+
+    private function toArray($value): array
+    {
+        if (is_array($value)) return $value;
+        if (is_object($value)) return json_decode(json_encode($value), true);
+        return (array) $value;
+    }
+
 }

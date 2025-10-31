@@ -56,7 +56,7 @@ class UserController extends Controller
 
     public function getMe(Request $request)
     {
-        $user = User::with('workgroups')->findOrFail(Auth::id());
+        $user = User::with(['workgroups', 'roles'])->findOrFail(Auth::id());
         return $this->OKResponse($user);
     }
 
