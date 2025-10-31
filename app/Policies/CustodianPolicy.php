@@ -16,15 +16,6 @@ class CustodianPolicy
         $userObject = null;
 
         $claims = $this->toArray(request()->attributes->get('jwt_claims', []));
-        // // In case of JSON being set against the request
-        // if (is_string($claims)) {
-        //     $claims = json_decode($claims, true);
-        // }
-        
-        // if (is_object($claims)) {
-        //     $claims = json_decode(json_encode($claims), true);
-        // }
-
         $userObject = $this->toArray($claims['user'] ?? []);
 
         if (!$userObject || ($userObject['email'] ?? null) !== $user->email) {
