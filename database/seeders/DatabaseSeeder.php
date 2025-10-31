@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        Artisan::call('passport:install', ['--personal' => true, '--force' => true]);
+        Artisan::call('passport:install', ['--force' => true]);
 
         $this->call([
             CustodianSeeder::class,
