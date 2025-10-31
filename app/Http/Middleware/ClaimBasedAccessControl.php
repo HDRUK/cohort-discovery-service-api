@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 use App\Traits\Responses;
+use App\Support\ApplicationMode;
 
 class ClaimBasedAccessControl
 {
@@ -25,9 +26,14 @@ class ClaimBasedAccessControl
             // Decode JWT token and check claims
             $request->header('Authorization');
             $token = $request->bearerToken();
+            $key = null;
 
             $signer = new Sha256();
-            $key = InMemory::plainText(config('integrated.jwt_secret'));
+            if (ApplicationMode::isStandalone()) {
+                $key = InMemory::plainText(config('api.jwt_secret'));
+            } else {
+                $key = InMemory::plainText(config('integrated.jwt_secret'));
+            }
 
             $config = Configuration::forSymmetricSigner($signer, $key);
             $token = $config->parser()->parse($token);

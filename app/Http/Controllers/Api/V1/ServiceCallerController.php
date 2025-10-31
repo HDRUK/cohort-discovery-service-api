@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Console\Commands\Dispatchers\ApiCommandDispatcher;
 use App\Traits\Responses;
+use App\Http\Controllers\Controller;
 
 class ServiceCallerController extends Controller
 {

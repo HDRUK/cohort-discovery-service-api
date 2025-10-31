@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use DB;
 use Str;
+use Config;
+
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Custodian;
@@ -23,6 +25,7 @@ class CollectionTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         User::truncate();
+        Custodian::truncate();
         Collection::truncate();
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -70,6 +73,7 @@ class CollectionTest extends TestCase
             $overrides
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+        // dd($response);
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
@@ -151,6 +155,8 @@ class CollectionTest extends TestCase
 
     public function test_it_can_get_by_status(): void
     {
+        Custodian::factory()->create();
+
         for ($i = 0; $i < 5; $i++) {
             Collection::factory()->create([
                 'status' => ($i % 2 ? 1 : 0),
@@ -194,6 +200,8 @@ class CollectionTest extends TestCase
 
     public function test_it_can_search_by_name(): void
     {
+        Custodian::factory()->create();
+
         Collection::factory(10)->create();
         $coll = Collection::inRandomOrder()->first();
 
@@ -214,6 +222,8 @@ class CollectionTest extends TestCase
 
     public function test_it_can_sort(): void
     {
+        Custodian::factory()->create();
+
         Collection::factory(10)->create();
         $response = $this->actingAsJwt(
             $this->user,
@@ -278,6 +288,8 @@ class CollectionTest extends TestCase
 
     public function test_it_can_filter_collections(): void
     {
+        Custodian::factory()->create();
+
         $collections = [
             [
                 'name' => 'Collection One',
@@ -331,6 +343,123 @@ class CollectionTest extends TestCase
         foreach ($content['data'] as $d) {
             $this->assertEquals(1, $d['status']);
         }
+    }
+
+    /**
+     * Once standalone mode was completed, the initial test_it_can_list_collections
+     * test failed on decoding jwt and checking claims. The following tests are to
+     * cover edge-cases of both standalone and integrated modes.
+     */
+    public function test_it_can_list_collections_standalone_mode(): void
+    {
+        Config::set('system.operation_mode', 'standalone');
+        
+        $fakeGatewayTeamId = 1111;
+        $anotherFakeGatewayTeamId = 2222;
+        $custodian = Custodian::factory()->create([
+            'gateway_team_id' => $fakeGatewayTeamId
+        ]);
+
+        $anotherCustodian = Custodian::factory()->create([
+            'gateway_team_id' => $anotherFakeGatewayTeamId
+        ]);
+
+        Collection::factory(5)->create([
+            'custodian_id' => $custodian->id
+        ]);
+        Collection::factory(5)->create([
+            'custodian_id' => $anotherCustodian->id
+        ]);
+
+        $overrides = [
+            'user' => [
+                'workgroups' => [[
+                    'id' => 1,
+                    'name' => 'cohort-admin'
+                ]],
+                'admin_teams' => [
+                    [
+                        'id' => $fakeGatewayTeamId,
+                        'name' => $custodian->name
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+        // dd($response);
+
+        $response->assertStatus(200);
+        $this->assertEquals(5, count($response->json('data.data')));
+
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
+
+        $response->assertStatus(403);
+    }
+
+    public function test_it_can_list_collections_integrated_mode(): void
+    {
+        Config::set('system.operation_mode', 'integrated');
+        
+        $fakeGatewayTeamId = 1111;
+        $anotherFakeGatewayTeamId = 2222;
+        $custodian = Custodian::factory()->create([
+            'gateway_team_id' => $fakeGatewayTeamId
+        ]);
+
+        $anotherCustodian = Custodian::factory()->create([
+            'gateway_team_id' => $anotherFakeGatewayTeamId
+        ]);
+
+        Collection::factory(5)->create([
+            'custodian_id' => $custodian->id
+        ]);
+        Collection::factory(5)->create([
+            'custodian_id' => $anotherCustodian->id
+        ]);
+
+        $overrides = [
+            'user' => [
+                'workgroups' => [[
+                    'id' => 1,
+                    'name' => 'cohort-admin'
+                ]],
+                'admin_teams' => [
+                    [
+                        'id' => $fakeGatewayTeamId,
+                        'name' => $custodian->name
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+        // dd($response);
+
+        $response->assertStatus(200);
+        $this->assertEquals(5, count($response->json('data.data')));
+
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
+
+        $response->assertStatus(403);
     }
 
     // public function test_the_application_can_group_by_custodian(): void

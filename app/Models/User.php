@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
@@ -148,6 +149,21 @@ class User extends Authenticatable implements OAuthenticatable
             'user_id',
             'workgroup_id'
         )->using(UserHasWorkgroup::class);
+    }
+
+    public function getRoleNamesAttribute(): array
+    {
+        return $this->roles->pluck('name')->toArray();
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'user_has_roles',
+            'user_id',
+            'role_id',
+        );
     }
 
     public function scopeWithStatus(Builder $query): Builder

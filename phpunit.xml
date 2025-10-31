@@ -27,7 +27,7 @@
     <env name="RULES_ENGINE_ACTIVE" value="false"/>
     <env name="QUEUE_DRIVER" value="sync"/>
     <env name="CONFIG_CACHE" value="true"/>
-    <env name="LOG_CHANNEL" value="null"/>
+    <env name="LOG_CHANNEL" value="single"/>
   </php>
   <source>
     <include>
