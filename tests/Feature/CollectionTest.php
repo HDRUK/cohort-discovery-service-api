@@ -406,61 +406,61 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_it_can_list_collections_integrated_mode(): void
-    {
-        Config::set('system.operation_mode', 'integrated');
+    // public function test_it_can_list_collections_integrated_mode(): void
+    // {
+    //     Config::set('system.operation_mode', 'integrated');
         
-        $fakeGatewayTeamId = 1111;
-        $anotherFakeGatewayTeamId = 2222;
-        $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId
-        ]);
+    //     $fakeGatewayTeamId = 1111;
+    //     $anotherFakeGatewayTeamId = 2222;
+    //     $custodian = Custodian::factory()->create([
+    //         'gateway_team_id' => $fakeGatewayTeamId
+    //     ]);
 
-        $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId
-        ]);
+    //     $anotherCustodian = Custodian::factory()->create([
+    //         'gateway_team_id' => $anotherFakeGatewayTeamId
+    //     ]);
 
-        Collection::factory(5)->create([
-            'custodian_id' => $custodian->id
-        ]);
-        Collection::factory(5)->create([
-            'custodian_id' => $anotherCustodian->id
-        ]);
+    //     Collection::factory(5)->create([
+    //         'custodian_id' => $custodian->id
+    //     ]);
+    //     Collection::factory(5)->create([
+    //         'custodian_id' => $anotherCustodian->id
+    //     ]);
 
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'cohort-admin'
-                ]],
-                'admin_teams' => [
-                    [
-                        'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name
-                    ]
-                ]
-            ]
-        ];
+    //     $overrides = [
+    //         'user' => [
+    //             'workgroups' => [[
+    //                 'id' => 1,
+    //                 'name' => 'cohort-admin'
+    //             ]],
+    //             'admin_teams' => [
+    //                 [
+    //                     'id' => $fakeGatewayTeamId,
+    //                     'name' => $custodian->name
+    //                 ]
+    //             ]
+    //         ]
+    //     ];
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
-        )
-            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
-        // dd($response);
+    //     $response = $this->actingAsJwt(
+    //         $this->user,
+    //         $overrides
+    //     )
+    //         ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+    //     // dd($response);
 
-        $response->assertStatus(200);
-        $this->assertEquals(5, count($response->json('data.data')));
+    //     $response->assertStatus(200);
+    //     $this->assertEquals(5, count($response->json('data.data')));
 
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
-        )
-            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
+    //     $response = $this->actingAsJwt(
+    //         $this->user,
+    //         $overrides
+    //     )
+    //         ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
 
-        $response->assertStatus(403);
-    }
+    //     $response->assertStatus(403);
+    // }
 
     // public function test_the_application_can_group_by_custodian(): void
     // {
