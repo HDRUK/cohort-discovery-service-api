@@ -45,13 +45,11 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 
 # Composer & laravel
 RUN --mount=type=secret,id=composer_auth,required \
-    mkdir -p /root/.composer \
-    && cp /run/secrets/composer_auth /root/.composer/auth.json \
+    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
     && composer install \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
-    && composer dumpautoload \
-    && rm -f /root/.composer/auth.json
+    && composer dumpautoload
 
 # Generate Swagger
 RUN php artisan l5-swagger:generate
