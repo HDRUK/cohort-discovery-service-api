@@ -46,11 +46,8 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 # Composer & laravel
 RUN composer install --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
-    && php artisan optimize:clear \
-    && php artisan optimize \
-    && php artisan config:clear \
-    && php artisan octane:install \
-    && composer dumpautoload 
+    && php artisan octane:install --server=frankenphp --no-interaction \
+    && composer dumpautoload
 
 # Generate Swagger
 RUN php artisan l5-swagger:generate
