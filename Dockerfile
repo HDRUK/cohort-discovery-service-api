@@ -49,9 +49,6 @@ RUN composer install --optimize-autoloader \
     && php artisan octane:install --server=frankenphp --no-interaction \
     && composer dumpautoload
 
-# Generate Swagger
-RUN php artisan l5-swagger:generate
-
 # Cleanup unwanted files
 RUN rm /var/www/public/.htaccess
 
