@@ -56,7 +56,7 @@ jobs:
         env: 
           GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
-          GAR_NAME: ${{ secrets.GAR_NAME_API }}
+          GAR_NAME: ${{ secrets.GAR_NAME }}
           
         run: |-
           docker build -t '${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} -t '${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:latest ./
@@ -98,9 +98,9 @@ jobs:
         env:
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
           GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
-          GAR_NAME: ${{ secrets.GAR_NAME_API }}
-          SERVICE_NAME: '${{ secrets.SERVICE_NAME_API }}'
-          SERVICE_REGION: '${{ secrets.SERVICE_REGION_API }}'
+          GAR_NAME: ${{ secrets.GAR_NAME }}
+          SERVICE_NAME: '${{ secrets.SERVICE_NAME }}'
+          SERVICE_REGION: '${{ secrets.SERVICE_REGION }}'
 
         with:
           args: run services update '${{ env.SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}' 
