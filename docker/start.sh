@@ -12,8 +12,11 @@ REBUILD_DB="${REBUILD_DB:-0}"
 
 base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=8100"
 
-php artisan optimize:clear
-php artisan optimize
+if [ "${DB_CONNECTION:-}" = "sqlite" ]; then
+    db_path="${DB_DATABASE:-database/database.sqlite}"
+    mkdir -p "$(dirname "$db_path")"
+    touch "$db_path"
+fi
 
 if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
     echo 'running in dev mode - with watch'
@@ -34,6 +37,9 @@ fi
 if [ -n "${OCTANE_WORKERS:-}" ]; then
     base_command="$base_command --workers=${OCTANE_WORKERS}"
 fi
+
+php artisan optimize:clear
+php artisan optimize
 
 $base_command &
 

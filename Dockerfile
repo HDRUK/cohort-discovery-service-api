@@ -48,12 +48,8 @@ RUN --mount=type=secret,id=composer_auth,required \
     mkdir -p /root/.composer \
     && cp /run/secrets/composer_auth /root/.composer/auth.json \
     && composer install \
-    && mkdir -p database \
-    && touch database/database.sqlite \
-    && php artisan optimize:clear \
-    && php artisan optimize \
     && chmod -R 777 storage bootstrap/cache \
-    && php artisan octane:install \
+    && php artisan octane:install --server=frankenphp --no-interaction \
     && composer dumpautoload \
     && rm -f /root/.composer/auth.json
 
