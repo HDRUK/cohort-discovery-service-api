@@ -44,15 +44,13 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 
 
 # Composer & laravel
-RUN --mount=type=secret,id=composer_auth,required \
-    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
-    && composer install \
+RUN composer install \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
-    && composer dumpautoload
+    && composer dumpautoload \
 
-# Generate Swagger
-RUN php artisan l5-swagger:generate
+    # Generate Swagger
+    RUN php artisan l5-swagger:generate
 
 # Starts both, laravel server and job queue
 CMD ["/var/www/docker/start.sh"]
