@@ -45,12 +45,11 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 
 # Composer & laravel
 RUN composer install \
-    && php artisan storage:link \
     && php artisan optimize:clear \
     && php artisan optimize \
     && php artisan config:clear \
     && chmod -R 777 storage bootstrap/cache \
-    && chown -R www-data:www-data storage \
+    && php artisan octane:install \
     && composer dumpautoload
 
 # Generate Swagger
