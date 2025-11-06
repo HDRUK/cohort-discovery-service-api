@@ -35,9 +35,6 @@ RUN mkdir -p /etc/pki/tls/certs && \
 RUN curl -sS https://getcomposer.org/installer | php -- \
     --install-dir=/usr/local/bin --filename=composer
 
-# Send update for php.ini
-COPY ./init/php.development.ini /usr/local/etc/php/php.ini
-
 # Copy the application
 COPY . /var/www
 
