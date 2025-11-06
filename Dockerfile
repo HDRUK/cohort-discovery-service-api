@@ -47,7 +47,6 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 RUN composer install \
     && php artisan optimize:clear \
     && php artisan optimize \
-    && php artisan config:clear \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install \
     && composer dumpautoload
