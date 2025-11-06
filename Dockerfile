@@ -44,13 +44,19 @@ RUN curl https://frankenphp.dev/install.sh | sh \
 
 
 # Composer & laravel
-RUN composer install \
+RUN composer install --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
-    && php artisan octane:install --server=frankenphp --no-interaction \
-    && composer dumpautoload \
+    && php artisan optimize:clear \
+    && php artisan optimize \
+    && php artisan config:clear \
+    && php artisan octane:install \
+    && composer dumpautoload 
 
-    # Generate Swagger
-    RUN php artisan l5-swagger:generate
+# Generate Swagger
+RUN php artisan l5-swagger:generate
+
+# Cleanup unwanted files
+RUN rm /var/www/public/.htaccess
 
 # Starts both, laravel server and job queue
 CMD ["/var/www/docker/start.sh"]
