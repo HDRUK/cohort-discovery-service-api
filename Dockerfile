@@ -48,6 +48,8 @@ RUN --mount=type=secret,id=composer_auth,required \
     mkdir -p /root/.composer \
     && cp /run/secrets/composer_auth /root/.composer/auth.json \
     && composer install \
+    && mkdir -p database \
+    && touch database/database.sqlite \
     && php artisan optimize:clear \
     && php artisan optimize \
     && chmod -R 777 storage bootstrap/cache \

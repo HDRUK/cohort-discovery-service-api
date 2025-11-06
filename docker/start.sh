@@ -1,31 +1,37 @@
 #!/bin/bash
 
-if [ -e /var/www/.env ]; then
+set -euo pipefail
+
+if [ -f /var/www/.env ]; then
+    # shellcheck disable=SC1091
     source /var/www/.env
 fi
 
+APP_ENV="${APP_ENV:-production}"
+REBUILD_DB="${REBUILD_DB:-0}"
+
 base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=8100"
 
-if [ $APP_ENV = 'local' ] || [ $APP_ENV = 'dev' ]; then
+php artisan optimize:clear
+php artisan optimize
+
+if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
     echo 'running in dev mode - with watch'
     # base_command="$base_command --watch"
 
-    if [ $REBUILD_DB = 1 ]; then
-        # Completely clear down the data in local/dev envs
+    if [ "$REBUILD_DB" = "1" ]; then
         php artisan migrate:fresh --seed --seeder=DevDatabaseSeeder
     else
         php artisan migrate
     fi
 else
-    # Only forward-facing migrations anywhere else
     php artisan migrate
     php artisan validation:generate-logs
 
     echo "running in prod mode"
 fi
 
-# Add workers option if OCTANE_WORKERS is set
-if [ -n "$OCTANE_WORKERS" ]; then
+if [ -n "${OCTANE_WORKERS:-}" ]; then
     base_command="$base_command --workers=${OCTANE_WORKERS}"
 fi
 
