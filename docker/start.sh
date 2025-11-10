@@ -44,3 +44,4 @@ php artisan optimize
 $base_command &
 
 php artisan horizon
+
