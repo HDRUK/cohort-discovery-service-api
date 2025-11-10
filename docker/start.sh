@@ -29,8 +29,6 @@ if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
     fi
 else
     php artisan migrate
-    php artisan validation:generate-logs
-
     echo "running in prod mode"
 fi
 
