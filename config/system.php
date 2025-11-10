@@ -38,4 +38,14 @@ return [
     |
     */
     'operation_mode' => env('APP_OPERATION_MODE', 'standalone'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Demo user password
+    |--------------------------------------------------------------------------
+    | This is the default password to apply to the demonstration user.
+    | If one is not set, this is defaulted to use d3m0User_!
+    |
+    */
+    'demo_user_password' => env('DEMO_USER_PASSWORD', 'd3m0User_!'),
 ];

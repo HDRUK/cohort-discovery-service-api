@@ -24,7 +24,8 @@ class CollectionFactory extends Factory
             'created_at' => now(),
             'updated_at' => now(),
             'custodian_id' => Custodian::first()->id,
-            'url' => 'http://localhost:5050'
+            'url' => 'http://localhost:5050',
+            'status' => $this->faker->randomElement([0, 1]),
         ];
     }
 

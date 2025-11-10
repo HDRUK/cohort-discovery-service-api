@@ -2,34 +2,27 @@
 
 namespace App\Services\Authentication;
 
-use App\Contracts\AuthenticationServiceInterface;
 use Hash;
 use Illuminate\Http\Request;
-use Laravel\Passport\Client;
-use Laravel\Passport\PersonalAccessTokenFactory;
 use App\Models\User;
+use App\Contracts\AuthenticationServiceInterface;
 
 class StandaloneAuthenticationService implements AuthenticationServiceInterface
 {
+    private LocalPersonalAccessTokenService $tokenService;
+
+    public function __construct(LocalPersonalAccessTokenService $tokenService)
+    {
+        $this->tokenService = $tokenService;
+    }
+
     public function authenticate(Request $request): mixed
     {
         $credentials = $request->only('email', 'password');
 
         $user = User::where('email', $credentials['email'])->first();
         if ($user && Hash::check($credentials['password'], $user->password)) {
-            $client = Client::where('provider', 'users')
-                ->where('revoked', 0)
-                ->get()
-                /** @phpstan-ignore-next-line */
-                ->first(fn ($c) => in_array('personal_access', $c->grant_types, true));
-
-            $tokenFactory = app(PersonalAccessTokenFactory::class);
-            $token = $tokenFactory->make(
-                $user->getKey(),
-                'local_login',
-                ['*'],
-                $client->provider
-            );
+            $token = $this->tokenService->makeForUser($user);
 
             return [
                 'access_token' => $token->accessToken,

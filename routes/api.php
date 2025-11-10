@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryParserController;
+use App\Http\Controllers\Api\V1\CollectionConfigController;
+use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::middleware(['decode.jwt'])->group(function () {
@@ -76,10 +78,24 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
 
-    Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
+    // OLD //
+    //Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
-    Route::get('/v1/queries', [QueryController::class, 'getQueries']);
-    Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+    //Route::get('/v1/queries', [QueryController::class, 'getQueries']);
+    //Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
+
+    // NEW //
+    Route::get('/v1/queries', [QueryController::class, 'index']);
+    Route::get('/v1/query/{id}', [QueryController::class, 'show'])->whereNumber('id');
+    Route::get('/v1/query/{pid}', [QueryController::class, 'show'])->whereUuid('pid');
+    Route::get('/v1/query/re-run/{id}', [QueryController::class, 'duplicateAndReRun'])->whereNumber('id');
+    Route::get('/v1/query/re-run/{pid}', [QueryController::class, 'duplicateAndReRun'])->whereUuid('pid');
+    Route::post('/v1/queries', [QueryController::class, 'store']);
+    Route::put('/v1/query/{id}', [QueryController::class, 'update'])->whereNumber('id');
+    Route::put('/v1/query/{pid}', [QueryController::class, 'update'])->whereUuid('pid');
+    Route::delete('/v1/query/{id}', [QueryController::class, 'destroy'])->whereNumber('id');
+    Route::delete('/v1/query/{pid}', [QueryController::class, 'destroy'])->whereUuid('pid');
+    Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
@@ -92,9 +108,21 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
 
 
-    Route::get('/v1/collections', [CollectionController::class, 'getCollections']);
+    Route::get('/v1/collections', [CollectionController::class, 'index']);
+    Route::get('/v1/collections/{id}', [CollectionController::class, 'show']);
+    Route::post('/v1/collections', [CollectionController::class, 'store']);
+    Route::put('/v1/collections/{id}', [CollectionController::class, 'update']);
+    Route::delete('/v1/collections/{id}', [CollectionController::class, 'destroy']);
+
+    Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
+
+    Route::get('/v1/collection_config', [CollectionConfigController::class, 'index']);
+    Route::get('/v1/collection_config/{id}', [CollectionConfigController::class, 'show']);
+    Route::put('/v1/collection_config/{id}', [CollectionConfigController::class, 'update']);
+    Route::post('/v1/collection_config', [CollectionConfigController::class, 'store']);
+    Route::delete('/v1/collection_config/{id}', [CollectionConfigController::class, 'destroy']);
 
     Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
     Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
@@ -116,3 +144,5 @@ Route::get('/status', function (Request $request) {
         'message' => 'alive',
     ], 200);
 });
+
+Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch']);

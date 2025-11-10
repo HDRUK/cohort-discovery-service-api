@@ -6,8 +6,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Enum;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use App\Rules\IdOrUuid;
+use App\Enums\TaskType;
+use App\Traits\Downloadable;
 
 /**
+ * @OA\Schema(
+ *     schema="Query",
+ *     type="object",
+ *     title="Query",
+ *     required={"pid","name","definition"},
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="pid", type="string", example="qry_abc123"),
+ *     @OA\Property(property="name", type="string", example="Cardiology cohort query"),
+ *     @OA\Property(property="user_id", type="integer", nullable=true, example=2),
+ *     @OA\Property(
+ *         property="definition",
+ *         type="array",
+ *         description="Structured query definition (array of rule objects)",
+ *         @OA\Items(type="object")
+ *     ),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
+ * )
+ *
  * @property int $id
  * @property string $name
  * @property array $definition
@@ -15,6 +39,10 @@ use Illuminate\Support\Str;
 class Query extends Model
 {
     use HasFactory;
+    use Search;
+    use Filter;
+    use Downloadable;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -29,6 +57,61 @@ class Query extends Model
         'definition' => 'array',
         'created_at' => 'datetime',
     ];
+
+    protected static array $searchableColumns = [
+        'pid',
+        'name',
+        'definition',
+    ];
+
+    protected static array $sortableColumns = [
+        'name',
+        'created_at',
+    ];
+
+    public static function downloadableFields(): array
+    {
+        return [
+            'id',
+            'pid',
+            'name',
+            'definition',
+            'created_at',
+        ];
+    }
+
+    public function getValidationRules(string $context): array
+    {
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'key' => [
+                    'required',
+                    new IdOrUuid()
+                ],
+            ],
+            'store' => [
+                'name' => 'required|string|min:3|max:255',
+                'definition' => 'required|array',
+                'collection_filter' => 'nullable|array',
+                'task_type' => [
+                    'required',
+                    new Enum(TaskType::class),
+                ],
+            ],
+            'update' => [
+                'name' => 'sometimes|string|min:3|max:255',
+                'definition' => 'sometimes|array',
+            ],
+            'delete' => [
+                'key' => [
+                    'required',
+                    new IdOrUuid()
+                ],
+            ],
+            default => [],
+        };
+    }
 
     protected static function booted(): void
     {

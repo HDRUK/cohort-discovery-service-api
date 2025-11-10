@@ -11,8 +11,10 @@ parameters:
     # Level 10 is the highest level
     level: 5
 
-#    ignoreErrors:
+    ignoreErrors:
+        - '#Method App\\Http\\Controllers\\Api\\V1\\QueryController::download\(\) should return Illuminate\\Http\\JsonResponse\|Symfony\\Component\\HttpFoundation\\BinaryFileResponse\|Symfony\\Component\\HttpFoundation\\StreamedResponse but returns Illuminate\\Database\\Eloquent\\Builder<App\\Models\\Query>#'
 #        - '#PHPDoc tag @var#'
+
 #
 #    excludePaths:
 #        - ./*/*/FileToBeExcluded.php

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use DB;
+use Str;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
@@ -15,15 +16,68 @@ class QueryControllerTest extends TestCase
     private const BASE_URL = '/api/v1/queries';
     private const QUERY_URL = '/api/v1/query';
 
+    private User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        User::truncate();
+        Task::truncate();
+        Query::truncate();
+        Collection::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $this->enableObservers();
+
+        $this->user = User::factory()->create();
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_validates_input_when_submitting_query()
+    public function it_can_search_queries(): void
+    {
+        $this->enableMiddleware();
+        $this->disableObservers();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated()
+            ->assertJsonStructure([
+                'data' => [
+                    'query_pid',
+                    'task_count',
+                    'task_pids',
+                ],
+            ]);
+
+        $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
+
+        $response = $this->getJson(self::BASE_URL . '?name[]=Test%20Query');
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertTrue(count($content['data']) === 1);
+        $this->assertTrue($content['data'][0]['name'] === $payload['name']);
+
+        foreach ($content['data'][0]['tasks'] as $t) {
+            $this->assertEquals($t['query_id'], $content['data'][0]['id']);
+        }
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_validates_input_when_submitting_query(): void
     {
         $response = $this->postJson(self::BASE_URL, []);
 
@@ -32,14 +86,10 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_creates_query_and_tasks_correctly()
+    public function it_creates_query_and_tasks_correctly(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        Collection::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
         $this->disableObservers();
+        $this->enableMiddleware();
 
         $n = 3;
         $collections = Collection::factory()->bunny()->count($n)->create();
@@ -51,7 +101,8 @@ class QueryControllerTest extends TestCase
             'task_type' => TaskType::A
         ];
 
-        $response = $this->postJson(self::BASE_URL, $payload);
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
 
         $response->assertCreated()
             ->assertJsonStructure([
@@ -70,14 +121,10 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_only_creates_tasks_for_filtered_collections()
+    public function it_only_creates_tasks_for_filtered_collections(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        Collection::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
         $this->disableObservers();
+        $this->enableMiddleware();
 
         $included = Collection::factory()->bunny()->create();
         Collection::factory()->bunny()->count(2)->create();
@@ -89,7 +136,8 @@ class QueryControllerTest extends TestCase
             'task_type' => 'a'
         ];
 
-        $response = $this->postJson(self::BASE_URL, $payload);
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
 
         $response->assertCreated()
             ->assertJsonPath('data.task_count', 1)
@@ -102,10 +150,11 @@ class QueryControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_creates_and_views_with_correct_auth()
+    public function it_creates_and_views_with_correct_auth(): void
     {
+        $this->disableObservers();
         $this->enableMiddleware();
-        $user = User::factory()->create();
+
         $altUser = User::factory()->create();
 
         $n = 3;
@@ -118,15 +167,14 @@ class QueryControllerTest extends TestCase
             'task_type' => TaskType::A
         ];
 
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->postJson(self::BASE_URL, $payload);
 
         $response->assertCreated();
 
         $pid = $response->decodeResponseJson()['data']['query_pid'];
 
-
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->get(self::QUERY_URL . "/" . $pid);
 
         $response->assertSuccessful();
@@ -135,7 +183,7 @@ class QueryControllerTest extends TestCase
             ->get(self::QUERY_URL . "/" . $pid);
         $response->assertForbidden();
 
-        $response = $this->actingAsJwt($user)
+        $response = $this->actingAsJwt($this->user)
             ->get(self::BASE_URL);
         $response->assertSuccessful();
 
@@ -146,5 +194,48 @@ class QueryControllerTest extends TestCase
         $response->assertSuccessful();
 
         $this->assertEquals(0, count($response->json('data.data')));
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_duplicate_and_rerun_a_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pid = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now duplicate and re-run
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::QUERY_URL . '/re-run/' . $pid);
+
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $query = Query::where('pid', $content['query_pid'])->first();
+        $tasks = Task::where('query_id', $query->id)->get();
+
+        $this->assertTrue(Str::contains($query->name, 'ReRun'));
+        $this->assertTrue($query->pid === $content['query_pid']);
+        $this->assertTrue(count($tasks) === 3);
+
+        foreach ($tasks as $t) {
+            $this->assertEquals($t->query_id, $query->id);
+            $this->assertEquals($t->completed_at, null);
+        }
     }
 }

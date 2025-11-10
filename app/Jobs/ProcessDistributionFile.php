@@ -146,6 +146,8 @@ class ProcessDistributionFile implements ShouldQueue
         foreach ($rows as $data) {
             Distribution::create($data);
         }
+
+        RefreshDistributionConceptsView::dispatch();
         // note - to be revisited
         //      - this can copy over ancestors locally
         //        based on what distributions we have

@@ -3,8 +3,11 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Enums\TaskType;
+use App\Enums\FrequencyMode;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CollectionConfig;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
@@ -21,7 +24,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -30,7 +34,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -39,7 +44,8 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
 
         $this->seedCollectionWithDemographics(
@@ -48,11 +54,12 @@ class CollectionSeeder extends Seeder
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
-            femaleCount: 0
+            femaleCount: 0,
+            status: 1
         );
     }
 
-    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount): void
+    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount, int $status): void
     {
         $custodianId = Custodian::first()->id;
         $collection = Collection::create([
@@ -61,7 +68,29 @@ class CollectionSeeder extends Seeder
             'url' => $url,
             'type' => $type,
             'custodian_id' => $custodianId,
+            'status' => $status,
         ]);
+
+        // Create two CollectionConfig records for the above Collection
+        // to mimic the distribution and generic query types
+        $types = [TaskType::A, TaskType::B];
+        $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
+        $frequencyRun = 7; // ...on Sunday's
+        foreach ($types as $t) {
+            CollectionConfig::create([
+                'collection_id' => $collection->id,
+                'run_time_hour' => 23,
+                'run_time_minute' => 59,
+                'frequency_mode' => $frequencyMode,
+                'run_time_frequency' => $frequencyRun,
+                'enabled' => 1,
+                'type' => $t,
+            ]);
+
+            $frequencyMode++; // Add another in monthly mode
+            $frequencyRun = 1; // First week of the month
+        }
+
 
         $collectionHost = CollectionHost::firstOrCreate([
             'name' => 'default-seeded-collection-host',

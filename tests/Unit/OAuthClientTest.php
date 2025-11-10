@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use DB;
 use Tests\TestCase;
 use App\Models\User;
 use Laravel\Passport\ClientRepository;
@@ -68,6 +69,8 @@ class OAuthClientTest extends TestCase
 
     public function test_the_application_can_create_public_clients(): void
     {
+        DB::statement('truncate oauth_clients');
+
         User::factory(1)->create()->first();
         $user = User::find(1)->first();
 

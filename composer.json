@@ -13,12 +13,14 @@
         "darkaonline/l5-swagger": "^9.0",
         "firebase/php-jwt": "^6.11",
         "hdruk/claims-based-access-control": "^0.1.11",
+        "hdruk/laravel-plugin-core": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
         "laravel/framework": "^12.4",
         "laravel/horizon": "^5.33",
         "laravel/octane": "^2.12",
         "laravel/passport": "^13.0",
         "laravel/tinker": "^2.10.1",
+        "maatwebsite/excel": "^3.1",
         "predis/predis": "^3.2",
         "spatie/laravel-permission": "^6.21"
     },
@@ -28,6 +30,7 @@
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.41",
+        "league/csv": "^9.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "phpstan/phpstan": "^2.1",
@@ -101,6 +104,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-search-and-filter"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hdruk/laravel-plugin-core"
         }
     ],
     "minimum-stability": "dev",

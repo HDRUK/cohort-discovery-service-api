@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use DB;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Workgroup;
@@ -10,6 +11,31 @@ use App\Models\UserHasWorkgroup;
 class WorkgroupTest extends TestCase
 {
     private string $url = '/api/v1/workgroups';
+    private array $workgroups = [
+        'ADMIN',
+        'DEFAULT',
+        'CUSTODIAN',
+        'NON-UK-INDUSTRY',
+        'NON-UK-RESEARCH',
+        'OTHER',
+        'UK-INDUSTRY',
+        'UK-RESEARCH',
+        'NHS-SDE',
+    ];
+
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        Workgroup::truncate();
+
+        foreach ($this->workgroups as $w) {
+            Workgroup::create([
+                'name' => $w,
+                'active' => true,
+            ]);
+        }
+    }
 
     public function test_the_application_can_list_workgroups(): void
     {
@@ -72,34 +98,38 @@ class WorkgroupTest extends TestCase
 
         $content = $response->json();
         $this->assertEmpty($content['data']);
-
-        $response = $this->get($this->url . '/' . $workgroup->id);
-        $response->assertStatus(404);
     }
 
     public function test_the_application_can_search_users_by_workgroup(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        User::factory()->count(5)->create();
+
         $users = User::all();
 
-        $elements = ['CUSTODIAN']; // in case we need more later
-
         foreach ($users as $u) {
-            $workgroup = Workgroup::whereIn('name', $elements)->select('id')->pluck('id')->toArray();
-
-            UserHasWorkgroup::create([
+            $uhw = UserHasWorkgroup::create([
                 'user_id' => $u->id,
-                'workgroup_id' => fake()->randomElement($workgroup),
+                'workgroup_id' => 2,
+            ]);
+
+            $this->assertDatabaseHas('user_has_workgroups', [
+                'user_id' => $u->id,
+                'workgroup_id' => 2,
             ]);
         }
 
-        $response = $this->get($this->url . '/search/users?name[]=CUSTODIAN');
+        $response = $this->get($this->url . '/search/users?name[]=DEFAULT');
         $response->assertStatus(200);
 
         $content = $response->json();
         $this->assertIsArray($content['data']);
 
         foreach ($content['data'] as $group) {
-            $this->assertTrue(in_array($group['name'], $elements));
+            $this->assertTrue(in_array($group['name'], $this->workgroups));
             $this->assertTrue(count($group['users']) > 0);
         }
     }

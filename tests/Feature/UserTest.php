@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use DB;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Query;
@@ -126,8 +127,58 @@ class UserTest extends TestCase
         $this->assertEquals($content['data'][0]['name'], $names[2]['name']);
     }
 
+    public function test_the_application_can_search_users_or_and(): void
+    {
+        $names = [
+           [
+                'name'  => 'Alice Smith',
+                'email' => 'alice@example.com',
+            ],
+            [
+                'name'  => 'Bob Johnson',
+                'email' => 'bob@example.com',
+            ],
+            [
+                'name'  => 'Charlie Brown',
+                'email' => 'charlie@example.com',
+            ],
+        ];
+
+        foreach ($names as $n) {
+            $newUser = User::factory()->create($n);
+        }
+
+        $response = $this->get($this->url . '?name__or[]=Alice&name__or[]=Bob');
+        $response->assertStatus(200);
+
+        $content = $response->json();
+
+        $this->assertIsArray($content['data']);
+        $this->assertCount(2, $content['data']);
+        $this->assertEqualsCanonicalizing(
+            [
+                'Alice Smith',
+                'Bob Johnson',
+            ],
+            array_column($content['data'], 'name')
+        );
+
+        $response = $this->get($this->url . '?email__and[]=example&email__and[]=alice');
+        $response->assertStatus(200);
+
+        $content = $response->json();
+
+        $this->assertIsArray($content['data']);
+        $this->assertCount(1, $content['data']);
+        $this->assertEquals('Alice Smith', $content['data'][0]['name']);
+    }
+
     public function test_the_application_can_sort_users(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
         $names = [
             [
                 'name' => 'Zach Zachson',

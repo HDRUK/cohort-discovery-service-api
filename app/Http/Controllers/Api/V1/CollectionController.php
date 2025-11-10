@@ -2,23 +2,99 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Controller;
-use App\Models\Collection;
-use App\Models\Custodian;
-use App\Services\QueryContext\QueryContextType;
-use App\Traits\Responses;
-use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Models\Collection;
+use App\Models\Custodian;
+use App\Traits\Responses;
+use App\Traits\HelperFunctions;
+use App\Http\Requests\ModelBackedRequest;
+use App\Services\QueryContext\QueryContextType;
+use App\Http\Controllers\Controller;
 
 class CollectionController extends Controller
 {
     use Responses;
     use HelperFunctions;
+
+    public function index(ModelBackedRequest $request): JsonResponse
+    {
+        $collections = Collection::with('demographics')
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting()
+            ->get();
+        return $this->OKResponse($collections);
+    }
+
+    public function show(ModelBackedRequest $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            return $this->OKResponse($collection);
+        } catch (\Throwable $e) {
+            return $this->NotFoundResponse();
+        }
+    }
+
+    public function store(ModelBackedRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::create($validated);
+            return $this->CreatedResponse($collection);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@store - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    public function update(ModelBackedRequest $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            if ($collection->update($validated)) {
+                return $this->OKResponse($collection);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            return $this->NotFoundResponse();
+        }
+
+        return $this->ErrorResponse();
+    }
+
+    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            if ($collection->delete()) {
+                $this->OKResponse([]);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@destroy - failed: ' .
+                $e->getMessage());
+            return $this->NotFoundResponse();
+        }
+
+        return $this->ErrorResponse();
+    }
 
     public function getCollection($pid): JsonResponse
     {
@@ -33,13 +109,6 @@ class CollectionController extends Controller
         return $this->OKResponse($collection);
     }
 
-    public function getCollections(): JsonResponse
-    {
-        $collections = Collection::with('demographics')->get();
-
-        return $this->OKResponse($collections);
-    }
-
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
@@ -51,6 +120,9 @@ class CollectionController extends Controller
         $collections = Collection::query()
             ->with(['host'])
             ->where('custodian_id', $custodian->id)
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting()
             ->paginate($perPage);
 
         return $this->OKResponse($collections);
@@ -94,6 +166,27 @@ class CollectionController extends Controller
 
 
             return $this->CreatedResponse($collection);
+        } catch (\Exception $e) {
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    public function getByStatus(Request $request, string $status): JsonResponse
+    {
+        try {
+            $perPage = $this->resolvePerPage();
+            $input = $status;
+            if (!in_array($input, [
+                Collection::STATUS_ACTIVE,
+                Collection::STATUS_INACTIVE,
+            ])) {
+                $input = Collection::STATUS_ACTIVE;
+            }
+
+            $collections = Collection::where('status', ($status === Collection::STATUS_ACTIVE ? 1 : 0))
+                ->paginate($perPage);
+            return $this->OKResponse($collections);
+
         } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
         }

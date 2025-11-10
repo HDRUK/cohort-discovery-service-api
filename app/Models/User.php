@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,6 +88,47 @@ class User extends Authenticatable implements OAuthenticatable
     ];
 
     /**
+     * Supported operators:
+     *
+     * __gte
+     *  example: created_at__gte=2025-10-23
+     *  meaning: >=
+     * __lte
+     *  example: created_at__lte=2025-10-23
+     *  meaning: <=
+     * __gt
+     *  example: age__gt=40
+     *  meaning: >
+     * __lt
+     *  example: age__lt=40
+     *  meaning: <
+     * __ne
+     *  example: status__ne=inactive
+     *  meaning: <>
+     * __in
+     *  example: status__in=active,inactive
+     *  meaning: IN (...)
+     * __nin
+     *  example: status_nin=active
+     *  meaning: NOT IN (...)
+     * __null
+     *  example: deleted_at__null=1
+     *  meaning: IS NULL
+     * __notnull
+     *  example: deleted_at__notnull=1
+     *  meaning: IS NOT NULL
+     * (nothing)
+     *  example: email=a@b.com
+     *  meaning: =
+     */
+    protected static array $filterableColumns = [
+        'name',
+        'email',
+        'created_at',
+        'updated_at',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -103,8 +145,25 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $this->belongsToMany(
             Workgroup::class,
-            'user_has_workgroups'
+            'user_has_workgroups',
+            'user_id',
+            'workgroup_id'
         )->using(UserHasWorkgroup::class);
+    }
+
+    public function getRoleNamesAttribute(): array
+    {
+        return $this->roles->pluck('name')->toArray();
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'user_has_roles',
+            'user_id',
+            'role_id',
+        );
     }
 
     public function scopeWithStatus(Builder $query): Builder
