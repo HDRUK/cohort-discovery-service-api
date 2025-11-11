@@ -17,7 +17,8 @@ class UserController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $users = User::searchViaRequest()
+        $users = User::with('workgroups')
+            ->searchViaRequest()
             ->withStatus()
             ->applySorting()
             ->get();

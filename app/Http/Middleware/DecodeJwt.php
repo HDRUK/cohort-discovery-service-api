@@ -40,21 +40,25 @@ class DecodeJwt
                 if (!$jwtUser) {
                     return response()->json(['error' => 'Invalid token: Unknown user'], 401);
                 }
+
                 $userEmail = $jwtUser->email;
-                $teams = $jwtUser->admin_teams;
 
-                foreach ($teams as $team) {
-                    $custodian = Custodian::updateOrCreate(
-                        ['gateway_team_id' => $team->id],
-                        [
-                            'name' => $team->name,
-                            'gateway_team_name' => $team->name,
-                        ]
-                    );
+                if (isset($jwtUser->admin_teams)) {
+                    $teams = $jwtUser->admin_teams;
 
-                    if ($custodian->wasRecentlyCreated) {
-                        $custodian->pid = Str::uuid();
-                        $custodian->save();
+                    foreach ($teams as $team) {
+                        $custodian = Custodian::updateOrCreate(
+                            ['gateway_team_id' => $team->id],
+                            [
+                                'name' => $team->name,
+                                'gateway_team_name' => $team->name,
+                            ]
+                        );
+
+                        if ($custodian->wasRecentlyCreated) {
+                            $custodian->pid = Str::uuid();
+                            $custodian->save();
+                        }
                     }
                 }
 

@@ -27,6 +27,15 @@ trait ConceptLookup
         $cleanedTerm = $this->extractConceptPhrase($term);
         $concept = $this->findConcept($cleanedTerm);
 
+        if (!$concept) {
+            return [
+                'concept_id' => null,
+                'description' => ucfirst($cleanedTerm),
+                'category' => $this->getMapper()->inferCategory($term),
+                'children' => [],
+            ];
+        }
+
         return [
             'concept_id' => $concept->concept_id ?? null,
             'description' => $concept->concept_name ?? $term,
@@ -55,11 +64,39 @@ trait ConceptLookup
      */
     protected function findConcept(string $term): ?Concept
     {
-        return Concept::on('omop')
+        $query = Concept::on('omop')
+            ->selectRaw('concept_id, concept_name, domain_id, MATCH (concept_name) AGAINST (? IN NATURAL LANGUAGE MODE) AS relevance', [$term])
             ->whereRaw(
                 'MATCH(concept_name) AGAINST (? IN NATURAL LANGUAGE MODE)',
                 [$term]
+            )
+            ->orderByDesc('relevance')
+            ->limit(5)
+            ->get()
+            ->first();
+
+        // $query = Concept::on('omop')
+        //     ->whereRaw(
+        //         'MATCH(concept_name) AGAINST (? IN NATURAL LANGUAGE MODE)',
+        //         [$term]
+        //     )->first();
+
+        // Fallback to LIKE search if no results from full-text search
+        if (!$query) {
+            $candidates = Concept::on('omop')
+                ->select('concept_id', 'concept_name', 'domain_id')
+                ->where('concept_name', 'LIKE', '%' . $term . '%')
+                ->limit(10)
+                ->get();
+                // ->orderByRaw('LENGTH(concept_name)')
+                // ->first();
+
+            $query = $candidates->sortBy(
+                fn($c) => levenshtein(strtolower($c->concept_name), strtolower($term))
             )->first();
+        }
+
+        return $query;
     }
 
     /**

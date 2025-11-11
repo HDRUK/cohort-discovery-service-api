@@ -132,6 +132,9 @@ class RuleBuilderService
                 // Only add if we have something meaningful
                 if (isset($concept['concept_id']) && !empty($concept['concept_id'])) {
                     $rules[] = $this->makeRule($concept, $excludeNext || $negateGroup);
+                } else {
+                    $concept['unmatched'] = true;
+                    $rules[] = $this->makeRule($concept, $excludeNext || $negateGroup);
                 }
 
                 $excludeNext = false;
