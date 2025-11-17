@@ -133,7 +133,7 @@ class DistributionsCollector implements ApiCommand
                                 continue 2;
                             }
 
-                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' . 
+                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' .
                                 $c->collection_id . ') running per quarterly schedule');
 
                             $this->generateQueriesAndTasks($c);
@@ -163,11 +163,11 @@ class DistributionsCollector implements ApiCommand
                                 continue 2;
                             }
 
-                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' . 
+                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' .
                                 $c->collection_id . ') running per biannual schedule');
 
                             $this->generateQueriesAndTasks($c);
-                            $counts['biannually'] = ($counts['biannually'] ?? 0) + 1;
+                            $counts['biannually']++;
                             $retVal['configs'][] = $c->toJson();
 
                             continue 2;

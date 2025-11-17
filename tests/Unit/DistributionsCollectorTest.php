@@ -298,7 +298,7 @@ class DistributionsCollectorTest extends TestCase
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
-            fn($msg) => str_contains($msg, 'already ran this quarter')
+            fn ($msg) => str_contains($msg, 'already ran this quarter')
         );
 
         $this->assertDatabaseCount('queries', 0);
@@ -339,7 +339,7 @@ class DistributionsCollectorTest extends TestCase
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
-            fn($msg) => str_contains($msg, 'already ran this half of the year')
+            fn ($msg) => str_contains($msg, 'already ran this half of the year')
         );
 
         $this->assertDatabaseCount('queries', 0);
