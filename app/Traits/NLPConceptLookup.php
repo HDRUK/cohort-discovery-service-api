@@ -7,8 +7,6 @@ use Illuminate\Support\Facades\App;
 
 trait NLPConceptLookup
 {
-    use NLPSpanRepair;
-
     protected ?array $nlpEntities = null;
 
     protected function loadNlpEntities(string $query, float $threshold=80): void

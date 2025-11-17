@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Traits\RuleBuilder;
 use App\Traits\ConceptLookup;
-use App\Traits\ConceptPhraseExtractor;
 use App\Traits\NLPConceptLookup;
 use Illuminate\Support\Str;
 
@@ -20,7 +19,6 @@ class RuleBuilderService
 {
     use RuleBuilder;
     use ConceptLookup;
-    use ConceptPhraseExtractor;
     use NLPConceptLookup;
 
     /** @var array<string> Logical combinators supported in queries */
