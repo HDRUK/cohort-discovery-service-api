@@ -9,7 +9,7 @@ trait NLPConceptLookup
 {
     protected ?array $nlpEntities = null;
 
-    protected function loadNlpEntities(string $query, float $threshold=80): void
+    protected function loadNlpEntities(string $query, float $threshold = 80): void
     {
         \Log::info('Calling NLP Extractor with: ' . $query);
         $nlp = App::make(NLPConceptExtractor::class);

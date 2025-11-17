@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-
 use App\Models\NlpQueryLog;
 
 class NLPConceptExtractor
@@ -31,7 +30,7 @@ class NLPConceptExtractor
         NlpQueryLog::create([
             'query' => $query,
             'nlp_extracted' => json_encode($response->json('entities', [])),
-            'user_id' => 0, // TODO - Add Auth::id() - haven't because it's not 
+            'user_id' => 0, // TODO - Add Auth::id() - haven't because it's not
             // passed through as-is for some reason - to investigate
         ]);
 

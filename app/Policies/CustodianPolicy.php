@@ -34,8 +34,12 @@ class CustodianPolicy
 
     private function toArray($value): array
     {
-        if (is_array($value)) return $value;
-        if (is_object($value)) return json_decode(json_encode($value), true);
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_object($value)) {
+            return json_decode(json_encode($value), true);
+        }
         return (array) $value;
     }
 

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Traits\RuleBuilder;
-use App\Traits\ConceptLookup;
 use App\Traits\NLPConceptLookup;
 use Illuminate\Support\Str;
 
@@ -18,14 +17,7 @@ use Illuminate\Support\Str;
 class RuleBuilderService
 {
     use RuleBuilder;
-    use ConceptLookup;
     use NLPConceptLookup;
-
-    /** @var array<string> Logical combinators supported in queries */
-    private array $combinators = ['and', 'or', 'followed', 'followed_by', '(', ')',];
-
-    /** @var array<string> Terms that indicate exclusion/negation in queries */
-    private array $exclusionTerms = ['not', 'without', 'excluding'];
 
     private function splitTopLevelOr(string $query): array
     {
@@ -58,7 +50,7 @@ class RuleBuilderService
     public function parseToRules(string $query): array
     {
         $segments = $this->splitTopLevelOr($query);
-        
+
         $rules = [];
         foreach ($segments as $i => $segment) {
             \Log::info('Finding OMOP concepts for segment: ' . $segment);
@@ -77,7 +69,7 @@ class RuleBuilderService
                 }
 
                 $rules[] = $this->makeGroup($groupNodes);
-            } else if (count($concepts) === 1) {
+            } elseif (count($concepts) === 1) {
                 $rules[] = $concepts[0];
             }
 

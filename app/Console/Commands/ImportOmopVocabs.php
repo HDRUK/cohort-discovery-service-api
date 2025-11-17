@@ -2,10 +2,6 @@
 
 namespace App\Console\Commands;
 
-use League\Csv\Reader;
-use League\Csv\Statement;
-use League\Csv\Exception;
-
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -68,8 +64,10 @@ DESC;
     {
         $path = rtrim($this->argument('path'), '/');
         $useBulk = $this->option('bulk');
-        $shouldTruncate = $this->option('truncate') ?? true;
-        $shouldClean = $this->option('clean-file') ?? false;
+        /** @var string|null $shouldTruncate */
+        $shouldTruncate = $this->option('truncate') ?: true;
+        /** @var string|null $shouldTruncate */
+        $shouldClean = $this->option('clean-file') ?: false;
         $tmpFile = '';
 
         if ($this->option('create-schema')) {
@@ -83,8 +81,8 @@ DESC;
 
         $this->info('Scanning folder: ' . $path);
         $files = collect(File::files($path))
-            ->filter(fn($f) => str_ends_with(strtolower($f->getFilename()), '.csv'))
-            ->keyBy(fn($f) => strtoupper(str_replace('.csv', '', $f->getFilename())));
+            ->filter(fn ($f) => str_ends_with(strtolower($f->getFilename()), '.csv'))
+            ->keyBy(fn ($f) => strtoupper(str_replace('.csv', '', $f->getFilename())));
 
         $conn = DB::connection('omop');
 
@@ -219,7 +217,9 @@ SQL;
         while (($raw = fgets($in)) !== false) {
             $line = trim($raw, "\r\n");
 
-            if ($line === '') continue;
+            if ($line === '') {
+                continue;
+            }
 
             // --- 1. Strip outer wrapping quotes if the whole line is quoted ---
             if ($line[0] === '"' && substr($line, -1) === '"') {
