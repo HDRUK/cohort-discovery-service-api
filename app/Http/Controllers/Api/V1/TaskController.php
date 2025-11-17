@@ -148,92 +148,95 @@ class TaskController extends Controller
 
     public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
-        $status = $request->get('status');
-        $message = $request->get('message');
-        $queryResult = $request->get('queryResult');
+        try {
+            $status = $request->get('status');
+            $message = $request->get('message');
+            $queryResult = $request->get('queryResult');
 
-        if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
-            return $this->BadRequestResponseExtended('Invalid or missing count in queryResult.');
-        }
-
-        $count = $queryResult['count'];
-
-
-        error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
-
-        $task = Task::where(['pid' => $task_pid])->first();
-
-        if (!$task) {
-            return $this->NotFoundResponse();
-        }
-
-        $metadata = collect($queryResult)->except('count')->toArray();
-        $storedFiles = [];
-
-        foreach ($metadata['files'] ?? [] as $file) {
-
-            if (!isset($file['file_data'])) {
-                continue;
+            if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
+                return $this->BadRequestResponseExtended('Invalid or missing count in queryResult.');
             }
 
-            $fileName = $file['file_name'] ?? 'unknown';
-            $fileType = $file['file_type'] ?? null;
-            $fileDescription = $file['file_description'] ?? null;
-            $fileDataBase64 = $file['file_data'];
+            $count = $queryResult['count'];
 
-            $decodedContent = base64_decode($fileDataBase64, true);
 
-            if (!$decodedContent) {
-                continue;
+            error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
+
+            $task = Task::where(['pid' => $task_pid])->first();
+
+            if (!$task) {
+                return $this->NotFoundResponse();
             }
 
-            $hash = hash('sha256', $decodedContent);
+            $metadata = collect($queryResult)->except('count')->toArray();
+            $storedFiles = [];
 
-            $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
+            foreach ($metadata['files'] ?? [] as $file) {
 
-            //note: need to change this storage to a bucket??
-            Storage::disk('local')->put($path, $decodedContent);
+                if (!isset($file['file_data'])) {
+                    continue;
+                }
 
-            $resultFile = ResultFile::create([
-                'pid'             => $hash,
-                'task_id'         => $task->id,
-                'collection_id'   => $task->collection->id,
-                'path'            => $path,
-                'file_name'       => $fileName,
-                'file_type'       => $fileType,
-                'file_description' => $fileDescription,
-                'status'          => ResultFile::STATUS_QUEUED,
+                $fileName = $file['file_name'] ?? 'unknown';
+                $fileType = $file['file_type'] ?? null;
+                $fileDescription = $file['file_description'] ?? null;
+                $fileDataBase64 = $file['file_data'];
 
+                $decodedContent = base64_decode($fileDataBase64, true);
+
+                if (!$decodedContent) {
+                    continue;
+                }
+
+                $hash = hash('sha256', $decodedContent);
+
+                $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
+
+                //note: need to change this storage to a bucket??
+                Storage::disk('local')->put($path, $decodedContent);
+
+                $resultFile = ResultFile::create([
+                    'pid'             => $hash,
+                    'task_id'         => $task->id,
+                    'collection_id'   => $task->collection->id,
+                    'path'            => $path,
+                    'file_name'       => $fileName,
+                    'file_type'       => $fileType,
+                    'file_description' => $fileDescription,
+                    'status'          => ResultFile::STATUS_QUEUED,
+                ]);
+
+                ProcessDistributionFile::dispatch($resultFile->id);
+
+                $storedFiles[] = [
+                    'file_name' => $fileName,
+                    'file_type' => $fileType,
+                    'file_description' => $fileDescription,
+                    'path' => $path,
+                ];
+            }
+
+            $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
+
+            Result::create([
+                'task_id' => $task->id,
+                'count' => (int) $count,
+                'metadata' => $resultMetadata,
+                'status' => $status,
+                'message' => $message
             ]);
 
-            ProcessDistributionFile::dispatch($resultFile->id);
+            $task->update([
+                'completed_at' => now(),
+                'failed_at' => null
+            ]);
+            $task->save();
 
-            $storedFiles[] = [
-                'file_name' => $fileName,
-                'file_type' => $fileType,
-                'file_description' => $fileDescription,
-                'path' => $path,
-            ];
+            return $this->CreatedResponse([
+                'message' => 'Result received successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            dd($e->getMessage());
         }
-
-        $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
-
-        Result::create([
-            'task_id' => $task->id,
-            'count' => (int) $count,
-            'metadata' => $resultMetadata,
-            'status' => $status,
-            'message' => $message
-        ]);
-
-        $task->update([
-            'completed_at' => now(),
-            'failed_at' => null
-        ]);
-        $task->save();
-
-        return $this->CreatedResponse([
-            'message' => 'Result received successfully.',
-        ]);
     }
 }

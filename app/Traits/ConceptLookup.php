@@ -2,6 +2,8 @@
 
 namespace App\Traits;
 
+use DB;
+
 use App\Utils\VerbCategoryMapper;
 use App\Models\Omop\Concept;
 
@@ -64,39 +66,30 @@ trait ConceptLookup
      */
     protected function findConcept(string $term): ?Concept
     {
-        $query = Concept::on('omop')
-            ->selectRaw('concept_id, concept_name, domain_id, MATCH (concept_name) AGAINST (? IN NATURAL LANGUAGE MODE) AS relevance', [$term])
-            ->whereRaw(
-                'MATCH(concept_name) AGAINST (? IN NATURAL LANGUAGE MODE)',
-                [$term]
-            )
-            ->orderByDesc('relevance')
-            ->limit(5)
-            ->get()
-            ->first();
+        $results = DB::select("
+            SELECT
+                concept_id,
+                concept_name,
+                domain_id
+            FROM
+                distribution_concepts
+            WHERE
+                concept_name LIKE ?
+            LIMIT 10",
+            [
+               '%' . $term . '%',
+            ]);
 
-        // $query = Concept::on('omop')
-        //     ->whereRaw(
-        //         'MATCH(concept_name) AGAINST (? IN NATURAL LANGUAGE MODE)',
-        //         [$term]
-        //     )->first();
-
-        // Fallback to LIKE search if no results from full-text search
-        if (!$query) {
-            $candidates = Concept::on('omop')
-                ->select('concept_id', 'concept_name', 'domain_id')
-                ->where('concept_name', 'LIKE', '%' . $term . '%')
-                ->limit(10)
-                ->get();
-                // ->orderByRaw('LENGTH(concept_name)')
-                // ->first();
-
-            $query = $candidates->sortBy(
-                fn($c) => levenshtein(strtolower($c->concept_name), strtolower($term))
-            )->first();
+        if (empty($results)) {
+            return null;
         }
 
-        return $query;
+        usort($results, fn ($a, $b) => 
+            levenshtein(strtolower($a->concept_name), strtolower($term))
+            <=> levenshtein(strtolower($b->concept_name), strtolower($term))
+        );
+
+        return new Concept((array)$results[0]); // returns the best match
     }
 
     /**
