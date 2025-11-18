@@ -23,7 +23,10 @@ class CollectionController extends Controller
 
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $collections = Collection::with('demographics')
+        $collections = Collection::with([
+            'demographics',
+            'custodian'
+        ])
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
@@ -146,7 +149,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
-                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id))
+                        ->where(fn($q) => $q->where('custodian_id', $custodian->id))
                 ],
             ]);
         } catch (ValidationException $e) {
@@ -186,7 +189,6 @@ class CollectionController extends Controller
             $collections = Collection::where('status', ($status === Collection::STATUS_ACTIVE ? 1 : 0))
                 ->paginate($perPage);
             return $this->OKResponse($collections);
-
         } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
         }

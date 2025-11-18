@@ -9,6 +9,8 @@ use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 
+use App\Services\QueryContext\QueryContextManager;
+
 class QuerySubmissionService
 {
     private $tag = 'QuerySubmissionService';
@@ -17,8 +19,8 @@ class QuerySubmissionService
         protected Query $queryModel,
         protected Collection $collectionModel,
         protected Task $taskModel,
-    ) {
-    }
+        protected QueryContextManager $contextManager,
+    ) {}
 
     public function handle(array $data, int $userId): array
     {
@@ -58,10 +60,15 @@ class QuerySubmissionService
                     return $task;
                 });
 
+                $contextType = $collections[0]->type;
+                $translatedQuery = $this->contextManager->handle($query->definition, $contextType);
+
+                return $translatedQuery;
                 return [
                     'query_pid' => $query->pid,
                     'task_count' => $tasks->count(),
                     'task_pids' => $tasks->pluck('pid'),
+                    'query_json' => $translatedQuery,
                 ];
             });
         } catch (\Throwable $e) {

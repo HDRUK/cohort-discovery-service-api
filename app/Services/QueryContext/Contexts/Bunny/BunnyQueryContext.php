@@ -4,6 +4,7 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 
 use App\Services\QueryContext\QueryContextType;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
+use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -11,7 +12,7 @@ class BunnyQueryContext implements QueryContextInterface
     {
         $groups = [];
 
-        $makeLeafRule = function (array $concept, bool $isExcluded = false): array {
+        $makeLeafRule = function (array $concept, bool $isExcluded = false, array $timeConstraint = []): array {
             $rule = [
                 'varname' => 'OMOP',
                 'varcat'  => $concept['category'] ?? 'UNKNOWN',
@@ -19,6 +20,15 @@ class BunnyQueryContext implements QueryContextInterface
                 'oper'    => $isExcluded ? '!=' : '=',
                 'value'   => (string) ($concept['concept_id'] ?? ''),
             ];
+
+            if (is_array($timeConstraint) && count($timeConstraint) === 2) {
+                [$upper, $lower] = $timeConstraint;
+
+                $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
+                if (!is_null($bunnyTime)) {
+                    $rule['time'] = $bunnyTime;
+                }
+            }
 
             return $rule;
         };
@@ -33,92 +43,112 @@ class BunnyQueryContext implements QueryContextInterface
             return isset($node['rules']);
         };
 
-        /**
-         * Process a node:
-         *  1) Recurse into nested groups so they emit their own groups.
-         *  2) Build a sequential list of leaves and attach a LEFT-edge operator
-         *     to each leaf (operator connecting THIS leaf to the NEXT leaf).
-         *  3) Chunk by runs of identical LEFT-edge operators and emit groups.
-         *     (Excluded leaves stay inline but carry oper "!=".)
-         */
         $processNode = function (array $node) use (&$groups, &$processNode, $makeLeafRule, $isOperatorNode, $isLeafNode, $isGroupNode): void {
             $children = $node['rules'] ?? [];
             if (empty($children)) {
                 return;
             }
 
-            // 1) Recurse into nested groups first (they stand on their own)
+            // 1) recurse into nested groups first
             foreach ($children as $child) {
                 if ($isGroupNode($child)) {
                     $processNode($child);
                 }
             }
 
-            // 2) Build the leaf sequence and assign LEFT-edge operators
-            //    Each item: ['rule'=>array, 'edge_op'=>string|null]
-            $seq = [];
-            $lastLeafIndex = null;
-            $opBuffer = null;
+            // 2) flatten this level into leaf list + operator list
+            //    $leafRules[i]   = rule for leaf i
+            //    $ops[i]         = operator between leaf (i-1) and leaf i
+            $leafRules = [];
+            $ops       = [];
+            $pendingOp = null;
 
             foreach ($children as $child) {
                 if ($isOperatorNode($child)) {
-                    $opBuffer = strtoupper($child['combinator'] ?? 'AND');
+                    $pendingOp = strtoupper($child['combinator'] ?? 'AND');
                     continue;
                 }
 
                 if ($isLeafNode($child)) {
-                    $isExcluded = (bool)($child['exclude'] ?? false);
+                    $isExcluded     = (bool)($child['exclude'] ?? false);
+                    $timeConstraint = $child['timeConstraint'] ?? [null, null];
+                    $leafRule       = $makeLeafRule($child['rule']['concept'], $isExcluded, $timeConstraint);
 
-                    $leafRule = $makeLeafRule($child['rule']['concept'], $isExcluded);
+                    $leafRules[] = $leafRule;
+                    $leafIndex   = count($leafRules) - 1;
 
-                    $seq[] = [
-                        'rule'    => $leafRule,
-                        'edge_op' => null,
-                    ];
-                    $thisIndex = count($seq) - 1;
-
-                    if ($lastLeafIndex !== null && $opBuffer !== null) {
-                        $seq[$lastLeafIndex]['edge_op'] = $opBuffer;
+                    // operator applies between previous leaf and this one
+                    if ($pendingOp !== null && $leafIndex > 0) {
+                        $ops[$leafIndex] = $pendingOp;
                     }
 
-                    $lastLeafIndex = $thisIndex;
-                    $opBuffer = null;
+                    $pendingOp = null;
                 }
             }
 
-            if (empty($seq)) {
+            $n = count($leafRules);
+            if ($n === 0) {
                 return;
             }
 
-            // 3) Chunk by runs of identical LEFT-edge operator.
-            //    If a leaf lacks edge_op (e.g., last in chain), default to AND.
-            $n = count($seq);
-            $i = 0;
-            while ($i < $n) {
-                $op = strtoupper($seq[$i]['edge_op'] ?? 'AND');
-                $j  = $i;
-
-                while ($j < $n - 1 && strtoupper($seq[$j]['edge_op'] ?? 'AND') === $op) {
-                    $j++;
-                }
-
-                // Collect rules i..j inclusive
-                $groupRules = [];
-                for ($k = $i; $k <= $j; $k++) {
-                    $groupRules[] = $seq[$k]['rule'];
-                }
-
-                if ($groupRules) {
-                    $g = [
-                        'rules_oper' => $op,
-                        'rules'      => $groupRules,
-                    ];
-
-                    $groups[] = $g;
-                }
-
-                $i = $j + 1;
+            // Only one leaf at this level → single AND-group
+            if ($n === 1) {
+                $groups[] = [
+                    'rules_oper' => 'AND',
+                    'rules'      => [$leafRules[0]],
+                ];
+                return;
             }
+
+            // 3) group leaves:
+            //    - ops[i] is the operator between leaf i-1 and i
+            //    - when operator changes, we "steal" the last leaf into
+            //      the new block so that e.g. A AND B AND C OR D =>
+            //      [A AND B] + [C OR D]
+            $currentBlock = [$leafRules[0]];
+            $currentOp    = null;
+
+            for ($i = 1; $i < $n; $i++) {
+                $op = $ops[$i] ?? null; // operator between leaf (i-1) and leaf i
+
+                if ($currentOp === null) {
+                    $currentOp = $op ?? 'AND';
+                }
+
+                if ($op === $currentOp || $op === null) {
+                    // same operator → extend current block
+                    $currentBlock[] = $leafRules[$i];
+                } else {
+                    // operator changed → close previous block
+                    if (count($currentBlock) >= 2) {
+                        // move last leaf into the new block
+                        $lastRule = array_pop($currentBlock);
+
+                        $groups[] = [
+                            'rules_oper' => $currentOp,
+                            'rules'      => $currentBlock,
+                        ];
+
+                        $currentBlock = [$lastRule, $leafRules[$i]];
+                    } else {
+                        // only one leaf in the old block
+                        $groups[] = [
+                            'rules_oper' => $currentOp,
+                            'rules'      => $currentBlock,
+                        ];
+
+                        $currentBlock = [$leafRules[$i]];
+                    }
+
+                    $currentOp = $op ?? 'AND';
+                }
+            }
+
+            // push final block
+            $groups[] = [
+                'rules_oper' => $currentOp ?? 'AND',
+                'rules'      => $currentBlock,
+            ];
         };
 
         $processNode($definition);
@@ -129,8 +159,29 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
+    function getRelativeMonths(string $date): int
+    {
+        $now   = Carbon::today();
+        $other = Carbon::parse($date);
+        return abs($now->diffInMonths($other, false));
+    }
 
 
+    function encodeBunnyTimeConstraint(string $lower, string $upper): ?string
+    {
+        if (is_null($lower) && is_null($upper)) {
+            return null;
+        }
+
+        // !! BUNNY warning
+        // - we are only able to encode left or right operator
+        // - not an 'inbetween' and you'd think would be logical
+        // - we have to default to use lower for now
+
+        [$date, $pattern] = !is_null($lower) ? [$lower, '%d|:TIME:M'] : [$upper, '|%d:TIME:M'];
+        $months = $this->getRelativeMonths($date);
+        return sprintf($pattern, $months);
+    }
 
     public function getType(): QueryContextType
     {

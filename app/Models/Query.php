@@ -82,7 +82,7 @@ class Query extends Model
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'key' => [

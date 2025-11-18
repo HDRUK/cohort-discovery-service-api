@@ -64,9 +64,9 @@ class QueryController extends Controller
         $queries = Query::searchViaRequest()
             ->filterViaRequest()
             ->with([
-            'tasks.collection.size',
-            'tasks.result'
-        ])
+                'tasks.collection.size',
+                'tasks.result'
+            ])
             ->where('user_id', Auth::id())
             ->whereHas('tasks', function ($query) {
                 $query->where('task_type', TaskType::A);
@@ -214,8 +214,8 @@ class QueryController extends Controller
 
         try {
             $query = Query::where('id', $key)
-                        ->orWhere('pid', $key)
-                        ->firstOrFail();
+                ->orWhere('pid', $key)
+                ->firstOrFail();
             if ($query->delete()) {
                 return $this->OKResponse([]);
             }
