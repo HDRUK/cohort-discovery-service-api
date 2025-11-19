@@ -24,7 +24,9 @@ class ProcessDistributionFile implements ShouldQueue
     public $backoff   = [30, 120, 300];
     public $batchSize = 500;
 
-    public function __construct(public int $resultFileId) {}
+    public function __construct(public int $resultFileId)
+    {
+    }
 
     public function handle(): void
     {

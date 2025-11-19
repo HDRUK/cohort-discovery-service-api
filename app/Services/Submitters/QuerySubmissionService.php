@@ -17,7 +17,8 @@ class QuerySubmissionService
         protected Query $queryModel,
         protected Collection $collectionModel,
         protected Task $taskModel,
-    ) {}
+    ) {
+    }
 
     public function handle(array $data, int $userId): array
     {

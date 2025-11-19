@@ -159,7 +159,7 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
-    function getRelativeMonths(string $date): int
+    public function getRelativeMonths(string $date): int
     {
         $now   = Carbon::today();
         $other = Carbon::parse($date);
@@ -167,7 +167,7 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
 
-    function encodeBunnyTimeConstraint(?string $lower, ?string $upper): ?string
+    public function encodeBunnyTimeConstraint(?string $lower, ?string $upper): ?string
     {
         if (is_null($lower) && is_null($upper)) {
             return null;

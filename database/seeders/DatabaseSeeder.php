@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Str;
-
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Laravel\Passport\Client;

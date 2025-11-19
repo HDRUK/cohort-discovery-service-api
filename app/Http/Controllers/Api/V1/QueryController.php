@@ -128,8 +128,8 @@ class QueryController extends Controller
             ])
                 ->when(
                     ctype_digit($key),
-                    fn($q) => $q->where('id', $key),
-                    fn($q) => $q->where('pid', $key)
+                    fn ($q) => $q->where('id', $key),
+                    fn ($q) => $q->where('pid', $key)
                 )
                 ->firstOrFail();
 
