@@ -154,6 +154,7 @@ class ProcessDistributionFile implements ShouldQueue
         //      - this can copy over ancestors locally
         //        based on what distributions we have
         //      - instead of having to use the full concept_ancestor table
-        PopulateLocalConceptAncestors::dispatch();
+        // PopulateLocalConceptAncestors::dispatch();
+
     }
 }

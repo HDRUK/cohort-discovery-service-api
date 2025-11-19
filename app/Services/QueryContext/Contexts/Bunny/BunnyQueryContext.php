@@ -43,6 +43,9 @@ class BunnyQueryContext implements QueryContextInterface
             return isset($node['rules']);
         };
 
+        /*
+        - Note: this entire piece will need to be revisited 
+        */
         $processNode = function (array $node) use (&$groups, &$processNode, $makeLeafRule, $isOperatorNode, $isLeafNode, $isGroupNode): void {
             $children = $node['rules'] ?? [];
             if (empty($children)) {
@@ -58,7 +61,7 @@ class BunnyQueryContext implements QueryContextInterface
 
             // 2) flatten this level into leaf list + operator list
             //    $leafRules[i]   = rule for leaf i
-            //    $ops[i]         = operator between leaf (i-1) and leaf i
+            //    $ops[i]         = operator betwene leaf (i-1) and leaf i
             $leafRules = [];
             $ops       = [];
             $pendingOp = null;
@@ -102,26 +105,23 @@ class BunnyQueryContext implements QueryContextInterface
 
             // 3) group leaves:
             //    - ops[i] is the operator between leaf i-1 and i
-            //    - when operator changes, we "steal" the last leaf into
+            //    - when operator changes, we takethe last leaf into
             //      the new block so that e.g. A AND B AND C OR D =>
             //      [A AND B] + [C OR D]
+            // - this needs to be revisited 
             $currentBlock = [$leafRules[0]];
             $currentOp    = null;
 
             for ($i = 1; $i < $n; $i++) {
-                $op = $ops[$i] ?? null; // operator between leaf (i-1) and leaf i
-
+                $op = $ops[$i] ?? null;
                 if ($currentOp === null) {
                     $currentOp = $op ?? 'AND';
                 }
 
                 if ($op === $currentOp || $op === null) {
-                    // same operator → extend current block
                     $currentBlock[] = $leafRules[$i];
                 } else {
-                    // operator changed → close previous block
                     if (count($currentBlock) >= 2) {
-                        // move last leaf into the new block
                         $lastRule = array_pop($currentBlock);
 
                         $groups[] = [
@@ -143,8 +143,6 @@ class BunnyQueryContext implements QueryContextInterface
                     $currentOp = $op ?? 'AND';
                 }
             }
-
-            // push final block
             $groups[] = [
                 'rules_oper' => $currentOp ?? 'AND',
                 'rules'      => $currentBlock,

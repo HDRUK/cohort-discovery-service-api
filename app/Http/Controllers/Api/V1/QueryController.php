@@ -203,8 +203,11 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
                 ->firstOrFail();
             if ($query->update($validated)) {
                 return $this->OKResponse($query);
@@ -240,8 +243,11 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
                 ->firstOrFail();
             if ($query->delete()) {
                 return $this->OKResponse([]);
@@ -310,8 +316,11 @@ class QueryController extends Controller
         $query = null;
 
         try {
-            $query = Query::where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
                 ->first()
                 ->toArray();
 
