@@ -14,7 +14,9 @@ use App\Models\Query;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use App\Services\Submitters\QuerySubmissionService;
+use App\Services\QueryContext\QueryContextManager;
 use App\Http\Controllers\Controller;
+use App\Services\QueryContext\QueryContextType;
 
 /**
  * @OA\Tag(
@@ -102,9 +104,33 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::with(['tasks.collection.size', 'tasks.result'])
-                ->where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::with([
+                'tasks' => function ($taskQuery) {
+                    $taskQuery
+                        ->whereHas('collection', function ($collectionQuery) {
+                            $collectionQuery
+                                ->searchViaRequest();
+                        })
+                        // hack to allow applySorting to work on relationships
+                        // - return to better optimise this?
+                        // - I need to sort tasks (of a query) based on tasks.collection.name
+                        // New requirement to also maybe default sort by the result count
+                        // - doing this on the FE for now
+                        ->leftJoin('collections as collection', 'collection.id', '=', 'tasks.collection_id')
+                        ->select('tasks.*')
+                        ->with([
+                            'collection.size',
+                            'collection.custodian',
+                            'result',
+                        ])
+                        ->applySorting();
+                },
+            ])
+                ->when(
+                    ctype_digit($key),
+                    fn($q) => $q->where('id', $key),
+                    fn($q) => $q->where('pid', $key)
+                )
                 ->firstOrFail();
 
             if (Gate::denies('view', $query)) {
@@ -113,7 +139,8 @@ class QueryController extends Controller
 
             return $this->OKResponse($query);
         } catch (\Throwable $e) {
-            return $this->NotFoundResponse();
+            \Log::error('QueryController@show - failed: ' . json_encode($validated));
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -146,6 +173,22 @@ class QueryController extends Controller
             return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
             \Log::error('QueryController@store - failed: ' . json_encode($validated));
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    public function test(ModelBackedRequest $request, QueryContextManager $contextManager): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $contextType = QueryContextType::Bunny;
+            $translatedQuery = $contextManager->handle($validated['definition'], $contextType);
+
+
+            return $this->CreatedResponse($translatedQuery);
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@test - failed: ' . json_encode($validated));
             return $this->ErrorResponse($e->getMessage());
         }
     }

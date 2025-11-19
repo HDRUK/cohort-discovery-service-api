@@ -9,7 +9,6 @@ use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 
-
 class QuerySubmissionService
 {
     private $tag = 'QuerySubmissionService';

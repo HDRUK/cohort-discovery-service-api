@@ -15,7 +15,7 @@ class QueryContextTest extends TestCase
     private BeaconQueryContext $beaconContext;
     private QueryContextManager $manager;
 
-    private const INPUT_QUERY = [
+    /*private const INPUT_QUERY = [
         "id" => "9f71c79e-8e3c-467c-9970-d8b9ee4badca",
         "rules" => [
             [
@@ -88,9 +88,65 @@ class QueryContextTest extends TestCase
                 ],
             ]
         ],
+    ];*/
+
+
+    private const INPUT_QUERY = [
+        "id" => "ef9af804-78b8-46d8-91a8-42d8236ef6bf",
+        "rules" => [
+            [
+                "id" => "962b041d-8957-4b4a-b1bf-4a74bc712c51",
+                "exclude" => false,
+                "rule" => [
+                    "concept" => [
+                        "concept_id" => 3955322,
+                        "description" => "Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "e5b283cd-8681-49c7-8046-664d937bc83a",
+                "combinator" => "and",
+                "valid" => true
+            ],
+            [
+                "id" => "04a0a135-aa35-44ba-a148-bedee094c4d2",
+                "rule" => [
+                    "concept" => [
+                        "name" => "3955321",
+                        "concept_id" => 3955321,
+                        "description" => "Pfizer - SARS-CoV-2 (COVID-19) vaccine",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "00ff5058-3d91-40b5-901c-09822334ebcb",
+                "combinator" => "or",
+                "valid" => true
+            ],
+            [
+                "id" => "8aeaca43-e5c8-4ea6-b234-d3ba6b02b523",
+                "exclude" => false,
+                "rule" => [
+                    "concept" => [
+                        "name" => "3955320",
+                        "concept_id" => 3955320,
+                        "description" => "Moderna - SARS-CoV-2 (COVID-19) vaccine",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ]
+        ],
+        "valid" => true
     ];
-
-
 
 
     protected function setUp(): void
