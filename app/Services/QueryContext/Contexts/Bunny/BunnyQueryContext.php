@@ -21,7 +21,7 @@ class BunnyQueryContext implements QueryContextInterface
                 'value'   => (string) ($concept['concept_id'] ?? ''),
             ];
 
-            if (is_array($timeConstraint) && count($timeConstraint) === 2) {
+            if (count($timeConstraint) === 2) {
                 [$upper, $lower] = $timeConstraint;
 
                 $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
@@ -139,12 +139,12 @@ class BunnyQueryContext implements QueryContextInterface
 
                         $currentBlock = [$leafRules[$i]];
                     }
-
+                    /** @phpstan-ignore-next-line */
                     $currentOp = $op ?? 'AND';
                 }
             }
             $groups[] = [
-                'rules_oper' => $currentOp ?? 'AND',
+                'rules_oper' => $currentOp ?? 'AND', // @phpstan-ignore-line
                 'rules'      => $currentBlock,
             ];
         };
@@ -161,7 +161,7 @@ class BunnyQueryContext implements QueryContextInterface
     {
         $now   = Carbon::today();
         $other = Carbon::parse($date);
-        return abs($now->diffInMonths($other, false));
+        return (int)round(abs($now->diffInMonths($other, false)));
     }
 
 

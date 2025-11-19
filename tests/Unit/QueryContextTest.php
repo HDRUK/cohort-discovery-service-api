@@ -15,7 +15,7 @@ class QueryContextTest extends TestCase
     private BeaconQueryContext $beaconContext;
     private QueryContextManager $manager;
 
-    /*private const INPUT_QUERY = [
+    private const INPUT_QUERY = [
         "id" => "9f71c79e-8e3c-467c-9970-d8b9ee4badca",
         "rules" => [
             [
@@ -88,10 +88,9 @@ class QueryContextTest extends TestCase
                 ],
             ]
         ],
-    ];*/
+    ];
 
-
-    private const INPUT_QUERY = [
+    private const ALT_INPUT_QUERY = [
         "id" => "ef9af804-78b8-46d8-91a8-42d8236ef6bf",
         "rules" => [
             [
@@ -190,6 +189,32 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955320', $firstRule['value'] ?? null);
         $secondRule = $firstGroup['rules'][1] ?? null;
         $this->assertEquals('3955321', $secondRule['value'] ?? null);
+    }
+
+    public function test_application_can_translate_bunny_query_alt(): void
+    {
+        $result = $this->bunnyContext->translate(self::ALT_INPUT_QUERY);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('groups', $result);
+        $this->assertArrayHasKey('groups_oper', $result);
+
+        $firstGroup = $result['groups'][0];
+        $this->assertIsArray($firstGroup['rules']);
+        $this->assertCount(1, $firstGroup['rules']);
+        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+
+        $firstRule = $firstGroup['rules'][0] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('3955322', $firstRule['value'] ?? null);
+
+        $secondGroup = $result['groups'][1];
+        $this->assertIsArray($secondGroup['rules']);
+        $this->assertCount(2, $secondGroup['rules']);
+        $this->assertEquals('OR', $secondGroup['rules_oper'] ?? null);
+
+        $firstRule = $secondGroup['rules'][0] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('3955321', $firstRule['value'] ?? null);
     }
 
     /*
