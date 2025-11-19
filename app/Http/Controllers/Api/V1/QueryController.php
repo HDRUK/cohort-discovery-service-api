@@ -128,8 +128,8 @@ class QueryController extends Controller
             ])
                 ->when(
                     ctype_digit($key),
-                    fn ($q) => $q->where('id', $key),
-                    fn ($q) => $q->where('pid', $key)
+                    fn($q) => $q->where('id', $key),
+                    fn($q) => $q->where('pid', $key)
                 )
                 ->firstOrFail();
 
@@ -173,22 +173,6 @@ class QueryController extends Controller
             return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
             \Log::error('QueryController@store - failed: ' . json_encode($validated));
-            return $this->ErrorResponse($e->getMessage());
-        }
-    }
-
-    public function test(ModelBackedRequest $request, QueryContextManager $contextManager): JsonResponse
-    {
-        $validated = $request->validated();
-
-        try {
-            $contextType = QueryContextType::Bunny;
-            $translatedQuery = $contextManager->handle($validated['definition'], $contextType);
-
-
-            return $this->CreatedResponse($translatedQuery);
-        } catch (\Throwable $e) {
-            \Log::error('QueryController@test - failed: ' . json_encode($validated));
             return $this->ErrorResponse($e->getMessage());
         }
     }
