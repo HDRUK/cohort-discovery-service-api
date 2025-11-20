@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'nlp' => [
+        'base_uri' => env('COHORT_DISCOVER_NLP_SERVICE_BASE_URI'),
+    ],
+
 ];
