@@ -35,8 +35,6 @@ class DistributionTest extends TestCase
 
         $this->enableMiddleware();
         $this->user = User::factory()->create();
-        // Inject workgroups required for CBAC.
-        $this->user->workgroups = $this->adminWorkgroup;
     }
 
     public function test_it_can_manually_trigger_distribution_jobs(): void
