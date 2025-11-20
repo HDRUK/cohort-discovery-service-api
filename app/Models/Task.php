@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use App\Enums\TaskType;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
  * @property int $id
@@ -16,6 +17,7 @@ use App\Enums\TaskType;
  */
 class Task extends Model
 {
+    use Search;
     use HasFactory;
     public $timestamps = false;
 
@@ -37,6 +39,10 @@ class Task extends Model
         'attempted_at' => 'datetime',
         'failed_at' => 'datetime',
         'task_type' => TaskType::class,
+    ];
+
+    protected static array $sortableColumns = [
+        'collection.name',
     ];
 
     protected static function booted(): void

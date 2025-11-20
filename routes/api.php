@@ -23,8 +23,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('v1/user', [UserController::class, 'getMe']);
 });
 
-Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
-
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
 Route::post('/v1/users/{id}/workgroup/add', [UserController::class, 'addToWorkgroup'])->middleware('cbac:admin');
@@ -78,13 +76,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
 
-    // OLD //
-    //Route::get('/v1/query/{pid}', [QueryController::class, 'getQuery']);
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
-    //Route::get('/v1/queries', [QueryController::class, 'getQueries']);
-    //Route::post('/v1/queries', [QueryController::class, 'submitQueryAndCreateTasks']);
-
-    // NEW //
     Route::get('/v1/queries', [QueryController::class, 'index']);
     Route::get('/v1/query/{id}', [QueryController::class, 'show'])->whereNumber('id');
     Route::get('/v1/query/{pid}', [QueryController::class, 'show'])->whereUuid('pid');
@@ -132,6 +124,8 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
     Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
+
+    Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 });
 
 Route::prefix('auth')->group(function () {

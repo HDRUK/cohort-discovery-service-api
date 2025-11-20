@@ -101,7 +101,7 @@ If you want to get a full OMOP Vocab, or you want to update yours, you must:
 
 7. Load the data into your favourite database (`DB_OMOP_CONNECTION`)
 
--   I'd recommend use [OMOP-lite](https://github.com/health-Informatics-UoN/omop-lite) created by UoN
+-   We recommend you use [OMOP-lite](https://github.com/health-Informatics-UoN/omop-lite) created by UoN
 -   Otherwise you'll have to do this manually and optimise/set indices etc.
 
 ### [Option B] You need a minimal OMOP Vocab

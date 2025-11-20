@@ -24,7 +24,10 @@ class CollectionController extends Controller
 
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $collections = Collection::with('demographics')
+        $collections = Collection::with([
+            'demographics',
+            'custodian'
+        ])
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
@@ -181,7 +184,6 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
-
         } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
         }

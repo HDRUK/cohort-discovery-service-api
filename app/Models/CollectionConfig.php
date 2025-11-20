@@ -55,6 +55,10 @@ class CollectionConfig extends Model implements ValidatableModel
 
     protected $casts = [
         'enabled' => 'boolean',
+        'frequency_mode' => 'integer',
+        'run_time_frequency' => 'integer',
+        'run_time_hour' => 'integer',
+        'run_time_minute' => 'integer',
     ];
 
     public function getValidationRules(string $context): array

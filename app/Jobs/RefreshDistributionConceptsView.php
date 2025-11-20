@@ -19,9 +19,9 @@ class RefreshDistributionConceptsView implements ShouldQueue
      */
     public function __construct()
     {
-        $this->viewName = config('database.connections.omop.database') . '.distribution_concepts';
-        $this->distributionTable = config('database.connections.omop.database') . '.distributions';
-        $this->conceptTable = config('database.connections.omop.database') . '.concepts';
+        $this->viewName = config('database.connections.mysql.database') . '.distribution_concepts';
+        $this->distributionTable = config('database.connections.mysql.database') . '.distributions';
+        $this->conceptTable = config('database.connections.omop.database') . '.concept';
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * ModelBackedRequest supersedes Laravel's standard FormRequest pattern by providing
@@ -100,7 +102,7 @@ class ModelBackedRequest extends FormRequest
             return null;
         }
 
-        [$controller, ] = explode('@', $action);
+        [$controller,] = explode('@', $action);
         $controllerBase = class_basename($controller);
         $modelBase = Str::before($controllerBase, 'Controller');
 
@@ -112,12 +114,22 @@ class ModelBackedRequest extends FormRequest
     {
         $routeParams = $this->route()?->parameters() ?? [];
 
-        return match(strtolower($this->method())) {
+        return match (strtolower($this->method())) {
             'get' => count($routeParams) > 0 ? 'show' : 'index',
             'post' => 'store',
             'put' => 'update',
             'delete' => 'delete',
             default => 'index',
         };
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'message' => 'Request data is not valid.',
+                'errors'  => $validator->errors(),
+            ], 422)
+        );
     }
 }
