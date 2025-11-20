@@ -31,6 +31,8 @@ class DistributionsCollector implements ApiCommand
             $counts = [
                 'weekly' => 0,
                 'monthly' => 0,
+                'quarterly' => 0,
+                'biannually' => 0,
             ];
 
             $retVal = [
@@ -111,6 +113,63 @@ class DistributionsCollector implements ApiCommand
                             $retVal['configs'][] = $c->toJson();
 
                             // Completed, continue with next iterable.
+                            continue 2;
+                        }
+
+                        Log::info($this->tag . ' config (' . $c['id'] . ') for collection (' .
+                            $c->collection_id . ') not scheduled to run - skipping.');
+                        break;
+                    case (int)FrequencyMode::QUARTERLY->value:
+                        // Quaterly run mode
+                        $currentQuarter = (int)ceil($now->month / 3);
+
+                        if ($currentQuarter === $c->run_time_frequency) {
+                            $alreadyRan = CollectionConfigRun::where('collection_config_id', $c->id)
+                                ->whereBetween('ran_at', [$now->copy()->firstOfQuarter(), $now->copy()->lastOfQuarter()])
+                                ->exists();
+
+                            if ($alreadyRan) {
+                                Log::info($this->tag . ' config (' . $c->id . ') already ran this quarter, skipping.');
+                                continue 2;
+                            }
+
+                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' .
+                                $c->collection_id . ') running per quarterly schedule');
+
+                            $this->generateQueriesAndTasks($c);
+                            $counts['quarterly']++;
+                            $retVal['configs'][] = $c->toJson();
+
+                            continue 2;
+                        }
+
+                        Log::info($this->tag . ' config (' . $c['id'] . ') for collection (' .
+                            $c->collection_id . ') not scheduled to run - skipping.');
+                        break;
+                    case (int)FrequencyMode::BIANNUALLY->value:
+                        // Biannually run mode
+                        $currentHalf = ($now->month <= 6) ? 1 : 2;
+
+                        if ($currentHalf === $c->run_time_frequency) {
+                            $alreadyRan = CollectionConfigRun::where('collection_config_id', $c->id)
+                                ->whereBetween('ran_at', [
+                                    $now->copy()->firstOfMonth()->startOfMonth()->subMonths($currentHalf === 2 ? 6 : 0),
+                                    $now->copy()->lastOfMonth()->endOfMonth()
+                                ])
+                                ->exists();
+
+                            if ($alreadyRan) {
+                                Log::info($this->tag . ' config (' . $c->id . ') already ran this half of the year, skipping');
+                                continue 2;
+                            }
+
+                            Log::info($this->tag . ' config (' . $c->id . ') for collection (' .
+                                $c->collection_id . ') running per biannual schedule');
+
+                            $this->generateQueriesAndTasks($c);
+                            $counts['biannually']++;
+                            $retVal['configs'][] = $c->toJson();
+
                             continue 2;
                         }
 
