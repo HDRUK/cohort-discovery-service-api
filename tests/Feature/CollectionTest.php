@@ -72,7 +72,6 @@ class CollectionTest extends TestCase
             $overrides
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
-        // dd($response);
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
