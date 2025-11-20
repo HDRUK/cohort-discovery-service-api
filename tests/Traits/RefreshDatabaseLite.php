@@ -14,7 +14,6 @@ trait RefreshDatabaseLite
     public function liteSetUp(): void
     {
         parent::setUp();
-
         if (!static::$migrated) {
             if (env('APP_ENV') === 'testing') {
                 Artisan::call('migrate:fresh');

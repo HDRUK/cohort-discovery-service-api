@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use DB;
 use Str;
 use Config;
-
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Custodian;
@@ -353,7 +352,7 @@ class CollectionTest extends TestCase
     public function test_it_can_list_collections_standalone_mode(): void
     {
         Config::set('system.operation_mode', 'standalone');
-        
+
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
@@ -409,7 +408,7 @@ class CollectionTest extends TestCase
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
     //     Config::set('system.operation_mode', 'integrated');
-        
+
     //     $fakeGatewayTeamId = 1111;
     //     $anotherFakeGatewayTeamId = 2222;
     //     $custodian = Custodian::factory()->create([

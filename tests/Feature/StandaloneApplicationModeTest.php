@@ -6,6 +6,7 @@ use DB;
 use Tests\TestCase;
 use Laravel\Passport\Client;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class StandaloneApplicationModeTest extends TestCase
 {
@@ -20,7 +21,7 @@ class StandaloneApplicationModeTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         // Ensure we are in standalone mode for these tests
-        config(['app.mode' => 'standalone']);
+        config(['system.operation_mode' => 'standalone']);
     }
 
     public function test_the_application_can_login_standalone_users(): void
@@ -34,9 +35,9 @@ class StandaloneApplicationModeTest extends TestCase
         ]);
 
         $user = User::factory()->create([
-            'email' => 'test@test.com',
+            'email' => config('integrated.test_user_email'),
             'name' => 'Test User',
-            'password' => '$2y$12$HpqKWe/3w2u8wyLunwHInuJUiksENoVheROqXNhsjTLMqwi5Gmjxm',
+            'password' => Hash::make(config('integrated.test_user_password')),
         ]);
 
         $this->actingAs($user, 'api');
@@ -64,9 +65,9 @@ class StandaloneApplicationModeTest extends TestCase
         ]);
 
         $user = User::factory()->create([
-            'email' => 'test@test.com',
+            'email' => config('integrated.test_user_email'),
             'name' => 'Test User',
-            'password' => '$2y$12$HpqKWe/3w2u8wyLunwHInuJUiksENoVheROqXNhsjTLMqwi5Gmjxm',
+            'password' => Hash::make(config('integrated.test_user_password')),
         ]);
 
         $this->actingAs($user, 'api');

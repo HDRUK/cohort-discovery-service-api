@@ -41,6 +41,6 @@ return [
      */
     'internal_oauth_callback_uri' => env('OAUTH_INTERNAL_REDIRECT'),
 
-    'test_user_email' => env('INTEGRATED_TEST_USER_EMAIL'),
-    'test_user_password' => env('INTEGRATED_TEST_USER_PASSWORD'),
+    'test_user_email' => env('INTEGRATED_TEST_USER_EMAIL', 'test@test.com'),
+    'test_user_password' => env('INTEGRATED_TEST_USER_PASSWORD', 'test1234'),
 ];

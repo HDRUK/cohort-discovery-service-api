@@ -90,7 +90,62 @@ class QueryContextTest extends TestCase
         ],
     ];
 
-
+    private const ALT_INPUT_QUERY = [
+        "id" => "ef9af804-78b8-46d8-91a8-42d8236ef6bf",
+        "rules" => [
+            [
+                "id" => "962b041d-8957-4b4a-b1bf-4a74bc712c51",
+                "exclude" => false,
+                "rule" => [
+                    "concept" => [
+                        "concept_id" => 3955322,
+                        "description" => "Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "e5b283cd-8681-49c7-8046-664d937bc83a",
+                "combinator" => "and",
+                "valid" => true
+            ],
+            [
+                "id" => "04a0a135-aa35-44ba-a148-bedee094c4d2",
+                "rule" => [
+                    "concept" => [
+                        "name" => "3955321",
+                        "concept_id" => 3955321,
+                        "description" => "Pfizer - SARS-CoV-2 (COVID-19) vaccine",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ],
+            [
+                "id" => "00ff5058-3d91-40b5-901c-09822334ebcb",
+                "combinator" => "or",
+                "valid" => true
+            ],
+            [
+                "id" => "8aeaca43-e5c8-4ea6-b234-d3ba6b02b523",
+                "exclude" => false,
+                "rule" => [
+                    "concept" => [
+                        "name" => "3955320",
+                        "concept_id" => 3955320,
+                        "description" => "Moderna - SARS-CoV-2 (COVID-19) vaccine",
+                        "category" => "Drug",
+                        "children" => []
+                    ]
+                ],
+                "valid" => true
+            ]
+        ],
+        "valid" => true
+    ];
 
 
     protected function setUp(): void
@@ -134,6 +189,32 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955320', $firstRule['value'] ?? null);
         $secondRule = $firstGroup['rules'][1] ?? null;
         $this->assertEquals('3955321', $secondRule['value'] ?? null);
+    }
+
+    public function test_application_can_translate_bunny_query_alt(): void
+    {
+        $result = $this->bunnyContext->translate(self::ALT_INPUT_QUERY);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('groups', $result);
+        $this->assertArrayHasKey('groups_oper', $result);
+
+        $firstGroup = $result['groups'][0];
+        $this->assertIsArray($firstGroup['rules']);
+        $this->assertCount(1, $firstGroup['rules']);
+        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+
+        $firstRule = $firstGroup['rules'][0] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('3955322', $firstRule['value'] ?? null);
+
+        $secondGroup = $result['groups'][1];
+        $this->assertIsArray($secondGroup['rules']);
+        $this->assertCount(2, $secondGroup['rules']);
+        $this->assertEquals('OR', $secondGroup['rules_oper'] ?? null);
+
+        $firstRule = $secondGroup['rules'][0] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('3955321', $firstRule['value'] ?? null);
     }
 
     /*

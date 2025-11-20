@@ -14,7 +14,9 @@ use App\Models\Query;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use App\Services\Submitters\QuerySubmissionService;
+use App\Services\QueryContext\QueryContextManager;
 use App\Http\Controllers\Controller;
+use App\Services\QueryContext\QueryContextType;
 
 /**
  * @OA\Tag(
@@ -64,9 +66,9 @@ class QueryController extends Controller
         $queries = Query::searchViaRequest()
             ->filterViaRequest()
             ->with([
-            'tasks.collection.size',
-            'tasks.result'
-        ])
+                'tasks.collection.size',
+                'tasks.result'
+            ])
             ->where('user_id', Auth::id())
             ->whereHas('tasks', function ($query) {
                 $query->where('task_type', TaskType::A);
@@ -102,9 +104,33 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::with(['tasks.collection.size', 'tasks.result'])
-                ->where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::with([
+                'tasks' => function ($taskQuery) {
+                    $taskQuery
+                        ->whereHas('collection', function ($collectionQuery) {
+                            $collectionQuery
+                                ->searchViaRequest();
+                        })
+                        // hack to allow applySorting to work on relationships
+                        // - return to better optimise this?
+                        // - I need to sort tasks (of a query) based on tasks.collection.name
+                        // New requirement to also maybe default sort by the result count
+                        // - doing this on the FE for now
+                        ->leftJoin('collections as collection', 'collection.id', '=', 'tasks.collection_id')
+                        ->select('tasks.*')
+                        ->with([
+                            'collection.size',
+                            'collection.custodian',
+                            'result',
+                        ])
+                        ->applySorting();
+                },
+            ])
+                ->when(
+                    ctype_digit($key),
+                    fn($q) => $q->where('id', $key),
+                    fn($q) => $q->where('pid', $key)
+                )
                 ->firstOrFail();
 
             if (Gate::denies('view', $query)) {
@@ -113,7 +139,8 @@ class QueryController extends Controller
 
             return $this->OKResponse($query);
         } catch (\Throwable $e) {
-            return $this->NotFoundResponse();
+            \Log::error('QueryController@show - failed: ' . json_encode($validated));
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -176,8 +203,11 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
                 ->firstOrFail();
             if ($query->update($validated)) {
                 return $this->OKResponse($query);
@@ -213,9 +243,12 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::where('id', $key)
-                        ->orWhere('pid', $key)
-                        ->firstOrFail();
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
+                ->firstOrFail();
             if ($query->delete()) {
                 return $this->OKResponse([]);
             }
@@ -283,8 +316,11 @@ class QueryController extends Controller
         $query = null;
 
         try {
-            $query = Query::where('id', $key)
-                ->orWhere('pid', $key)
+            $query = Query::when(
+                ctype_digit($key),
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
+            )
                 ->first()
                 ->toArray();
 
