@@ -60,14 +60,14 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
 });
 
-Route::get('/v1/task/nextjob/{collection_id}', [TaskController::class, 'nextJob'])
+Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])
     ->name('task.nextjob')
     ->middleware([
         'throttle:polling',
         CollectionHostBasicAuth::class,
     ]);
 
-Route::post('/v1/task/result/{uuid}/{collection_id}', [TaskController::class, 'receiveResult'])
+Route::post('/v1/task/result/{uuid}/{collectionId}', [TaskController::class, 'receiveResult'])
     ->name('task.result')
     ->middleware([
         'throttle:polling',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
-use App\Services\QueryContext\QueryContextType;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use App\Services\QueryContext\QueryContextType;
 use App\Contracts\ValidatableModel;
+use App\Enums\TaskType;
 
 /**
  * @OA\Schema(
@@ -60,8 +62,10 @@ class Collection extends Model implements ValidatableModel
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
+    public const STATUS_SUSPENDED = 'suspended';
 
     public $table = 'collections';
+    public $timestamps = true;
 
     protected $fillable = [
         'name',
@@ -70,12 +74,14 @@ class Collection extends Model implements ValidatableModel
         'type',
         'custodian_id',
         'status',
+        'updated_at',
     ];
 
     protected $casts = [
         'type' => QueryContextType::class,
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'last_active' => 'datetime',
     ];
 
     protected static array $searchableColumns = [
@@ -189,5 +195,19 @@ class Collection extends Model implements ValidatableModel
     public function config(): HasOne
     {
         return $this->hasOne(CollectionConfig::class);
+    }
+
+    public static function logActivity(Collection $c, TaskType $type): void
+    {
+        if (strtolower(config('system.collection_activity_log_type')) === 'log') {
+            CollectionActivityLog::create([
+                'collection_id' => $c->id,
+                'task_type' => $type->value,
+            ]);
+        } elseif (strtolower(config('system.collection_activity_log_type')) === 'record') {
+            Collection::where('id', $c->id)->update([
+                'last_active' => Carbon::now(),
+            ]);
+        }
     }
 }

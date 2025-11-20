@@ -5,7 +5,7 @@ namespace Tests\Unit;
 use Tests\TestCase;
 use DB;
 use Carbon\Carbon;
-use Illuminate\SUpport\Facades\Log;
+use Illuminate\Support\Facades\Log;
 use App\Models\Task;
 use App\Models\Query;
 use App\Models\Collection;

@@ -15,6 +15,7 @@ use App\Traits\HelperFunctions;
 use App\Http\Requests\ModelBackedRequest;
 use App\Services\QueryContext\QueryContextType;
 use App\Http\Controllers\Controller;
+use App\Enums\CollectionStatus;
 
 class CollectionController extends Controller
 {
@@ -164,7 +165,6 @@ class CollectionController extends Controller
 
             $collection->host()->sync([$validated['host_id']]);
 
-
             return $this->CreatedResponse($collection);
         } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
@@ -175,16 +175,11 @@ class CollectionController extends Controller
     {
         try {
             $perPage = $this->resolvePerPage();
-            $input = $status;
-            if (!in_array($input, [
-                Collection::STATUS_ACTIVE,
-                Collection::STATUS_INACTIVE,
-            ])) {
-                $input = Collection::STATUS_ACTIVE;
-            }
 
-            $collections = Collection::where('status', ($status === Collection::STATUS_ACTIVE ? 1 : 0))
+            $input = CollectionStatus::tryFromName($status) ?? CollectionStatus::ACTIVE;
+            $collections = Collection::where('status', $input->value)
                 ->paginate($perPage);
+
             return $this->OKResponse($collections);
 
         } catch (\Exception $e) {

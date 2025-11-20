@@ -221,6 +221,11 @@ class TaskControllerTest extends TestCase
         ]);
         $response->assertStatus(200);
 
+        $this->assertDatabaseHas('collection_activity_logs', [
+            'collection_id' => $collection->id,
+            'task_type' => $task->task_type,
+        ]);
+
         // muddle the keys to ensure the middleware is working with invalid credentials too
         $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid, [
             'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode("{$collectionHost->client_id}:wrong-secret")

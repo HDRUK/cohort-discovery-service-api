@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use DB;
 use Str;
 use Config;
-
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Custodian;
@@ -163,13 +162,6 @@ class CollectionTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
-        $response->assertStatus(200);
-
         $this->assertDatabaseHas('collections', [
             'status' => 1,
         ]);
@@ -177,6 +169,13 @@ class CollectionTest extends TestCase
         $this->assertDatabaseHas('collections', [
             'status' => 0,
         ]);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
+        $response->assertStatus(200);
 
         $content = $response->json('data');
 
@@ -353,7 +352,7 @@ class CollectionTest extends TestCase
     public function test_it_can_list_collections_standalone_mode(): void
     {
         Config::set('system.operation_mode', 'standalone');
-        
+
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
@@ -409,7 +408,7 @@ class CollectionTest extends TestCase
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
     //     Config::set('system.operation_mode', 'integrated');
-        
+
     //     $fakeGatewayTeamId = 1111;
     //     $anotherFakeGatewayTeamId = 2222;
     //     $custodian = Custodian::factory()->create([
