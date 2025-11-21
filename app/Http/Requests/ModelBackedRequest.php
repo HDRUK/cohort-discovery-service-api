@@ -63,16 +63,16 @@ class ModelBackedRequest extends FormRequest
         $id = $this->route('id');
         $pid = $this->route('pid');
 
-        if ($id || $pid) {
-            if ($id && $pid) {
-                abort(400, 'Bad request, cannot request on both ID and PID');
-            }
+        if ($id !== null && $pid !== null) {
+            abort(400, 'Bad request, cannot request on both ID and PID');
+        }
 
-            $key = $id ?? $pid;
-
-            $this->merge([
-                'key' => $key,
-            ]);
+        if ($id !== null) {
+            $this->merge(['id' => $id]);
+            $this->merge(['key' => $id]);
+        } elseif ($pid !== null) {
+            $this->merge(['custodianPid' => $pid]);
+            $this->merge(['key' => $pid]);
         }
     }
 

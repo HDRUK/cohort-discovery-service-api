@@ -6,6 +6,7 @@ use Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ModelBackedRequest;
 use App\Traits\Responses;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
@@ -32,15 +33,22 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(ModelBackedRequest $request): JsonResponse
     {
-        return $this->OKResponse(CollectionHost::with('collections')->get());
+        $hosts = CollectionHost::with('collections')
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting()
+            ->get();
+
+        return $this->OKResponse($hosts);
     }
 
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         $custodian = Custodian::where('pid', $custodianPid)->first();
         $custodianId = $custodian->id;
+
         return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)->with('collections')->get());
     }
 
@@ -66,15 +74,16 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
-            $collectionHost = CollectionHost::with('collections')->findOrFail($id);
+            $collectionHost = CollectionHost::with('collections')->findOrFail($validated['id']);
+            return $this->OKResponse($collectionHost);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
-
-        return $this->OKResponse($collectionHost);
     }
 
     /**
@@ -97,26 +106,28 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(ModelBackedRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'query_context_type' => 'required|string|max:255',
-            'custodian_id' => 'required|exists:custodians,id',
-        ]);
+        $validated = $request->validated();
 
-        $rawClientId = Str::uuid()->toString();
-        $rawClientSecret = Str::random(64);
+        try {
+            $rawClientId = Str::uuid()->toString();
+            $rawClientSecret = Str::random(64);
 
-        $collectionHost = CollectionHost::create([
-            'name' => $data['name'],
-            'query_context_type' => $data['query_context_type'],
-            'client_id' => hash('sha256', config('system.salt_1') . $rawClientId . config('system.salt_2')),
-            'client_secret' => hash('sha256', config('system.salt_1') . $rawClientSecret . config('system.salt_2')),
-            'custodian_id' => $data['custodian_id'],
-        ]);
+            $collectionHost = CollectionHost::create([
+                'name' => $validated['name'],
+                'query_context_type' => $validated['query_context_type'],
+                'client_id' => hash('sha256', config('system.salt_1') . $rawClientId . config('system.salt_2')),
+                'client_secret' => hash('sha256', config('system.salt_1') . $rawClientSecret . config('system.salt_2')),
+                'custodian_id' => $validated['custodian_id'],
+            ]);
 
-        return $this->CreatedResponse($collectionHost);
+            return $this->CreatedResponse($collectionHost);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@store - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
@@ -149,21 +160,21 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
-            $collectionHost = CollectionHost::findOrFail($id);
-        } catch (\Exception $e) {
+            $collectionHost = CollectionHost::findOrFail($validated['id']);
+            $collectionHost->update($validated);
+
+            return $this->OKResponse($collectionHost);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+
             return $this->NotFoundResponse();
         }
-
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'query_context_type' => 'sometimes|string|max:255',
-        ]);
-
-        $collectionHost->update($data);
-        return $this->OKResponse($collectionHost);
     }
 
     /**
@@ -187,15 +198,20 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
-            $collectionHost = CollectionHost::findOrFail($id);
+            $collectionHost = CollectionHost::findOrFail($validated['id']);
             $collectionHost->delete();
+
+            return $this->OKResponse([]);
         } catch (\Exception $e) {
+            \Log::error('CollectionHostController@destroy - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+
             return $this->NotFoundResponse();
         }
-
-        return $this->OKResponse([]);
     }
 }

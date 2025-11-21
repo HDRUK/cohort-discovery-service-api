@@ -196,6 +196,27 @@ class CollectionTest extends TestCase
         }
     }
 
+    public function test_it_can_show_collections(): void
+    {
+        Custodian::factory()->create();
+
+        Collection::factory(10)->create();
+        $coll = Collection::inRandomOrder()->first();
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/' . $coll->id);
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertNotNull($content);
+        $this->assertTrue($content['id'] === $coll->id);
+        $this->assertTrue($content['name'] === $coll->name);
+    }
+
     public function test_it_can_search_by_name(): void
     {
         Custodian::factory()->create();
