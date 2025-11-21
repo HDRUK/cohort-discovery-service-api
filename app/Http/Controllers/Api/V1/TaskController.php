@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessDistributionFile;
-use App\Models\Collection;
-use App\Models\Result;
-use App\Models\ResultFile;
-use App\Models\Task;
-use App\Services\QueryContext\QueryContextManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
-use App\Traits\Responses;
-use App\Traits\HelperFunctions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\ProcessDistributionFile;
+use App\Models\Collection;
+use App\Models\ResultFile;
+use App\Enums\TaskType;
+use App\Models\Result;
+use App\Models\Task;
+use App\Services\QueryContext\QueryContextManager;
+use App\Traits\HelperFunctions;
+use App\Traits\Responses;
 
 class TaskController extends Controller
 {
@@ -51,32 +51,34 @@ class TaskController extends Controller
         return $this->OKResponse($task);
     }
 
-    public function nextJob($collection_id, QueryContextManager $contextManager): JsonResponse|Response
+    public function nextJob($collectionId, QueryContextManager $contextManager): JsonResponse|Response
     {
-        $parts = explode('.', $collection_id);
-        $parsed_id = $parts[0];
-        $raw_type = $parts[1] ?? 'a';
+        $parts = explode('.', $collectionId);
+        $parsedId = $parts[0];
+        $rawType = $parts[1] ?? 'a';
 
         try {
-            $task_type = TaskType::from($raw_type);
+            $taskType = TaskType::from($rawType);
         } catch (\ValueError $e) {
-            return $this->BadRequestResponseExtended("Invalid task type: '{$raw_type}'. Allowed types are: 'a', 'b'.");
+            return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-
-        $collection = Collection::where('pid', $parsed_id)->first();
+        $collection = Collection::where('pid', $parsedId)->first();
 
         if (!$collection) {
             return $this->NotFoundResponse();
         }
 
-        $nattemps = config('api.default_max_attemps', 3);
+        // Always log activity, regardless of if jobs exist
+        Collection::logActivity($collection, $taskType);
+
+        $nAttempts = config('api.default_max_attempts', 3);
         $task = Task::where([
-            'task_type' => $task_type,
+            'task_type' => $taskType,
             'completed_at' => null,
             'collection_id' => $collection->id
         ])
-            ->where('attempts', '<', $nattemps)
+            ->where('attempts', '<', $nAttempts)
             ->first();
 
         if (!$task) {
@@ -88,7 +90,7 @@ class TaskController extends Controller
         $task->attempts     = $nextAttempts;
         $task->attempted_at = now();
 
-        if ($nextAttempts === $nattemps) {
+        if ($nextAttempts === $nAttempts) {
             $task->failed_at = now();
         }
 
@@ -98,8 +100,7 @@ class TaskController extends Controller
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
 
-
-        if ($task_type === TaskType::B) {
+        if ($taskType === TaskType::B) {
             $code = $rawQuery['code'] ?? 'DEMOGRAPHICS';
             $allowedCodes = ['DEMOGRAPHICS', 'GENERIC', 'ICD-MAIN'];
 
@@ -132,7 +133,6 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
-
         // response needed by Bunny
         return $this->OKResponseSimple([
             'task_id' => $task->id,
@@ -158,7 +158,6 @@ class TaskController extends Controller
             }
 
             $count = $queryResult['count'];
-
 
             error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
 

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Enums\TaskType;
 use App\Enums\FrequencyMode;
+use App\Enums\CollectionStatus;
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CollectionConfig;
@@ -25,7 +26,7 @@ class CollectionSeeder extends Seeder
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: 1
+            status: CollectionStatus::ACTIVE->value
         );
 
         $this->seedCollectionWithDemographics(
@@ -35,7 +36,7 @@ class CollectionSeeder extends Seeder
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: 1
+            status: CollectionStatus::ACTIVE->value
         );
 
         $this->seedCollectionWithDemographics(
@@ -45,7 +46,7 @@ class CollectionSeeder extends Seeder
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: 1
+            status: CollectionStatus::ACTIVE->value
         );
 
         $this->seedCollectionWithDemographics(
@@ -55,7 +56,7 @@ class CollectionSeeder extends Seeder
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: 1
+            status: CollectionStatus::ACTIVE->value
         );
     }
 

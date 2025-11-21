@@ -162,13 +162,6 @@ class CollectionTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
-        $response->assertStatus(200);
-
         $this->assertDatabaseHas('collections', [
             'status' => 1,
         ]);
@@ -176,6 +169,13 @@ class CollectionTest extends TestCase
         $this->assertDatabaseHas('collections', [
             'status' => 0,
         ]);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
+        $response->assertStatus(200);
 
         $content = $response->json('data');
 

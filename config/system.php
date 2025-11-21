@@ -48,4 +48,6 @@ return [
     |
     */
     'demo_user_password' => env('DEMO_USER_PASSWORD', 'd3m0User_!'),
+
+    'collection_activity_log_type' => env('COLLECTION_ACTIVITY_LOG_TYPE', 'log'),
 ];
