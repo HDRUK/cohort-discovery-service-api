@@ -44,7 +44,7 @@ class BunnyQueryContext implements QueryContextInterface
         };
 
         /*
-        - Note: this entire piece will need to be revisited 
+        - Note: this entire piece will need to be revisited
         */
         $processNode = function (array $node) use (&$groups, &$processNode, $makeLeafRule, $isOperatorNode, $isLeafNode, $isGroupNode): void {
             $children = $node['rules'] ?? [];
@@ -108,7 +108,7 @@ class BunnyQueryContext implements QueryContextInterface
             //    - when operator changes, we takethe last leaf into
             //      the new block so that e.g. A AND B AND C OR D =>
             //      [A AND B] + [C OR D]
-            // - this needs to be revisited 
+            // - this needs to be revisited
             $currentBlock = [$leafRules[0]];
             $currentOp    = null;
 

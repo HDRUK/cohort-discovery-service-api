@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -22,10 +25,12 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
  * )
  */
-class CollectionHost extends Model
+class CollectionHost extends Model implements ValidatableModel
 {
     /** @use HasFactory<\Database\Factories\CollectionHostFactory> */
     use HasFactory;
+    use Search;
+    use Filter;
 
     public $table = 'collection_hosts';
     public $timestamps = true;
@@ -38,6 +43,45 @@ class CollectionHost extends Model
         'client_secret',
         'custodian_id',
     ];
+
+    protected static array $searchableColumns = [
+        'name',
+        'query_context_type',
+    ];
+
+    protected static array $sortableColumns = [
+        'name',
+    ];
+
+    protected static array $filterableColumns = [
+        'created_at',
+        'updated_at',
+        'custodian_id',
+    ];
+
+    public function getValidationRules(string $context): array
+    {
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'id' => 'required|integer|exists:collection_hosts,id',
+            ],
+            'store' => [
+                'name' => 'required|string|max:255',
+                'query_context_type' => 'required|string|max:255',
+                'custodian_id' => 'required|integer|exists:custodians,id',
+            ],
+            'update' => [
+                'id' => 'required|integer|exists:collection_hosts,id',
+                'name' => 'sometimes|string|max:255',
+                'query_context_type' => 'sometimes|string|max:255',
+            ],
+            'delete' => [
+                'id' => 'required|integer|exists:collection_hosts,id',
+            ],
+            default => [],
+        };
+    }
 
     public function collections(): HasManyThrough
     {

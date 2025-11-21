@@ -12,7 +12,8 @@ use App\Models\CollectionHostHasCollection;
 
 class CollectionHostTest extends TestCase
 {
-    private string $url = '/api/v1/collection_hosts';
+    private const BASE_URL = '/api/v1/collection_hosts';
+    private User $user;
 
     protected function setUp(): void
     {
@@ -23,6 +24,8 @@ class CollectionHostTest extends TestCase
         Collection::truncate();
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $this->user = User::factory()->create();
     }
 
     public function test_it_can_list_collection_hosts()
@@ -35,7 +38,7 @@ class CollectionHostTest extends TestCase
             'collection_id' => $collection->id,
         ]);
 
-        $response = $this->getJson($this->url);
+        $response = $this->getJson(self::BASE_URL);
 
         $response->assertStatus(200);
         $content = $response->json();
@@ -50,17 +53,23 @@ class CollectionHostTest extends TestCase
     {
         $host = CollectionHost::factory()->create();
 
-        $response = $this->getJson($this->url . '/' . $host->id);
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '/' . $host->id);
 
         $response->assertStatus(200)
             ->assertJsonFragment(['id' => $host->id]);
     }
 
 
-    public function test_it_returns_404_for_missing_collection_host()
+    public function test_it_returns_invalid_for_missing_collection_host()
     {
-        $response = $this->getJson($this->url . '/9999');
-        $response->assertStatus(404);
+        // LS - Changed to match the new failed validation rules on this class
+        // 422 supersedes 404 as validation path is run first.
+        $response = $this->getJson(self::BASE_URL . '/9999');
+        $response->assertStatus(422);
     }
 
 
@@ -76,9 +85,8 @@ class CollectionHostTest extends TestCase
 
         // Create related models if needed
         Collection::factory()->create(['id' => 1]);
-        User::factory()->create(['id' => 1]);
 
-        $response = $this->postJson($this->url, $data);
+        $response = $this->postJson(self::BASE_URL, $data);
 
         $response->assertStatus(201)
             ->assertJsonFragment(['name' => 'Host Test']);
@@ -89,7 +97,7 @@ class CollectionHostTest extends TestCase
     {
         $host = CollectionHost::factory()->create();
 
-        $response = $this->putJson($this->url . '/' . $host->id, [
+        $response = $this->putJson(self::BASE_URL . '/' . $host->id, [
             'name' => 'Updated Host'
         ]);
 
@@ -102,10 +110,26 @@ class CollectionHostTest extends TestCase
     {
         $host = CollectionHost::factory()->create();
 
-        $response = $this->deleteJson($this->url . '/' . $host->id);
+        $response = $this->deleteJson(self::BASE_URL . '/' . $host->id);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('collection_hosts', ['id' => $host->id]);
+    }
+
+    public function test_it_can_search_by_name(): void
+    {
+        $host = CollectionHost::factory()->create();
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL . '?name[]=' . str_replace(' ', '%20', $host->name));
+
+        $content = $response->json('data');
+
+        $this->assertNotEmpty($content);
+        $this->assertEquals(count($content), 1);
+        $this->assertEquals($content[0]['name'], $host->name);
     }
 }

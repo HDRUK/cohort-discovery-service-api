@@ -14,9 +14,7 @@ use App\Models\Query;
 use App\Traits\Responses;
 use App\Traits\HelperFunctions;
 use App\Services\Submitters\QuerySubmissionService;
-use App\Services\QueryContext\QueryContextManager;
 use App\Http\Controllers\Controller;
-use App\Services\QueryContext\QueryContextType;
 
 /**
  * @OA\Tag(
@@ -128,8 +126,8 @@ class QueryController extends Controller
             ])
                 ->when(
                     ctype_digit($key),
-                    fn($q) => $q->where('id', $key),
-                    fn($q) => $q->where('pid', $key)
+                    fn ($q) => $q->where('id', $key),
+                    fn ($q) => $q->where('pid', $key)
                 )
                 ->firstOrFail();
 
@@ -205,8 +203,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
+                fn ($q) => $q->where('id', $key),
+                fn ($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
             if ($query->update($validated)) {
@@ -245,8 +243,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
+                fn ($q) => $q->where('id', $key),
+                fn ($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
             if ($query->delete()) {
@@ -318,8 +316,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
+                fn ($q) => $q->where('id', $key),
+                fn ($q) => $q->where('pid', $key)
             )
                 ->first()
                 ->toArray();
