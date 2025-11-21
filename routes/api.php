@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryParserController;
 use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\ServiceCallerController;
+use App\Http\Controllers\Api\V1\DistributionController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::middleware(['decode.jwt'])->group(function () {
@@ -56,6 +57,8 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
 
     Route::get('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'indexByCustodian']);
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
+
+    Route::post('/v1/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun']);
 });
 
 Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])

@@ -11,7 +11,6 @@ use App\Models\Task;
 use App\Models\User;
 use Tests\TestCase;
 
-
 class QueryControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/queries';
