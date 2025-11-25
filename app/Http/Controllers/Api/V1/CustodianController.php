@@ -33,7 +33,10 @@ class CustodianController extends Controller
     public function index(Request $request): JsonResponse
     {
         return $this->OKResponse(
-            Custodian::with('hosts')
+            Custodian::with([
+                'hosts',
+                'network',
+            ])
                 ->searchViaRequest()
                 ->applySorting()
                 ->get()
@@ -65,7 +68,10 @@ class CustodianController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $custodian = Custodian::with('hosts')->findOrFail($id);
+            $custodian = Custodian::with([
+                'hosts',
+                'network'
+            ])->findOrFail($id);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }

@@ -89,7 +89,7 @@ class CollectionController extends Controller
         try {
             $collection = Collection::findOrFail($validated['id']);
             if ($collection->delete()) {
-                $this->OKResponse([]);
+                return $this->OKResponse([]);
             }
         } catch (\Throwable $e) {
             \Log::error('CollectionController@destroy - failed: ' .

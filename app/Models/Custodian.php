@@ -64,4 +64,16 @@ class Custodian extends Model
     {
         return $this->hasMany(CollectionHost::class, 'custodian_id');
     }
+
+    public function network(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(
+            CustodianNetwork::class,
+            CustodianNetworkHasCustodian::class,
+            'custodian_id',
+            'id',
+            'id',
+            'network_id',
+        );
+    }
 }
