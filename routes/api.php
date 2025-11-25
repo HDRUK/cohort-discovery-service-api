@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\QueryParserController;
 use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Controllers\Api\V1\DistributionController;
+use App\Http\Controllers\Api\V1\CustodianNetworkController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 
 Route::middleware(['decode.jwt'])->group(function () {
@@ -59,6 +60,13 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
 
     Route::post('/v1/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun']);
+
+    // Custodian Network - guarded routes.
+    Route::post('/v1/custodian_networks', [CustodianNetworkController::class, 'store']);
+    Route::put('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'update']);
+    Route::delete('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'destroy']);
+    Route::post('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'linkToNetwork']);
+    Route::delete('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'unlinkFromNetwork']);
 });
 
 Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])
@@ -129,6 +137,10 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
+
+    // Custodian Networks - "public" routes.
+    Route::get('/v1/custodian_networks', [CustodianNetworkController::class, 'index']);
+    Route::get('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'show']);
 });
 
 Route::prefix('auth')->group(function () {
