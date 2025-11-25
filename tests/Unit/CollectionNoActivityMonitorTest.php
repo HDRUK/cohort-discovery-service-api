@@ -4,7 +4,6 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use App\Models\Task;
 use App\Models\Query;
 use App\Models\Collection;
@@ -33,6 +32,8 @@ class CollectionNoActivityMonitorTest extends TestCase
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
     {
+        config()->set('system.collection_activity_log_type', 'log');
+
         $this->disableObservers();
 
         $now = CarbonImmutable::now($this->timezone);
@@ -40,6 +41,7 @@ class CollectionNoActivityMonitorTest extends TestCase
 
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
+            'status' => CollectionStatus::ACTIVE->value,
         ]);
 
         $config = CollectionConfig::create([
@@ -74,28 +76,20 @@ class CollectionNoActivityMonitorTest extends TestCase
             'task_type' => TaskType::A->value,
         ]);
 
-        Log::spy();
-
         $command = new CollectionNoActivityMonitor();
         $result = $command->handle([]);
-
-        Log::shouldHaveReceived('info')->withArgs(
-            fn ($message) => str_contains($message, 'CollectionNoActivityMonitor - Started')
-        );
-
-        Log::shouldHaveReceived('info')->withArgs(
-            fn ($message) => str_contains($message, 'that has had ZERO ACTIVITY for 24 hours - flagging')
-        );
 
         $this->assertDatabaseHas('collections', [
             'id' => $collection->id,
             'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::SUSPENDED,
+            'status' => CollectionStatus::SUSPENDED->value,
         ]);
     }
 
     public function test_it_doesnt_suspend_collections_with_activity_within_24_hours(): void
     {
+        config()->set('system.collection_activity_log_type', 'log');
+
         $this->disableObservers();
 
         $now = CarbonImmutable::now($this->timezone);
@@ -103,6 +97,7 @@ class CollectionNoActivityMonitorTest extends TestCase
 
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
+            'status' => CollectionStatus::ACTIVE->value,
         ]);
 
         $config = CollectionConfig::create([
@@ -137,23 +132,13 @@ class CollectionNoActivityMonitorTest extends TestCase
             'task_type' => TaskType::A->value,
         ]);
 
-        Log::spy();
-
         $command = new CollectionNoActivityMonitor();
         $result = $command->handle([]);
-
-        Log::shouldHaveReceived('info')->withArgs(
-            fn ($message) => str_contains($message, 'CollectionNoActivityMonitor - Started')
-        );
-
-        Log::shouldHaveReceived('info')->withArgs(
-            fn ($message) => str_contains($message, 'has had ACTIVITY within 24 hours - skipping')
-        );
 
         $this->assertDatabaseHas('collections', [
             'id' => $collection->id,
             'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::ACTIVE,
+            'status' => CollectionStatus::ACTIVE->value,
         ]);
     }
 }

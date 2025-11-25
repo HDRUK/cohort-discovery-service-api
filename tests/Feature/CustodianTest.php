@@ -7,6 +7,8 @@ use Tests\TestCase;
 use Illuminate\Support\Str;
 use App\Models\Custodian;
 use App\Models\CollectionHost;
+use App\Models\CustodianNetwork;
+use App\Models\CustodianNetworkHasCustodian;
 
 class CustodianTest extends TestCase
 {
@@ -20,6 +22,8 @@ class CustodianTest extends TestCase
 
         Custodian::truncate();
         CollectionHost::truncate();
+        CustodianNetwork::truncate();
+        CustodianNetworkHasCustodian::truncate();
 
         $this->payload = [
             'pid' => (string)Str::uuid(),
@@ -30,9 +34,15 @@ class CustodianTest extends TestCase
     public function test_the_application_can_list_custodians(): void
     {
         $custodians = Custodian::factory(5)->create();
+        $network = CustodianNetwork::factory()->create();
         foreach ($custodians as $c) {
             CollectionHost::factory()->create([
                 'custodian_id' => $c->id,
+            ]);
+
+            CustodianNetworkHasCustodian::create([
+                'custodian_id' => $c->id,
+                'network_id' => $network->id,
             ]);
         }
 
@@ -42,6 +52,7 @@ class CustodianTest extends TestCase
         $content = $response->json();
         $this->assertIsArray($content['data']);
         $this->assertNotEmpty($content['data'][count($content['data']) - 1]['hosts']);
+        $this->assertNotEmpty($content['data'][count($content['data']) - 1]['network']);
     }
 
     public function test_the_application_can_list_custodians_sorted(): void
@@ -85,8 +96,15 @@ class CustodianTest extends TestCase
     public function test_the_application_can_show_a_custodian(): void
     {
         $custodian = Custodian::factory()->create();
+        $network = CustodianNetwork::factory()->create();
+
         $host = CollectionHost::factory()->create([
             'custodian_id' => $custodian->id,
+        ]);
+
+        CustodianNetworkHasCustodian::create([
+            'custodian_id' => $custodian->id,
+            'network_id' => $network->id,
         ]);
 
         $response = $this->get($this->url . '/' . $custodian->id);
@@ -95,6 +113,7 @@ class CustodianTest extends TestCase
         $content = $response->json();
         $this->assertEquals($custodian->id, $content['data']['id']);
         $this->assertNotEmpty($content['data']['hosts']);
+        $this->assertNotEmpty($content['data']['network']);
     }
 
     public function test_the_application_can_create_a_custodian(): void
@@ -104,6 +123,7 @@ class CustodianTest extends TestCase
         $response->assertStatus(201);
 
         $content = $response->json();
+
         $this->assertArrayHasKey('id', $content['data']);
         $this->assertEquals($this->payload['name'], $content['data']['name']);
     }
@@ -134,6 +154,34 @@ class CustodianTest extends TestCase
 
         $this->assertDatabaseMissing('custodians', [
             'id' => $custodian->id,
+        ]);
+    }
+
+    public function test_it_can_link_a_custodian_to_a_network(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $network = CustodianNetwork::factory()->create();
+
+        $response = $this->post($this->url . '/' . $custodian->id . '/networks/' . $network->id);
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('custodian_network_has_custodians', [
+            'custodian_id' => $custodian->id,
+            'network_id' => $network->id,
+        ]);
+    }
+
+    public function test_it_can_unlink_a_custodian_to_a_network(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $network = CustodianNetwork::factory()->create();
+
+        $response = $this->delete($this->url . '/' . $custodian->id . '/networks/' . $network->id);
+        $response->assertStatus(200);
+
+        $this->assertDatabaseMissing('custodian_network_has_custodians', [
+            'custodian_id' => $custodian->id,
+            'network_id' => $network->id,
         ]);
     }
 }
