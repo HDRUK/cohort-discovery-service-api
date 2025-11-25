@@ -29,6 +29,8 @@ class CollectionNoActivityMonitorTest extends TestCase
         Collection::truncate();
         CollectionActivityLog::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        config(['system.collection_activity_log_type' => 'log']);
     }
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
