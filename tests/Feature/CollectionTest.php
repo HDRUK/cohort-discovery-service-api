@@ -186,7 +186,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_INACTIVE);
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_DRAFT);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -215,6 +215,31 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content);
         $this->assertTrue($content['id'] === $coll->id);
         $this->assertTrue($content['name'] === $coll->name);
+    }
+
+    public function test_it_can_transition_collections(): void
+    {
+        Custodian::factory()->create();
+        $collection = Collection::factory()->create();
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+        ->putJson(
+            self::BASE_URL . '/' . $collection->id . '/transition_to',
+            [
+            'state' => Collection::STATUS_REJECTED,
+        ]
+        );
+
+        $response->assertStatus(200);
+        $content = $response->json('data');
+
+        $this->assertNotNull($content);
+        $this->assertNotNull($content['model_state']);
+        $this->assertNotNull($content['model_state']['state']);
+        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_REJECTED);
     }
 
     public function test_it_can_search_by_name(): void

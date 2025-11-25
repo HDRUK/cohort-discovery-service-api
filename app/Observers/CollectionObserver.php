@@ -55,5 +55,7 @@ class CollectionObserver
             // to be implemented..
             //RunBeaconTask::dispatch($task);
         }
+
+        $collection->setState(Collection::STATUS_DRAFT);
     }
 }
