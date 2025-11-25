@@ -65,6 +65,8 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::post('/v1/custodian_networks', [CustodianNetworkController::class, 'store']);
     Route::put('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'update']);
     Route::delete('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'destroy']);
+    Route::post('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'linkToNetwork']);
+    Route::delete('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'unlinkFromNetwork']);
 });
 
 Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])

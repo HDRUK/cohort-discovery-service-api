@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Custodian;
+use App\Models\CustodianNetwork;
+use App\Models\CustodianNetworkHasCustodian;
 use App\Traits\Responses;
 
 /**
@@ -191,5 +193,47 @@ class CustodianController extends Controller
         }
 
         return $this->OKResponse([]);
+    }
+
+    public function linkToNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
+    {
+        try {
+            $custodian = Custodian::findOrFail($custodianId);
+            $network = CustodianNetwork::findOrFail($networkId);
+
+            $link = CustodianNetworkHasCustodian::firstOrCreate([
+                'custodian_id' => $custodian->id,
+                'network_id' => $network->id,
+            ]);
+
+            if ($link) {
+                return $this->OKResponse($link);
+            }
+
+            return $this->BadRequestResponse();
+        } catch (\Throwable $e) {
+            dd($e->getMessage());
+        }
+    }
+
+    public function unlinkFromNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
+    {
+        try {
+            $custodian = Custodian::findOrFail($custodianId);
+            $network = CustodianNetwork::findOrFail($networkId);
+
+            $link = CustodianNetworkHasCustodian::firstOrCreate([
+                'custodian_id' => $custodian->id,
+                'network_id' => $network->id,
+            ]);
+
+            if ($link->delete()) {
+                return $this->OKResponse([]);
+            }
+
+            return $this->BadRequestResponse();
+        } catch (\Throwable $e) {
+            dd($e->getMessage());
+        }
     }
 }
