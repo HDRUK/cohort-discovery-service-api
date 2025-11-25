@@ -4,9 +4,15 @@ namespace App\Enums;
 
 enum CollectionStatus: int
 {
-    case INACTIVE = 0;
-    case ACTIVE = 1;
-    case SUSPENDED = 2;
+    // case INACTIVE = 0;
+    // case ACTIVE = 1;
+    // case SUSPENDED = 2;
+
+    case DRAFT = 0;
+    case PENDING = 1;
+    case ACTIVE = 2;
+    case REJECTED = 3;
+    case SUSPENDED = 4;
 
     public static function tryFromName(string $name): ?self
     {

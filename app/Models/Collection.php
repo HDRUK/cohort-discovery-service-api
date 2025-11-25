@@ -60,8 +60,10 @@ class Collection extends Model implements ValidatableModel
     use Search;
     use Filter;
 
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_PENDING = 'pending';
     public const STATUS_ACTIVE = 'active';
-    public const STATUS_INACTIVE = 'inactive';
+    public const STATUS_REJECTED = 'rejected';
     public const STATUS_SUSPENDED = 'suspended';
 
     public $table = 'collections';

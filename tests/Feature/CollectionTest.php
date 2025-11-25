@@ -186,7 +186,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_INACTIVE);
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_DRAFT);
         $response->assertStatus(200);
 
         $content = $response->json('data');
