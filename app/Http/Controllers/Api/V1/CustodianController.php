@@ -74,11 +74,11 @@ class CustodianController extends Controller
                 'hosts',
                 'network'
             ])->findOrFail($id);
+            
+            return $this->OKResponse($custodian);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
-
-        return $this->OKResponse($custodian);
     }
 
     /**
@@ -148,18 +148,17 @@ class CustodianController extends Controller
     {
         try {
             $custodian = Custodian::findOrFail($id);
+            $data = $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'url' => 'nullable|url',
+            ]);
+
+            $custodian->update($data);
+
+            return $this->OKResponse($custodian);            
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
-
-        $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'url' => 'nullable|url',
-        ]);
-
-        $custodian->update($data);
-
-        return $this->OKResponse($custodian);
     }
 
     /**
@@ -188,11 +187,11 @@ class CustodianController extends Controller
         try {
             $custodian = Custodian::findOrFail($id);
             $custodian->delete();
+
+            return $this->OKResponse([]);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
-
-        return $this->OKResponse([]);
     }
 
     public function linkToNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
