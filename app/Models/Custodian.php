@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -26,7 +27,7 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
  * )
  */
-class Custodian extends Model
+class Custodian extends Model implements ValidatableModel
 {
     /** @use HasFactory<\Database\Factories\CustodianFactory> */
     use HasFactory;
@@ -51,13 +52,29 @@ class Custodian extends Model
         'name',
     ];
 
-    protected static function booted()
+    public function getValidationRules(string $context): array
     {
-        static::creating(function (Custodian $custodian) {
-            if (empty($custodian->pid)) {
-                $custodian->pid = (string) Str::uuid();
-            }
-        });
+        return match(strtolower($context)) {
+            'index' => [],
+            'show' => [
+                'id' => 'required|integer|exists:custodians,id',
+            ],
+            'store' => [
+                'name' => 'required|string|max:255',
+                'gateway_team_id' => 'sometimes|integer',
+                'gateway_team_name' => 'sometimes|string',
+            ],
+            'update' => [
+                'id' => 'required|integer|exists:custodians,id',
+                'name' => 'sometimes|string|max:255',
+                'gateway_team_id' => 'sometimes|integer',
+                'gateway_team_name' => 'sometimes|integer',
+            ],
+            'delete' => [
+                'id' => 'required|integer|exists:custodians,id',
+            ],
+            default => [],
+        };
     }
 
     public function hosts(): \Illuminate\Database\Eloquent\Relations\HasMany

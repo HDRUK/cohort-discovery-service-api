@@ -123,6 +123,7 @@ class CustodianTest extends TestCase
         $response->assertStatus(201);
 
         $content = $response->json();
+
         $this->assertArrayHasKey('id', $content['data']);
         $this->assertEquals($this->payload['name'], $content['data']['name']);
     }

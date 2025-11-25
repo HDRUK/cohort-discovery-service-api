@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
@@ -9,6 +10,7 @@ use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Traits\Responses;
+use App\Http\Requests\ModelBackedRequest;
 
 /**
  * @OA\Tag(
@@ -32,7 +34,7 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(ModelBackedRequest $request): JsonResponse
     {
         return $this->OKResponse(
             Custodian::with([
@@ -67,16 +69,18 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
             $custodian = Custodian::with([
                 'hosts',
                 'network'
-            ])->findOrFail($id);
-            
+            ])->findOrFail($validated['id']);
+
             return $this->OKResponse($custodian);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->NotFoundResponse();
         }
     }
@@ -101,17 +105,18 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(ModelBackedRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'pid' => 'nullable|string',
-            'name' => 'required|string|max:255',
-            'url' => 'nullable|url',
-        ]);
+        $validated = $request->validated();
 
-        $custodian = Custodian::create($data);
-
-        return $this->CreatedResponse($custodian);
+        try {
+            $custodian = Custodian::create($validated);
+            return $this->CreatedResponse($custodian);
+        } catch (\Throwable $e) {
+            \Log::error('CustodianController@store - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
@@ -144,19 +149,18 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
-            $custodian = Custodian::findOrFail($id);
-            $data = $request->validate([
-                'name' => 'sometimes|required|string|max:255',
-                'url' => 'nullable|url',
-            ]);
+            $custodian = Custodian::findOrFail($validated['id']);
+            $custodian->update($validated);
 
-            $custodian->update($data);
-
-            return $this->OKResponse($custodian);            
-        } catch (\Exception $e) {
+            return $this->OKResponse($custodian);
+        } catch (\Throwable $e) {
+            \Log::error('CustodianController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
     }
@@ -182,14 +186,18 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $validated = $request->validated();
+
         try {
-            $custodian = Custodian::findOrFail($id);
+            $custodian = Custodian::findOrFail($validated['id']);
             $custodian->delete();
 
             return $this->OKResponse([]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('CustodianController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
     }
@@ -226,6 +234,8 @@ class CustodianController extends Controller
             if ($link->delete()) {
                 return $this->OKResponse([]);
             }
+
+            return $this->BadRequestResponse();
         } catch (\Throwable $e) {
             \Log::error('CustodianController@unlinkFromNetwork - failed: (exception: ' . $e->getMessage() . ')');
             return $this->BadRequestResponse();

@@ -4,7 +4,6 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
-
 use App\Models\Task;
 use App\Models\Query;
 use App\Models\Collection;
@@ -98,6 +97,7 @@ class CollectionNoActivityMonitorTest extends TestCase
 
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
+            'status' => CollectionStatus::ACTIVE->value,
         ]);
 
         $config = CollectionConfig::create([
