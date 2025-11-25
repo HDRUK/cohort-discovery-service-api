@@ -31,6 +31,7 @@ class CollectionNoActivityMonitorTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         config(['system.collection_activity_log_type' => 'log']);
+        config(['logging.default' => 'stack']);
     }
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
