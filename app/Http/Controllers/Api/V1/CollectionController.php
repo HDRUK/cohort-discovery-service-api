@@ -83,7 +83,6 @@ class CollectionController extends Controller
 
     public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
-        $request->merge(['id' => $id]);
         $validated = $request->validated();
 
         try {
