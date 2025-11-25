@@ -9,9 +9,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelModelStates\Models\ModelState;
+use Hdruk\LaravelModelStates\Models\State;
 use Hdruk\LaravelModelStates\Traits\HasState;
 use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
 use App\Services\QueryContext\QueryContextType;
@@ -53,6 +56,8 @@ use App\Enums\TaskType;
  * @property QueryContextType $type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read ModelState|null $modelState
+ * @property-read State|null $state
  *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
  */
@@ -172,6 +177,11 @@ class Collection extends Model implements ValidatableModel, HasStateTransitions
     public static function getStateTransitions(): array
     {
         return static::$transitions;
+    }
+
+    public function modelState(): MorphOne
+    {
+        return $this->morphOne(ModelState::class, 'stateable');
     }
 
     public function custodian(): BelongsTo

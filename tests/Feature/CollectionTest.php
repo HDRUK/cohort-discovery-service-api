@@ -216,7 +216,7 @@ class CollectionTest extends TestCase
         $this->assertTrue($content['id'] === $coll->id);
         $this->assertTrue($content['name'] === $coll->name);
     }
-    
+
     public function test_it_can_transition_collections(): void
     {
         Custodian::factory()->create();
@@ -226,10 +226,12 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-        ->putJson(self::BASE_URL . '/' . $collection->id . '/transition_to',
-        [
+        ->putJson(
+            self::BASE_URL . '/' . $collection->id . '/transition_to',
+            [
             'state' => Collection::STATUS_REJECTED,
-        ]);
+        ]
+        );
 
         $response->assertStatus(200);
         $content = $response->json('data');
