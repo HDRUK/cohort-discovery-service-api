@@ -138,16 +138,14 @@ class CustodianNetworkController extends Controller
 
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
-            if ($network->update($validated)) {
-                return $this->OKResponse($network);
-            }
+            $network->update($validated);
+
+            return $this->OKResponse($network);
         } catch (\Throwable $e) {
             \Log::error('CustodianNetworkController@update - failed: ' .
                 json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
-
-        return $this->ErrorResponse();
     }
 
     /**
@@ -171,15 +169,13 @@ class CustodianNetworkController extends Controller
 
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
-            if ($network->delete()) {
-                return $this->OKResponse([]);
-            }
+            $network->delete();
+
+            return $this->OKResponse([]);
         } catch (\Throwable $e) {
             \Log::error('CustodianNetworkController@destroy - failed: ' .
                 json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
             return $this->NotFoundResponse();
         }
-
-        return $this->ErrorResponse();
     }
 }
