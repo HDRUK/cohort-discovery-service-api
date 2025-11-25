@@ -206,14 +206,12 @@ class CustodianController extends Controller
                 'network_id' => $network->id,
             ]);
 
-            if ($link) {
-                return $this->OKResponse($link);
-            }
-
-            return $this->BadRequestResponse();
+            return $this->OKResponse($link);
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            \Log::error('CustodianController@linkToNetwork - failed: (exception: ' . $e->getMessage() . ')');
         }
+
+        return $this->BadRequestResponse();
     }
 
     public function unlinkFromNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
@@ -230,10 +228,10 @@ class CustodianController extends Controller
             if ($link->delete()) {
                 return $this->OKResponse([]);
             }
-
-            return $this->BadRequestResponse();
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            \Log::error('CustodianController@unlinkFromNetwork - failed: (exception: ' . $e->getMessage() . ')');
         }
+
+        return $this->BadRequestResponse();
     }
 }

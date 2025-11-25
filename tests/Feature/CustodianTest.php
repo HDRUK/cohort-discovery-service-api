@@ -181,6 +181,6 @@ class CustodianTest extends TestCase
         $this->assertDatabaseMissing('custodian_network_has_custodians', [
             'custodian_id' => $custodian->id,
             'network_id' => $network->id,
-        ]);        
+        ]);
     }
 }
