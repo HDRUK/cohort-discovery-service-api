@@ -53,7 +53,7 @@ class Custodian extends Model implements ValidatableModel
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'id' => 'required|integer|exists:custodians,id',
@@ -69,7 +69,7 @@ class Custodian extends Model implements ValidatableModel
                 'gateway_team_id' => 'sometimes|integer',
                 'gateway_team_name' => 'sometimes|integer',
             ],
-            'delete' => [
+            'destroy' => [
                 'id' => 'required|integer|exists:custodians,id',
             ],
             default => [],

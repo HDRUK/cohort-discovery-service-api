@@ -118,7 +118,7 @@ class ModelBackedRequest extends FormRequest
             'get' => count($routeParams) > 0 ? 'show' : 'index',
             'post' => 'store',
             'put' => 'update',
-            'delete' => 'delete',
+            'delete' => 'destroy',
             default => 'index',
         };
     }

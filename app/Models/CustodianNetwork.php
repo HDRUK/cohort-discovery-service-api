@@ -54,7 +54,7 @@ class CustodianNetwork extends Model implements ValidatableModel
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'id' => 'required|integer|exists:custodian_networks,id',
@@ -66,7 +66,7 @@ class CustodianNetwork extends Model implements ValidatableModel
                 'id' => 'required|integer|exists:custodian_networks,id',
                 'name' => 'sometimes|string|max:255',
             ],
-            'delete' => [
+            'destroy' => [
                 'id' => 'required|integer|exists:custodian_networks,id',
             ],
             default => [],

@@ -61,7 +61,7 @@ class CollectionHost extends Model implements ValidatableModel
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'id' => 'required|integer|exists:collection_hosts,id',
@@ -76,7 +76,7 @@ class CollectionHost extends Model implements ValidatableModel
                 'name' => 'sometimes|string|max:255',
                 'query_context_type' => 'sometimes|string|max:255',
             ],
-            'delete' => [
+            'destroy' => [
                 'id' => 'required|integer|exists:collection_hosts,id',
             ],
             default => [],

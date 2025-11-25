@@ -88,7 +88,6 @@ class CollectionController extends Controller
 
     public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
-        $request->merge(['id' => $id]);
         $validated = $request->validated();
 
         try {
@@ -147,15 +146,14 @@ class CollectionController extends Controller
         try {
             $validated = $request->validate([
                 'name'    => ['required', 'string', 'max:255'],
-                // to-do / to-be-implemented: decision pending
-                //'description'    => ['required', 'string', 'max:255'],
+                'description'    => ['required', 'string', 'max:65535'],
                 'url'     => ['nullable', 'url', 'max:2048'],
                 'type'    => ['required', Rule::enum(QueryContextType::class)],
                 'host_id' => [
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
-                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id))
+                        ->where(fn($q) => $q->where('custodian_id', $custodian->id))
                 ],
             ]);
         } catch (ValidationException $e) {
@@ -165,6 +163,7 @@ class CollectionController extends Controller
         try {
             $collection = Collection::create([
                 'name'         => $validated['name'],
+                'description'  => $validated['description'],
                 'url'          => $validated['url'] ?? null,
                 'pid'          => Str::uuid(),
                 'type'         => $validated['type'],
