@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelModelStates\Traits\HasState;
+use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
 use App\Services\QueryContext\QueryContextType;
 use App\Contracts\ValidatableModel;
 use App\Enums\TaskType;
@@ -54,11 +56,12 @@ use App\Enums\TaskType;
  *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
  */
-class Collection extends Model implements ValidatableModel
+class Collection extends Model implements ValidatableModel, HasStateTransitions
 {
     use HasFactory;
     use Search;
     use Filter;
+    use HasState;
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PENDING = 'pending';
@@ -107,6 +110,33 @@ class Collection extends Model implements ValidatableModel
         'custodian',
     ];
 
+    protected static array $transitions = [
+        self::STATUS_DRAFT => [
+            self::STATUS_PENDING,
+            self::STATUS_ACTIVE,
+            self::STATUS_REJECTED,
+            self::STATUS_SUSPENDED,
+        ],
+        self::STATUS_PENDING => [
+            self::STATUS_DRAFT,
+            self::STATUS_ACTIVE,
+            self::STATUS_REJECTED,
+            self::STATUS_SUSPENDED,
+        ],
+        self::STATUS_ACTIVE => [
+            self::STATUS_DRAFT,
+            self::STATUS_SUSPENDED,
+        ],
+        self::STATUS_REJECTED => [
+            self::STATUS_DRAFT,
+            self::STATUS_ACTIVE,
+        ],
+        self::STATUS_SUSPENDED => [
+            self::STATUS_DRAFT,
+            self::STATUS_ACTIVE,
+        ],
+    ];
+
     public function getValidationRules(string $context): array
     {
         return match(strtolower($context)) {
@@ -130,12 +160,18 @@ class Collection extends Model implements ValidatableModel
                 'type' => 'sometimes|string',
                 'custodian_id' => 'sometimes|integer|exists:custodians,id',
                 'status' => 'sometimes|boolean',
+                'state' => 'sometimes|string',
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:collections,id',
             ],
             default => [],
         };
+    }
+
+    public static function getStateTransitions(): array
+    {
+        return static::$transitions;
     }
 
     public function custodian(): BelongsTo

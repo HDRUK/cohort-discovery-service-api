@@ -26,7 +26,8 @@ class CollectionController extends Controller
     {
         $collections = Collection::with([
             'demographics',
-            'custodian'
+            'custodian',
+            'modelState.state',
         ])
             ->searchViaRequest()
             ->filterViaRequest()
@@ -41,7 +42,11 @@ class CollectionController extends Controller
         $validated = $request->validated();
 
         try {
-            $collection = Collection::findOrFail($validated['id']);
+            $collection = Collection::with([
+                'demographics',
+                'custodian',
+                'modelState.state',
+            ])->findOrFail($validated['id']);
             return $this->OKResponse($collection);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
@@ -170,6 +175,27 @@ class CollectionController extends Controller
 
             return $this->CreatedResponse($collection);
         } catch (\Exception $e) {
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    public function transitionTo(ModelBackedRequest $request, int $id): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::findOrFail($validated['id']);
+            if ($collection->isInState($validated['state'])) {
+                return $this->ErrorResponse('collection is already in state: \"' . $validated['state'] . '\"');
+            }
+
+            if ($collection->canTransitionTo($validated['state'])) {
+                $collection = $collection->transitionTo($validated['state']);
+                return $this->OKResponse($collection);
+            }
+
+            return $this->ErrorResponse('collection cannot transition from ' . $collection->getState() . ' to ' . $validated['state']);
+        } catch (\Throwable $e) {
             return $this->ErrorResponse($e->getMessage());
         }
     }

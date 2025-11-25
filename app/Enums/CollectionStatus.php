@@ -4,10 +4,6 @@ namespace App\Enums;
 
 enum CollectionStatus: int
 {
-    // case INACTIVE = 0;
-    // case ACTIVE = 1;
-    // case SUSPENDED = 2;
-
     case DRAFT = 0;
     case PENDING = 1;
     case ACTIVE = 2;
