@@ -43,8 +43,8 @@ class DecodeJwt
 
                 $userEmail = $jwtUser->email;
 
-                if (isset($jwtUser->admin_teams)) {
-                    $teams = $jwtUser->admin_teams;
+                if (isset($jwtUser->cohort_admin_teams)) {
+                    $teams = $jwtUser->cohort_admin_teams;
 
                     foreach ($teams as $team) {
                         $custodian = Custodian::updateOrCreate(

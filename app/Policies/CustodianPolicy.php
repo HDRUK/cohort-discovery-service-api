@@ -22,14 +22,14 @@ class CustodianPolicy
             return false;
         }
 
-        $adminTeamIds = Arr::pluck($userObject['admin_teams'] ?? [], 'id');
+        $cohortAdminTeamIds = Arr::pluck($userObject['cohort_admin_teams'] ?? [], 'id');
         //note: this is currently quite specific to the gateway
         // - we map a custodian to a gateway 'team'
-        // - we check if this user is a team admin on this gateway team
-        // - the user claims tell us what teams they are admins on
+        // - we check if this user is a team cohortAdmin on this gateway team
+        // - the user claims tell us what teams they are cohortAdmins on
         // - if so, we check if the custodian is linked to this gateway team
         // - access is granted based on this
-        return in_array($custodian->gateway_team_id, $adminTeamIds, true);
+        return in_array($custodian->gateway_team_id, $cohortAdminTeamIds, true);
     }
 
     private function toArray($value): array
