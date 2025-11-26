@@ -58,7 +58,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -103,7 +103,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'unknown-workgroup'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -138,7 +138,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => []
+                'cohort_admin_teams' => []
             ]
         ];
 
@@ -471,7 +471,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -527,7 +527,7 @@ class CollectionTest extends TestCase
     //                 'id' => 1,
     //                 'name' => 'cohort-admin'
     //             ]],
-    //             'admin_teams' => [
+    //             'cohort_admin_teams' => [
     //                 [
     //                     'id' => $fakeGatewayTeamId,
     //                     'name' => $custodian->name
