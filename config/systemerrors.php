@@ -20,6 +20,10 @@ return [
         'message' => 'Unsupported context type: %s',
         'code' => 1000,
     ],
+    'PERMISSIONS_NOT_MET_COLLECTION_TRANSITION' => [
+        'message' => 'Permissions do not allow you to transition to state: %s',
+        'code' => 1001,
+    ],
     'TRANSLATION_ERROR' => [
         'message' => 'Error translating query context: %s',
         'code' => 2000,
