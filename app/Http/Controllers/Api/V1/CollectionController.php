@@ -161,7 +161,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
-                        ->where(fn($q) => $q->where('custodian_id', $custodian->id))
+                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id))
                 ],
             ]);
         } catch (ValidationException $e) {
