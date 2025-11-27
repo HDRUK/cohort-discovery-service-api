@@ -120,7 +120,8 @@ class QueryController extends Controller
                         // New requirement to also maybe default sort by the result count
                         // - doing this on the FE for now
                         ->leftJoin('collections as collection', 'collection.id', '=', 'tasks.collection_id')
-                        ->select('tasks.*')
+                        ->select('tasks.*
+                        ')
                         ->with([
                             'collection.size',
                             'collection.custodian',
@@ -131,7 +132,7 @@ class QueryController extends Controller
             ])
                 ->when(
                     ctype_digit($key),
-                    fn ($q) => $q->where('id', $key),
+                    fn( $q) => $q->where('id', $key),
                     fn ($q) => $q->where('pid', $key)
                 )
                 ->firstOrFail();
