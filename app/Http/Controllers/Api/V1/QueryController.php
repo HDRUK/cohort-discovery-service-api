@@ -63,7 +63,9 @@ class QueryController extends Controller
 
         $queries = Query::searchViaRequest()
             ->filterViaRequest()
+            ->applySorting()
             ->with([
+                'tasks.collection.custodian',
                 'tasks.collection.size',
                 'tasks.result'
             ])
@@ -71,7 +73,10 @@ class QueryController extends Controller
             ->whereHas('tasks', function ($query) {
                 $query->where('task_type', TaskType::A);
             })
-            ->orderBy('created_at', 'desc')
+            // note: can this be made as a default that can be passed to applySorting?
+            ->when(!$request->input('sort'), function ($query) {
+                $query->orderBy('created_at', 'desc');
+            })
             ->paginate($perPage);
         return $this->OKResponse($queries);
     }
@@ -126,8 +131,8 @@ class QueryController extends Controller
             ])
                 ->when(
                     ctype_digit($key),
-                    fn ($q) => $q->where('id', $key),
-                    fn ($q) => $q->where('pid', $key)
+                    fn($q) => $q->where('id', $key),
+                    fn($q) => $q->where('pid', $key)
                 )
                 ->firstOrFail();
 
@@ -203,8 +208,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
             if ($query->update($validated)) {
@@ -243,8 +248,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
             if ($query->delete()) {
@@ -316,8 +321,8 @@ class QueryController extends Controller
         try {
             $query = Query::when(
                 ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
+                fn($q) => $q->where('id', $key),
+                fn($q) => $q->where('pid', $key)
             )
                 ->first()
                 ->toArray();
