@@ -82,7 +82,7 @@ abstract class TestCase extends BaseTestCase
             'exp'  => $now + 3600,
             'user' => [
                 'email' => $email,
-                'admin_teams' => [],
+                'cohort_admin_teams' => [],
                 'workgroups' => [],
             ],
         ], $overrides);

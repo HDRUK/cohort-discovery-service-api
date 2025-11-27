@@ -58,7 +58,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -103,7 +103,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'unknown-workgroup'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -138,7 +138,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => []
+                'cohort_admin_teams' => []
             ]
         ];
 
@@ -222,6 +222,10 @@ class CollectionTest extends TestCase
         Custodian::factory()->create();
         $collection = Collection::factory()->create();
 
+        $this->user->assignRole('custodian');
+
+        // This works because user is a 'custodian' and custodians can request a change
+        // from Draft -> Pending.
         $response = $this->actingAsJwt(
             $this->user,
             []
@@ -229,8 +233,8 @@ class CollectionTest extends TestCase
         ->putJson(
             self::BASE_URL . '/' . $collection->id . '/transition_to',
             [
-            'state' => Collection::STATUS_REJECTED,
-        ]
+            'state' => Collection::STATUS_PENDING,
+            ]
         );
 
         $response->assertStatus(200);
@@ -239,7 +243,53 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content);
         $this->assertNotNull($content['model_state']);
         $this->assertNotNull($content['model_state']['state']);
-        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_REJECTED);
+        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_PENDING);
+
+        // Now swap to a researcher who can do nothing with collections
+        $this->user->removeRole('custodian');
+        $this->user->assignRole('researcher');
+
+        // This fails because a researcher isn't allowed to edit collections
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+        ->putJson(
+            self::BASE_URL . '/' . $collection->id . '/transition_to',
+            [
+                'state' => Collection::STATUS_ACTIVE,
+            ]
+        );
+
+        $response->assertStatus(500);
+        $this->assertEquals($response->json('data'), 'Permissions do not allow you to transition to state: active');
+
+        // Reset collection state
+        $collection->setState(Collection::STATUS_DRAFT);
+
+        // Now swap to an admin who can do everything with a collection (??)
+        $this->user->removeRole('researcher');
+        $this->user->assignRole('admin');
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+        ->putJson(
+            self::BASE_URL . '/' . $collection->id . '/transition_to',
+            [
+                'state' => Collection::STATUS_ACTIVE,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        $content = $response->json('data');
+
+        $this->assertNotNull($content);
+        $this->assertNotNull($content['model_state']);
+        $this->assertNotNull($content['model_state']['state']);
+        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_ACTIVE);
     }
 
     public function test_it_can_search_by_name(): void
@@ -421,7 +471,7 @@ class CollectionTest extends TestCase
                     'id' => 1,
                     'name' => 'cohort-admin'
                 ]],
-                'admin_teams' => [
+                'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
                         'name' => $custodian->name
@@ -477,7 +527,7 @@ class CollectionTest extends TestCase
     //                 'id' => 1,
     //                 'name' => 'cohort-admin'
     //             ]],
-    //             'admin_teams' => [
+    //             'cohort_admin_teams' => [
     //                 [
     //                     'id' => $fakeGatewayTeamId,
     //                     'name' => $custodian->name

@@ -16,11 +16,19 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Services\QueryContext\QueryContextType;
 use App\Http\Controllers\Controller;
 use App\Enums\CollectionStatus;
+use App\Services\CollectionStateService;
 
 class CollectionController extends Controller
 {
     use Responses;
     use HelperFunctions;
+
+    protected CollectionStateService $stateService;
+
+    public function __construct(CollectionStateService $stateService)
+    {
+        $this->stateService = $stateService;
+    }
 
     public function index(ModelBackedRequest $request): JsonResponse
     {
@@ -188,12 +196,9 @@ class CollectionController extends Controller
                 return $this->ErrorResponse('collection is already in state: \"' . $validated['state'] . '\"');
             }
 
-            if ($collection->canTransitionTo($validated['state'])) {
-                $collection = $collection->transitionTo($validated['state']);
-                return $this->OKResponse($collection);
-            }
+            $this->stateService->transition($collection, $validated['state'], $request->user());
+            return $this->OKResponse($collection);
 
-            return $this->ErrorResponse('collection cannot transition from ' . $collection->getState() . ' to ' . $validated['state']);
         } catch (\Throwable $e) {
             return $this->ErrorResponse($e->getMessage());
         }
