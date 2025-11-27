@@ -70,7 +70,7 @@ class QueryController extends Controller
 
         $queries = Query::searchViaRequest()
             ->filterViaRequest()
-            ->applySorting()
+            ->applySorting('created_at', 'desc')
             ->with([
                 'tasks.collection.custodian',
                 'tasks.collection.size',
@@ -79,10 +79,6 @@ class QueryController extends Controller
             ->where('user_id', Auth::id())
             ->whereHas('tasks', function ($query) {
                 $query->where('task_type', TaskType::A);
-            })
-            // note: can this be made as a default that can be passed to applySorting?
-            ->when(! $request->input('sort'), function ($query) {
-                $query->orderBy('created_at', 'desc');
             })
             ->paginate($perPage);
 
