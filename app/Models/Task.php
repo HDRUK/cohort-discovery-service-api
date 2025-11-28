@@ -11,6 +11,26 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
+ * @OA\Schema(
+ *     schema="Task",
+ *     type="object",
+ *     title="Task",
+ *     description="A background processing task that executes a saved query against a collection.",
+ *     required={"pid", "query_id", "collection_id", "task_type"},
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="pid", type="string", example="tsk_abc123", description="Public identifier for the task"),
+ *     @OA\Property(property="query_id", type="integer", example=5, description="FK to the saved query"),
+ *     @OA\Property(property="collection_id", type="integer", example=10, description="FK to the collection the task targets"),
+ *     @OA\Property(property="task_type", type="string", example="A", description="Type of task (enum)"),
+ *     @OA\Property(property="attempts", type="integer", example=0, description="Number of attempts so far"),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(property="attempted_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:35:00Z"),
+ *     @OA\Property(property="completed_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:00Z"),
+ *     @OA\Property(property="failed_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:30Z"),
+ *     @OA\Property(property="result", ref="#/components/schemas/Result", description="Optional associated result object"),
+ *     @OA\Property(property="resultFiles", type="array", @OA\Items(ref="#/components/schemas/ResultFile"), description="Optional files produced by the task")
+ * )
+ *
  * @property int $id
  * @property \App\Models\Query $submittedQuery
  * @property \App\Models\Collection $collection
