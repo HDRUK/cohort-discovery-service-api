@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Workgroup;
+use Illuminate\Database\Seeder;
 
 class WorkgroupSeeder extends Seeder
 {

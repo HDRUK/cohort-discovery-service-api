@@ -13,7 +13,7 @@ class Result extends Model
         'count',
         'metadata',
         'status',
-        'message'
+        'message',
     ];
 
     protected $casts = [

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
+use App\Models\Omop\Concept;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Config;
-use App\Models\Omop\Concept;
-use App\Contracts\ValidatableModel;
 
 /**
  * @property int $id
@@ -48,19 +48,18 @@ class Distribution extends Model implements ValidatableModel
     protected static $searchableColumns = [
         'concept_id',
         'name',
-        'description'
+        'description',
     ];
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'store' => [
                 'collection_id' => 'required|integer|exists:collections,id',
             ],
             default => [],
         };
     }
-
 
     public function collection(): BelongsTo
     {
@@ -76,7 +75,6 @@ class Distribution extends Model implements ValidatableModel
     {
         return $this->belongsTo(Concept::class, 'concept_id', 'concept_id');
     }
-
 
     public function children(): BelongsToMany
     {

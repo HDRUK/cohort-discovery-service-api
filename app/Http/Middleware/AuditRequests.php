@@ -2,12 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\RequestAudit;
 use Closure;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\RequestAudit;
 
 class AuditRequests
 {

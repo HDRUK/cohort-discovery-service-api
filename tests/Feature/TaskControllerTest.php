@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Api\V1;
 
-use Config;
-use App\Models\Custodian;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
+use Config;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -27,7 +27,7 @@ class TaskControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_not_found_for_invalid_collection_pid_in_next_job()
     {
-        $response = $this->getJson(self::BASE_URL . '/nextjob/invalid-id');
+        $response = $this->getJson(self::BASE_URL.'/nextjob/invalid-id');
 
         $response->assertNotFound();
     }
@@ -37,7 +37,7 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
 
-        $response = $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}");
+        $response = $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}");
 
         $response->assertNoContent();
     }
@@ -51,7 +51,7 @@ class TaskControllerTest extends TestCase
             [
                 'collection_id' => $collection->id,
                 'query_id' => $query->id,
-                'task_type' => 'a'
+                'task_type' => 'a',
             ]
         );
 
@@ -63,7 +63,7 @@ class TaskControllerTest extends TestCase
 
         $this->app->instance(QueryContextManager::class, $mock);
 
-        $response = $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}");
+        $response = $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}");
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -74,7 +74,7 @@ class TaskControllerTest extends TestCase
                 'owner',
                 'collection',
                 'protocol_version',
-                'char_salt'
+                'char_salt',
             ]);
     }
 
@@ -92,7 +92,7 @@ class TaskControllerTest extends TestCase
 
         $this->app->instance(QueryContextManager::class, $mock);
 
-        $response = $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}");
+        $response = $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}");
 
         $response->assertStatus(400)
             ->assertJson([
@@ -105,15 +105,14 @@ class TaskControllerTest extends TestCase
     public function it_receives_and_stores_query_result()
     {
         $collection = Collection::factory()->create([
-            'type' => QueryContextType::Bunny
+            'type' => QueryContextType::Bunny,
         ]);
         $task = Task::factory()->create(['collection_id' => $collection->id]);
-
 
         $payload = ['queryResult' => ['count' => 42]];
 
         $response = $this->postJson(
-            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
             $payload
         );
 
@@ -127,22 +126,20 @@ class TaskControllerTest extends TestCase
 
         $this->assertDatabaseHas(Result::class, [
             'task_id' => $task->id,
-            'count' => 42
+            'count' => 42,
         ]);
 
         $this->assertNotNull($task->fresh()->completed_at);
 
-
         $collection = Collection::factory()->create([
-            'type' => QueryContextType::Beacon
+            'type' => QueryContextType::Beacon,
         ]);
         $task = Task::factory()->create(['collection_id' => $collection->id]);
-
 
         $payload = ['queryResult' => ['count' => 42]];
 
         $response = $this->postJson(
-            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
             $payload
         );
 
@@ -156,7 +153,7 @@ class TaskControllerTest extends TestCase
 
         $this->assertDatabaseHas(Result::class, [
             'task_id' => $task->id,
-            'count' => 42
+            'count' => 42,
         ]);
 
         $this->assertNotNull($task->fresh()->completed_at);
@@ -169,7 +166,7 @@ class TaskControllerTest extends TestCase
         $collection = Collection::find($task->collection_id);
 
         $response = $this->postJson(
-            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
             ['queryResult' => ['foo' => 'bar']]
         );
 
@@ -196,7 +193,7 @@ class TaskControllerTest extends TestCase
         $task = Task::factory()->create();
         $collection = Collection::find($task->collection_id);
 
-        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid);
+        $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid);
         $response->assertStatus(401);
     }
 
@@ -216,8 +213,8 @@ class TaskControllerTest extends TestCase
 
         $this->assertNotNull($collectionHost);
 
-        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid, [
-            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}")
+        $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}"),
         ]);
         $response->assertStatus(200);
 
@@ -227,8 +224,8 @@ class TaskControllerTest extends TestCase
         ]);
 
         // muddle the keys to ensure the middleware is working with invalid credentials too
-        $response = $this->get(self::BASE_URL . '/nextjob/' . $collection->pid, [
-            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode("{$collectionHost->client_id}:wrong-secret")
+        $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("{$collectionHost->client_id}:wrong-secret"),
         ]);
 
         $response->assertStatus(401);

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\AuthenticationServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Traits\Responses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Contracts\AuthenticationServiceInterface;
-use App\Traits\Responses;
 
 class LocalAuthController extends Controller
 {
@@ -28,7 +28,7 @@ class LocalAuthController extends Controller
 
         $user = $this->authService->authenticate($request);
 
-        if (!$user) {
+        if (! $user) {
             return $this->UnauthorisedResponse();
         }
 

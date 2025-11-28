@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\QueryContext\Contexts\Beacon\BeaconQueryContext;
+use App\Services\QueryContext\Contexts\Bunny\BunnyQueryContext;
 use Illuminate\Support\ServiceProvider;
-use App\Services\QueryContext\Contexts\{
-    Bunny\BunnyQueryContext,
-    Beacon\BeaconQueryContext
-};
 
 class QueryContextServiceProvider extends ServiceProvider
 {

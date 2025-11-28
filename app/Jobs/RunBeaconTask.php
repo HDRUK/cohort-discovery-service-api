@@ -39,7 +39,7 @@ class RunBeaconTask implements ShouldQueue
     public function handle(QueryContextManager $contextManager): void
     {
         $task = $this->task;
-        $url = $task->collection->url . '/api/individuals';
+        $url = $task->collection->url.'/api/individuals';
         $submittedQuery = $task->submittedQuery;
         $task_type = $task->task_type;
 
@@ -62,17 +62,17 @@ class RunBeaconTask implements ShouldQueue
                     'count' => (int) $count,
                     'metadata' => $data,
                     'status' => 'ok',
-                    'message' => 'success'
+                    'message' => 'success',
                 ]);
 
                 $task->update([
                     'completed_at' => $now,
-                    'failed_at' => null
+                    'failed_at' => null,
                 ]);
                 $task->save();
             } catch (Throwable $e) {
                 $task->update([
-                    'failed_at' => $now
+                    'failed_at' => $now,
                 ]);
                 $task->save();
 
@@ -81,10 +81,10 @@ class RunBeaconTask implements ShouldQueue
                     'count' => (int) -1,
                     'metadata' => [
                         'rawQuery' => $rawQuery,
-                        'translatedQuery' => $translatedQuery
+                        'translatedQuery' => $translatedQuery,
                     ],
                     'status' => 'error',
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ]);
 
                 throw $e;
@@ -94,19 +94,18 @@ class RunBeaconTask implements ShouldQueue
                 // note: this is discovery work
                 $beaconQuery = null;
 
-
                 $data = $this->postBeacon($url, $beaconQuery);
                 $count = $data['responseSummary']['numTotalResults'];
                 Distribution::create(
                     [
                         'collection_id' => $task->collection->id,
-                        'task_id'       => $task->id,
-                        'category'      => 'DEMOGRAPHICS',
-                        'name'          => (string) 'SEX',
-                        'description'   => (string) 'Count from beacon',
-                        'count'         => (int) $count,
-                        'created_at'    => $now,
-                        'updated_at'    => $now,
+                        'task_id' => $task->id,
+                        'category' => 'DEMOGRAPHICS',
+                        'name' => (string) 'SEX',
+                        'description' => (string) 'Count from beacon',
+                        'count' => (int) $count,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]
                 );
 
@@ -114,10 +113,10 @@ class RunBeaconTask implements ShouldQueue
                     'query' => [
                         'filters' => [
                             [
-                                'id' => 'Gender:F'
-                            ]
-                        ]
-                    ]
+                                'id' => 'Gender:F',
+                            ],
+                        ],
+                    ],
                 ];
 
                 $data = $this->postBeacon($url, $beaconQuery);
@@ -125,13 +124,13 @@ class RunBeaconTask implements ShouldQueue
                 Distribution::create(
                     [
                         'collection_id' => $task->collection->id,
-                        'task_id'       => $task->id,
-                        'category'      => 'DEMOGRAPHICS',
-                        'name'          => (string) 'Female',
-                        'description'   => (string) 'Count from beacon',
-                        'count'         => (int) $count,
-                        'created_at'    => $now,
-                        'updated_at'    => $now,
+                        'task_id' => $task->id,
+                        'category' => 'DEMOGRAPHICS',
+                        'name' => (string) 'Female',
+                        'description' => (string) 'Count from beacon',
+                        'count' => (int) $count,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]
                 );
 
@@ -139,10 +138,10 @@ class RunBeaconTask implements ShouldQueue
                     'query' => [
                         'filters' => [
                             [
-                                'id' => 'Gender:M'
-                            ]
-                        ]
-                    ]
+                                'id' => 'Gender:M',
+                            ],
+                        ],
+                    ],
                 ];
 
                 $data = $this->postBeacon($url, $beaconQuery);
@@ -150,18 +149,18 @@ class RunBeaconTask implements ShouldQueue
                 Distribution::create(
                     [
                         'collection_id' => $task->collection->id,
-                        'task_id'       => $task->id,
-                        'category'      => 'DEMOGRAPHICS',
-                        'name'          => (string) 'Male',
-                        'description'   => (string) 'Count from beacon',
-                        'count'         => (int) $count,
-                        'created_at'    => $now,
-                        'updated_at'    => $now,
+                        'task_id' => $task->id,
+                        'category' => 'DEMOGRAPHICS',
+                        'name' => (string) 'Male',
+                        'description' => (string) 'Count from beacon',
+                        'count' => (int) $count,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]
                 );
             } catch (Throwable $e) {
                 $task->update([
-                    'failed_at' => now()
+                    'failed_at' => now(),
                 ]);
                 $task->save();
 
@@ -181,6 +180,7 @@ class RunBeaconTask implements ShouldQueue
 
         $response->throw();
         $data = $response->json();
+
         return $data;
     }
 }

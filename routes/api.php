@@ -1,25 +1,24 @@
 <?php
 
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\QueryController;
-use App\Http\Controllers\Api\V1\TaskController;
-use App\Http\Controllers\Api\V1\CollectionController;
-use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\ApplicationController;
-use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\WorkgroupController;
-use App\Http\Controllers\Api\V1\CustodianController;
+use App\Http\Controllers\Api\V1\CodeController;
+use App\Http\Controllers\Api\V1\CollectionConfigController;
+use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
-use App\Http\Controllers\Api\V1\OmopController;
-use App\Http\Controllers\Api\V1\QueryParserController;
-use App\Http\Controllers\Api\V1\CollectionConfigController;
-use App\Http\Controllers\Api\V1\ServiceCallerController;
-use App\Http\Controllers\Api\V1\DistributionController;
+use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CustodianNetworkController;
+use App\Http\Controllers\Api\V1\DistributionController;
+use App\Http\Controllers\Api\V1\OmopController;
+use App\Http\Controllers\Api\V1\QueryController;
+use App\Http\Controllers\Api\V1\QueryParserController;
+use App\Http\Controllers\Api\V1\ServiceCallerController;
+use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Middleware\CollectionHostBasicAuth;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('v1/user', [UserController::class, 'getMe']);
@@ -100,7 +99,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/query/{pid}', [QueryController::class, 'destroy'])->whereUuid('pid');
     Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
-
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
     Route::get('/v1/concept_sets/{conceptSet}', [ConceptSetController::class, 'show']);
@@ -109,7 +107,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/concept_sets/{conceptSet}/clear', [ConceptSetController::class, 'clear']);
     Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
-
 
     Route::get('/v1/collections', [CollectionController::class, 'index']);
     Route::get('/v1/collections/{id}', [CollectionController::class, 'show']);
@@ -131,7 +128,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
     Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
     Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
-
 
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);

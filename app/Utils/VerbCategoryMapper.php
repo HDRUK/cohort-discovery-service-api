@@ -12,67 +12,67 @@ class VerbCategoryMapper
      */
     protected array $verbMap = [
         // Drug administration
-        'received'      => 'Drug',
-        'administered'  => 'Drug',
-        'given'         => 'Drug',
-        'vaccinated'    => 'Drug',
-        'prescribed'    => 'Drug',
-        'dispensed'     => 'Drug',
-        'started'       => 'Drug',
-        'initiated'     => 'Drug',
-        'continued'     => 'Drug',
-        'stopped'       => 'Drug',
-        'ceased'        => 'Drug',
-        'discontinued'  => 'Drug',
-        'took'          => 'Drug',
-        'taking'        => 'Drug',
-        'dosed'         => 'Drug',
-        'treated'       => 'Drug',
+        'received' => 'Drug',
+        'administered' => 'Drug',
+        'given' => 'Drug',
+        'vaccinated' => 'Drug',
+        'prescribed' => 'Drug',
+        'dispensed' => 'Drug',
+        'started' => 'Drug',
+        'initiated' => 'Drug',
+        'continued' => 'Drug',
+        'stopped' => 'Drug',
+        'ceased' => 'Drug',
+        'discontinued' => 'Drug',
+        'took' => 'Drug',
+        'taking' => 'Drug',
+        'dosed' => 'Drug',
+        'treated' => 'Drug',
 
         // Measurements and tests
-        'measured'      => 'Measurement',
-        'tested'        => 'Measurement',
-        'assessed'      => 'Measurement',
-        'recorded'      => 'Measurement',
-        'checked'       => 'Measurement',
-        'monitored'     => 'Measurement',
-        'evaluated'     => 'Measurement',
-        'collected'     => 'Measurement',
-        'sampled'       => 'Measurement',
-        'taken'         => 'Measurement', // e.g. "blood taken"
-        'performed'     => 'Measurement',
+        'measured' => 'Measurement',
+        'tested' => 'Measurement',
+        'assessed' => 'Measurement',
+        'recorded' => 'Measurement',
+        'checked' => 'Measurement',
+        'monitored' => 'Measurement',
+        'evaluated' => 'Measurement',
+        'collected' => 'Measurement',
+        'sampled' => 'Measurement',
+        'taken' => 'Measurement', // e.g. "blood taken"
+        'performed' => 'Measurement',
 
         // Observations and findings
-        'observed'      => 'Observation',
-        'noted'         => 'Observation',
-        'seen'          => 'Observation',
-        'found'         => 'Observation',
-        'identified'    => 'Observation',
-        'detected'      => 'Observation',
-        'appeared'      => 'Observation',
-        'presented'     => 'Observation',
-        'reported'      => 'Observation',
-        'described'     => 'Observation',
-        'showed'        => 'Observation', // e.g. "CT showed a lesion"
+        'observed' => 'Observation',
+        'noted' => 'Observation',
+        'seen' => 'Observation',
+        'found' => 'Observation',
+        'identified' => 'Observation',
+        'detected' => 'Observation',
+        'appeared' => 'Observation',
+        'presented' => 'Observation',
+        'reported' => 'Observation',
+        'described' => 'Observation',
+        'showed' => 'Observation', // e.g. "CT showed a lesion"
 
         // Diagnoses and conditions
-        'diagnosed'     => 'Condition',
-        'suffers'       => 'Condition',
-        'has'           => 'Condition',
-        'with'          => 'Condition',
-        'developed'     => 'Condition',
-        'experiencing'  => 'Condition',
-        'complained'    => 'Condition',
-        'reports'       => 'Condition',
-        'positive'      => 'Condition', // e.g. “tested positive for…”
-        'negative'      => 'Condition',
-        'indicates'     => 'Condition',
+        'diagnosed' => 'Condition',
+        'suffers' => 'Condition',
+        'has' => 'Condition',
+        'with' => 'Condition',
+        'developed' => 'Condition',
+        'experiencing' => 'Condition',
+        'complained' => 'Condition',
+        'reports' => 'Condition',
+        'positive' => 'Condition', // e.g. “tested positive for…”
+        'negative' => 'Condition',
+        'indicates' => 'Condition',
     ];
 
     /**
      * Infers the OMOP domain category from a clinical phrase.
      *
-     * @param string $phrase The phrase to analyse.
+     * @param  string  $phrase  The phrase to analyse.
      * @return string The inferred category, or 'Unknown' if not matched - for now.
      */
     public function inferCategory(string $phrase): string
@@ -91,9 +91,8 @@ class VerbCategoryMapper
     /**
      * Adds a new verb-category mapping.
      *
-     * @param string $verb The verb to map.
-     * @param string $category The category to associate.
-     * @return void
+     * @param  string  $verb  The verb to map.
+     * @param  string  $category  The category to associate.
      */
     public function addMapping(string $verb, string $category): void
     {

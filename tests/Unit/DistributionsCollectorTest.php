@@ -2,19 +2,19 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use DB;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use App\Models\Task;
-use App\Models\Query;
+use App\Console\Commands\DistributionsCollector;
+use App\Enums\FrequencyMode;
+use App\Enums\QueryType;
+use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Models\CollectionConfigRun;
-use App\Console\Commands\DistributionsCollector;
-use App\Enums\TaskType;
-use App\Enums\QueryType;
-use App\Enums\FrequencyMode;
+use App\Models\Query;
+use App\Models\Task;
+use Carbon\Carbon;
+use DB;
+use Illuminate\Support\Facades\Log;
+use Tests\TestCase;
 
 class DistributionsCollectorTest extends TestCase
 {
@@ -97,7 +97,7 @@ class DistributionsCollectorTest extends TestCase
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
         $this->assertTrue(TaskType::A->value === $task->task_type->value);
-        $this->assertEquals($query->name, 'omop-concept-job-' . strtolower($collection->name));
+        $this->assertEquals($query->name, 'omop-concept-job-'.strtolower($collection->name));
     }
 
     public function test_it_creates_query_and_task_for_weekly_config_matching_time_and_day(): void
@@ -162,7 +162,7 @@ class DistributionsCollectorTest extends TestCase
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
         $this->assertTrue(TaskType::A->value === $task->task_type->value);
-        $this->assertEquals($query->name, 'omop-concept-job-' . strtolower($collection->name));
+        $this->assertEquals($query->name, 'omop-concept-job-'.strtolower($collection->name));
     }
 
     public function test_it_creates_query_and_task_for_quarterly_config_matching_time_and_quarter(): void
@@ -184,7 +184,7 @@ class DistributionsCollectorTest extends TestCase
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
             'frequency_mode' => FrequencyMode::QUARTERLY->value,
-            'run_time_frequency' => (int)$currentQuarter,
+            'run_time_frequency' => (int) $currentQuarter,
             'collection_id' => $collection->id,
             'type' => TaskType::A->value,
         ]);
@@ -264,7 +264,6 @@ class DistributionsCollectorTest extends TestCase
         $this->assertEquals($collection->id, json_decode($result[1]['configs'][0], true)['id']);
     }
 
-
     public function test_quarterly_config_does_not_run_if_already_ran_this_quarter(): void
     {
         $this->disableObservers();
@@ -289,7 +288,7 @@ class DistributionsCollectorTest extends TestCase
         CollectionConfigRun::create([
             'collection_config_id' => $config->id,
             'ran_at' => Carbon::create(2025, 7, 5, 10, 0, 0, $this->timezone),
-            'successful' => true
+            'successful' => true,
         ]);
 
         Log::spy();
@@ -330,7 +329,7 @@ class DistributionsCollectorTest extends TestCase
         CollectionConfigRun::create([
             'collection_config_id' => $config->id,
             'ran_at' => Carbon::create(2025, 8, 1, 10, 0, 0, $this->timezone),
-            'successful' => true
+            'successful' => true,
         ]);
 
         Log::spy();

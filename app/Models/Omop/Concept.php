@@ -3,10 +3,10 @@
 namespace App\Models\Omop;
 
 use App\Models\Distribution;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
  * @property int $concept_id
@@ -23,10 +23,15 @@ class Concept extends Model
     use Search;
 
     protected $connection = 'omop';
+
     protected $table = 'concept';
+
     protected $primaryKey = 'concept_id';
+
     public $incrementing = false;
+
     protected $keyType = 'int';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -47,7 +52,6 @@ class Concept extends Model
         'concept_id',
         'concept_name',
     ];
-
 
     public function ancestors(): BelongsToMany
     {
@@ -85,7 +89,6 @@ class Concept extends Model
             ->where('concept_id', '>', 0)
             ->distinct()
             ->pluck('concept_id');
-
 
         return $this->ancestors()
             ->whereIn('concept.concept_id', $conceptIdsWithDists);

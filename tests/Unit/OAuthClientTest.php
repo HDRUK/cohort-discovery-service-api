@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use DB;
-use Tests\TestCase;
 use App\Models\User;
+use DB;
 use Laravel\Passport\ClientRepository;
+use Tests\TestCase;
 
 class OAuthClientTest extends TestCase
 {

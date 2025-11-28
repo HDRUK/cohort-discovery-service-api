@@ -7,8 +7,8 @@ use App\Models\ConceptSet;
 use App\Models\ConceptSetHasConcept;
 use App\Models\Distribution;
 use App\Traits\Responses;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +37,7 @@ class ConceptSetController extends Controller
     public function show(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
         $conceptSet->load([
             'concepts' => function ($q) {
@@ -57,8 +57,8 @@ class ConceptSetController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name'        => 'required|string|max:255',
-                'domain'      => 'required|string',
+                'name' => 'required|string|max:255',
+                'domain' => 'required|string',
                 'description' => 'nullable|string',
             ]);
 
@@ -77,12 +77,12 @@ class ConceptSetController extends Controller
     public function update(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
         try {
             $validated = $request->validate([
-                'name'        => 'required|string|max:255',
-                'domain'      => 'required|string',
+                'name' => 'required|string|max:255',
+                'domain' => 'required|string',
                 'description' => 'nullable|string',
             ]);
 
@@ -101,6 +101,7 @@ class ConceptSetController extends Controller
     {
         try {
             $conceptSet->delete();
+
             return $this->OKResponse([]);
         } catch (\Exception $e) {
             return $this->ErrorResponse('Unable to delete concept set.');
@@ -110,13 +111,13 @@ class ConceptSetController extends Controller
     public function attachConcept(Request $request, ConceptSet $conceptSet, int $conceptId): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
         try {
             $query = Distribution::where('concept_id', $conceptId);
 
             $exists = $query->clone()->exists();
-            if (!$exists) {
+            if (! $exists) {
                 return $this->NotFoundResponse();
             }
 
@@ -127,7 +128,6 @@ class ConceptSetController extends Controller
             if ($countMismatched > 0) {
                 return $this->ValidationErrorResponse(['concept_id' => 'Concept does not exist in the domain for this concept set']);
             }
-
 
             $conceptSetHasConcept = ConceptSetHasConcept::firstOrCreate(
                 ['concept_set_id' => $conceptSet->id, 'concept_id' => $conceptId]
@@ -142,7 +142,7 @@ class ConceptSetController extends Controller
     public function detachConcept(Request $request, ConceptSet $conceptSet, int $conceptId): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
         try {
             ConceptSetHasConcept::where('concept_set_id', $conceptSet->id)
@@ -162,7 +162,7 @@ class ConceptSetController extends Controller
     public function clear(Request $request, ConceptSet $conceptSet): JsonResponse
     {
         if (Gate::denies('view', $conceptSet)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
         try {
             ConceptSetHasConcept::where('concept_set_id', $conceptSet->id)->delete();

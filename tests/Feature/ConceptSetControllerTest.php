@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Models\User;
 use App\Models\ConceptSet;
 use App\Models\ConceptSetHasConcept;
 use App\Models\Distribution;
+use App\Models\User;
 use Tests\TestCase;
 
 class ConceptSetControllerTest extends TestCase
 {
-    private const BASE_URL  = '/api/v1/concept_sets';
+    private const BASE_URL = '/api/v1/concept_sets';
 
     protected function setUp(): void
     {
@@ -28,11 +28,10 @@ class ConceptSetControllerTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'domain']);
 
-
         $response = $this->actingAsJwt($user)->postJson(self::BASE_URL, [
             'name' => 'COVID-19 Vaccines',
             'description' => 'my definition of COVID-19 vaccines',
-            'domain' => 'Drug'
+            'domain' => 'Drug',
         ]);
         $response->assertCreated();
     }
@@ -41,22 +40,22 @@ class ConceptSetControllerTest extends TestCase
     public function it_creates_and_lists_concept_sets_for_the_correct_user()
     {
         $this->enableMiddleware();
-        $owner   = User::factory()->create();
+        $owner = User::factory()->create();
         $another = User::factory()->create();
 
         // Create (as owner)
         $payload = [
             'name' => 'COVID-19 Vaccines',
             'description' => 'my definition of COVID-19 vaccines',
-            'domain' => 'Drug'
+            'domain' => 'Drug',
         ];
 
         $create = $this->actingAsJwt($owner)->postJson(self::BASE_URL, $payload);
         $create->assertCreated();
 
         $this->assertDatabaseHas(ConceptSet::class, [
-            'name'    => $payload['name'],
-            'domain'  => $payload['domain'],
+            'name' => $payload['name'],
+            'domain' => $payload['domain'],
             'user_id' => $owner->id,
         ]);
 
@@ -79,7 +78,7 @@ class ConceptSetControllerTest extends TestCase
         ConceptSet::factory()->for($user)->create(['domain' => 'drug']);
         ConceptSet::factory()->for($user)->create(['domain' => 'observation']);
 
-        $response = $this->actingAsJwt($user)->get(self::BASE_URL . '?domain=drug');
+        $response = $this->actingAsJwt($user)->get(self::BASE_URL.'?domain=drug');
         $response->assertSuccessful();
 
         $items = $response->json('data');
@@ -87,23 +86,22 @@ class ConceptSetControllerTest extends TestCase
         $this->assertEquals('drug', $items[0]['domain']);
     }
 
-
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_shows_concept_set_with_correct_auth()
     {
         $this->enableMiddleware();
-        $owner   = User::factory()->create();
+        $owner = User::factory()->create();
         $another = User::factory()->create();
 
         $conceptSet = ConceptSet::factory()->for($owner)->create([
             'domain' => 'Drug',
-            'name'   => 'COVID-19 Vaccines',
+            'name' => 'COVID-19 Vaccines',
         ]);
 
-        $response = $this->actingAsJwt($owner)->get(self::BASE_URL . '/' . $conceptSet->id);
+        $response = $this->actingAsJwt($owner)->get(self::BASE_URL.'/'.$conceptSet->id);
         $response->assertSuccessful();
 
-        $response = $this->actingAsJwt($another)->get(self::BASE_URL . '/' . $conceptSet->id);
+        $response = $this->actingAsJwt($another)->get(self::BASE_URL.'/'.$conceptSet->id);
         $response->assertForbidden();
     }
 
@@ -124,22 +122,22 @@ class ConceptSetControllerTest extends TestCase
             'collection_id' => 1,
             'name' => $conceptId,
             'count' => 100,
-            'concept_id'  => $conceptId,
-            'category'    => 'Drug',
+            'concept_id' => $conceptId,
+            'category' => 'Drug',
             'description' => 'Some drug',
         ]);
 
         $this->actingAsJwt($user)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId)
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId)
             ->assertCreated();
 
         $this->actingAsJwt($another)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId)
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId)
             ->assertForbidden();
 
         $this->assertDatabaseHas(ConceptSetHasConcept::class, [
             'concept_set_id' => $conceptSet->id,
-            'concept_id'     => $conceptId,
+            'concept_id' => $conceptId,
         ]);
     }
 
@@ -153,12 +151,12 @@ class ConceptSetControllerTest extends TestCase
         $missingConceptId = 999999;
 
         $resp = $this->actingAsJwt($user)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $missingConceptId);
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$missingConceptId);
 
         $resp->assertNotFound();
         $this->assertDatabaseMissing(ConceptSetHasConcept::class, [
             'concept_set_id' => $conceptSet->id,
-            'concept_id'     => $missingConceptId,
+            'concept_id' => $missingConceptId,
         ]);
     }
 
@@ -175,19 +173,19 @@ class ConceptSetControllerTest extends TestCase
             'collection_id' => 1,
             'name' => $conceptId,
             'count' => 100,
-            'concept_id'  => $conceptId,
-            'category'    => 'Observation',
+            'concept_id' => $conceptId,
+            'category' => 'Observation',
             'description' => 'Some drug',
         ]);
 
         $resp = $this->actingAsJwt($user)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId);
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId);
 
         $resp->assertStatus(422)
             ->assertJsonValidationErrors(['concept_id']);
         $this->assertDatabaseMissing(ConceptSetHasConcept::class, [
             'concept_set_id' => $conceptSet->id,
-            'concept_id'     => $conceptId,
+            'concept_id' => $conceptId,
         ]);
     }
 
@@ -205,32 +203,32 @@ class ConceptSetControllerTest extends TestCase
             'collection_id' => 1,
             'name' => $conceptId,
             'count' => 100,
-            'concept_id'  => $conceptId,
-            'category'    => 'Drug',
+            'concept_id' => $conceptId,
+            'category' => 'Drug',
             'description' => 'Some drug',
         ]);
 
         $this->actingAsJwt($user)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId)
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId)
             ->assertCreated();
 
         $this->actingAsJwt($another)
-            ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId)
+            ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId)
             ->assertForbidden();
 
         $this->assertDatabaseHas(ConceptSetHasConcept::class, [
             'concept_set_id' => $conceptSet->id,
-            'concept_id'     => $conceptId,
+            'concept_id' => $conceptId,
         ]);
 
         $response = $this->actingAsJwt($user)
-            ->deleteJson(self::BASE_URL . '/' . $conceptSet->id . '/detach/' .  $conceptId);
+            ->deleteJson(self::BASE_URL.'/'.$conceptSet->id.'/detach/'.$conceptId);
 
         $response->assertSuccessful();
 
         $this->assertDatabaseMissing(ConceptSetHasConcept::class, [
             'concept_set_id' => $conceptSet->id,
-            'concept_id'     => $conceptId,
+            'concept_id' => $conceptId,
         ]);
     }
 
@@ -248,23 +246,23 @@ class ConceptSetControllerTest extends TestCase
                 'collection_id' => 1,
                 'name' => $conceptId,
                 'count' => 100,
-                'concept_id'  => $conceptId,
-                'category'    => 'Drug',
+                'concept_id' => $conceptId,
+                'category' => 'Drug',
                 'description' => 'Some drug',
             ]);
             $this->actingAsJwt($user)
-                ->postJson(self::BASE_URL . '/' . $conceptSet->id . '/attach/' .  $conceptId)
+                ->postJson(self::BASE_URL.'/'.$conceptSet->id.'/attach/'.$conceptId)
                 ->assertCreated();
         }
 
         $response = $this->actingAsJwt($user)
-            ->deleteJson(self::BASE_URL . '/' . $conceptSet->id . '/clear');
+            ->deleteJson(self::BASE_URL.'/'.$conceptSet->id.'/clear');
 
         $response->assertSuccessful();
         foreach ($ids as $cid) {
             $this->assertDatabaseMissing(ConceptSetHasConcept::class, [
                 'concept_set_id' => $conceptSet->id,
-                'concept_id'     => $cid,
+                'concept_id' => $cid,
             ]);
         }
     }

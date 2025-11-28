@@ -12,9 +12,9 @@ class DistributionConceptViewSeeder extends Seeder
      */
     public function run(): void
     {
-        $viewName = config('database.connections.omop.database') . '.distribution_concepts';
-        $distributionTable = config('database.connections.omop.database') . '.distributions';
-        $conceptTable = config('database.connections.omop.database') . '.concepts';
+        $viewName = config('database.connections.omop.database').'.distribution_concepts';
+        $distributionTable = config('database.connections.omop.database').'.distributions';
+        $conceptTable = config('database.connections.omop.database').'.concepts';
 
         DB::statement("
             CREATE OR REPLACE VIEW {$viewName} AS

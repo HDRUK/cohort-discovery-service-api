@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
-use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -15,6 +15,7 @@ use App\Contracts\ValidatableModel;
  *     type="object",
  *     title="CollectionHost",
  *     required={"name", "query_context_type", "user_id"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Host A"),
  *     @OA\Property(property="query_context_type", type="string", example="FHIR"),
@@ -27,12 +28,14 @@ use App\Contracts\ValidatableModel;
  */
 class CollectionHost extends Model implements ValidatableModel
 {
+    use Filter;
+
     /** @use HasFactory<\Database\Factories\CollectionHostFactory> */
     use HasFactory;
     use Search;
-    use Filter;
 
     public $table = 'collection_hosts';
+
     public $timestamps = true;
 
     protected $fillable = [

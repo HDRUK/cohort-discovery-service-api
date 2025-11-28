@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -13,6 +13,7 @@ use App\Contracts\ValidatableModel;
  *     type="object",
  *     title="Custodian",
  *     required={"name", "street_address", "city", "postal_code", "country"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Health Data Custodian"),
  *     @OA\Property(property="street_address", type="string", example="123 Main St"),
@@ -30,6 +31,7 @@ class Custodian extends Model implements ValidatableModel
 {
     /** @use HasFactory<\Database\Factories\CustodianFactory> */
     use HasFactory;
+
     use Search;
 
     public $table = 'custodians';

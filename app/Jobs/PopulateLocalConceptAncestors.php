@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Distribution;
 use App\Models\LocalConceptAncestor;
-use App\Models\Omop\ConceptAncestor as ConceptAncestor;
+use App\Models\Omop\ConceptAncestor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -44,15 +44,15 @@ class PopulateLocalConceptAncestors implements ShouldQueue
                 foreach ($rows as $r) {
                     $payload[] = [
                         'parent_concept_id' => (int) $r->parent_concept_id,
-                        'child_concept_id'  => (int) $r->child_concept_id,
+                        'child_concept_id' => (int) $r->child_concept_id,
                     ];
                 }
                 $payload = collect($payload)
-                    ->unique(fn ($r) => $r['parent_concept_id'] . '-' . $r['child_concept_id'])
+                    ->unique(fn ($r) => $r['parent_concept_id'].'-'.$r['child_concept_id'])
                     ->values()
                     ->all();
 
-                if (!empty($payload)) {
+                if (! empty($payload)) {
                     LocalConceptAncestor::insertOrIgnore($payload);
                 }
             });

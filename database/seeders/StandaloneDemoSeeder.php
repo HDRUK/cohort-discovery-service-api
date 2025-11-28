@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Custodian;
+use App\Models\User;
+use App\Models\UserHasRole;
 use DB;
 use Hash;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
-use App\Models\User;
-use App\Models\Custodian;
-use App\Models\UserHasRole;
 
 class StandaloneDemoSeeder extends Seeder
 {

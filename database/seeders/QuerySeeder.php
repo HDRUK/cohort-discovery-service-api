@@ -23,10 +23,10 @@ class QuerySeeder extends Seeder
                         'field' => 'sex',
                         'operator' => '=',
                         'value' => '8507',
-                        'id' => '8ec83173-24cb-4100-b5a1-7d5308400e90'
-                    ]
+                        'id' => '8ec83173-24cb-4100-b5a1-7d5308400e90',
+                    ],
                 ],
-                'id' => 'ae65dccc-8ebc-4e67-b104-a28876085447'
+                'id' => 'ae65dccc-8ebc-4e67-b104-a28876085447',
             ],
             'created_at' => now(),
         ]);

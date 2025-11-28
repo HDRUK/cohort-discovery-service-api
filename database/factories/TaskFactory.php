@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Task;
-use App\Models\Query;
 use App\Models\Collection;
+use App\Models\Query;
+use App\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -20,7 +20,7 @@ class TaskFactory extends Factory
             'collection_id' => Collection::factory(),
             'completed_at' => null,
             'created_at' => now(),
-            'task_type' => 'a'
+            'task_type' => 'a',
         ];
     }
 }

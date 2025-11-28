@@ -2,17 +2,18 @@
 
 namespace Tests\Feature;
 
-use DB;
-use Tests\TestCase;
-use App\Models\User;
+use App\Models\Collection;
+use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Task;
-use App\Models\Custodian;
-use App\Models\Collection;
+use App\Models\User;
+use DB;
+use Tests\TestCase;
 
 class DistributionTest extends TestCase
 {
-    private const BASE_URL  = '/api/v1/distributions/run-manually';
+    private const BASE_URL = '/api/v1/distributions/run-manually';
+
     private User $user;
 
     private array $adminWorkgroup = [
@@ -63,17 +64,17 @@ class DistributionTest extends TestCase
             $this->user,
             $overrides
         )
-        ->postJson(
-            self::BASE_URL,
-            [
-            'collection_id' => $collection->id,
-        ]
-        );
+            ->postJson(
+                self::BASE_URL,
+                [
+                    'collection_id' => $collection->id,
+                ]
+            );
 
         $response->assertStatus(200);
         $content = $response->json('data');
 
-        $query = Query::where('name', 'manual-run-' . str_replace(' ', '-', $collection->name))->first();
+        $query = Query::where('name', 'manual-run-'.str_replace(' ', '-', $collection->name))->first();
         $task = Task::where('query_id', $query->id)->first();
 
         $this->assertNotNull($content);

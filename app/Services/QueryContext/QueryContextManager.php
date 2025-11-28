@@ -2,8 +2,8 @@
 
 namespace App\Services\QueryContext;
 
-use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Exceptions\Errors_1xxx\UnsupportedContextTypeException;
+use App\Services\QueryContext\Contexts\QueryContextInterface;
 use Illuminate\Container\Container;
 
 class QueryContextManager
@@ -24,7 +24,7 @@ class QueryContextManager
     public function handle(array $query, QueryContextType $contextType): array
     {
         $context = $this->contexts[$contextType->value] ?? null;
-        if (!$context) {
+        if (! $context) {
             throw new UnsupportedContextTypeException($contextType->value);
         }
 

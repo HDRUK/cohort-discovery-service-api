@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\AuthenticationServiceInterface;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Http\Request;
+use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Traits\Responses;
-use App\Contracts\AuthenticationServiceInterface;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -26,7 +26,7 @@ class AuthController extends Controller
     {
         $user = $this->authService->authenticate($request);
 
-        if (!$user) {
+        if (! $user) {
             return $this->UnauthorisedResponse();
         }
 
@@ -46,7 +46,7 @@ class AuthController extends Controller
     {
         $code = $request->input('code');
 
-        if (!$code) {
+        if (! $code) {
             return $this->UnauthorisedResponse();
         }
 
@@ -63,6 +63,7 @@ class AuthController extends Controller
         }
 
         $token = $response->json()['token'];
+
         return redirect()->to('auth/callback2')
             ->with(['token' => $token]);
     }
@@ -71,7 +72,7 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->UnauthorisedResponse();
         }
 

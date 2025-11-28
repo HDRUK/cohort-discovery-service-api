@@ -2,24 +2,24 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
+use App\Enums\TaskType;
+use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Support\Facades\DB;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
 use Hdruk\LaravelModelStates\Models\ModelState;
 use Hdruk\LaravelModelStates\Models\State;
 use Hdruk\LaravelModelStates\Traits\HasState;
-use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
-use App\Services\QueryContext\QueryContextType;
-use App\Contracts\ValidatableModel;
-use App\Enums\TaskType;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Schema(
@@ -28,6 +28,7 @@ use App\Enums\TaskType;
  *     title="Collection",
  *     description="A data collection (cohort) containing tasks, distributions and host relationship metadata.",
  *     required={"name","pid","type"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Cardiology Cohort"),
  *     @OA\Property(property="pid", type="string", example="col_abc123"),
@@ -40,12 +41,15 @@ use App\Enums\TaskType;
  *         property="tasks",
  *         type="array",
  *         description="Tasks associated with this collection",
+ *
  *         @OA\Items(ref="#/components/schemas/Task")
  *     ),
+ *
  *     @OA\Property(
  *         property="host",
  *         type="array",
  *         description="Associated collection host(s)",
+ *
  *         @OA\Items(ref="#/components/schemas/CollectionHost")
  *     )
  * )
@@ -58,23 +62,27 @@ use App\Enums\TaskType;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read ModelState|null $modelState
  * @property-read State|null $state
- *
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
  */
-class Collection extends Model implements ValidatableModel, HasStateTransitions
+class Collection extends Model implements HasStateTransitions, ValidatableModel
 {
-    use HasFactory;
-    use Search;
     use Filter;
+    use HasFactory;
     use HasState;
+    use Search;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_SUSPENDED = 'suspended';
 
     public $table = 'collections';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -144,7 +152,7 @@ class Collection extends Model implements ValidatableModel, HasStateTransitions
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'id' => 'required|integer|exists:collections,id',
@@ -219,13 +227,12 @@ class Collection extends Model implements ValidatableModel, HasStateTransitions
             ->whereIn('id', $sub);
     }
 
-
     public function size(): HasOne
     {
         return $this->hasOne(Distribution::class)
             ->where([
-                "category" => "DEMOGRAPHICS",
-                "name" => "SEX"
+                'category' => 'DEMOGRAPHICS',
+                'name' => 'SEX',
             ])
             ->latest('created_at');
     }

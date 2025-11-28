@@ -3,17 +3,17 @@
 namespace App\Models;
 
 use DB;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Passport\Contracts\OAuthenticatable;
-use Laravel\Passport\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
-use Spatie\Permission\Models\Role;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @OA\Schema(
@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
  *     type="object",
  *     title="User",
  *     required={"name", "email", "password"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Jane Doe"),
  *     @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
@@ -31,12 +32,13 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class User extends Authenticatable implements OAuthenticatable
 {
+    use HasApiTokens;
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
-    use Notifiable;
-    use HasApiTokens;
     use HasRoles;
     use HasScopedClaims;
+    use Notifiable;
     use Search;
 
     public const CLIENT_TOKEN_SCOPES = [
@@ -170,7 +172,7 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $query->addSelect('users.*')
             ->addSelect([
-            DB::raw('
+                DB::raw('
                 CASE
                     WHEN EXISTS (
                         SELECT 1
@@ -180,7 +182,7 @@ class User extends Authenticatable implements OAuthenticatable
                     THEN 0
                     ELSE 1
                 END AS new_user_status
-            ')
-        ]);
+            '),
+            ]);
     }
 }

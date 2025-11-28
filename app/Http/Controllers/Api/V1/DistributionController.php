@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\JsonResponse;
-use App\Http\Requests\ModelBackedRequest;
-use App\Http\Controllers\Controller;
-use App\Models\Collection;
-use App\Enums\TaskType;
 use App\Enums\QueryType;
+use App\Enums\TaskType;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\ModelBackedRequest;
+use App\Models\Collection;
 use App\Traits\JobCreation;
 use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
 
 class DistributionController extends Controller
 {
@@ -23,7 +23,7 @@ class DistributionController extends Controller
         try {
             $collection = Collection::findOrFail($validated['collection_id']);
             $query = $this->createQuery(
-                'manual-run-' . str_replace(' ', '-', $collection->name),
+                'manual-run-'.str_replace(' ', '-', $collection->name),
                 QueryType::DEMOGRAPHICS
             );
 

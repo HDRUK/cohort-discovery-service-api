@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
+use App\Models\UserHasWorkgroup;
+use App\Models\Workgroup;
 use DB;
 use Tests\TestCase;
-use App\Models\User;
-use App\Models\Workgroup;
-use App\Models\UserHasWorkgroup;
 
 class WorkgroupTest extends TestCase
 {
     private string $url = '/api/v1/workgroups';
+
     private array $workgroups = [
         'ADMIN',
         'DEFAULT',
@@ -23,7 +24,7 @@ class WorkgroupTest extends TestCase
         'NHS-SDE',
     ];
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -50,7 +51,7 @@ class WorkgroupTest extends TestCase
     {
         $workgroup = Workgroup::all()->random();
 
-        $response = $this->get($this->url . '/' . $workgroup->id);
+        $response = $this->get($this->url.'/'.$workgroup->id);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -81,7 +82,7 @@ class WorkgroupTest extends TestCase
             'active' => false,
         ];
 
-        $response = $this->put($this->url . '/' . $workgroup->id, $payload);
+        $response = $this->put($this->url.'/'.$workgroup->id, $payload);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -93,7 +94,7 @@ class WorkgroupTest extends TestCase
     {
         $workgroup = Workgroup::all()->random();
 
-        $response = $this->delete($this->url . '/' . $workgroup->id);
+        $response = $this->delete($this->url.'/'.$workgroup->id);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -122,7 +123,7 @@ class WorkgroupTest extends TestCase
             ]);
         }
 
-        $response = $this->get($this->url . '/search/users?name[]=DEFAULT');
+        $response = $this->get($this->url.'/search/users?name[]=DEFAULT');
         $response->assertStatus(200);
 
         $content = $response->json();
