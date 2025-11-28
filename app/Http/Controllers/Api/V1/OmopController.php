@@ -12,11 +12,16 @@ use App\Traits\HelperFunctions;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(
+ *     name="OMOP",
+ *     description="Endpoints for OMOP concept lookups and hierarchy exploration"
+ * )
+ */
 class OmopController extends Controller
 {
     use Responses;
     use HelperFunctions;
-
 
     public function getConcept($concept_id): JsonResponse
     {

@@ -1,4 +1,4 @@
-FROM php:8.3.3-fpm
+FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
 ENV REBUILD_DB=1
@@ -21,12 +21,13 @@ RUN apt-get update && apt-get install -y \
     zip \
     default-mysql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql soap zip iconv bcmath \
+    && docker-php-ext-install -j"$(nproc)" gd pdo pdo_mysql soap zip iconv bcmath \
     && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
     && docker-php-ext-install sockets \
     && docker-php-ext-install exif \
     && docker-php-ext-configure pcntl --enable-pcntl \
-    && docker-php-ext-install pcntl
+    && docker-php-ext-install pcntl \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /etc/pki/tls/certs && \
     ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
@@ -38,16 +39,20 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 # Copy the application
 COPY . /var/www
 
-RUN curl https://frankenphp.dev/install.sh | sh \
-    && mv frankenphp /usr/local/bin/frankenphp \
-    && chmod +x /usr/local/bin/frankenphp
-
 
 # Composer & laravel
 RUN composer install --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
-    && composer dumpautoload
+    && php artisan storage:link \
+    # && php artisan optimize:clear \
+    # && php artisan optimize \
+    && php artisan config:clear \
+    && chmod -R 777 storage bootstrap/cache \
+    && chown -R www-data:www-data storage \
+    && composer dump-autoload
+
+RUN php artisan l5-swagger:generate
 
 # Cleanup unwanted files
 RUN rm /var/www/public/.htaccess

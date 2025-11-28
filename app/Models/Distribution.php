@@ -11,6 +11,29 @@ use App\Models\Omop\Concept;
 use App\Contracts\ValidatableModel;
 
 /**
+ * @OA\Schema(
+ *     schema="Distribution",
+ *     type="object",
+ *     title="Distribution",
+ *     description="A distribution (result) produced from running a query on a collection (e.g., a count or measurement summary).",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="collection_id", type="integer", example=10, description="FK to collections"),
+ *     @OA\Property(property="task_id", type="integer", nullable=true, example=22, description="FK to task that produced this distribution"),
+ *     @OA\Property(property="category", type="string", example="DEMOGRAPHICS", description="Category for the distribution (e.g. DEMOGRAPHICS, MEASUREMENT)"),
+ *     @OA\Property(property="name", type="string", example="SEX", description="Distribution name"),
+ *     @OA\Property(property="description", type="string", example="Sex distribution for cohort", nullable=true),
+ *     @OA\Property(property="concept_id", type="integer", nullable=true, example=12345, description="OMOP concept identifier if applicable"),
+ *     @OA\Property(property="count", type="integer", example=100, description="Count of matching records"),
+ *     @OA\Property(property="q1", type="number", format="float", example=1.23, nullable=true),
+ *     @OA\Property(property="q3", type="number", format="float", example=4.56, nullable=true),
+ *     @OA\Property(property="min", type="number", format="float", example=0.5, nullable=true),
+ *     @OA\Property(property="max", type="number", format="float", example=99.9, nullable=true),
+ *     @OA\Property(property="mean", type="number", format="float", example=12.34, nullable=true),
+ *     @OA\Property(property="median", type="number", format="float", example=10.5, nullable=true),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
+ * )
+ *
  * @property int $id
  * @property int $collection_id
  * @property int $task_id
