@@ -17,7 +17,7 @@ return new class () extends Migration {
 
         $firstCustodianId = DB::table('custodians')->orderBy('id')->value('id');
 
-        if (!is_null($firstCustodianId)) {
+        if (! is_null($firstCustodianId)) {
             DB::table('collections')
                 ->where('custodian_id', 0)
                 ->update(['custodian_id' => $firstCustodianId]);

@@ -2,28 +2,29 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use Str;
-use League\Csv\Reader;
-use App\Models\User;
-use App\Models\Query;
-use App\Models\Collection;
 use App\Enums\TaskType;
+use App\Models\Collection;
+use App\Models\Query;
+use App\Models\User;
+use League\Csv\Reader;
+use Str;
+use Tests\TestCase;
 
 class DownloadableTest extends TestCase
 {
     private User $user;
+
     private string $baseUrl = '/api/v1/queries/{pid}/download';
 
     private array $urls = [];
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
         $this->urls = [
-            $this->baseUrl . '/json',
-            $this->baseUrl . '/csv',
+            $this->baseUrl.'/json',
+            $this->baseUrl.'/csv',
         ];
 
         $this->user = User::factory()->create();
@@ -78,7 +79,7 @@ class DownloadableTest extends TestCase
             $this->user,
             []
         )
-        ->getJson(str_replace('{pid}', $query->pid, $this->urls[1]));
+            ->getJson(str_replace('{pid}', $query->pid, $this->urls[1]));
 
         $response->assertStatus(200);
 

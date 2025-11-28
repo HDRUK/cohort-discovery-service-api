@@ -2,18 +2,18 @@
 
 namespace Tests\Unit;
 
+use App\Enums\TaskType;
+use App\Models\Collection;
+use App\Models\Query;
+use App\Models\Task;
+use App\Services\Submitters\QuerySubmissionService;
 use DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
-use App\Services\Submitters\QuerySubmissionService;
-use App\Models\Query;
-use App\Models\Collection;
-use App\Models\Task;
-use App\Enums\TaskType;
 
 class QuerySubmissionServiceTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 

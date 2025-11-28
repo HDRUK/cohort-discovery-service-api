@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Str;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Laravel\Passport\Client;
+use Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,13 +19,12 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
         ]);
 
-
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
 
-        if (!Client::where('provider', 'users')->exists()) {
+        if (! Client::where('provider', 'users')->exists()) {
             $client = Client::create([
                 'owner_type' => null,
                 'owner_id' => null,

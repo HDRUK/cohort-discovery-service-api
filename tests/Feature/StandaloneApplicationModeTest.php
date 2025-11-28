@@ -2,17 +2,17 @@
 
 namespace Test\Feature;
 
-use DB;
-use Tests\TestCase;
-use Laravel\Passport\Client;
 use App\Models\User;
+use DB;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Passport\Client;
+use Tests\TestCase;
 
 class StandaloneApplicationModeTest extends TestCase
 {
     private string $url = '/api/auth';
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -42,7 +42,7 @@ class StandaloneApplicationModeTest extends TestCase
 
         $this->actingAs($user, 'api');
 
-        $response = $this->postJson($this->url . '/login', [
+        $response = $this->postJson($this->url.'/login', [
             'email' => config('integrated.test_user_email'),
             'password' => config('integrated.test_user_password'),
         ]);
@@ -72,7 +72,7 @@ class StandaloneApplicationModeTest extends TestCase
 
         $this->actingAs($user, 'api');
 
-        $response = $this->postJson($this->url . '/login', [
+        $response = $this->postJson($this->url.'/login', [
             'email' => config('integrated.test_user_email'),
             'password' => config('integrated.test_user_password'),
         ]);
@@ -84,8 +84,8 @@ class StandaloneApplicationModeTest extends TestCase
         $this->assertNotEmpty($content['data']['access_token']);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $content['data']['access_token'],
-        ])->postJson($this->url . '/logout');
+            'Authorization' => 'Bearer '.$content['data']['access_token'],
+        ])->postJson($this->url.'/logout');
 
         $response->assertStatus(200);
         $content = $response->json();

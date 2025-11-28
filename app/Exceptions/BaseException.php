@@ -2,15 +2,16 @@
 
 namespace App\Exceptions;
 
+use App\Traits\Responses;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use App\Traits\Responses;
 
 class BaseException extends Exception
 {
     use Responses;
 
     protected int $errorCode;
+
     protected ?array $data;
 
     public function __construct(string $message, int $errorCode, ?array $data = null)

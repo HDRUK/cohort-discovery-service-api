@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @OA\Schema(
@@ -46,6 +46,7 @@ class ConceptSet extends Model
 {
     /** @use HasFactory<\Database\Factories\ConceptSetFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     protected $fillable = [
@@ -72,7 +73,6 @@ class ConceptSet extends Model
         )
             ->using(ConceptSetHasConcept::class);
     }
-
 
     public function scopeForDomain($q, string $domain)
     {

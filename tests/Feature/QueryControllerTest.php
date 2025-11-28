@@ -2,18 +2,19 @@
 
 namespace Tests\Feature\Api\V1;
 
-use DB;
-use Str;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Models\User;
+use DB;
+use Str;
 use Tests\TestCase;
 
 class QueryControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/queries';
+
     private const QUERY_URL = '/api/v1/query';
 
     private User $user;
@@ -46,7 +47,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => TaskType::A
+            'task_type' => TaskType::A,
         ];
 
         $response = $this->actingAsJwt($this->user)
@@ -63,7 +64,7 @@ class QueryControllerTest extends TestCase
 
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
 
-        $response = $this->getJson(self::BASE_URL . '?name[]=Test%20Query');
+        $response = $this->getJson(self::BASE_URL.'?name[]=Test%20Query');
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -98,7 +99,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => TaskType::A
+            'task_type' => TaskType::A,
         ];
 
         $response = $this->actingAsJwt($this->user)
@@ -112,7 +113,6 @@ class QueryControllerTest extends TestCase
                     'task_pids',
                 ],
             ]);
-
 
         $this->assertDatabaseCount(Task::class, $n);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
@@ -133,7 +133,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Filtered Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => [$included->pid],
-            'task_type' => 'a'
+            'task_type' => 'a',
         ];
 
         $response = $this->actingAsJwt($this->user)
@@ -164,7 +164,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => TaskType::A
+            'task_type' => TaskType::A,
         ];
 
         $response = $this->actingAsJwt($this->user)
@@ -175,12 +175,12 @@ class QueryControllerTest extends TestCase
         $pid = $response->decodeResponseJson()['data']['query_pid'];
 
         $response = $this->actingAsJwt($this->user)
-            ->get(self::QUERY_URL . "/" . $pid);
+            ->get(self::QUERY_URL.'/'.$pid);
 
         $response->assertSuccessful();
 
         $response = $this->actingAsJwt($altUser)
-            ->get(self::QUERY_URL . "/" . $pid);
+            ->get(self::QUERY_URL.'/'.$pid);
         $response->assertForbidden();
 
         $response = $this->actingAsJwt($this->user)
@@ -208,7 +208,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Test Query 123',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => TaskType::A
+            'task_type' => TaskType::A,
         ];
 
         $response = $this->actingAsJwt($this->user)
@@ -220,7 +220,7 @@ class QueryControllerTest extends TestCase
 
         // Now duplicate and re-run
         $response = $this->actingAsJwt($this->user)
-            ->getJson(self::QUERY_URL . '/re-run/' . $pid);
+            ->getJson(self::QUERY_URL.'/re-run/'.$pid);
 
         $response->assertStatus(200);
 

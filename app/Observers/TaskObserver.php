@@ -2,8 +2,8 @@
 
 namespace App\Observers;
 
-use App\Models\Task;
 use App\Enums\QueryContextType;
+use App\Models\Task;
 
 class TaskObserver
 {

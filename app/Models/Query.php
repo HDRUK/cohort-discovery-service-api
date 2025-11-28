@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\TaskType;
+use App\Rules\IdOrUuid;
+use App\Traits\Downloadable;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
-use App\Rules\IdOrUuid;
-use App\Enums\TaskType;
-use App\Traits\Downloadable;
 
 /**
  * @OA\Schema(
@@ -19,6 +19,7 @@ use App\Traits\Downloadable;
  *     type="object",
  *     title="Query",
  *     required={"pid","name","definition"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="pid", type="string", example="qry_abc123"),
  *     @OA\Property(property="name", type="string", example="Cardiology cohort query"),
@@ -27,8 +28,10 @@ use App\Traits\Downloadable;
  *         property="definition",
  *         type="array",
  *         description="Structured query definition (array of rule objects)",
+ *
  *         @OA\Items(type="object")
  *     ),
+ *
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
  * )
  *
@@ -38,10 +41,10 @@ use App\Traits\Downloadable;
  */
 class Query extends Model
 {
+    use Downloadable;
+    use Filter;
     use HasFactory;
     use Search;
-    use Filter;
-    use Downloadable;
 
     public $timestamps = false;
 
@@ -82,12 +85,12 @@ class Query extends Model
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'key' => [
                     'required',
-                    new IdOrUuid()
+                    new IdOrUuid(),
                 ],
             ],
             'store' => [
@@ -106,7 +109,7 @@ class Query extends Model
             'delete' => [
                 'key' => [
                     'required',
-                    new IdOrUuid()
+                    new IdOrUuid(),
                 ],
             ],
             default => [],

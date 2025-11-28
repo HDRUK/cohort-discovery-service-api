@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Str;
 
 /**
  * ModelBackedRequest supersedes Laravel's standard FormRequest pattern by providing
@@ -81,14 +81,14 @@ class ModelBackedRequest extends FormRequest
         $modelClass = $this->inferModelClass();
         $context = $this->inferContext();
 
-        if (!class_exists($modelClass)) {
+        if (! class_exists($modelClass)) {
             return [];
         }
 
         $model = app($modelClass);
         // Ensure our modelClass implements the ValidatableModel
         // trait and has getValidationRules.
-        if (!method_exists($model, 'getValidationRules')) {
+        if (! method_exists($model, 'getValidationRules')) {
             return [];
         }
 
@@ -98,15 +98,16 @@ class ModelBackedRequest extends FormRequest
     protected function inferModelClass(): ?string
     {
         $action = $this->route()?->getActionName();
-        if (!$action) {
+        if (! $action) {
             return null;
         }
 
-        [$controller,] = explode('@', $action);
+        [$controller] = explode('@', $action);
         $controllerBase = class_basename($controller);
         $modelBase = Str::before($controllerBase, 'Controller');
 
-        $modelClass = 'App\\Models\\' . $modelBase;
+        $modelClass = 'App\\Models\\'.$modelBase;
+
         return class_exists($modelClass) ? $modelClass : null;
     }
 
@@ -128,7 +129,7 @@ class ModelBackedRequest extends FormRequest
         throw new HttpResponseException(
             response()->json([
                 'message' => 'Request data is not valid.',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422)
         );
     }

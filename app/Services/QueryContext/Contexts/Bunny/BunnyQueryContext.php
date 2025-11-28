@@ -2,8 +2,8 @@
 
 namespace App\Services\QueryContext\Contexts\Bunny;
 
-use App\Services\QueryContext\QueryContextType;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
+use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
@@ -15,17 +15,17 @@ class BunnyQueryContext implements QueryContextInterface
         $makeLeafRule = function (array $concept, bool $isExcluded = false, array $timeConstraint = []): array {
             $rule = [
                 'varname' => 'OMOP',
-                'varcat'  => $concept['category'] ?? 'UNKNOWN',
-                'type'    => 'TEXT',
-                'oper'    => $isExcluded ? '!=' : '=',
-                'value'   => (string) ($concept['concept_id'] ?? ''),
+                'varcat' => $concept['category'] ?? 'UNKNOWN',
+                'type' => 'TEXT',
+                'oper' => $isExcluded ? '!=' : '=',
+                'value' => (string) ($concept['concept_id'] ?? ''),
             ];
 
             if (count($timeConstraint) === 2) {
                 [$upper, $lower] = $timeConstraint;
 
                 $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
-                if (!is_null($bunnyTime)) {
+                if (! is_null($bunnyTime)) {
                     $rule['time'] = $bunnyTime;
                 }
             }
@@ -34,10 +34,10 @@ class BunnyQueryContext implements QueryContextInterface
         };
 
         $isOperatorNode = function (array $node): bool {
-            return isset($node['combinator']) && !isset($node['rule']) && !isset($node['rules']);
+            return isset($node['combinator']) && ! isset($node['rule']) && ! isset($node['rules']);
         };
         $isLeafNode = function (array $node): bool {
-            return isset($node['rule']['concept']) && !isset($node['rules']);
+            return isset($node['rule']['concept']) && ! isset($node['rules']);
         };
         $isGroupNode = function (array $node): bool {
             return isset($node['rules']);
@@ -63,22 +63,23 @@ class BunnyQueryContext implements QueryContextInterface
             //    $leafRules[i]   = rule for leaf i
             //    $ops[i]         = operator betwene leaf (i-1) and leaf i
             $leafRules = [];
-            $ops       = [];
+            $ops = [];
             $pendingOp = null;
 
             foreach ($children as $child) {
                 if ($isOperatorNode($child)) {
                     $pendingOp = strtoupper($child['combinator'] ?? 'AND');
+
                     continue;
                 }
 
                 if ($isLeafNode($child)) {
-                    $isExcluded     = (bool)($child['exclude'] ?? false);
+                    $isExcluded = (bool) ($child['exclude'] ?? false);
                     $timeConstraint = $child['timeConstraint'] ?? [null, null];
-                    $leafRule       = $makeLeafRule($child['rule']['concept'], $isExcluded, $timeConstraint);
+                    $leafRule = $makeLeafRule($child['rule']['concept'], $isExcluded, $timeConstraint);
 
                     $leafRules[] = $leafRule;
-                    $leafIndex   = count($leafRules) - 1;
+                    $leafIndex = count($leafRules) - 1;
 
                     // operator applies between previous leaf and this one
                     if ($pendingOp !== null && $leafIndex > 0) {
@@ -98,8 +99,9 @@ class BunnyQueryContext implements QueryContextInterface
             if ($n === 1) {
                 $groups[] = [
                     'rules_oper' => 'AND',
-                    'rules'      => [$leafRules[0]],
+                    'rules' => [$leafRules[0]],
                 ];
+
                 return;
             }
 
@@ -110,7 +112,7 @@ class BunnyQueryContext implements QueryContextInterface
             //      [A AND B] + [C OR D]
             // - this needs to be revisited
             $currentBlock = [$leafRules[0]];
-            $currentOp    = null;
+            $currentOp = null;
 
             for ($i = 1; $i < $n; $i++) {
                 $op = $ops[$i] ?? null;
@@ -126,7 +128,7 @@ class BunnyQueryContext implements QueryContextInterface
 
                         $groups[] = [
                             'rules_oper' => $currentOp,
-                            'rules'      => $currentBlock,
+                            'rules' => $currentBlock,
                         ];
 
                         $currentBlock = [$lastRule, $leafRules[$i]];
@@ -134,7 +136,7 @@ class BunnyQueryContext implements QueryContextInterface
                         // only one leaf in the old block
                         $groups[] = [
                             'rules_oper' => $currentOp,
-                            'rules'      => $currentBlock,
+                            'rules' => $currentBlock,
                         ];
 
                         $currentBlock = [$leafRules[$i]];
@@ -145,25 +147,25 @@ class BunnyQueryContext implements QueryContextInterface
             }
             $groups[] = [
                 'rules_oper' => $currentOp ?? 'AND', // @phpstan-ignore-line
-                'rules'      => $currentBlock,
+                'rules' => $currentBlock,
             ];
         };
 
         $processNode($definition);
 
         return [
-            'groups'      => $groups,
+            'groups' => $groups,
             'groups_oper' => strtoupper($definition['combinator'] ?? 'AND'),
         ];
     }
 
     public function getRelativeMonths(string $date): int
     {
-        $now   = Carbon::today();
+        $now = Carbon::today();
         $other = Carbon::parse($date);
-        return (int)round(abs($now->diffInMonths($other, false)));
-    }
 
+        return (int) round(abs($now->diffInMonths($other, false)));
+    }
 
     public function encodeBunnyTimeConstraint(?string $lower, ?string $upper): ?string
     {
@@ -176,8 +178,9 @@ class BunnyQueryContext implements QueryContextInterface
         // - not an 'inbetween' and you'd think would be logical
         // - we have to default to use lower for now
 
-        [$date, $pattern] = !is_null($lower) ? [$lower, '%d|:TIME:M'] : [$upper, '|%d:TIME:M'];
+        [$date, $pattern] = ! is_null($lower) ? [$lower, '%d|:TIME:M'] : [$upper, '|%d:TIME:M'];
         $months = $this->getRelativeMonths($date);
+
         return sprintf($pattern, $months);
     }
 

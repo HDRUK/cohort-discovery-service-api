@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\NlpQueryLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use App\Models\NlpQueryLog;
 
 class NLPConceptExtractor
 {
@@ -21,8 +21,8 @@ class NLPConceptExtractor
             'query' => $query,
         ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException("NLP extraction failed: " . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('NLP extraction failed: '.$response->body());
         }
 
         // dd($response->json());

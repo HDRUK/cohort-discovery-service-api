@@ -2,12 +2,12 @@
 
 namespace App\Traits;
 
-use Str;
-use Carbon\Carbon;
-use App\Models\Task;
-use App\Models\Query;
-use App\Enums\TaskType;
 use App\Enums\QueryType;
+use App\Enums\TaskType;
+use App\Models\Query;
+use App\Models\Task;
+use Carbon\Carbon;
+use Str;
 
 trait JobCreation
 {

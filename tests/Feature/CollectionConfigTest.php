@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
-use DB;
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
+use App\Models\User;
+use DB;
+use Tests\TestCase;
 
 class CollectionConfigTest extends TestCase
 {
-    private const BASE_URL  = '/api/v1/collection_config';
+    private const BASE_URL = '/api/v1/collection_config';
+
     private User $user;
 
     private array $payload = [];
@@ -62,7 +63,7 @@ class CollectionConfigTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/' . $config->id);
+            ->getJson(self::BASE_URL.'/'.$config->id);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -113,7 +114,7 @@ class CollectionConfigTest extends TestCase
             $this->user,
             []
         )
-            ->putJson(self::BASE_URL . '/' . $content['id'], $this->payload);
+            ->putJson(self::BASE_URL.'/'.$content['id'], $this->payload);
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('collection_config', [
@@ -133,7 +134,7 @@ class CollectionConfigTest extends TestCase
             $this->user,
             []
         )
-            ->deleteJson(self::BASE_URL . '/' . $config->id);
+            ->deleteJson(self::BASE_URL.'/'.$config->id);
         $response->assertStatus(200);
 
         $this->assertNull(CollectionConfig::where('id', $config->id)->first());

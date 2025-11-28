@@ -2,19 +2,20 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ApplicationMode;
+use App\Traits\Responses;
 use Closure;
+use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
+use Illuminate\Http\Request;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-use App\Traits\Responses;
-use App\Support\ApplicationMode;
 
 class ClaimBasedAccessControl
 {
     use Responses;
+
     /**
      * Handle an incoming request.
      *
@@ -45,7 +46,7 @@ class ClaimBasedAccessControl
 
             // normalise the workgroup claims to determine access
             $newArr = $this->normaliseWorkgroups($user['workgroups']);
-            $user['workgroups'] = $newArr['workgroups']; #cohort-admin
+            $user['workgroups'] = $newArr['workgroups']; // cohort-admin
 
             foreach ($claims as $claim) {
                 $resolution = $claimResolverService->hasWorkgroup(

@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CollectionHost;
+use App\Traits\Responses;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\CollectionHost;
-use App\Traits\Responses;
 
 class CollectionHostBasicAuth
 {
@@ -25,14 +25,14 @@ class CollectionHostBasicAuth
 
         $authorisationHeader = $request->header('Authorization');
 
-        if (!$authorisationHeader || !preg_match('/Basic\s+(.*)$/i', $authorisationHeader, $matches)) {
+        if (! $authorisationHeader || ! preg_match('/Basic\s+(.*)$/i', $authorisationHeader, $matches)) {
             return $this->UnauthorisedResponse();
         }
 
         $encodedCredentials = $matches[1];
         $decodedCredentials = base64_decode($encodedCredentials, true);
 
-        if (!$decodedCredentials || strpos($decodedCredentials, ':') === false) {
+        if (! $decodedCredentials || strpos($decodedCredentials, ':') === false) {
             return $this->UnauthorisedResponse();
         }
 
@@ -41,11 +41,11 @@ class CollectionHostBasicAuth
         // Look up client
         $client = CollectionHost::where('client_id', $clientId)->first();
 
-        if (!$client) {
+        if (! $client) {
             return $this->UnauthorisedResponse();
         }
 
-        if (!hash_equals($client->client_secret, $clientSecret)) {
+        if (! hash_equals($client->client_secret, $clientSecret)) {
             return $this->UnauthorisedResponse();
         }
 

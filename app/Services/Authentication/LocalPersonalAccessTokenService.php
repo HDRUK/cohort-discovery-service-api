@@ -2,12 +2,12 @@
 
 namespace App\Services\Authentication;
 
+use App\Models\User;
+use App\Support\ApplicationMode;
 use Laravel\Passport\PersonalAccessTokenFactory;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Token;
-use App\Models\User;
-use App\Support\ApplicationMode;
 
 class LocalPersonalAccessTokenService
 {

@@ -19,9 +19,12 @@ class ProcessDistributionFile implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public $timeout   = 900;
-    public $tries     = 3;
-    public $backoff   = [30, 120, 300];
+    public $timeout = 900;
+
+    public $tries = 3;
+
+    public $backoff = [30, 120, 300];
+
     public $batchSize = 500;
 
     public function __construct(public int $resultFileId)
@@ -39,12 +42,12 @@ class ProcessDistributionFile implements ShouldQueue
         $file->markProcessing();
 
         $stream = Storage::disk('local')->readStream($file->path);
-        if (!$stream) {
+        if (! $stream) {
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
         $header = null;
-        $batch  = [];
+        $batch = [];
         $rowsProcessed = 0;
         $now = now();
 
@@ -57,11 +60,12 @@ class ProcessDistributionFile implements ShouldQueue
 
                 if ($header === null) {
                     $header = preg_split("/\t/", $line);
-                    if (!$header) {
+                    if (! $header) {
                         continue;
                     }
 
                     $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
+
                     continue;
                 }
 
@@ -71,48 +75,47 @@ class ProcessDistributionFile implements ShouldQueue
                 }
 
                 $row = array_combine($header, $cols);
-                if (!isset($row['COUNT'])) {
+                if (! isset($row['COUNT'])) {
                     continue;
                 }
-
 
                 $conceptId = $row[$codeField] ?? $row['CODE'] ?? null;
                 $conceptId = $conceptId !== null && $conceptId !== '' ? (int) $conceptId : null;
 
                 $base = [
                     'collection_id' => $file->collection_id,
-                    'task_id'       => $file->task_id,
-                    'category'      => $row['CATEGORY'] ?? null,
-                    'name'          => $row[$codeField] ?? $row['CODE'] ?? null,
-                    'description'   => $row[$descField] ?? null,
-                    'concept_id'    => $conceptId,
-                    'count'         => (int) $row['COUNT'],
-                    'q1'            => $row['Q1'] ?? null,
-                    'q3'            => $row['Q3'] ?? null,
-                    'min'           => $row['MIN'] ?? null,
-                    'max'           => $row['MAX'] ?? null,
-                    'mean'          => $row['MEAN'] ?? null,
-                    'median'        => $row['MEDIAN'] ?? null,
-                    'created_at'    => $now,
-                    'updated_at'    => $now,
+                    'task_id' => $file->task_id,
+                    'category' => $row['CATEGORY'] ?? null,
+                    'name' => $row[$codeField] ?? $row['CODE'] ?? null,
+                    'description' => $row[$descField] ?? null,
+                    'concept_id' => $conceptId,
+                    'count' => (int) $row['COUNT'],
+                    'q1' => $row['Q1'] ?? null,
+                    'q3' => $row['Q3'] ?? null,
+                    'min' => $row['MIN'] ?? null,
+                    'max' => $row['MAX'] ?? null,
+                    'mean' => $row['MEAN'] ?? null,
+                    'median' => $row['MEDIAN'] ?? null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
 
                 $batch[] = $base;
 
-                if (!empty($row['ALTERNATIVES'])) {
+                if (! empty($row['ALTERNATIVES'])) {
                     $segments = explode('^', trim($row['ALTERNATIVES'], '^'));
                     foreach ($segments as $seg) {
                         if (strpos($seg, '|') !== false) {
                             [$name, $count] = explode('|', $seg, 2);
                             $batch[] = [
                                 'collection_id' => $file->collection_id,
-                                'task_id'       => $file->task_id,
-                                'category'      => $row['CATEGORY'] ?? null,
-                                'name'          => (string) $name,
-                                'description'   => (string) $name,
-                                'count'         => (int) $count,
-                                'created_at'    => $now,
-                                'updated_at'    => $now,
+                                'task_id' => $file->task_id,
+                                'category' => $row['CATEGORY'] ?? null,
+                                'name' => (string) $name,
+                                'description' => (string) $name,
+                                'count' => (int) $count,
+                                'created_at' => $now,
+                                'updated_at' => $now,
                             ];
                         }
                     }
@@ -125,7 +128,7 @@ class ProcessDistributionFile implements ShouldQueue
                 }
             }
 
-            if (!empty($batch)) {
+            if (! empty($batch)) {
                 $this->persistBatchWithCreate($batch);
                 $rowsProcessed += count($batch);
             }

@@ -17,9 +17,9 @@ class ConceptSetFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'        => $this->faker->sentence(3),
+            'name' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
-            'domain'      => $this->faker->randomElement([
+            'domain' => $this->faker->randomElement([
                 'Drug',
                 'Observation',
                 'Measurement',

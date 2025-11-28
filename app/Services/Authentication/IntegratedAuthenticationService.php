@@ -2,14 +2,14 @@
 
 namespace App\Services\Authentication;
 
+use App\Contracts\AuthenticationServiceInterface;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
-use App\Contracts\AuthenticationServiceInterface;
-use App\Models\User;
 
 class IntegratedAuthenticationService implements AuthenticationServiceInterface
 {
@@ -17,7 +17,7 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
     {
         $tokenString = $request->bearerToken() ?? session('token');
 
-        if (!$tokenString) {
+        if (! $tokenString) {
             return null;
         }
 
@@ -36,8 +36,8 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
         // validate with external API
         $response = Http::withHeaders([
             'Accept' => 'application/json',
-            'Authorization' => 'bearer ' . $tokenString,
-        ])->get(config('integrated.api_uri') . 'users/' . $userClaims['id']);
+            'Authorization' => 'bearer '.$tokenString,
+        ])->get(config('integrated.api_uri').'users/'.$userClaims['id']);
 
         if ($response->failed() || $response->json('message') !== 'success') {
             return null;
@@ -71,6 +71,7 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
             $config = Configuration::forSymmetricSigner($signer, $key);
 
             $token = $config->parser()->parse($tokenString);
+
             /** @phpstan-ignore-next-line */
             return $token->claims()->get('cohort_discovery_url');
         } catch (\Throwable $e) {

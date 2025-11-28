@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Model;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use App\Contracts\ValidatableModel;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
  * @OA\Schema(
@@ -16,6 +16,7 @@ use App\Contracts\ValidatableModel;
  *     title="CustodianNetwork",
  *     description="A network grouping of custodians",
  *     required={"name"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="North West Network"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
@@ -24,12 +25,14 @@ use App\Contracts\ValidatableModel;
  */
 class CustodianNetwork extends Model implements ValidatableModel
 {
+    use Filter;
+
     /** @use HasFactory<\Database\Factories\CustodianNetworkFactory> */
     use HasFactory;
     use Search;
-    use Filter;
 
     public $table = 'custodian_networks';
+
     public $timestamps = true;
 
     protected $fillable = [

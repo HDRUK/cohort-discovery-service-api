@@ -2,18 +2,18 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Custodian;
+use App\Models\User;
+use App\Support\ApplicationMode;
 use Closure;
-use Illuminate\Http\Request;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Token;
-use App\Support\ApplicationMode;
-use App\Models\Custodian;
-use App\Models\User;
 
 class DecodeJwt
 {
@@ -21,7 +21,7 @@ class DecodeJwt
     {
         $token = $request->bearerToken();
 
-        if (!ApplicationMode::isStandalone()) {
+        if (! ApplicationMode::isStandalone()) {
             if (! $token) {
                 return response()->json(['error' => 'No token'], 401);
             }
@@ -29,7 +29,7 @@ class DecodeJwt
             try {
                 $key = config('integrated.jwt_secret');
 
-                if (!$key) {
+                if (! $key) {
                     throw new \Exception('No jwt secret provided, cant decode safely');
                 }
                 $claims = JWT::decode($token, new Key($key, 'HS256'));
@@ -37,7 +37,7 @@ class DecodeJwt
                 $request->attributes->set('jwt_claims', (array) $claims);
 
                 $jwtUser = $claims->user ?? null;
-                if (!$jwtUser) {
+                if (! $jwtUser) {
                     return response()->json(['error' => 'Invalid token: Unknown user'], 401);
                 }
 
@@ -72,7 +72,7 @@ class DecodeJwt
                     }
                 }
             } catch (\Exception $e) {
-                return response()->json(['error' => 'Invalid token: ' . $e->getMessage()], 401);
+                return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
             }
         } else {
             // Standalone mode - token signed internally, rather than externally
@@ -86,7 +86,7 @@ class DecodeJwt
             $jwt = $jwtConfig->parser()->parse($token);
 
             $jwtUser = $jwt->claims()->get('user');
-            if (!$jwtUser) {
+            if (! $jwtUser) {
                 return response()->json(['error' => 'Invalid token: Unknown user'], 401);
             }
 
@@ -98,7 +98,6 @@ class DecodeJwt
                 return response()->json(['error' => 'cannot find token user in local database'], 401);
             }
         }
-
 
         return $next($request);
     }

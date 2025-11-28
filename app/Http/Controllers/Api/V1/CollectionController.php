@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
+use App\Enums\CollectionStatus;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
-use App\Traits\Responses;
-use App\Traits\HelperFunctions;
-use App\Http\Requests\ModelBackedRequest;
-use App\Services\QueryContext\QueryContextType;
-use App\Http\Controllers\Controller;
-use App\Enums\CollectionStatus;
 use App\Services\CollectionStateService;
+use App\Services\QueryContext\QueryContextType;
+use App\Traits\HelperFunctions;
+use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @OA\Tag(
@@ -26,8 +26,8 @@ use App\Services\CollectionStateService;
  */
 class CollectionController extends Controller
 {
-    use Responses;
     use HelperFunctions;
+    use Responses;
 
     protected CollectionStateService $stateService;
 
@@ -71,6 +71,7 @@ class CollectionController extends Controller
             ->filterViaRequest()
             ->applySorting()
             ->get();
+
         return $this->OKResponse($collections);
     }
 
@@ -104,6 +105,7 @@ class CollectionController extends Controller
                 'custodian',
                 'modelState.state',
             ])->findOrFail($validated['id']);
+
             return $this->OKResponse($collection);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
@@ -133,10 +135,12 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::create($validated);
+
             return $this->CreatedResponse($collection);
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@store - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CollectionController@store - failed: '.
+                json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -176,8 +180,9 @@ class CollectionController extends Controller
                 return $this->OKResponse($collection);
             }
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@update - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CollectionController@update - failed: '.
+                json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->NotFoundResponse();
         }
 
@@ -209,8 +214,9 @@ class CollectionController extends Controller
                 return $this->OKResponse([]);
             }
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@destroy - failed: ' .
+            \Log::error('CollectionController@destroy - failed: '.
                 $e->getMessage());
+
             return $this->NotFoundResponse();
         }
 
@@ -242,7 +248,7 @@ class CollectionController extends Controller
             ->with('size')
             ->first();
 
-        if (!$collection) {
+        if (! $collection) {
             return $this->NotFoundResponse();
         }
 
@@ -324,15 +330,15 @@ class CollectionController extends Controller
 
         try {
             $validated = $request->validate([
-                'name'    => ['required', 'string', 'max:255'],
-                'description'    => ['required', 'string', 'max:65535'],
-                'url'     => ['nullable', 'url', 'max:2048'],
-                'type'    => ['required', Rule::enum(QueryContextType::class)],
+                'name' => ['required', 'string', 'max:255'],
+                'description' => ['required', 'string', 'max:65535'],
+                'url' => ['nullable', 'url', 'max:2048'],
+                'type' => ['required', Rule::enum(QueryContextType::class)],
                 'host_id' => [
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
-                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id))
+                        ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
             ]);
         } catch (ValidationException $e) {
@@ -341,11 +347,11 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::create([
-                'name'         => $validated['name'],
-                'description'  => $validated['description'],
-                'url'          => $validated['url'] ?? null,
-                'pid'          => Str::uuid(),
-                'type'         => $validated['type'],
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'url' => $validated['url'] ?? null,
+                'pid' => Str::uuid(),
+                'type' => $validated['type'],
                 'custodian_id' => $custodian->id,
             ]);
 
@@ -388,10 +394,11 @@ class CollectionController extends Controller
         try {
             $collection = Collection::findOrFail($validated['id']);
             if ($collection->isInState($validated['state'])) {
-                return $this->ErrorResponse('collection is already in state: \"' . $validated['state'] . '\"');
+                return $this->ErrorResponse('collection is already in state: \"'.$validated['state'].'\"');
             }
 
             $this->stateService->transition($collection, $validated['state'], $request->user());
+
             return $this->OKResponse($collection);
 
         } catch (\Throwable $e) {
@@ -432,7 +439,7 @@ class CollectionController extends Controller
     protected function getAuthorisedCustodian(string $pid): array
     {
         $custodian = Custodian::where('pid', $pid)->first();
-        if (!$custodian) {
+        if (! $custodian) {
             return [null, $this->NotFoundResponse()];
         }
         if (Gate::denies('access', $custodian)) {

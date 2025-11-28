@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use App\Jobs\ProcessDistributionFile;
 use App\Models\Collection;
-use App\Models\ResultFile;
-use App\Enums\TaskType;
 use App\Models\Result;
+use App\Models\ResultFile;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextManager;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @OA\Tag(
@@ -27,8 +27,8 @@ use App\Traits\Responses;
  */
 class TaskController extends Controller
 {
-    use Responses;
     use HelperFunctions;
+    use Responses;
 
     /**
      * @OA\Get(
@@ -47,6 +47,7 @@ class TaskController extends Controller
         $tasks = Task::whereHas('submittedQuery', function ($query) {
             $query->where('user_id', Auth::id());
         });
+
         return $this->OKResponse($tasks);
     }
 
@@ -77,12 +78,12 @@ class TaskController extends Controller
             ->where('pid', $task_pid)
             ->first();
 
-        if (!$task) {
+        if (! $task) {
             return $this->NotFoundResponse();
         }
 
         if (Gate::denies('view', $task)) {
-            return  $this->ForbiddenResponse();
+            return $this->ForbiddenResponse();
         }
 
         return $this->OKResponse($task);
@@ -132,7 +133,7 @@ class TaskController extends Controller
 
         $collection = Collection::where('pid', $parsedId)->first();
 
-        if (!$collection) {
+        if (! $collection) {
             return $this->NotFoundResponse();
         }
 
@@ -143,18 +144,19 @@ class TaskController extends Controller
         $task = Task::where([
             'task_type' => $taskType,
             'completed_at' => null,
-            'collection_id' => $collection->id
+            'collection_id' => $collection->id,
         ])
             ->where('attempts', '<', $nAttempts)
             ->first();
 
-        if (!$task) {
+        if (! $task) {
             error_log('returning no content');
+
             return $this->NoContentResponse();
         }
 
         $nextAttempts = $task->attempts + 1;
-        $task->attempts     = $nextAttempts;
+        $task->attempts = $nextAttempts;
         $task->attempted_at = now();
 
         if ($nextAttempts === $nAttempts) {
@@ -171,7 +173,7 @@ class TaskController extends Controller
             $code = $rawQuery['code'] ?? 'DEMOGRAPHICS';
             $allowedCodes = ['DEMOGRAPHICS', 'GENERIC', 'ICD-MAIN'];
 
-            if (!in_array($code, $allowedCodes)) {
+            if (! in_array($code, $allowedCodes)) {
                 return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
             }
 
@@ -196,7 +198,7 @@ class TaskController extends Controller
             return $this->ErrorResponse($e->getMessage());
         }
 
-        if (!$translatedQuery) {
+        if (! $translatedQuery) {
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
@@ -278,7 +280,7 @@ class TaskController extends Controller
             $message = $request->get('message');
             $queryResult = $request->get('queryResult');
 
-            if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
+            if (! is_array($queryResult) || ! isset($queryResult['count']) || ! is_numeric($queryResult['count'])) {
                 return $this->BadRequestResponseExtended('Invalid or missing count in queryResult.');
             }
 
@@ -288,7 +290,7 @@ class TaskController extends Controller
 
             $task = Task::where(['pid' => $task_pid])->first();
 
-            if (!$task) {
+            if (! $task) {
                 return $this->NotFoundResponse();
             }
 
@@ -297,7 +299,7 @@ class TaskController extends Controller
 
             foreach ($metadata['files'] ?? [] as $file) {
 
-                if (!isset($file['file_data'])) {
+                if (! isset($file['file_data'])) {
                     continue;
                 }
 
@@ -308,7 +310,7 @@ class TaskController extends Controller
 
                 $decodedContent = base64_decode($fileDataBase64, true);
 
-                if (!$decodedContent) {
+                if (! $decodedContent) {
                     continue;
                 }
 
@@ -316,18 +318,18 @@ class TaskController extends Controller
 
                 $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
 
-                //note: need to change this storage to a bucket??
+                // note: need to change this storage to a bucket??
                 Storage::disk('local')->put($path, $decodedContent);
 
                 $resultFile = ResultFile::create([
-                    'pid'             => $hash,
-                    'task_id'         => $task->id,
-                    'collection_id'   => $task->collection->id,
-                    'path'            => $path,
-                    'file_name'       => $fileName,
-                    'file_type'       => $fileType,
+                    'pid' => $hash,
+                    'task_id' => $task->id,
+                    'collection_id' => $task->collection->id,
+                    'path' => $path,
+                    'file_name' => $fileName,
+                    'file_type' => $fileType,
                     'file_description' => $fileDescription,
-                    'status'          => ResultFile::STATUS_QUEUED,
+                    'status' => ResultFile::STATUS_QUEUED,
                 ]);
 
                 ProcessDistributionFile::dispatch($resultFile->id);
@@ -340,19 +342,19 @@ class TaskController extends Controller
                 ];
             }
 
-            $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
+            $resultMetadata = ! empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
 
             Result::create([
                 'task_id' => $task->id,
                 'count' => (int) $count,
                 'metadata' => $resultMetadata,
                 'status' => $status,
-                'message' => $message
+                'message' => $message,
             ]);
 
             $task->update([
                 'completed_at' => now(),
-                'failed_at' => null
+                'failed_at' => null,
             ]);
             $task->save();
 

@@ -5,16 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\Distribution;
-use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-use Illuminate\Http\Request;
+use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CodeController extends Controller
 {
-    use Responses;
     use HelperFunctions;
+    use Responses;
 
     public function getAllCodes(Request $request): JsonResponse
     {
@@ -42,7 +42,7 @@ class CodeController extends Controller
 
         $codes = Distribution::query()
             ->whereRaw("name REGEXP '^[0-9]+$'")
-            ->where("concept_id", ">", 0)
+            ->where('concept_id', '>', 0)
             ->whereNotNull('concept_id')
             ->when($collectionPid, function ($query, $collectionPid) {
                 $query->where('collection_id', $collectionPid);
@@ -52,8 +52,8 @@ class CodeController extends Controller
                 'description',
                 'category',
                 DB::raw('COUNT(DISTINCT collection_id) AS collections_count'),
-                DB::raw('ROUND(COUNT(DISTINCT collection_id) * 100.0 / ' . (int) $totalCollections . ', 2) AS collections_pct'),
-                DB::raw('SUM(`count`) AS total_count')
+                DB::raw('ROUND(COUNT(DISTINCT collection_id) * 100.0 / '.(int) $totalCollections.', 2) AS collections_pct'),
+                DB::raw('SUM(`count`) AS total_count'),
             ])
             ->groupBy('name', 'description', 'category')
             ->orderByDesc('collections_count')
@@ -69,14 +69,14 @@ class CodeController extends Controller
 
             $codes = Distribution::query()
                 ->whereRaw("name REGEXP '^[0-9]+$'")
-                ->where("concept_id", ">", 0)
+                ->where('concept_id', '>', 0)
                 ->whereNotNull('concept_id')
                 ->where('collection_id', Collection::where(['pid' => $collectionPid])->first()->id)
                 ->select([
                     'name',
                     'description',
                     'category',
-                    'count'
+                    'count',
                 ])
                 ->orderByDesc('count')
                 ->paginate($perPage);
@@ -86,7 +86,6 @@ class CodeController extends Controller
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
 
     public function getCodes(Request $request, string $domain): JsonResponse
     {
@@ -107,6 +106,7 @@ class CodeController extends Controller
             return $this->OKResponse($codes);
         } catch (\Exception $e) {
             error_log($e->getMessage());
+
             return $this->ErrorResponse($e->getMessage());
         }
     }

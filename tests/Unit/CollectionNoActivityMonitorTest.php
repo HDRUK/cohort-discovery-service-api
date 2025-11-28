@@ -1,18 +1,18 @@
 <?php
 
-use Carbon\Carbon;
-use Carbon\CarbonImmutable;
-use Tests\TestCase;
-use Illuminate\Support\Facades\DB;
-use App\Models\Task;
-use App\Models\Query;
-use App\Models\Collection;
-use App\Models\CollectionConfig;
-use App\Models\CollectionActivityLog;
-use App\Enums\TaskType;
+use App\Console\Commands\CollectionNoActivityMonitor;
 use App\Enums\CollectionStatus;
 use App\Enums\FrequencyMode;
-use App\Console\Commands\CollectionNoActivityMonitor;
+use App\Enums\TaskType;
+use App\Models\Collection;
+use App\Models\CollectionActivityLog;
+use App\Models\CollectionConfig;
+use App\Models\Query;
+use App\Models\Task;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class CollectionNoActivityMonitorTest extends TestCase
 {

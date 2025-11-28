@@ -2,15 +2,15 @@
 
 namespace Tests;
 
-use App\Support\ApplicationMode;
 use App\Models\User;
+use App\Support\ApplicationMode;
 use Firebase\JWT\JWT;
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
-use Tests\Traits\RefreshDatabaseLite;
 use Illuminate\Support\Facades\Http;
+use Tests\Traits\RefreshDatabaseLite;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -32,9 +32,9 @@ abstract class TestCase extends BaseTestCase
 
         Http::fake([
             'http://localhost:5050/api/*' => Http::response([
-                "responseSummary" => [
-                    "exists" => true,
-                    "numTotalResults" => 1000
+                'responseSummary' => [
+                    'exists' => true,
+                    'numTotalResults' => 1000,
                 ],
             ], 200),
         ]);
@@ -63,23 +63,22 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * @param  \App\Models\User $user
-     * @param  array  $overrides
+     * @param  \App\Models\User  $user
      */
     protected function makeJwtToken($user = null, array $overrides = []): string
     {
         $email = match (true) {
             $user instanceof User => $user->email,
-            is_string($user)      => $user,
-            is_array($user)       => Arr::get($user, 'email'),
-            default               => null,
+            is_string($user) => $user,
+            is_array($user) => Arr::get($user, 'email'),
+            default => null,
         };
 
         $now = time();
         $payload = array_replace_recursive([
-            'iss'  => 'test-suite',
-            'iat'  => $now,
-            'exp'  => $now + 3600,
+            'iss' => 'test-suite',
+            'iat' => $now,
+            'exp' => $now + 3600,
             'user' => [
                 'email' => $email,
                 'cohort_admin_teams' => [],
@@ -98,11 +97,12 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * @param  \App\Models\User $user
+     * @param  \App\Models\User  $user
      */
     protected function actingAsJwt($user, array $overrides = []): static
     {
         $token = $this->makeJwtToken($user, $overrides);
+
         return $this->withJwt($token);
     }
 }

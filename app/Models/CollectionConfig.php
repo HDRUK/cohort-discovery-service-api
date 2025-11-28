@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -14,6 +14,7 @@ use App\Contracts\ValidatableModel;
  *     title="CollectionConfig",
  *     description="Configuration settings for scheduled distribution runs for a Collection",
  *     required={"collection_id"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="collection_id", type="integer", example=10),
  *     @OA\Property(property="run_time_hour", type="integer", nullable=true, example=2, description="Hour of day for distribution run (0-23)"),
@@ -31,6 +32,7 @@ class CollectionConfig extends Model implements ValidatableModel
     use HasFactory;
 
     public $table = 'collection_config';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -63,32 +65,32 @@ class CollectionConfig extends Model implements ValidatableModel
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
-                'id'                   => 'required|exists:collection_config,id',
+                'id' => 'required|exists:collection_config,id',
             ],
             'store' => [
-                'collection_id'        => 'required|exists:collections,id',
-                'run_time_hour'        => 'required|integer|min:0|max:12',
-                'run_time_minute'      => 'required|integer|min:0|max:59',
-                'frequency_mode'       => 'required|integer',
-                'run_time_frequency'   => 'required|integer',
-                'enabled'              => 'required|integer',
-                'type'                 => 'required|string',
+                'collection_id' => 'required|exists:collections,id',
+                'run_time_hour' => 'required|integer|min:0|max:12',
+                'run_time_minute' => 'required|integer|min:0|max:59',
+                'frequency_mode' => 'required|integer',
+                'run_time_frequency' => 'required|integer',
+                'enabled' => 'required|integer',
+                'type' => 'required|string',
             ],
             'update' => [
-                'id'                   => 'required|exists:collection_config,id',
-                'collection_id'        => 'sometimes|exists:collections,id',
-                'run_time_hour'        => 'sometimes|integer|min:0|max:12',
-                'run_time_minute'      => 'sometimes|integer|min:0|max:59',
-                'frequency_mode'       => 'sometimes|integer',
-                'run_time_frequency'   => 'sometimes|integer',
-                'enabled'              => 'sometimes|integer',
-                'type'                 => 'sometimes|string',
+                'id' => 'required|exists:collection_config,id',
+                'collection_id' => 'sometimes|exists:collections,id',
+                'run_time_hour' => 'sometimes|integer|min:0|max:12',
+                'run_time_minute' => 'sometimes|integer|min:0|max:59',
+                'frequency_mode' => 'sometimes|integer',
+                'run_time_frequency' => 'sometimes|integer',
+                'enabled' => 'sometimes|integer',
+                'type' => 'sometimes|string',
             ],
             'delete' => [
-                'id'                   => 'required|exists:collection_config,id',
+                'id' => 'required|exists:collection_config,id',
             ],
             default => [],
         };

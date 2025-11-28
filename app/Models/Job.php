@@ -39,7 +39,7 @@ class Job extends Model
         'attempts',
         'reserved_at',
         'available_at',
-        'created_at'
+        'created_at',
     ];
 
     public function collection(): BelongsTo

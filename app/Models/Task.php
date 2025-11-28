@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\TaskType;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
-use App\Enums\TaskType;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
 
 /**
  * @OA\Schema(
@@ -37,8 +37,9 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
  */
 class Task extends Model
 {
-    use Search;
     use HasFactory;
+    use Search;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -50,7 +51,7 @@ class Task extends Model
         'attempted_at',
         'failed_at',
         'attempts',
-        'task_type'
+        'task_type',
     ];
 
     protected $casts = [

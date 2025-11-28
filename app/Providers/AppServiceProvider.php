@@ -2,19 +2,19 @@
 
 namespace App\Providers;
 
+use App\Models\Collection;
+use App\Models\Task;
+use App\Models\User;
+use App\Observers\CollectionObserver;
+use App\Observers\TaskObserver;
 use Carbon\CarbonInterval;
-use Illuminate\Support\ServiceProvider;
+use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
+use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
-use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
-use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-use App\Models\User;
-use App\Models\Task;
-use App\Models\Collection;
-use App\Observers\CollectionObserver;
-use App\Observers\TaskObserver;
 
 class AppServiceProvider extends ServiceProvider
 {

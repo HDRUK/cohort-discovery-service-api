@@ -39,13 +39,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $file_name
  * @property string|null $file_type
  * @property string|null $file_description
- * @property string $status        queued|processing|done|failed
+ * @property string $status queued|processing|done|failed
  * @property int $rows_processed
  * @property string|null $error
  * @property string|null $hash
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- *
  * @property-read \App\Models\Task $task
  * @property-read \App\Models\Collection $collection
  */
@@ -70,10 +69,13 @@ class ResultFile extends Model
         'rows_processed' => 'integer',
     ];
 
-    public const STATUS_QUEUED     = 'queued';
+    public const STATUS_QUEUED = 'queued';
+
     public const STATUS_PROCESSING = 'processing';
-    public const STATUS_DONE       = 'done';
-    public const STATUS_FAILED     = 'failed';
+
+    public const STATUS_DONE = 'done';
+
+    public const STATUS_FAILED = 'failed';
 
     public function task()
     {
@@ -98,7 +100,7 @@ class ResultFile extends Model
     public function markDone(?int $rowsProcessed = null): void
     {
         $attrs = ['status' => self::STATUS_DONE];
-        if (!is_null($rowsProcessed)) {
+        if (! is_null($rowsProcessed)) {
             $attrs['rows_processed'] = $rowsProcessed;
         }
         $this->update($attrs);

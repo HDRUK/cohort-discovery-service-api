@@ -21,8 +21,8 @@ use Illuminate\Database\Eloquent\Model;
 class CollectionActivityLog extends Model
 {
     public $table = 'collection_activity_logs';
-    public $timestamps = true;
 
+    public $timestamps = true;
 
     protected $fillable = [
         'created_at',

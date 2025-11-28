@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Distribution;
 use App\Models\Collection;
+use App\Models\Distribution;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
-use App\Traits\Responses;
 use App\Traits\HelperFunctions;
-use Illuminate\Http\Request;
+use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * @OA\Tag(
@@ -20,18 +20,18 @@ use Illuminate\Http\JsonResponse;
  */
 class OmopController extends Controller
 {
-    use Responses;
     use HelperFunctions;
+    use Responses;
 
     public function getConcept($concept_id): JsonResponse
     {
         $concept = Concept::find($concept_id);
-        if (!$concept) {
+        if (! $concept) {
             return $this->NotFoundResponse();
         }
         $concept->load([
             'distributions:id,count,concept_id,collection_id',
-            'distributions.collection:id,name'
+            'distributions.collection:id,name',
         ]);
 
         return $this->OKResponse($concept);
@@ -39,14 +39,13 @@ class OmopController extends Controller
 
     public function getPeersAtLevel($concept_id): JsonResponse
     {
-        $nup           = max(1, (int) request()->input('max_up', 1));
-        $ndown           = max(1, (int) request()->input('max_down', 1));
+        $nup = max(1, (int) request()->input('max_up', 1));
+        $ndown = max(1, (int) request()->input('max_down', 1));
         $standardOnly = request()->boolean('standard_only', false);
-        $sameDomain   = request()->boolean('same_domain', false);
-        $sameVocab    = request()->boolean('same_vocabulary', false);
-        $slim    = request()->boolean('slim', true);
-        $fullOmop    = request()->boolean('fullOmop', false);
-
+        $sameDomain = request()->boolean('same_domain', false);
+        $sameVocab = request()->boolean('same_vocabulary', false);
+        $slim = request()->boolean('slim', true);
+        $fullOmop = request()->boolean('fullOmop', false);
 
         $start = null;
         if ($sameDomain || $sameVocab) {
@@ -72,7 +71,7 @@ class OmopController extends Controller
                 $q->whereHas('descendant', fn ($c) => $c->where('vocabulary_id', $start->vocabulary_id));
             })
             ->with(['descendant' => function ($q) use ($slim, $fullOmop) {
-                if (!$fullOmop) {
+                if (! $fullOmop) {
                     $q->inDistribution();
                 }
                 if ($slim) {
@@ -89,7 +88,6 @@ class OmopController extends Controller
                 return $item->concept_id == $concept_id ? 0 : 1;
             })
             ->values();
-
 
         return response()->json($desc);
     }
@@ -126,6 +124,7 @@ class OmopController extends Controller
             return $this->OKResponse($codes);
         } catch (\Exception $e) {
             error_log($e->getMessage());
+
             return $this->ErrorResponse($e->getMessage());
         }
     }

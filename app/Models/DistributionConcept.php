@@ -39,6 +39,7 @@ class DistributionConcept extends Model
     protected $table = 'distribution_concepts';
 
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [

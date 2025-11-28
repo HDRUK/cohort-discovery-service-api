@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 class CustodianNetworkHasCustodian extends Model
 {
     public $table = 'custodian_network_has_custodians';
+
     public $timestamps = true;
 
     protected $fillable = [

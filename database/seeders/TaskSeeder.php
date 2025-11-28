@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
-use Illuminate\Support\Str;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class TaskSeeder extends Seeder
 {

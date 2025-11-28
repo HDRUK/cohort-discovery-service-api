@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 
 class ImportOmopVocabs extends Command
 {
@@ -27,7 +27,7 @@ class ImportOmopVocabs extends Command
      *
      * @var string
      */
-    protected $description = <<<DESC
+    protected $description = <<<'DESC'
 Import OMOP Athena vocabulary TSVs into the OMOP database.
 
 Notes:
@@ -74,12 +74,13 @@ DESC;
             $this->createSchema();
         }
 
-        if (!is_dir($path)) {
-            $this->error('Path not found: ' . $path);
+        if (! is_dir($path)) {
+            $this->error('Path not found: '.$path);
+
             return;
         }
 
-        $this->info('Scanning folder: ' . $path);
+        $this->info('Scanning folder: '.$path);
         $files = collect(File::files($path))
             ->filter(fn ($f) => str_ends_with(strtolower($f->getFilename()), '.csv'))
             ->keyBy(fn ($f) => strtoupper(str_replace('.csv', '', $f->getFilename())));
@@ -87,15 +88,16 @@ DESC;
         $conn = DB::connection('omop');
 
         foreach ($this->vocabFiles as $tableName) {
-            if (!$files->has($tableName)) {
-                $this->warn('Skipping ' . $tableName . ': file not found in directory');
+            if (! $files->has($tableName)) {
+                $this->warn('Skipping '.$tableName.': file not found in directory');
+
                 continue;
             }
 
             $file = $files->get($tableName)->getPathname();
             $table = strtolower($tableName);
 
-            $this->info('Importing ' . $tableName . ' from ' . $file . ' to ' . 'omop.' . $table);
+            $this->info('Importing '.$tableName.' from '.$file.' to '.'omop.'.$table);
             if ($shouldTruncate) {
                 $conn->table($table)->truncate();
                 $this->line('   - truncated existing data');
@@ -150,7 +152,7 @@ SQL;
         $elapsed = round(microtime(true) - $start, 2);
 
         $count = $conn->table($table)->count();
-        $this->info('   - Imported ' . number_format($count, 0, '', ',') . ' records in ' . $elapsed . ' seconds (bulk)');
+        $this->info('   - Imported '.number_format($count, 0, '', ',').' records in '.$elapsed.' seconds (bulk)');
     }
 
     protected function streamLoad($conn, string $table, string $file): void
@@ -162,8 +164,9 @@ SQL;
         gc_enable();
 
         $handle = fopen($file, 'r');
-        if (!$handle) {
-            $this->error('Unable to open file: ' . $file);
+        if (! $handle) {
+            $this->error('Unable to open file: '.$file);
+
             return;
         }
 
@@ -183,7 +186,7 @@ SQL;
             if (count($batch) >= $batchSize) {
                 $conn->table($table)->insert($batch);
                 $inserted += count($batch);
-                $this->output->write("\r" . '   - Imported ' . number_format($inserted, 0, '', ',') . ' records so far...');
+                $this->output->write("\r".'   - Imported '.number_format($inserted, 0, '', ',').' records so far...');
                 unset($batch);
                 $batch = [];
                 gc_collect_cycles();
@@ -193,20 +196,20 @@ SQL;
         if ($batch) {
             $conn->table($table)->insert($batch);
             $inserted += count($batch);
-            $this->output->write("\r" . '   - Imported ' . number_format($inserted, 0, '', ',') . ' records so far...');
+            $this->output->write("\r".'   - Imported '.number_format($inserted, 0, '', ',').' records so far...');
         }
 
         fclose($handle);
-        $this->output->write("\r" . '   - Imported ' . number_format($inserted, 0, '', ',') . ' records');
+        $this->output->write("\r".'   - Imported '.number_format($inserted, 0, '', ',').' records');
     }
 
     protected function cleanFile(string $file): string
     {
         $physicalTmp = tempnam(sys_get_temp_dir(), 'omop_');
         $out = fopen($physicalTmp, 'w');
-        $in  = fopen($file, 'r');
+        $in = fopen($file, 'r');
 
-        if (!$in || !$out) {
+        if (! $in || ! $out) {
             throw new \RuntimeException('Cannot open files');
         }
 
@@ -243,27 +246,26 @@ SQL;
                     : array_slice($fields, 0, $expectedCols);
             }
 
-            fwrite($out, implode("\t", $fields) . PHP_EOL);
-            $this->output->write("\r" . '    - Cleaned ' . number_format($rowNum, 0, '', ',') . ' lines');
+            fwrite($out, implode("\t", $fields).PHP_EOL);
+            $this->output->write("\r".'    - Cleaned '.number_format($rowNum, 0, '', ',').' lines');
             $rowNum++;
         }
 
         fclose($in);
         fclose($out);
 
-        $this->output->write("\r" . '    - Finished cleaning ' . number_format($rowNum, 0, '', ',') . " lines > {$physicalTmp}");
+        $this->output->write("\r".'    - Finished cleaning '.number_format($rowNum, 0, '', ',')." lines > {$physicalTmp}");
+
         return $physicalTmp;
     }
 
-
-
     protected function createSchema()
     {
-        $this->info("Creating OMOP tables...");
+        $this->info('Creating OMOP tables...');
 
         $schema = Schema::connection('omop');
 
-        if (!$schema->hasTable('vocabulary')) {
+        if (! $schema->hasTable('vocabulary')) {
             $this->info("Creating 'vocabulary' table...");
             $schema->create('vocabulary', function (Blueprint $table) {
                 $table->string('vocabulary_id', 128);
@@ -406,6 +408,6 @@ SQL;
             });
         }
 
-        $this->info("OMOP vocabulary tables created successfully.");
+        $this->info('OMOP vocabulary tables created successfully.');
     }
 }

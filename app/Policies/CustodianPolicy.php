@@ -18,12 +18,13 @@ class CustodianPolicy
         $claims = $this->toArray(request()->attributes->get('jwt_claims', []));
         $userObject = $this->toArray($claims['user'] ?? []);
 
-        if (!$userObject || ($userObject['email'] ?? null) !== $user->email) {
+        if (! $userObject || ($userObject['email'] ?? null) !== $user->email) {
             return false;
         }
 
         $cohortAdminTeamIds = Arr::pluck($userObject['cohort_admin_teams'] ?? [], 'id');
-        //note: this is currently quite specific to the gateway
+
+        // note: this is currently quite specific to the gateway
         // - we map a custodian to a gateway 'team'
         // - we check if this user is a team cohortAdmin on this gateway team
         // - the user claims tell us what teams they are cohortAdmins on
@@ -40,7 +41,7 @@ class CustodianPolicy
         if (is_object($value)) {
             return json_decode(json_encode($value), true);
         }
+
         return (array) $value;
     }
-
 }

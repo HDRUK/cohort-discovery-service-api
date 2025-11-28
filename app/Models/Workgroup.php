@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Contracts\ValidatableModel;
+use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Hdruk\LaravelSearchAndFilter\Traits\Search;
-use App\Contracts\ValidatableModel;
 
 /**
  * @OA\Schema(
@@ -13,6 +13,7 @@ use App\Contracts\ValidatableModel;
  *     type="object",
  *     title="Workgroup",
  *     required={"name"},
+ *
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Research Team"),
  *     @OA\Property(property="active", type="boolean", example=true),
@@ -42,7 +43,7 @@ class Workgroup extends Model implements ValidatableModel
 
     public function getValidationRules(string $context): array
     {
-        return match(strtolower($context)) {
+        return match (strtolower($context)) {
             'index' => [],
             'show' => [
                 'id' => 'required|integer|exists:workgroups,id',

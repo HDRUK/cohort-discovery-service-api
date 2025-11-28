@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 class UserHasWorkgroup extends Pivot
 {
     protected $table = 'user_has_workgroups';
+
     public $timestamps = false;
 
     protected $fillable = [

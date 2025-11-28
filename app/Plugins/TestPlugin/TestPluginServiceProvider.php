@@ -2,8 +2,8 @@
 
 namespace App\Plugins\TestPlugin;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
 
 class TestPluginServiceProvider extends ServiceProvider
 {
@@ -19,8 +19,7 @@ class TestPluginServiceProvider extends ServiceProvider
         // for this test, we’re just using middleware
         Route::middleware('inject.plugins')->get(
             'api/v1/test-plugin-endpoint',
-            fn () =>
-            response()->json(['success' => true], 200)
+            fn () => response()->json(['success' => true], 200)
         );
 
         \Log::info('TestPluginServiceProvider - booted');

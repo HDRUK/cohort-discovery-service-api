@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\CustodianNetwork;
 use App\Models\Custodian;
+use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
+use Illuminate\Database\Seeder;
 
 class CustodianNetworkSeeder extends Seeder
 {

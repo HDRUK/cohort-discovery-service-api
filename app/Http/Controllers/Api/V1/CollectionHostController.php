@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Str;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
-use App\Traits\Responses;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
+use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Str;
 
 /**
  * @OA\Tag(
@@ -26,9 +26,11 @@ class CollectionHostController extends Controller
      *     path="/api/v1/collection-hosts",
      *     summary="Get all collection hosts",
      *     tags={"CollectionHosts"},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="List of collection hosts",
+     *
      *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/CollectionHost"))
      *     )
      * )
@@ -57,17 +59,22 @@ class CollectionHostController extends Controller
      *     path="/api/v1/collection-hosts/{id}",
      *     summary="Get a collection host by ID",
      *     tags={"CollectionHosts"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Collection host found",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionHost")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Collection host not found"
@@ -80,6 +87,7 @@ class CollectionHostController extends Controller
 
         try {
             $collectionHost = CollectionHost::with('collections')->findOrFail($validated['id']);
+
             return $this->OKResponse($collectionHost);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
@@ -91,15 +99,20 @@ class CollectionHostController extends Controller
      *     path="/api/v1/collection-hosts",
      *     summary="Create a new collection host",
      *     tags={"CollectionHosts"},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionHost")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Collection host created",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionHost")
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error"
@@ -117,15 +130,16 @@ class CollectionHostController extends Controller
             $collectionHost = CollectionHost::create([
                 'name' => $validated['name'],
                 'query_context_type' => $validated['query_context_type'],
-                'client_id' => hash('sha256', config('system.salt_1') . $rawClientId . config('system.salt_2')),
-                'client_secret' => hash('sha256', config('system.salt_1') . $rawClientSecret . config('system.salt_2')),
+                'client_id' => hash('sha256', config('system.salt_1').$rawClientId.config('system.salt_2')),
+                'client_secret' => hash('sha256', config('system.salt_1').$rawClientSecret.config('system.salt_2')),
                 'custodian_id' => $validated['custodian_id'],
             ]);
 
             return $this->CreatedResponse($collectionHost);
         } catch (\Throwable $e) {
-            \Log::error('CollectionHostController@store - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+            \Log::error('CollectionHostController@store - failed: '.
+                json_encode($validated).' (exception: '.$e->getTraceAsString().')');
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -135,21 +149,28 @@ class CollectionHostController extends Controller
      *     path="/api/v1/collection-hosts/{id}",
      *     summary="Update a collection host",
      *     tags={"CollectionHosts"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionHost")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Collection host updated",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionHost")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Collection host not found"
@@ -170,8 +191,8 @@ class CollectionHostController extends Controller
 
             return $this->OKResponse($collectionHost);
         } catch (\Throwable $e) {
-            \Log::error('CollectionHostController@update - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+            \Log::error('CollectionHostController@update - failed: '.
+                json_encode($validated).' (exception: '.$e->getTraceAsString().')');
 
             return $this->NotFoundResponse();
         }
@@ -182,12 +203,15 @@ class CollectionHostController extends Controller
      *     path="/api/v1/collection-hosts/{id}",
      *     summary="Delete a collection host",
      *     tags={"CollectionHosts"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Collection host deleted"
@@ -208,8 +232,8 @@ class CollectionHostController extends Controller
 
             return $this->OKResponse([]);
         } catch (\Exception $e) {
-            \Log::error('CollectionHostController@destroy - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getTraceAsString() . ')');
+            \Log::error('CollectionHostController@destroy - failed: '.
+                json_encode($validated).' (exception: '.$e->getTraceAsString().')');
 
             return $this->NotFoundResponse();
         }

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use DB;
-use Tests\TestCase;
-use Illuminate\Support\Str;
-use App\Models\Custodian;
 use App\Models\CollectionHost;
+use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
+use DB;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class CustodianTest extends TestCase
 {
@@ -26,7 +26,7 @@ class CustodianTest extends TestCase
         CustodianNetworkHasCustodian::truncate();
 
         $this->payload = [
-            'pid' => (string)Str::uuid(),
+            'pid' => (string) Str::uuid(),
             'name' => fake()->company,
         ];
     }
@@ -57,7 +57,7 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_list_custodians_sorted(): void
     {
-        $response = $this->get($this->url . '?sort=name:desc');
+        $response = $this->get($this->url.'?sort=name:desc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -67,7 +67,7 @@ class CustodianTest extends TestCase
 
         $this->assertEquals($sortedArray, $content);
 
-        $response = $this->get($this->url . '?sort=name:asc');
+        $response = $this->get($this->url.'?sort=name:asc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -84,7 +84,7 @@ class CustodianTest extends TestCase
 
         $cust = Custodian::all()->random(1)->first();
 
-        $response = $this->get($this->url . '?name[]=' . $cust->name);
+        $response = $this->get($this->url.'?name[]='.$cust->name);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -107,7 +107,7 @@ class CustodianTest extends TestCase
             'network_id' => $network->id,
         ]);
 
-        $response = $this->get($this->url . '/' . $custodian->id);
+        $response = $this->get($this->url.'/'.$custodian->id);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -137,7 +137,7 @@ class CustodianTest extends TestCase
         $updatePayload = [
             'name' => 'Updated Custodian Name',
         ];
-        $response = $this->put($this->url . '/' . $custodian->id, $updatePayload);
+        $response = $this->put($this->url.'/'.$custodian->id, $updatePayload);
         $response->assertStatus(200);
         $content = $response->json();
         $this->assertEquals($updatePayload['name'], $content['data']['name']);
@@ -149,7 +149,7 @@ class CustodianTest extends TestCase
 
         $custodian = Custodian::all()->random();
 
-        $response = $this->delete($this->url . '/' . $custodian->id);
+        $response = $this->delete($this->url.'/'.$custodian->id);
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('custodians', [
@@ -162,7 +162,7 @@ class CustodianTest extends TestCase
         $custodian = Custodian::factory()->create();
         $network = CustodianNetwork::factory()->create();
 
-        $response = $this->post($this->url . '/' . $custodian->id . '/networks/' . $network->id);
+        $response = $this->post($this->url.'/'.$custodian->id.'/networks/'.$network->id);
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('custodian_network_has_custodians', [
@@ -176,7 +176,7 @@ class CustodianTest extends TestCase
         $custodian = Custodian::factory()->create();
         $network = CustodianNetwork::factory()->create();
 
-        $response = $this->delete($this->url . '/' . $custodian->id . '/networks/' . $network->id);
+        $response = $this->delete($this->url.'/'.$custodian->id.'/networks/'.$network->id);
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('custodian_network_has_custodians', [

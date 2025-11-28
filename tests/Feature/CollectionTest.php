@@ -2,20 +2,22 @@
 
 namespace Tests\Feature;
 
-use DB;
-use Str;
-use Config;
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Custodian;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\Custodian;
+use App\Models\User;
 use App\Services\QueryContext\QueryContextType;
+use Config;
+use DB;
+use Str;
+use Tests\TestCase;
 
 class CollectionTest extends TestCase
 {
-    private const BASE_URL  = '/api/v1/collections';
-    private const CUSTODIAN_BASE_URL  = '/api/v1/custodians/%s/collections';
+    private const BASE_URL = '/api/v1/collections';
+
+    private const CUSTODIAN_BASE_URL = '/api/v1/custodians/%s/collections';
+
     private User $user;
 
     protected function setUp(): void
@@ -38,33 +40,33 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId
+            'gateway_team_id' => $fakeGatewayTeamId,
         ]);
 
         $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId
+            'gateway_team_id' => $anotherFakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
-            'custodian_id' => $custodian->id
+            'custodian_id' => $custodian->id,
         ]);
         Collection::factory(5)->create([
-            'custodian_id' => $anotherCustodian->id
+            'custodian_id' => $anotherCustodian->id,
         ]);
 
         $overrides = [
             'user' => [
                 'workgroups' => [[
                     'id' => 1,
-                    'name' => 'cohort-admin'
+                    'name' => 'cohort-admin',
                 ]],
                 'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name
-                    ]
-                ]
-            ]
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
         ];
 
         $response = $this->actingAsJwt(
@@ -75,7 +77,6 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
-
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -90,26 +91,26 @@ class CollectionTest extends TestCase
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId
+            'gateway_team_id' => $fakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
-            'custodian_id' => $custodian->id
+            'custodian_id' => $custodian->id,
         ]);
 
         $overrides = [
             'user' => [
                 'workgroups' => [[
                     'id' => 1,
-                    'name' => 'unknown-workgroup'
+                    'name' => 'unknown-workgroup',
                 ]],
                 'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name
-                    ]
-                ]
-            ]
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
         ];
 
         $response = $this->actingAsJwt(
@@ -125,21 +126,21 @@ class CollectionTest extends TestCase
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId
+            'gateway_team_id' => $fakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
-            'custodian_id' => $custodian->id
+            'custodian_id' => $custodian->id,
         ]);
 
         $overrides = [
             'user' => [
                 'workgroups' => [[
                     'id' => 1,
-                    'name' => 'cohort-admin'
+                    'name' => 'cohort-admin',
                 ]],
-                'cohort_admin_teams' => []
-            ]
+                'cohort_admin_teams' => [],
+            ],
         ];
 
         $response = $this->actingAsJwt(
@@ -173,7 +174,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
+            ->getJson(self::BASE_URL.'/status/'.Collection::STATUS_ACTIVE);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -186,7 +187,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_DRAFT);
+            ->getJson(self::BASE_URL.'/status/'.Collection::STATUS_DRAFT);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -207,7 +208,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '/' . $coll->id);
+            ->getJson(self::BASE_URL.'/'.$coll->id);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -230,12 +231,12 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-        ->putJson(
-            self::BASE_URL . '/' . $collection->id . '/transition_to',
-            [
-            'state' => Collection::STATUS_PENDING,
-            ]
-        );
+            ->putJson(
+                self::BASE_URL.'/'.$collection->id.'/transition_to',
+                [
+                    'state' => Collection::STATUS_PENDING,
+                ]
+            );
 
         $response->assertStatus(200);
         $content = $response->json('data');
@@ -254,12 +255,12 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-        ->putJson(
-            self::BASE_URL . '/' . $collection->id . '/transition_to',
-            [
-                'state' => Collection::STATUS_ACTIVE,
-            ]
-        );
+            ->putJson(
+                self::BASE_URL.'/'.$collection->id.'/transition_to',
+                [
+                    'state' => Collection::STATUS_ACTIVE,
+                ]
+            );
 
         $response->assertStatus(500);
         $this->assertEquals($response->json('data'), 'Permissions do not allow you to transition to state: active');
@@ -275,12 +276,12 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-        ->putJson(
-            self::BASE_URL . '/' . $collection->id . '/transition_to',
-            [
-                'state' => Collection::STATUS_ACTIVE,
-            ]
-        );
+            ->putJson(
+                self::BASE_URL.'/'.$collection->id.'/transition_to',
+                [
+                    'state' => Collection::STATUS_ACTIVE,
+                ]
+            );
 
         $response->assertStatus(200);
 
@@ -303,7 +304,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '?name[]=' . $coll->name);
+            ->getJson(self::BASE_URL.'?name[]='.$coll->name);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -323,7 +324,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '?sort=name:asc');
+            ->getJson(self::BASE_URL.'?sort=name:asc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -336,7 +337,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '?sort=name:desc');
+            ->getJson(self::BASE_URL.'?sort=name:desc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -371,7 +372,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->getJson(self::BASE_URL . '?custodian_name=Custodian%20For%20Testing');
+            ->getJson(self::BASE_URL.'?custodian_name=Custodian%20For%20Testing');
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -427,7 +428,7 @@ class CollectionTest extends TestCase
             $this->user,
             []
         )
-            ->get(self::BASE_URL . '?status__gt=0');
+            ->get(self::BASE_URL.'?status__gt=0');
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -451,33 +452,33 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId
+            'gateway_team_id' => $fakeGatewayTeamId,
         ]);
 
         $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId
+            'gateway_team_id' => $anotherFakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
-            'custodian_id' => $custodian->id
+            'custodian_id' => $custodian->id,
         ]);
         Collection::factory(5)->create([
-            'custodian_id' => $anotherCustodian->id
+            'custodian_id' => $anotherCustodian->id,
         ]);
 
         $overrides = [
             'user' => [
                 'workgroups' => [[
                     'id' => 1,
-                    'name' => 'cohort-admin'
+                    'name' => 'cohort-admin',
                 ]],
                 'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name
-                    ]
-                ]
-            ]
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
         ];
 
         $response = $this->actingAsJwt(
@@ -489,7 +490,6 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
-
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -545,7 +545,6 @@ class CollectionTest extends TestCase
 
     //     $response->assertStatus(200);
     //     $this->assertEquals(5, count($response->json('data.data')));
-
 
     //     $response = $this->actingAsJwt(
     //         $this->user,
