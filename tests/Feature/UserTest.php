@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Query;
+use App\Models\User;
+use App\Models\UserHasWorkgroup;
+use App\Models\Workgroup;
 use DB;
 use Tests\TestCase;
-use App\Models\User;
-use App\Models\Query;
-use App\Models\Workgroup;
-use App\Models\UserHasWorkgroup;
 
 class UserTest extends TestCase
 {
@@ -46,7 +46,7 @@ class UserTest extends TestCase
         $workgroup = Workgroup::all()->random();
         $user = User::factory()->create();
 
-        $this->url .= '/' . $user->id . '/workgroup/add';
+        $this->url .= '/'.$user->id.'/workgroup/add';
 
         $response = $this->post($this->url, [
             'workgroup_id' => $workgroup->id,
@@ -73,7 +73,7 @@ class UserTest extends TestCase
             'workgroup_id' => $workgroup->id,
         ]);
 
-        $this->url .= '/' . $user->id . '/workgroup/remove';
+        $this->url .= '/'.$user->id.'/workgroup/remove';
 
         $response = $this->post($this->url, [
             'workgroup_id' => $workgroup->id,
@@ -110,7 +110,7 @@ class UserTest extends TestCase
             $newUser = User::factory()->create($n);
         }
 
-        $response = $this->get($this->url . '?name[]=' . explode(' ', $names[0]['name'])[0]);
+        $response = $this->get($this->url.'?name[]='.explode(' ', $names[0]['name'])[0]);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -119,7 +119,7 @@ class UserTest extends TestCase
         $this->assertIsArray($content['data']);
         $this->assertEquals($content['data'][0]['name'], $names[0]['name']);
 
-        $response = $this->get($this->url . '?name[]=' . explode(' ', $names[2]['name'])[0]);
+        $response = $this->get($this->url.'?name[]='.explode(' ', $names[2]['name'])[0]);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -130,16 +130,16 @@ class UserTest extends TestCase
     public function test_the_application_can_search_users_or_and(): void
     {
         $names = [
-           [
-                'name'  => 'Alice Smith',
+            [
+                'name' => 'Alice Smith',
                 'email' => 'alice@example.com',
             ],
             [
-                'name'  => 'Bob Johnson',
+                'name' => 'Bob Johnson',
                 'email' => 'bob@example.com',
             ],
             [
-                'name'  => 'Charlie Brown',
+                'name' => 'Charlie Brown',
                 'email' => 'charlie@example.com',
             ],
         ];
@@ -148,7 +148,7 @@ class UserTest extends TestCase
             $newUser = User::factory()->create($n);
         }
 
-        $response = $this->get($this->url . '?name__or[]=Alice&name__or[]=Bob');
+        $response = $this->get($this->url.'?name__or[]=Alice&name__or[]=Bob');
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -163,7 +163,7 @@ class UserTest extends TestCase
             array_column($content['data'], 'name')
         );
 
-        $response = $this->get($this->url . '?email__and[]=example&email__and[]=alice');
+        $response = $this->get($this->url.'?email__and[]=example&email__and[]=alice');
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -198,7 +198,7 @@ class UserTest extends TestCase
             $newUser = User::factory()->create($n);
         }
 
-        $response = $this->get($this->url . '?sort=name:asc');
+        $response = $this->get($this->url.'?sort=name:asc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -208,7 +208,7 @@ class UserTest extends TestCase
 
         $this->assertEquals($sortedArray, $content);
 
-        $response = $this->get($this->url . '?sort=name:desc');
+        $response = $this->get($this->url.'?sort=name:desc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
