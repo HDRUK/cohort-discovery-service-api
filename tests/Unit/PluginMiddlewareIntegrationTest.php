@@ -16,7 +16,7 @@ class PluginMiddlewareIntegrationTest extends TestCase
         $this->disablePlugin(false);
     }
 
-    protected function tearDown(): void
+    public function tearDown(): void
     {
         $this->disablePlugin(true);
 
