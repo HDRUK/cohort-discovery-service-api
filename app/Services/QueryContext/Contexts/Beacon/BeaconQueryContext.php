@@ -3,8 +3,8 @@
 namespace App\Services\QueryContext\Contexts\Beacon;
 
 use App\Models\Omop\Concept;
-use App\Services\QueryContext\QueryContextType;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
+use App\Services\QueryContext\QueryContextType;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -19,20 +19,20 @@ class BeaconQueryContext implements QueryContextInterface
             $filters = [];
 
             foreach ($this->flattenRules($definition) as $rule) {
-                if (!isset($rule['field'], $rule['operator'], $rule['value'])) {
+                if (! isset($rule['field'], $rule['operator'], $rule['value'])) {
                     continue;
                 }
                 switch ($rule['field']) {
                     case 'age':
                         switch ($rule['operator']) {
                             case 'between':
-                                $filters[] =    [
+                                $filters[] = [
                                     'id' => 'ageOfOnset',
-                                    "scope" => 'individuals.disease.age.iso8601duration',
+                                    'scope' => 'individuals.disease.age.iso8601duration',
                                     'value' => $rule['value'][0],
                                     'operator' => '>',
                                 ];
-                                $filters[] =    [
+                                $filters[] = [
                                     'id' => 'ageOfOnset',
                                     'scope' => 'individuals.disease.age.iso8601duration',
                                     'value' => $rule['value'][1],
@@ -40,17 +40,17 @@ class BeaconQueryContext implements QueryContextInterface
                                 ];
                                 break;
                             default:
-                                $filters[] =    [
+                                $filters[] = [
                                     'id' => 'ageOfOnset',
                                     'scope' => 'individuals.disease.age.iso8601duration',
                                     'value' => $rule['value'],
-                                    'operator' => (string)$rule['operator']
+                                    'operator' => (string) $rule['operator'],
                                 ];
                                 break;
                         }
                         break;
                     default:
-                        $id = $this->mapConceptToCode((int)$rule['value']);
+                        $id = $this->mapConceptToCode((int) $rule['value']);
                         if ($id) { // revisit
                             $filters[] = [
                                 'id' => $id,
@@ -75,9 +75,9 @@ class BeaconQueryContext implements QueryContextInterface
             return $out;
         } catch (Throwable $e) {
             Log::error('Error in QueryTranslator::translate', [
-                'message'    => $e->getMessage(),
+                'message' => $e->getMessage(),
                 'definition' => $definition,
-                'trace'      => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;
@@ -99,14 +99,14 @@ class BeaconQueryContext implements QueryContextInterface
         return $leaves;
     }
 
-    private function mapConceptToCode(int $conceptId): string|null
+    private function mapConceptToCode(int $conceptId): ?string
     {
         $concept = Concept::where('concept_id', $conceptId)
             ->select(['concept_code', 'vocabulary_id'])
             ->first();
 
-        if (!$concept) {
-            //revisit - should warn here?
+        if (! $concept) {
+            // revisit - should warn here?
             return null;
         }
 

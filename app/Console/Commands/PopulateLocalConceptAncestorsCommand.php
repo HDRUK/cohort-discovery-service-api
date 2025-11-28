@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\PopulateLocalConceptAncestors;
+use Illuminate\Console\Command;
 
 class PopulateLocalConceptAncestorsCommand extends Command
 {

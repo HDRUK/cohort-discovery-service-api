@@ -2,17 +2,18 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
+use App\Models\Workgroup;
 use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
-use App\Models\Workgroup;
+use Tests\TestCase;
 
 class CBACTest extends TestCase
 {
     private ClaimMappingService $claimMappingService;
+
     private ClaimResolverService $claimResolverService;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -49,7 +50,7 @@ class CBACTest extends TestCase
             config('claims-access.default_system') => [
                 'cohort-admin',
                 'uk-research',
-            ]
+            ],
         ];
 
         $this->assertTrue($this->claimResolverService->hasWorkgroup(

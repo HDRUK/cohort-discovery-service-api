@@ -72,7 +72,10 @@
         "test": "@php artisan config:clear --ansi && php artisan test",
         "test:only": "@php artisan test",
         "lint": [
-            "vendor/bin/pint --preset psr12"
+            "vendor/bin/pint"
+        ],
+        "lint:dirty": [
+            "vendor/bin/pint --preset psr12 --dirty"
         ],
         "phpstan": [
             "vendor/bin/phpstan analyse --memory-limit=512M app"

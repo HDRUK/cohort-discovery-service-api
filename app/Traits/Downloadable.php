@@ -31,8 +31,8 @@ trait Downloadable
 
         return $data->map(
             fn ($item) => collect($fields)
-            ->mapWithKeys(fn ($field) => [$field => data_get($item, $field)])
-            ->toArray()
+                ->mapWithKeys(fn ($field) => [$field => data_get($item, $field)])
+                ->toArray()
         )->toArray();
     }
 
@@ -43,7 +43,7 @@ trait Downloadable
 
         $data = $query->with($relations)->get();
         $prepared = $modelClass::prepareDownloadData($data);
-        $filename = strtolower(class_basename($modelClass)) . '_export' . now()->format('Ymd_His');
+        $filename = strtolower(class_basename($modelClass)).'_export'.now()->format('Ymd_His');
 
         switch (strtolower($format)) {
             case 'json':
@@ -51,23 +51,25 @@ trait Downloadable
                     echo json_encode($prepared, JSON_PRETTY_PRINT);
                 }, "$filename.json");
 
-            case "xlsx":
+            case 'xlsx':
                 return Excel::download(new class ($prepared) implements \Maatwebsite\Excel\Concerns\FromArray {
                     public function __construct(private array $data)
                     {
                     }
+
                     public function array(): array
                     {
                         return $this->data;
                     }
                 }, "$filename.xlsx");
 
-            case "csv":
+            case 'csv':
             default:
                 return Excel::download(new class ($prepared) implements \Maatwebsite\Excel\Concerns\FromArray {
                     public function __construct(private array $data)
                     {
                     }
+
                     public function array(): array
                     {
                         return $this->data;

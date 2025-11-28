@@ -2,10 +2,10 @@
 
 namespace App\Services\Authentication;
 
+use App\Contracts\AuthenticationServiceInterface;
+use App\Models\User;
 use Hash;
 use Illuminate\Http\Request;
-use App\Models\User;
-use App\Contracts\AuthenticationServiceInterface;
 
 class StandaloneAuthenticationService implements AuthenticationServiceInterface
 {

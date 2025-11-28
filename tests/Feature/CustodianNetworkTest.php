@@ -2,18 +2,18 @@
 
 namespace Tests\Feature;
 
-use DB;
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
+use App\Models\User;
+use DB;
+use Tests\TestCase;
 
 class CustodianNetworkTest extends TestCase
 {
     private const BASE_URL = '/api/v1/custodian_networks';
-    private User $user;
 
+    private User $user;
 
     protected function setUp(): void
     {
@@ -42,7 +42,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->getJson(self::BASE_URL);
+            ->getJson(self::BASE_URL);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -67,7 +67,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->getJson(self::BASE_URL . '/' . $network->id);
+            ->getJson(self::BASE_URL.'/'.$network->id);
         $response->assertStatus(200);
 
         $content = $response->json('data');
@@ -86,7 +86,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->postJson(self::BASE_URL, $payload);
+            ->postJson(self::BASE_URL, $payload);
         $response->assertStatus(201);
 
         $content = $response->json('data');
@@ -103,7 +103,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->postJson(self::BASE_URL, $payload);
+            ->postJson(self::BASE_URL, $payload);
         $response->assertStatus(422);
     }
 
@@ -117,7 +117,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->postJson(self::BASE_URL, $payload);
+            ->postJson(self::BASE_URL, $payload);
         $response->assertStatus(201);
 
         $content = $response->json('data');
@@ -129,9 +129,9 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->putJson(self::BASE_URL . '/' . $content['id'], [
-            'name' => 'Updated Custodian',
-        ]);
+            ->putJson(self::BASE_URL.'/'.$content['id'], [
+                'name' => 'Updated Custodian',
+            ]);
 
         $response->assertStatus(200);
         $content = $response->json('data');
@@ -153,7 +153,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->postJson(self::BASE_URL, $payload);
+            ->postJson(self::BASE_URL, $payload);
         $response->assertStatus(201);
 
         $contentFirst = $response->json('data');
@@ -165,7 +165,7 @@ class CustodianNetworkTest extends TestCase
             $this->user,
             []
         )
-        ->deleteJson(self::BASE_URL . '/' . $contentFirst['id']);
+            ->deleteJson(self::BASE_URL.'/'.$contentFirst['id']);
 
         $response->assertStatus(200);
         $content = $response->json('data');

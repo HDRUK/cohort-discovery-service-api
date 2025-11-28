@@ -14,8 +14,8 @@ class ApiCommandDispatcher
 
     public function run(string $command, array $input)
     {
-        if (!array_key_exists($command, $this->commands)) {
-            throw new NotFoundHttpException('Command [ ' . $command . '] not found.');
+        if (! array_key_exists($command, $this->commands)) {
+            throw new NotFoundHttpException('Command [ '.$command.'] not found.');
         }
 
         $commandClass = $this->commands[$command];

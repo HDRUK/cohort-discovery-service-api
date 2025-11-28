@@ -2,20 +2,20 @@
 
 namespace App\Observers;
 
-use Illuminate\Support\Str;
 use App\Enums\TaskType;
 use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Services\QueryContext\QueryContextType;
+use Illuminate\Support\Str;
 
 class CollectionObserver
 {
     public function created(Collection $collection)
     {
         $query = Query::create([
-            'name' => 'initial-distribution-job-' . $collection->name,
+            'name' => 'initial-distribution-job-'.$collection->name,
             'definition' => [
                 'code' => 'DEMOGRAPHICS',
             ],
@@ -26,7 +26,7 @@ class CollectionObserver
             'query_id' => $query->id,
             'collection_id' => $collection->id,
             'created_at' => now(),
-            'task_type' => TaskType::B
+            'task_type' => TaskType::B,
         ]);
 
         $type = $collection->type;
@@ -34,9 +34,8 @@ class CollectionObserver
             RunBeaconTask::dispatch($task);
         }
 
-
         $query = Query::create([
-            'name' => 'initial-omop-concept-job-' . $collection->name,
+            'name' => 'initial-omop-concept-job-'.$collection->name,
             'definition' => [
                 'code' => 'GENERIC',
             ],
@@ -47,13 +46,13 @@ class CollectionObserver
             'query_id' => $query->id,
             'collection_id' => $collection->id,
             'created_at' => now(),
-            'task_type' => TaskType::B
+            'task_type' => TaskType::B,
         ]);
 
         $type = $collection->type;
         if ($type === QueryContextType::Beacon) {
             // to be implemented..
-            //RunBeaconTask::dispatch($task);
+            // RunBeaconTask::dispatch($task);
         }
 
         $collection->setState(Collection::STATUS_DRAFT);

@@ -2,17 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Enums\TaskType;
-use App\Enums\FrequencyMode;
 use App\Enums\CollectionStatus;
+use App\Enums\FrequencyMode;
+use App\Enums\TaskType;
 use App\Models\Collection;
-use App\Models\CollectionHost;
 use App\Models\CollectionConfig;
+use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
 use App\Services\QueryContext\QueryContextType;
+use Illuminate\Database\Seeder;
 
 class CollectionSeeder extends Seeder
 {
@@ -92,18 +92,17 @@ class CollectionSeeder extends Seeder
             $frequencyRun = 1; // First week of the month
         }
 
-
         $collectionHost = CollectionHost::firstOrCreate([
             'name' => 'default-seeded-collection-host',
             'query_context_type' => 'bunny',
             'client_id' => 'ada604e0a5102c99e1cc989a97ae5da7cecd1edb01ca9d4b76be625dacad1107',
             'client_secret' => '00b261878aaf222f23becaec888b8b2907488bf3b4cfc5088482c68a841a6eb8',
-            'custodian_id' => $custodianId
+            'custodian_id' => $custodianId,
         ]);
 
         CollectionHostHasCollection::create([
             'collection_host_id' => $collectionHost->id,
-            'collection_id' => $collection->id
+            'collection_id' => $collection->id,
         ]);
 
         $distributions = [
@@ -112,7 +111,6 @@ class CollectionSeeder extends Seeder
             ['name' => 'SEX', 'description' => 'total count', 'count' => $maleCount + $femaleCount],
         ];
 
-
         foreach ($distributions as $dist) {
             if ($dist['count'] < 1) {
                 continue;
@@ -120,7 +118,7 @@ class CollectionSeeder extends Seeder
             Distribution::create([
                 'collection_id' => $collection->id,
                 'category' => 'DEMOGRAPHICS',
-                ...$dist
+                ...$dist,
             ]);
         }
     }

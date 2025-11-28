@@ -11,7 +11,7 @@ trait NLPConceptLookup
 
     protected function loadNlpEntities(string $query, float $threshold = 80): void
     {
-        \Log::info('Calling NLP Extractor with: ' . $query);
+        \Log::info('Calling NLP Extractor with: '.$query);
         $nlp = App::make(NLPConceptExtractor::class);
         $this->nlpEntities = collect($nlp->extract($query, $threshold))
             ->mapWithKeys(fn ($e) => [strtolower(trim($e['text'])) => $e])
@@ -20,18 +20,18 @@ trait NLPConceptLookup
 
     protected function lookupConceptFromNlp(string $phrase): ?array
     {
-        if (!$this->nlpEntities) {
+        if (! $this->nlpEntities) {
             return null;
         }
 
         $found = null;
         $key = strtolower(trim($phrase));
-        if (!isset($this->nlpEntities[$key])) {
+        if (! isset($this->nlpEntities[$key])) {
             // fuzzy fallback - find similar keys
             $found = collect($this->nlpEntities)
                 ->first(fn ($entity, $text) => levenshtein($key, $text) < 5);
 
-            if (!$found) {
+            if (! $found) {
                 return null;
             }
         } else {

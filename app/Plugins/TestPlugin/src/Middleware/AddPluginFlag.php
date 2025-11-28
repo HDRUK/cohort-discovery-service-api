@@ -3,8 +3,8 @@
 namespace App\Plugins\TestPlugin\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AddPluginFlag
 {

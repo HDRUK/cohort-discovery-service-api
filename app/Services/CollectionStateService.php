@@ -42,7 +42,7 @@ class CollectionStateService
 
     public function transition(Collection $collection, string $state, User $user): Collection
     {
-        if (!$this->canUserTransition($collection, $state, $user)) {
+        if (! $this->canUserTransition($collection, $state, $user)) {
             throw new CollectionException($state);
         }
 

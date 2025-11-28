@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ModelBackedRequest;
 use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Traits\Responses;
-use App\Http\Requests\ModelBackedRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * @OA\Tag(
@@ -26,9 +26,11 @@ class CustodianController extends Controller
      *     path="/api/v1/custodians",
      *     summary="Get all custodians",
      *     tags={"Custodians"},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="List of custodians",
+     *
      *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Custodian"))
      *     )
      * )
@@ -51,17 +53,22 @@ class CustodianController extends Controller
      *     path="/api/v1/custodians/{id}",
      *     summary="Get a custodian by ID",
      *     tags={"Custodians"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Custodian found",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/Custodian")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Custodian not found"
@@ -75,7 +82,7 @@ class CustodianController extends Controller
         try {
             $custodian = Custodian::with([
                 'hosts',
-                'network'
+                'network',
             ])->findOrFail($validated['id']);
 
             return $this->OKResponse($custodian);
@@ -89,15 +96,20 @@ class CustodianController extends Controller
      *     path="/api/v1/custodians",
      *     summary="Create a new custodian",
      *     tags={"Custodians"},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/Custodian")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Custodian created",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/Custodian")
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error"
@@ -110,10 +122,12 @@ class CustodianController extends Controller
 
         try {
             $custodian = Custodian::create($validated);
+
             return $this->CreatedResponse($custodian);
         } catch (\Throwable $e) {
-            \Log::error('CustodianController@store - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CustodianController@store - failed: '.
+                json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -123,21 +137,28 @@ class CustodianController extends Controller
      *     path="/api/v1/custodians/{id}",
      *     summary="Update a custodian",
      *     tags={"Custodians"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/Custodian")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Custodian updated",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/Custodian")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Custodian not found"
@@ -158,8 +179,9 @@ class CustodianController extends Controller
 
             return $this->OKResponse($custodian);
         } catch (\Throwable $e) {
-            \Log::error('CustodianController@update - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CustodianController@update - failed: '.
+                json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->NotFoundResponse();
         }
     }
@@ -169,12 +191,15 @@ class CustodianController extends Controller
      *     path="/api/v1/custodians/{id}",
      *     summary="Delete a custodian",
      *     tags={"Custodians"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Custodian deleted"
@@ -195,8 +220,9 @@ class CustodianController extends Controller
 
             return $this->OKResponse([]);
         } catch (\Throwable $e) {
-            \Log::error('CustodianController@update - failed: ' .
-                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CustodianController@update - failed: '.
+                json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->NotFoundResponse();
         }
     }
@@ -214,7 +240,8 @@ class CustodianController extends Controller
 
             return $this->OKResponse($link);
         } catch (\Throwable $e) {
-            \Log::error('CustodianController@linkToNetwork - failed: (exception: ' . $e->getMessage() . ')');
+            \Log::error('CustodianController@linkToNetwork - failed: (exception: '.$e->getMessage().')');
+
             return $this->BadRequestResponse();
         }
     }
@@ -236,7 +263,8 @@ class CustodianController extends Controller
 
             return $this->BadRequestResponse();
         } catch (\Throwable $e) {
-            \Log::error('CustodianController@unlinkFromNetwork - failed: (exception: ' . $e->getMessage() . ')');
+            \Log::error('CustodianController@unlinkFromNetwork - failed: (exception: '.$e->getMessage().')');
+
             return $this->BadRequestResponse();
         }
     }

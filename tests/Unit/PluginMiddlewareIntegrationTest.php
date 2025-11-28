@@ -3,20 +3,20 @@
 namespace Tests\Unit;
 
 use Config;
-use Illuminate\Support\Facades\Route;
 use Hdruk\LaravelPluginCore\Services\PluginManager;
-use Tests\TestCase;
+use Illuminate\Support\Facades\Route;
 use Mockery;
+use Tests\TestCase;
 
 class PluginMiddlewareIntegrationTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->disablePlugin(false);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->disablePlugin(true);
 
@@ -47,7 +47,7 @@ class PluginMiddlewareIntegrationTest extends TestCase
 
     protected function disablePlugin(bool $toggle): void
     {
-        $pluginPath = Config::get('plugin-core.path') . '/TestPlugin/plugin.json';
+        $pluginPath = Config::get('plugin-core.path').'/TestPlugin/plugin.json';
         $pluginData = json_decode(file_get_contents($pluginPath), true);
         $pluginData['disabled'] = $toggle;
         file_put_contents($pluginPath, json_encode($pluginData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));

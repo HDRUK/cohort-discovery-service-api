@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Custodian;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CollectionHost>
@@ -22,7 +22,7 @@ class CollectionHostFactory extends Factory
             // This likely supersedes the collections table type?
             'query_context_type' => $this->faker->randomElement(['bunny', 'beacon']),
             'client_id' => 'abcd-1234-efgh-5678',
-            'client_secret' => 'secret-' . $this->faker->uuid(),
+            'client_secret' => 'secret-'.$this->faker->uuid(),
             'custodian_id' => Custodian::all()->random()->id,
         ];
     }

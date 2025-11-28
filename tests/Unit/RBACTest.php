@@ -2,13 +2,13 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Models\User;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\TestCase;
 
 class RBACTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();

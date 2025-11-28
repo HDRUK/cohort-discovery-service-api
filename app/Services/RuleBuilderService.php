@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Traits\RuleBuilder;
 use App\Traits\NLPConceptLookup;
+use App\Traits\RuleBuilder;
 use Illuminate\Support\Str;
 
 /**
@@ -16,8 +16,8 @@ use Illuminate\Support\Str;
  */
 class RuleBuilderService
 {
-    use RuleBuilder;
     use NLPConceptLookup;
+    use RuleBuilder;
 
     private function splitTopLevelOr(string $query): array
     {
@@ -53,7 +53,7 @@ class RuleBuilderService
 
         $rules = [];
         foreach ($segments as $i => $segment) {
-            \Log::info('Finding OMOP concepts for segment: ' . $segment);
+            \Log::info('Finding OMOP concepts for segment: '.$segment);
             $concepts = $this->getConceptsForSegment($segment);
 
             // If there are multiple concepts, wrap in AND group

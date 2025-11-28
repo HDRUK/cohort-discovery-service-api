@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Laravel\Passport\ClientRepository;
 use App\Models\User;
 use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Laravel\Passport\ClientRepository;
 
 class ApplicationController extends Controller
 {

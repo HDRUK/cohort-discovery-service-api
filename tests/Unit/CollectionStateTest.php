@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use DB;
-use Tests\TestCase;
-use Hdruk\LaravelModelStates\Models\State;
-use Hdruk\LaravelModelStates\Models\ModelState;
-use App\Models\Custodian;
 use App\Models\Collection;
+use App\Models\Custodian;
+use DB;
+use Hdruk\LaravelModelStates\Models\ModelState;
+use Hdruk\LaravelModelStates\Models\State;
+use Tests\TestCase;
 
 class CollectionStateTest extends TestCase
 {
@@ -50,8 +50,8 @@ class CollectionStateTest extends TestCase
         $this->assertEquals(Collection::STATUS_DRAFT, $collection->getState());
         $this->assertDatabaseHas('model_states', [
             'stateable_type' => Collection::class,
-            'stateable_id'   => $collection->id,
-            'state_id'       => State::where('slug', Collection::STATUS_DRAFT)->first()->id,
+            'stateable_id' => $collection->id,
+            'state_id' => State::where('slug', Collection::STATUS_DRAFT)->first()->id,
         ]);
     }
 
@@ -140,8 +140,8 @@ class CollectionStateTest extends TestCase
 
         $this->assertDatabaseHas('model_states', [
             'stateable_type' => Collection::class,
-            'stateable_id'   => $collection->id,
-            'state_id'       => State::where('slug', Collection::STATUS_ACTIVE)->first()->id,
+            'stateable_id' => $collection->id,
+            'state_id' => State::where('slug', Collection::STATUS_ACTIVE)->first()->id,
         ]);
     }
 }

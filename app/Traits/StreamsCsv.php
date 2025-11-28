@@ -13,7 +13,7 @@ trait StreamsCsv
      */
     protected function csvRows(string $fullPath): \Generator
     {
-        if (!is_readable($fullPath)) {
+        if (! is_readable($fullPath)) {
             throw new \RuntimeException("CSV not readable: {$fullPath}");
         }
 
@@ -31,6 +31,7 @@ trait StreamsCsv
             // Trim + strip UTF-8 BOM from first header cell if present
             $header = array_map(function ($h) {
                 $h = preg_replace('/^\xEF\xBB\xBF/', '', $h ?? '');
+
                 return trim((string) $h);
             }, $header);
 

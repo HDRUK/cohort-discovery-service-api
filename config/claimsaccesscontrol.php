@@ -23,5 +23,5 @@ return [
         'uk-industry' => 'internal-uk-industry',
         'uk-research' => 'internal-uk-research',
         'nhs-sde' => 'internal-nhs-sde',
-    ]
+    ],
 ];

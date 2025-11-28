@@ -11,7 +11,9 @@ class RefreshDistributionConceptsView implements ShouldQueue
     use Queueable;
 
     private string $viewName = '';
+
     private string $distributionTable = '';
+
     private string $conceptTable = '';
 
     /**
@@ -19,9 +21,9 @@ class RefreshDistributionConceptsView implements ShouldQueue
      */
     public function __construct()
     {
-        $this->viewName = config('database.connections.mysql.database') . '.distribution_concepts';
-        $this->distributionTable = config('database.connections.mysql.database') . '.distributions';
-        $this->conceptTable = config('database.connections.omop.database') . '.concept';
+        $this->viewName = config('database.connections.mysql.database').'.distribution_concepts';
+        $this->distributionTable = config('database.connections.mysql.database').'.distributions';
+        $this->conceptTable = config('database.connections.omop.database').'.concept';
     }
 
     /**

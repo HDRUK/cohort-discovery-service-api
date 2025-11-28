@@ -2,12 +2,12 @@
 
 namespace App\Services\Submitters;
 
-use DB;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use Carbon\Carbon;
+use DB;
+use Illuminate\Support\Str;
 
 class QuerySubmissionService
 {
@@ -38,7 +38,7 @@ class QuerySubmissionService
 
                 // Get relevant collections
                 $collections = Collection::query()
-                    ->when(!empty($data['collection_filter']), function ($q) use ($data) {
+                    ->when(! empty($data['collection_filter']), function ($q) use ($data) {
                         $q->whereIn('pid', $data['collection_filter']);
                     })
                     ->select(['id', 'type'])
@@ -65,7 +65,8 @@ class QuerySubmissionService
                 ];
             });
         } catch (\Throwable $e) {
-            \Log::error($this->tag . ' - failed: ' . $e->getMessage());
+            \Log::error($this->tag.' - failed: '.$e->getMessage());
+
             return [
                 'query_pid' => null,
                 'task_count' => null,

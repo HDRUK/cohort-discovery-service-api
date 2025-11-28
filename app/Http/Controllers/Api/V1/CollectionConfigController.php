@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Models\CollectionConfig;
 use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CollectionConfigController extends Controller
 {
@@ -17,9 +17,11 @@ class CollectionConfigController extends Controller
      *     path="/api/v1/collection-configs",
      *     summary="Get all collection configs",
      *     tags={"CollectionConfig"},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="List of collection configs",
+     *
      *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/CollectionConfig"))
      *     )
      * )
@@ -28,9 +30,11 @@ class CollectionConfigController extends Controller
     {
         try {
             $configs = CollectionConfig::all();
+
             return $this->OKResponse($configs);
         } catch (\Throwable $e) {
             \Log::error('CollectionConfigController@index - failed');
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -40,17 +44,22 @@ class CollectionConfigController extends Controller
      *     path="/api/v1/collection-configs/{id}",
      *     summary="Get a collection config by ID",
      *     tags={"CollectionConfig"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="CollectionConfig found",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionConfig")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="CollectionConfig not found"
@@ -64,10 +73,11 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
+
             return $this->OKResponse($config);
 
         } catch (\Throwable $e) {
-            \Log::error('CollectionConfigController@show/' . $id . ' - failed: ' . $e->getMessage());
+            \Log::error('CollectionConfigController@show/'.$id.' - failed: '.$e->getMessage());
 
             return $this->NotFoundResponse();
         }
@@ -78,15 +88,20 @@ class CollectionConfigController extends Controller
      *     path="/api/v1/collection-configs",
      *     summary="Create a new collection config",
      *     tags={"CollectionConfig"},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionConfig")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="CollectionConfig created",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionConfig")
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error"
@@ -99,10 +114,12 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::create($validated);
+
             return $this->CreatedResponse($config);
 
         } catch (\Throwable $e) {
-            \Log::error('CollectionConfigController@store - failed: ' . json_encode($validated));
+            \Log::error('CollectionConfigController@store - failed: '.json_encode($validated));
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -112,21 +129,28 @@ class CollectionConfigController extends Controller
      *     path="/api/v1/collection-configs/{id}",
      *     summary="Update an existing collection config",
      *     tags={"CollectionConfig"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionConfig")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="CollectionConfig updated",
+     *
      *         @OA\JsonContent(ref="#/components/schemas/CollectionConfig")
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="CollectionConfig not found"
@@ -151,7 +175,8 @@ class CollectionConfigController extends Controller
             return $this->BadRequestResponseExtended('unable to update CollectionConfig');
 
         } catch (\Throwable $e) {
-            \Log::error('CollectionConfigController@update - failed: ' . json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+            \Log::error('CollectionConfigController@update - failed: '.json_encode($validated).' (exception: '.$e->getMessage().')');
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -161,12 +186,15 @@ class CollectionConfigController extends Controller
      *     path="/api/v1/collection-configs/{id}",
      *     summary="Delete a collection config",
      *     tags={"CollectionConfig"},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="CollectionConfig deleted"
@@ -195,7 +223,8 @@ class CollectionConfigController extends Controller
 
             return $this->ErrorResponse();
         } catch (\Throwable $e) {
-            \Log::error('CollectionConfigController@destroy/' . $id . ' - failed: ' . $e->getMessage());
+            \Log::error('CollectionConfigController@destroy/'.$id.' - failed: '.$e->getMessage());
+
             return $this->ErrorResponse($e->getMessage());
         }
     }

@@ -8,24 +8,26 @@ use Illuminate\Support\Facades\DB;
 trait RefreshDatabaseLite
 {
     protected static bool $migrated = false;
+
     protected static $databaseConnection = null;
+
     protected static $omopConnection = null;
 
     public function liteSetUp(): void
     {
         parent::setUp();
-        if (!static::$migrated) {
+        if (! static::$migrated) {
             if (env('APP_ENV') === 'testing') {
                 Artisan::call('migrate:fresh');
                 Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
 
                 Artisan::call('migrate:fresh', [
                     '--database' => 'omop',
-                    '--path'     => 'database/migrations_omop',
+                    '--path' => 'database/migrations_omop',
                 ]);
 
                 Artisan::call('db:seed', [
-                    '--class'    => 'MinimalOmopSeeder',
+                    '--class' => 'MinimalOmopSeeder',
                     '--database' => 'omop',
                 ]);
 

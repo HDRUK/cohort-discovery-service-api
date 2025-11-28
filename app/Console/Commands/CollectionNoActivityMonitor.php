@@ -2,16 +2,17 @@
 
 namespace App\Console\Commands;
 
-use Log;
-use DB;
-use Carbon\Carbon;
 use App\Contracts\ApiCommand;
 use App\Enums\CollectionStatus;
 use App\Models\Collection;
+use Carbon\Carbon;
+use DB;
+use Log;
 
 class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
+
     private string $statusMessage = 'SUSPENDED_DUE_TO_INACTIVITY_24_HOURS';
 
     public function rules(): array
@@ -21,7 +22,7 @@ class CollectionNoActivityMonitor implements ApiCommand
 
     public function handle(array $validated): mixed
     {
-        Log::info($this->tag . ' - Started');
+        Log::info($this->tag.' - Started');
 
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {
             $colls = $this->getCollections();
@@ -34,10 +35,10 @@ class CollectionNoActivityMonitor implements ApiCommand
                         FROM collection_activity_logs
                         WHERE collection_id = ?
                     ',
-                    [ $c->id ]
+                    [$c->id]
                 );
 
-                if (!empty($lastRow)) {
+                if (! empty($lastRow)) {
                     $stamp = Carbon::parse($lastRow[0]->created_at);
                     if ($this->isNonActive($stamp)) {
                         $this->logNoActivity($c->id);
@@ -82,21 +83,21 @@ class CollectionNoActivityMonitor implements ApiCommand
     private function getCollections(): \Illuminate\Database\Eloquent\Collection
     {
         return Collection::where([
-                'status' => CollectionStatus::ACTIVE->value,
-            ])->get();
+            'status' => CollectionStatus::ACTIVE->value,
+        ])->get();
     }
 
     private function logNoActivity(int $collectionId): void
     {
         // Flag as suspended, as the collection has seen no
         // activity for at least 24 hours.
-        Log::info($this->tag . ' - found Collection (' . $collectionId . ') that has had ZERO ACTIVITY for 24 hours - flagging');
+        Log::info($this->tag.' - found Collection ('.$collectionId.') that has had ZERO ACTIVITY for 24 hours - flagging');
     }
 
     private function logActivity(int $collectionId): void
     {
         // Log, but ignore as this collection is actively being
         // polled for jobs - at least within the last 24 hours.
-        Log::info($this->tag . ' - Collection (' . $collectionId . ') has had ACTIVITY within 24 hours - skipping');
+        Log::info($this->tag.' - Collection ('.$collectionId.') has had ACTIVITY within 24 hours - skipping');
     }
 }

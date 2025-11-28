@@ -17,7 +17,7 @@ class QueryFactory extends Factory
             'pid' => Str::uuid(),
             'name' => $this->faker->sentence,
             'user_id' => User::first()->id,
-            'definition' =>  [
+            'definition' => [
                 'combinator' => $this->faker->randomElement(['and', 'or']),
                 'rules' => [
                     [
@@ -25,7 +25,7 @@ class QueryFactory extends Factory
                         'operator' => $this->faker->randomElement(['=', '!=', '>', '<']),
                         'value' => (string) $this->faker->numberBetween(1000, 9999),
                         'id' => (string) Str::uuid(),
-                    ]
+                    ],
                 ],
                 'id' => (string) Str::uuid(),
             ],

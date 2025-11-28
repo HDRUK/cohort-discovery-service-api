@@ -23,7 +23,7 @@ class TaskCleanupJob implements ShouldQueue
         Task::where('created_at', '<', $cutoff)
             ->where('completed_at', null)
             ->update([
-                'failed_at' => now()
+                'failed_at' => now(),
             ]);
     }
 }
