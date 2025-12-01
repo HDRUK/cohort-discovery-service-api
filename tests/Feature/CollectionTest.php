@@ -6,6 +6,7 @@ use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\User;
+use App\Models\Workgroup;
 use App\Services\QueryContext\QueryContextType;
 use Config;
 use DB;
