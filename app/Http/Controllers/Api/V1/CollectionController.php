@@ -7,6 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Workgroup;
+use App\Models\WorkgroupHasCollection;
+use App\Traits\Responses;
+use App\Traits\HelperFunctions;
+use App\Http\Requests\ModelBackedRequest;
+use App\Services\QueryContext\QueryContextType;
+use App\Http\Controllers\Controller;
+use App\Enums\CollectionStatus;
 use App\Services\CollectionStateService;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\HelperFunctions;
@@ -104,6 +112,7 @@ class CollectionController extends Controller
                 'demographics',
                 'custodian',
                 'modelState.state',
+                'workgroups',
             ])->findOrFail($validated['id']);
 
             return $this->OKResponse($collection);
@@ -457,5 +466,61 @@ class CollectionController extends Controller
         }
 
         return [$custodian, null];
+    }
+
+    public function addToWorkgroup(Request $request, int $id): JsonResponse
+    {
+        $input = $request->validate([
+            'workgroup_id' => 'required|exists:workgroups,id',
+        ]);
+
+        try {
+            $collection = Collection::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        try {
+            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        $workgroupHasCollection = WorkgroupHasCollection::firstOrCreate([
+            'collection_id' => $collection->id,
+            'workgroup_id' => $input['workgroup_id'],
+        ]);
+
+        return $this->OKResponse([$workgroupHasCollection]);
+    }
+
+    public function removeFromWorkgroup(Request $request, int $id): JsonResponse
+    {
+        $input = $request->validate([
+            'workgroup_id' => 'required|exists:workgroups,id',
+        ]);
+
+        try {
+            $collection = Collection::findOrFail($id);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        try {
+            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        $workgroupHasCollection = WorkgroupHasCollection::where([
+            'collection_id' => $collection->id,
+            'workgroup_id' => $input['workgroup_id'],
+        ])->delete();
+
+        if ($workgroupHasCollection) {
+            return $this->OKResponse([]);
+        }
+
+        return $this->BadRequestResponse();
     }
 }

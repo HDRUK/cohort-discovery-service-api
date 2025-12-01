@@ -64,6 +64,16 @@ class Workgroup extends Model implements ValidatableModel
         };
     }
 
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Collection::class,
+            'workgroup_has_collection',
+            'workgroup_id',
+            'collection_id',
+        );
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(

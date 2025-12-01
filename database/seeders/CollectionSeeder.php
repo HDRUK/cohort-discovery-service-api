@@ -11,6 +11,8 @@ use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
+use App\Models\Workgroup;
+use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
 use Illuminate\Database\Seeder;
 
@@ -121,5 +123,12 @@ class CollectionSeeder extends Seeder
                 ...$dist,
             ]);
         }
+
+        $workgroupId = Workgroup::all()->random()->id;
+        // Assign to only one Workgroup for now, though it's technically a many-to-many
+        WorkgroupHasCollection::create([
+            'workgroup_id' => $workgroupId,
+            'collection_id' => $collection->id,
+        ]);
     }
 }

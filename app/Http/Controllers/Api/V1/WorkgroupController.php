@@ -61,7 +61,7 @@ class WorkgroupController extends Controller
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('show'));
 
         try {
-            $workgroup = Workgroup::findOrFail($validated['id']);
+            $workgroup = Workgroup::with('collections')->findOrFail($validated['id']);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }

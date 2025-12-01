@@ -251,6 +251,16 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->hasOne(CollectionConfig::class);
     }
 
+    public function workgroups(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Workgroup::class,
+            'workgroup_has_collection',
+            'collection_id',
+            'workgroup_id',
+        );
+    }
+
     public static function logActivity(Collection $c, TaskType $type): void
     {
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {
