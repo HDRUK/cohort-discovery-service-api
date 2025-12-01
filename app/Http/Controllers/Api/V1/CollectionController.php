@@ -283,16 +283,23 @@ class CollectionController extends Controller
             return $error;
         }
 
-        $perPage = $this->resolvePerPage();
-        $collections = Collection::query()
-            ->with(['host'])
-            ->where('custodian_id', $custodian->id)
-            ->searchViaRequest()
-            ->filterViaRequest()
-            ->applySorting()
-            ->paginate($perPage);
+        try {
+            $perPage = $this->resolvePerPage();
+            $collections = Collection::query()
+                ->with(['host', 'modelState.state'])
+                ->where('custodian_id', $custodian->id)
+                ->when($request->filled('state'), function ($q) use ($request) {
+                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                })
+                ->searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting()
+                ->paginate($perPage);
 
-        return $this->OKResponse($collections);
+            return $this->OKResponse($collections);
+        } catch (\Throwable $e) {
+            dd($e);
+        }
     }
 
     /**
