@@ -556,6 +556,71 @@ class CollectionTest extends TestCase
         $this->assertEquals(count($content), 1);
     }
 
+    public function test_it_can_add_and_remove_collections_from_workgroups(): void
+    {
+        $fakeGatewayTeamId = 1111;
+        $custodian = Custodian::factory()->create([
+            'gateway_team_id' => $fakeGatewayTeamId,
+        ]);
+
+        $collections = Collection::factory(5)->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $overrides = [
+            'user' => [
+                'workgroups' => [[
+                    'id' => 1,
+                    'name' => 'cohort-admin',
+                ]],
+                'cohort_admin_teams' => [
+                    [
+                        'id' => $fakeGatewayTeamId,
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
+        ];
+        $coll = $collections->random();
+        $workgroup = Workgroup::inRandomOrder()->first();
+
+        $initialNumLinkedWorkgroups = count($coll->workgroups);
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->postJson(self::BASE_URL.'/'.$coll->id.'/workgroup', [
+                'workgroup_id' => $workgroup->id,
+            ]);
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(self::BASE_URL.'/'.$coll->id);
+        $response->assertStatus(200);
+
+        $this->assertEquals($initialNumLinkedWorkgroups+1, count($response->json('data.workgroups')));
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->deleteJson(self::BASE_URL.'/'.$coll->id.'/workgroup', [
+                'workgroup_id' => $workgroup->id,
+            ]);
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(self::BASE_URL.'/'.$coll->id);
+
+        $response->assertStatus(200);
+        $this->assertEquals($initialNumLinkedWorkgroups, count($response->json('data.workgroups')));
+    }
 
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
