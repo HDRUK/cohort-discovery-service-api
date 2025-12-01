@@ -46,6 +46,7 @@ class ClaimBasedAccessControl
 
             // normalise the workgroup claims to determine access
             $newArr = $this->normaliseWorkgroups($user['workgroups']);
+
             $user['workgroups'] = $newArr['workgroups']; // cohort-admin
 
             foreach ($claims as $claim) {

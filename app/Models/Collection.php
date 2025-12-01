@@ -83,6 +83,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     protected $fillable = [
         'name',
+        'description',
         'url',
         'pid',
         'type',
@@ -155,6 +156,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ],
             'store' => [
                 'name' => 'required|string|min:3|max:255',
+                'description' => 'sometimes|string|min:0|max:65535',
                 'url' => 'required|string|max:255',
                 'pid' => 'required|string',
                 'type' => 'required|string',
@@ -164,6 +166,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             'update' => [
                 'id' => 'required|integer|exists:collections,id',
                 'name' => 'sometimes|string|min:3|max:255',
+                'description' => 'sometimes|string|min:0|max:65535',
                 'url' => 'sometimes|string|max:255',
                 'pid' => 'sometimes|string',
                 'type' => 'sometimes|string',

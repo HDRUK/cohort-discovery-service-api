@@ -6,6 +6,7 @@ use App\Contracts\ValidatableModel;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Rules\IdOrUuid;
 
 /**
  * @OA\Schema(
@@ -58,7 +59,10 @@ class Custodian extends Model implements ValidatableModel
         return match (strtolower($context)) {
             'index' => [],
             'show' => [
-                'id' => 'required|integer|exists:custodians,id',
+                 'key' => [
+                    'required',
+                    new IdOrUuid(),
+                ],
             ],
             'store' => [
                 'name' => 'required|string|max:255',
