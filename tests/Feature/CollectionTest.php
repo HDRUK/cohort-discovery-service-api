@@ -486,7 +486,6 @@ class CollectionTest extends TestCase
             $overrides
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
-        // dd($response);
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
@@ -499,6 +498,63 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_it_can_filter_by_model_state(): void
+    {
+        $this->enableObservers();
+
+        $fakeGatewayTeamId = 1111;
+
+        $custodian = Custodian::factory()->create([
+            'gateway_team_id' => $fakeGatewayTeamId,
+        ]);
+
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $this->disableObservers();
+
+        $collection->transitionTo(Collection::STATUS_SUSPENDED);
+
+        $overrides = [
+            'user' => [
+                'workgroups' => [[
+                    'id' => 1,
+                    'name' => 'cohort-admin',
+                ]],
+                'cohort_admin_teams' => [
+                    [
+                        'id' => $fakeGatewayTeamId,
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
+
+        $response->assertStatus(200);
+        $content = $response->json('data')['data'];
+        $this->assertEquals(count($content), 0);
+
+        $collection->transitionTo(Collection::STATUS_ACTIVE);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
+
+        $response->assertStatus(200);
+        $content = $response->json('data')['data'];
+        $this->assertEquals(count($content), 1);
+    }
+
 
     // public function test_it_can_list_collections_integrated_mode(): void
     // {

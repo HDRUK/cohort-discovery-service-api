@@ -12,6 +12,12 @@ use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @OA\Tag(
+ *     name="OMOP",
+ *     description="Endpoints for OMOP concept lookups and hierarchy exploration"
+ * )
+ */
 class OmopController extends Controller
 {
     use HelperFunctions;

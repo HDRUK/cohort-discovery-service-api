@@ -18,6 +18,12 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @OA\Tag(
+ *     name="Collections",
+ *     description="API Endpoints for managing Collections"
+ * )
+ */
 class CollectionController extends Controller
 {
     use HelperFunctions;
@@ -30,6 +36,30 @@ class CollectionController extends Controller
         $this->stateService = $stateService;
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/collections",
+     *     summary="Get all collections",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of collections",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection"))
+     *     )
+     * )
+     */
     public function index(ModelBackedRequest $request): JsonResponse
     {
         $collections = Collection::with([
@@ -45,6 +75,25 @@ class CollectionController extends Controller
         return $this->OKResponse($collections);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/collections/{id}",
+     *     summary="Get a collection by ID",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Collection found",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(response=404, description="Collection not found")
+     * )
+     */
     public function show(ModelBackedRequest $request, int $id): JsonResponse
     {
         $request->merge(['id' => $id]);
@@ -63,6 +112,23 @@ class CollectionController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/v1/collections",
+     *     summary="Create a new collection",
+     *     tags={"Collections"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Collection created",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function store(ModelBackedRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -79,6 +145,30 @@ class CollectionController extends Controller
         }
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/v1/collections/{id}",
+     *     summary="Update a collection by ID",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Collection updated",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(response=404, description="Collection not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function update(ModelBackedRequest $request, int $id): JsonResponse
     {
         $request->merge(['id' => $id]);
@@ -99,6 +189,21 @@ class CollectionController extends Controller
         return $this->ErrorResponse();
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/collections/{id}",
+     *     summary="Delete a collection by ID",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(response=200, description="Collection deleted"),
+     *     @OA\Response(response=404, description="Collection not found")
+     * )
+     */
     public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
         $validated = $request->validated();
@@ -118,6 +223,25 @@ class CollectionController extends Controller
         return $this->ErrorResponse();
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/collections/pid/{pid}",
+     *     summary="Get a collection by public PID",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", example="col_abc123")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Collection found",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(response=404, description="Collection not found")
+     * )
+     */
     public function getCollection($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
@@ -131,6 +255,27 @@ class CollectionController extends Controller
         return $this->OKResponse($collection);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/custodians/{custodianPid}/collections",
+     *     summary="Get collections for a specific custodian",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="custodianPid",
+     *         in="path",
+     *         description="Public pid of the custodian",
+     *         required=true,
+     *         @OA\Schema(type="string", example="cust_abc123")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of collections for the custodian",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection"))
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Custodian not found")
+     * )
+     */
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
@@ -138,18 +283,54 @@ class CollectionController extends Controller
             return $error;
         }
 
-        $perPage = $this->resolvePerPage();
-        $collections = Collection::query()
-            ->with(['host','config'])
-            ->where('custodian_id', $custodian->id)
-            ->searchViaRequest()
-            ->filterViaRequest()
-            ->applySorting()
-            ->paginate($perPage);
+        try {
+            $perPage = $this->resolvePerPage();
+            $collections = Collection::query()
+                ->with(['host', 'config', 'modelState.state'])
+                ->where('custodian_id', $custodian->id)
+                ->when($request->filled('state'), function ($q) use ($request) {
+                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                })
+                ->searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting()
+                ->paginate($perPage);
 
-        return $this->OKResponse($collections);
+            return $this->OKResponse($collections);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@indexByCustodian - failed: '.
+                $e->getMessage());
+
+            return $this->NotFoundResponse();
+        }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/v1/custodians/{custodianPid}/collections",
+     *     summary="Create a collection for a given custodian",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="custodianPid",
+     *         in="path",
+     *         description="Public pid of the custodian",
+     *         required=true,
+     *         @OA\Schema(type="string", example="cust_abc123")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Collection created for custodian",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Custodian not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function storeByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
@@ -192,6 +373,30 @@ class CollectionController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/v1/collections/{id}/transition",
+     *     summary="Transition a Collection to a new state",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *              @OA\Property(property="state", type="string", example="active")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Collection state transitioned", @OA\JsonContent(ref="#/components/schemas/Collection")),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function transitionTo(ModelBackedRequest $request, int $id): JsonResponse
     {
         $validated = $request->validated();
@@ -211,6 +416,21 @@ class CollectionController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/collections/status/{status}",
+     *     summary="Get collections by status",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="path",
+     *         required=true,
+     *         description="Status name (case-insensitive)",
+     *         @OA\Schema(type="string", example="active")
+     *     ),
+     *     @OA\Response(response=200, description="Paginated collections matching the status", @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection")))
+     * )
+     */
     public function getByStatus(Request $request, string $status): JsonResponse
     {
         try {
