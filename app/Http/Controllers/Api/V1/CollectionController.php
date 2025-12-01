@@ -464,7 +464,7 @@ class CollectionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/collections/{id}/workgroups",
+     *     path="/api/v1/collections/{id}/workgroup",
      *     summary="Add a collection to a workgroup",
      *     tags={"Collections"},
      *     @OA\Parameter(
@@ -520,7 +520,7 @@ class CollectionController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/collections/{id}/workgroups",
+     *     path="/api/v1/collections/{id}/workgroup",
      *     summary="Remove a collection from a workgroup",
      *     tags={"Collections"},
      *     @OA\Parameter(
