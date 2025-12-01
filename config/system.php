@@ -47,6 +47,7 @@ return [
     | If one is not set, this is defaulted to use d3m0User_!
     |
     */
+    'demo_user_email' => env('DEMO_USER_EMAIL', 'demo.user@domain.com', ),
     'demo_user_password' => env('DEMO_USER_PASSWORD', 'd3m0User_!'),
 
     'collection_activity_log_type' => env('COLLECTION_ACTIVITY_LOG_TYPE', 'log'),

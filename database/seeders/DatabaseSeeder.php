@@ -40,8 +40,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             StateSeeder::class,
             CustodianSeeder::class,
-            CollectionHostSeeder::class,
-            CollectionSeeder::class,
             QuerySeeder::class,
             TaskSeeder::class,
         ]);

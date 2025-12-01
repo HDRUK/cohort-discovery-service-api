@@ -21,7 +21,7 @@ class CollectionSeeder extends Seeder
 
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody CKD Dataset',
-            pid: 'a6c4f998-b837-4177-8e42-b941433abf44',
+            pid: '00000000-0000-0000-0000-000000000000',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
@@ -31,7 +31,7 @@ class CollectionSeeder extends Seeder
 
         $this->seedCollectionWithDemographics(
             name: 'Various Conditions Dataset',
-            pid: '8b9d64b5-c840-426e-bf6f-fdb50fd0f93a',
+            pid: '00000000-0000-0000-0000-000000000001',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
@@ -41,7 +41,7 @@ class CollectionSeeder extends Seeder
 
         $this->seedCollectionWithDemographics(
             name: 'SARs-CoV-2 Symptoms Dataset',
-            pid: 'accbd4a4-7e37-41e8-93de-eb1a3642e683',
+            pid: '00000000-0000-0000-0000-000000000002',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,
@@ -51,7 +51,7 @@ class CollectionSeeder extends Seeder
 
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody and Symptoms Dataset',
-            pid: 'a397a685-cbe2-4424-9c30-a9f37e6f2db7',
+            pid: '00000000-0000-0000-0000-000000000003',
             url: null,
             type: QueryContextType::Bunny,
             maleCount: 0,

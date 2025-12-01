@@ -27,6 +27,7 @@ class LocalAuthController extends Controller
         ]);
 
         $user = $this->authService->authenticate($request);
+        return $this->OKResponse($user);
 
         if (! $user) {
             return $this->UnauthorisedResponse();
