@@ -175,7 +175,7 @@ class CollectionController extends Controller
         $validated = $request->validated();
 
         try {
-            $collection = Collection::findOrFail($validated['id']);
+            $collection = Collection::with(['host','config'])->findOrFail($validated['id']);
             if ($collection->update($validated)) {
                 return $this->OKResponse($collection);
             }
@@ -285,7 +285,7 @@ class CollectionController extends Controller
 
         $perPage = $this->resolvePerPage();
         $collections = Collection::query()
-            ->with(['host'])
+            ->with(['host','config'])
             ->where('custodian_id', $custodian->id)
             ->searchViaRequest()
             ->filterViaRequest()

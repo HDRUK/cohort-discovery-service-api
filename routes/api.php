@@ -42,7 +42,10 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/workgroups/search/users', [WorkgroupController::class, 'usersByWorkgroup']);
 
     Route::get('/v1/custodians', [CustodianController::class, 'index']);
-    Route::get('/v1/custodians/{id}', [CustodianController::class, 'show']);
+    Route::get('/v1/custodians/{id}', [CustodianController::class, 'show'])->whereNumber('id');
+    Route::get('/v1/custodians/{pid}', [CustodianController::class, 'show'])->whereUuid('pid');
+
+
     Route::post('/v1/custodians', [CustodianController::class, 'store']);
     Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
     Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);

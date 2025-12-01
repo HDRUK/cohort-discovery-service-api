@@ -15,13 +15,13 @@ return [
      */
     'workgroup_mappings' => [
         'admin' => 'cohort-admin',
-        'default' => 'internal-lowest',
-        'custodian' => 'internal-owner',
-        'non-uk-industry' => 'internal-non-uk-industry',
-        'non-uk-research' => 'internal-non-uk-research',
-        'other' => 'internal-other',
-        'uk-industry' => 'internal-uk-industry',
-        'uk-research' => 'internal-uk-research',
-        'nhs-sde' => 'internal-nhs-sde',
+        'default' => 'external-lowest',
+        //'custodian' => 'cohort-custodian',
+        'non-uk-industry' => 'external-non-uk-industry',
+        'non-uk-research' => 'external-non-uk-research',
+        'other' => 'external-other',
+        'uk-industry' => 'external-uk-industry',
+        'uk-research' => 'external-uk-research',
+        'nhs-sde' => 'external-nhs-sde',
     ],
 ];
