@@ -75,7 +75,7 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function show(ModelBackedRequest $request, int $id): JsonResponse
+    public function show(ModelBackedRequest $request, mixed $key = null): JsonResponse
     {
         $validated = $request->validated();
 
@@ -83,7 +83,16 @@ class CustodianController extends Controller
             $custodian = Custodian::with([
                 'hosts',
                 'network',
-            ])->findOrFail($validated['id']);
+            ])->when(
+                ctype_digit($key),
+                fn ($q) => $q->where('id', $key),
+                fn ($q) => $q->where('pid', $key)
+            )
+            ->firstOrFail();
+
+            // gate to be added here to protect who can see this
+            // - admins
+            // - or users with this custodian in their custodian_team_admins (token)
 
             return $this->OKResponse($custodian);
         } catch (\Throwable $e) {
