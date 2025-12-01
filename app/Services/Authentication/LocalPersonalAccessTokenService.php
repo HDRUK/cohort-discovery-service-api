@@ -47,7 +47,7 @@ class LocalPersonalAccessTokenService
                 'name' => $user->name,
                 'email' => $user->email,
                 'cohort_discovery_roles' => $user->role_names,
-                'workgroups' => $user->workgroups->select(['id','name', 'active']),
+                'workgroups' => $user->workgroups,
                 'cohort_admin_teams' => $user->custodians,
             ];
 

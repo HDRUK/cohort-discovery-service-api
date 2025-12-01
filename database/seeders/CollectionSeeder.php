@@ -76,7 +76,7 @@ class CollectionSeeder extends Seeder
         // to mimic the distribution and generic query types
         $types = [TaskType::A, TaskType::B];
         $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
-        $frequencyRun = 7; // ...on Sunday's
+        $frequencyRun = 6; // ...on Sunday's
         foreach ($types as $t) {
             CollectionConfig::create([
                 'collection_id' => $collection->id,

@@ -21,7 +21,6 @@ class StandaloneAuthenticationService implements AuthenticationServiceInterface
         $credentials = $request->only('email', 'password');
 
         $user = User::where('email', $credentials['email'])->first();
-
         if ($user && Hash::check($credentials['password'], $user->password)) {
             $token = $this->tokenService->makeForUser($user);
 
