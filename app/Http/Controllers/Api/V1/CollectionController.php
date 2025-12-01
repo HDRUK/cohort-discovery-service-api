@@ -298,7 +298,10 @@ class CollectionController extends Controller
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
-            dd($e);
+            \Log::error('CollectionController@indexByCustodian - failed: '.
+                $e->getMessage());
+
+            return $this->NotFoundResponse();
         }
     }
 
