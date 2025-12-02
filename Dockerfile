@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
@@ -40,8 +41,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 COPY . /var/www
 
 
+RUN CAT /run/secrets/composer_auth
+
 # Composer & laravel
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
+RUN --mount=type=secret,id=composer_auth \
+    && export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
+    && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
     && php artisan storage:link \
