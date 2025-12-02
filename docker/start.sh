@@ -2,15 +2,23 @@
 
 set -euo pipefail
 
+# Preserve Cloud Run's PORT (or default to 8080 if running locally)
+CLOUD_RUN_PORT="${PORT:-8080}"
+
 if [ -f /var/www/.env ]; then
     # shellcheck disable=SC1091
-    source /var/www/.env
+    . /var/www/.env
 fi
 
+# Let .env define APP_ENV / REBUILD_DB if present, otherwise use defaults
 APP_ENV="${APP_ENV:-production}"
 REBUILD_DB="${REBUILD_DB:-0}"
+START_HORIZON="${START_HORIZON:-1}"
 
-base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=8100"
+# Force PORT to the Cloud Run / external value so .env can't break it
+PORT="${CLOUD_RUN_PORT}"
+
+base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=${PORT}"
 
 if [ "${DB_CONNECTION:-}" = "sqlite" ]; then
     db_path="${DB_DATABASE:-database/database.sqlite}"
@@ -19,7 +27,7 @@ if [ "${DB_CONNECTION:-}" = "sqlite" ]; then
 fi
 
 if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
-    echo 'running in dev mode - with watch'
+    echo 'running in dev mode'
     # base_command="$base_command --watch"
 
     if [ "$REBUILD_DB" = "1" ]; then
@@ -28,18 +36,36 @@ if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
         php artisan migrate
     fi
 else
-    php artisan migrate
     echo "running in prod mode"
+    php artisan migrate
 fi
 
 if [ -n "${OCTANE_WORKERS:-}" ]; then
     base_command="$base_command --workers=${OCTANE_WORKERS}"
 fi
 
+
+composer dump-autoload
+composer dump-autoload -o
+
+php artisan clear-compiled
 php artisan optimize:clear
+
+php artisan route:clear
+php artisan view:clear
+php artisan cache:clear
+php artisan config:clear
+
 php artisan optimize
+php artisan config:cache
 
-$base_command &
 
-php artisan horizon
+# Optionally run Horizon in the background (so Octane remains PID 1)
+if [ "${START_HORIZON:-1}" = "1" ]; then
+    echo "Starting Horizon in background..."
+    php artisan horizon &
+fi
 
+echo "Starting Octane on port ${PORT}..."
+# exec so Octane becomes PID 1 and receives signals properly
+exec $base_command
