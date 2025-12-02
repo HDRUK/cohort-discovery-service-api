@@ -2,7 +2,6 @@ FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
 ENV REBUILD_DB=1
-ENV COMPOSER_AUTH=
 
 WORKDIR /var/www
 
@@ -42,7 +41,9 @@ COPY . /var/www
 
 
 # Composer & laravel
-RUN composer install --optimize-autoloader \
+RUN --mount=type=secret,id=composer_auth \
+    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
+    && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
     && php artisan storage:link \
