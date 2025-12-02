@@ -41,9 +41,7 @@ COPY . /var/www
 
 
 # Composer & laravel
-RUN --mount=type=secret,id=composer_auth \
-    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
-    && composer install --no-interaction --prefer-dist --optimize-autoloader \
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
     && php artisan storage:link \
