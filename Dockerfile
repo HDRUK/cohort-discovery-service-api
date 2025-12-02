@@ -11,7 +11,8 @@ COPY composer.* /var/www/
 
 RUN --mount=type=secret,id=composer_auth \
     echo "Listing /run/secrets:" && ls -ltr /run/secrets && \
-    du -sh /run/secrets/composer_auth 
+    du -sh /run/secrets/composer_auth  && \
+    wc -l /run/secrets/composer_auth 
 
 
 RUN apt-get update && apt-get install -y \
