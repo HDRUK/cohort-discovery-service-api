@@ -58,7 +58,7 @@ jobs:
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
           GAR_NAME: ${{ secrets.GAR_NAME }}
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
-          DOCKER_BUILDKIT: "1"
+          DOCKER_BUILDKIT: 1
 
         run: |-
           set -euo pipefail
