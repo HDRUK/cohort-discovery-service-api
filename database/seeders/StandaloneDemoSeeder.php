@@ -13,6 +13,7 @@ use Hash;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Laravel\Passport\Client;
+use Illuminate\Support\Str;
 
 class StandaloneDemoSeeder extends Seeder
 {
