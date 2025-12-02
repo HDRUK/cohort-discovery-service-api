@@ -3,8 +3,6 @@ FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
 ENV REBUILD_DB=1
-# DOCKER_BUILDKIT is only needed on the host, not inside the image
-# ENV DOCKER_BUILDKIT="1"
 
 WORKDIR /var/www
 
