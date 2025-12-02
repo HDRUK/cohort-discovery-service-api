@@ -50,7 +50,7 @@ COPY . /var/www
 
 # Composer & laravel
 RUN --mount=type=secret,id=composer_auth \
-    && export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
+    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
     && echo $COMPOSER_AUTH \
     && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
