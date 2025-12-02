@@ -10,12 +10,10 @@ if [ -f /var/www/.env ]; then
     . /var/www/.env
 fi
 
-# Let .env define APP_ENV / REBUILD_DB if present, otherwise use defaults
 APP_ENV="${APP_ENV:-production}"
 REBUILD_DB="${REBUILD_DB:-0}"
 START_HORIZON="${START_HORIZON:-1}"
 
-# Force PORT to the Cloud Run / external value so .env can't break it
 PORT="${CLOUD_RUN_PORT}"
 
 base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=${PORT}"
