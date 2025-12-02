@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
-use Lcobucci\JWT\Token;
+use Lcobucci\JWT\Signer\Rsa\Sha256;
 
 class DecodeJwt
 {
@@ -75,11 +75,22 @@ class DecodeJwt
                 return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
             }
         } else {
-            // Standalone mode - token signed internally, rather than externally
+
+            $privateKeyEnv = config('passport.private_key');
+            $publicKeyEnv  = config('passport.public_key');
+
+            $privateKey = $privateKeyEnv
+                ? InMemory::plainText($privateKeyEnv)
+                : InMemory::file(storage_path('oauth-private.key'));
+
+            $publicKey = $publicKeyEnv
+                ? InMemory::plainText($publicKeyEnv)
+                : InMemory::file(storage_path('oauth-public.key'));
+
             $jwtConfig = Configuration::forAsymmetricSigner(
-                new \Lcobucci\JWT\Signer\Rsa\Sha256(),
-                InMemory::file(storage_path('oauth-private.key')),
-                InMemory::file(storage_path('oauth-public.key'))
+                new Sha256(),
+                $privateKey,
+                $publicKey
             );
 
             /** @var \Lcobucci\JWT\UnencryptedToken $jwt */
