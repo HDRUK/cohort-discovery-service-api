@@ -5,15 +5,9 @@ set -euo pipefail
 # Preserve Cloud Run's PORT (or default to 8080 if running locally)
 CLOUD_RUN_PORT="${PORT:-8080}"
 
-if [ -f /var/www/.env ]; then
-    # shellcheck disable=SC1091
-    . /var/www/.env
-fi
-
 APP_ENV="${APP_ENV:-production}"
 REBUILD_DB="${REBUILD_DB:-0}"
 START_HORIZON="${START_HORIZON:-1}"
-
 PORT="${CLOUD_RUN_PORT}"
 
 base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=${PORT}"
