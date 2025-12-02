@@ -3,7 +3,8 @@ FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
 ENV REBUILD_DB=1
-ENV DOCKER_BUILDKIT="1"
+# DOCKER_BUILDKIT is only needed on the host, not inside the image
+# ENV DOCKER_BUILDKIT="1"
 
 WORKDIR /var/www
 
@@ -11,9 +12,8 @@ COPY composer.* /var/www/
 
 RUN --mount=type=secret,id=composer_auth \
     echo "Listing /run/secrets:" && ls -ltr /run/secrets && \
-    du -sh /run/secrets/composer_auth  && \
-    wc -l /run/secrets/composer_auth 
-
+    du -sh /run/secrets/composer_auth && \
+    wc -l /run/secrets/composer_auth
 
 RUN apt-get update && apt-get install -y \
     nodejs \
@@ -47,11 +47,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 # Copy the application
 COPY . /var/www
 
-
-# Composer & laravel
+# Composer & Laravel
 RUN --mount=type=secret,id=composer_auth \
-    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
-    && echo $COMPOSER_AUTH \
+    # use /tmp/composer as our composer_home for the build
+    mkdir -p /tmp/composer \
+    && cp /run/secrets/composer_auth /tmp/composer/auth.json \
+    && export COMPOSER_HOME=/tmp/composer \
     && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
