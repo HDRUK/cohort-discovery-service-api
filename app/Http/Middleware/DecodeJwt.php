@@ -75,7 +75,6 @@ class DecodeJwt
                 return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
             }
         } else {
-
             $privateKeyEnv = config('passport.private_key');
             $publicKeyEnv  = config('passport.public_key');
 
