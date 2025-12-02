@@ -26,7 +26,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: dev # override for branch deployment
+          ref: feat/DP-288 # override for branch deployment
 
       - name: Read VERSION file
         id: getversion
@@ -84,7 +84,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: dev # override for branch deployment
+          ref: feat/DP-288 # override for branch deployment
 
       - name: Google Auth
         id: auth
