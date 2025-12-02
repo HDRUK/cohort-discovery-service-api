@@ -90,6 +90,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'custodian_id',
         'status',
         'updated_at',
+        'workgroup_ids',
     ];
 
     protected $casts = [
@@ -177,6 +178,12 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             'destroy' => [
                 'id' => 'required|integer|exists:collections,id',
             ],
+            'addtoworkgroup' => [
+                'workgroup_id' => 'required|integer|exists:workgroups,id',
+            ],
+            'removefromworkgroup' => [
+                'workgroup_id' => 'required|integer|exists:workgroups,id',
+            ],
             default => [],
         };
     }
@@ -249,6 +256,16 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     public function config(): HasOne
     {
         return $this->hasOne(CollectionConfig::class);
+    }
+
+    public function workgroups(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Workgroup::class,
+            'workgroup_has_collection',
+            'collection_id',
+            'workgroup_id',
+        );
     }
 
     public static function logActivity(Collection $c, TaskType $type): void

@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Workgroup;
+use App\Models\WorkgroupHasCollection;
 use App\Services\CollectionStateService;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\HelperFunctions;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * @OA\Tag(
@@ -104,6 +107,7 @@ class CollectionController extends Controller
                 'demographics',
                 'custodian',
                 'modelState.state',
+                'workgroups',
             ])->findOrFail($validated['id']);
 
             return $this->OKResponse($collection);
@@ -457,5 +461,112 @@ class CollectionController extends Controller
         }
 
         return [$custodian, null];
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/collections/{collectionId}/workgroup",
+     *     summary="Add a collection to a workgroup",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="collectionId",
+     *         in="path",
+     *         description="Collection ID",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=2)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"workgroup_id"},
+     *             @OA\Property(property="workgroup_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Collection added to workgroup",
+     *         @OA\JsonContent(ref="#/components/schemas/WorkgroupHasCollection")
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection or Workgroup not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function addToWorkgroup(Request $request, int $collectionId): JsonResponse
+    {
+        $input = $request->validate(app(Collection::class)->getValidationRules('addToWorkgroup'));
+
+        try {
+            $collection = Collection::findOrFail($collectionId);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        try {
+            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+        } catch (\Exception $e) {
+            return $this->NotFoundResponse();
+        }
+
+        $workgroupHasCollection = WorkgroupHasCollection::firstOrCreate([
+            'collection_id' => $collection->id,
+            'workgroup_id' => $input['workgroup_id'],
+        ]);
+
+        return $this->OKResponse([$workgroupHasCollection]);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/collections/{collectionId}/workgroup",
+     *     summary="Remove a collection from a workgroup",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="collectionId",
+     *         in="path",
+     *         description="Collection ID",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=2)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"workgroup_id"},
+     *             @OA\Property(property="workgroup_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Removed from workgroup"),
+     *     @OA\Response(response=404, description="Collection or Workgroup not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function removeFromWorkgroup(Request $request, int $collectionId): JsonResponse
+    {
+        $input = $request->validate(app(Collection::class)->getValidationRules('removeFromWorkgroup'));
+
+        try {
+            $collection = Collection::findOrFail($collectionId);
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        }
+
+        try {
+            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        }
+
+        $workgroupHasCollection = WorkgroupHasCollection::where([
+            'collection_id' => $collection->id,
+            'workgroup_id' => $input['workgroup_id'],
+        ])->delete();
+
+        if ($workgroupHasCollection) {
+            return $this->OKResponse([]);
+        }
+
+        return $this->BadRequestResponse();
     }
 }
