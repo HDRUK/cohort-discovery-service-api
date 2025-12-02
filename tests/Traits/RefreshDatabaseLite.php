@@ -19,7 +19,6 @@ trait RefreshDatabaseLite
         if (! static::$migrated) {
             if (env('APP_ENV') === 'testing') {
                 Artisan::call('migrate:fresh');
-                Artisan::call('db:seed', ['--class' => 'DatabaseSeeder']);
                 Artisan::call('db:seed', ['--class' => 'TestingSeeder']);
 
                 Artisan::call('migrate:fresh', [
