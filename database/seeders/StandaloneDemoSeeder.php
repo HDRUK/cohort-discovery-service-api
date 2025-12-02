@@ -12,6 +12,7 @@ use DB;
 use Hash;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Laravel\Passport\Client;
 
 class StandaloneDemoSeeder extends Seeder
 {
@@ -44,6 +45,19 @@ class StandaloneDemoSeeder extends Seeder
             'email' => config('system.demo_user_email'),
             'password' => Hash::make(config('system.demo_user_password')),
         ]);
+
+        if (! Client::where('provider', 'users')->exists()) {
+            $client = Client::create([
+                'owner_type' => null,
+                'owner_id' => null,
+                'secret' => Str::random(40),
+                'name' => 'ProjectDaphne',
+                'provider' => 'users',
+                'redirect_uris' => [],
+                'grant_types' => ['personal_access'],
+                'revoked' => 0,
+            ]);
+        }
 
         CustodianHasUser::create([
             'user_id' => $user->id,
