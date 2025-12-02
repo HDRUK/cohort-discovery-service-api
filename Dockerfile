@@ -8,6 +8,9 @@ WORKDIR /var/www
 
 COPY composer.* /var/www/
 
+RUN ls -ltr /run/secrets
+RUN cat /run/secrets/composer_auth
+
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
@@ -41,7 +44,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 COPY . /var/www
 
 
-RUN CAT /run/secrets/composer_auth
+RUN cat /run/secrets/composer_auth
 
 # Composer & laravel
 RUN --mount=type=secret,id=composer_auth \
