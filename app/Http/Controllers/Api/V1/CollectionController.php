@@ -464,11 +464,11 @@ class CollectionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/collections/{id}/workgroup",
+     *     path="/api/v1/collections/{collectionId}/workgroup",
      *     summary="Add a collection to a workgroup",
      *     tags={"Collections"},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="collectionId",
      *         in="path",
      *         description="Collection ID",
      *         required=true,
@@ -492,14 +492,12 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function addToWorkgroup(Request $request, int $id): JsonResponse
+    public function addToWorkgroup(Request $request, int $collectionId): JsonResponse
     {
-        $input = $request->validate([
-            'workgroup_id' => 'required|exists:workgroups,id',
-        ]);
+        $input = $request->validate(app(Collection::class)->getValidationRules('addToWorkgroup'));
 
         try {
-            $collection = Collection::findOrFail($id);
+            $collection = Collection::findOrFail($collectionId);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
@@ -520,11 +518,11 @@ class CollectionController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/collections/{id}/workgroup",
+     *     path="/api/v1/collections/{collectionId}/workgroup",
      *     summary="Remove a collection from a workgroup",
      *     tags={"Collections"},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="collectionId",
      *         in="path",
      *         description="Collection ID",
      *         required=true,
@@ -543,14 +541,12 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function removeFromWorkgroup(Request $request, int $id): JsonResponse
+    public function removeFromWorkgroup(Request $request, int $collectionId): JsonResponse
     {
-        $input = $request->validate([
-            'workgroup_id' => 'required|exists:workgroups,id',
-        ]);
+        $input = $request->validate(app(Collection::class)->getValidationRules('removeFromWorkgroup'));
 
         try {
-            $collection = Collection::findOrFail($id);
+            $collection = Collection::findOrFail($collectionId);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }

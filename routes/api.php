@@ -60,8 +60,8 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
 
     Route::get('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'indexByCustodian']);
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
-    Route::post('/v1/collections/{id}/workgroup', [CollectionController::class, 'addToWorkgroup']);
-    Route::delete('/v1/collections/{id}/workgroup', [CollectionController::class, 'removeFromWorkgroup']);
+    Route::post('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'addToWorkgroup']);
+    Route::delete('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'removeFromWorkgroup']);
 
     Route::post('/v1/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun']);
 

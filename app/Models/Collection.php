@@ -90,6 +90,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'custodian_id',
         'status',
         'updated_at',
+        'workgroup_ids',
     ];
 
     protected $casts = [
@@ -176,6 +177,12 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:collections,id',
+            ],
+            'addtoworkgroup' => [
+                'workgroup_id' => 'required|integer|exists:workgroups,id',
+            ],
+            'removefromworkgroup' => [
+                'workgroup_id' => 'required|integer|exists:workgroups,id',
             ],
             default => [],
         };
