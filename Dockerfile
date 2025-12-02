@@ -7,13 +7,11 @@ ENV DOCKER_BUILDKIT="1"
 
 WORKDIR /var/www
 
-RUN ls -ltr /var/www
-
 COPY composer.* /var/www/
 
 RUN --mount=type=secret,id=composer_auth \
     echo "Listing /run/secrets:" && ls -ltr /run/secrets && \
-    echo "Showing first 80 chars of composer_auth:" && head -c 80 /run/secrets/composer_auth && echo
+    du -sh /run/secrets/composer_auth 
 
 
 RUN apt-get update && apt-get install -y \
@@ -49,11 +47,10 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 COPY . /var/www
 
 
-RUN cat /run/secrets/composer_auth
-
 # Composer & laravel
 RUN --mount=type=secret,id=composer_auth \
     && export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
+    && echo $COMPOSER_AUTH \
     && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
     && php artisan octane:install --server=frankenphp --no-interaction \
