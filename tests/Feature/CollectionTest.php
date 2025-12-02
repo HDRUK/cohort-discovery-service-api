@@ -238,6 +238,7 @@ class CollectionTest extends TestCase
                 ]
             );
 
+        dump($response->decodeResponseJson());
         $response->assertStatus(200);
         $content = $response->json('data');
 
