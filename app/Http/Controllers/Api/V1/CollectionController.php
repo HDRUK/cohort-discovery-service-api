@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * @OA\Tag(
@@ -547,13 +548,13 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::findOrFail($collectionId);
-        } catch (\Exception $e) {
+        } catch (ModelNotFoundException $e) {
             return $this->NotFoundResponse();
         }
 
         try {
             $workgroup = Workgroup::findOrFail($input['workgroup_id']);
-        } catch (\Exception $e) {
+        } catch (ModelNotFoundException $e) {
             return $this->NotFoundResponse();
         }
 
