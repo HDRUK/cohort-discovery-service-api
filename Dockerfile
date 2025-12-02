@@ -3,11 +3,15 @@ FROM dunglas/frankenphp:php8.4
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
 ENV REBUILD_DB=1
+ENV DOCKER_BUILDKIT="1"
 
 WORKDIR /var/www
 
+RUN ls -ltr /var/www
+
 COPY composer.* /var/www/
 
+RUN echo $COMPOSER_AUTH
 RUN ls -ltr /run/secrets
 RUN cat /run/secrets/composer_auth
 
