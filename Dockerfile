@@ -10,11 +10,6 @@ WORKDIR /var/www
 
 COPY composer.* /var/www/
 
-RUN --mount=type=secret,id=composer_auth \
-    echo "Listing /run/secrets:" && ls -ltr /run/secrets && \
-    du -sh /run/secrets/composer_auth && \
-    wc -l /run/secrets/composer_auth
-
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
@@ -48,10 +43,10 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 COPY . /var/www
 
 # Composer & Laravel
-RUN --mount=type=secret,id=composer_auth \
-    # use /tmp/composer as our composer_home for the build
+RUN --mount=type=secret,id=github_token \
     mkdir -p /tmp/composer \
-    && cp /run/secrets/composer_auth /tmp/composer/auth.json \
+    && GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+    && printf '%s' "{\"github-oauth\":{\"github.com\":\"${GITHUB_TOKEN}\"}}" > /tmp/composer/auth.json \
     && export COMPOSER_HOME=/tmp/composer \
     && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \
