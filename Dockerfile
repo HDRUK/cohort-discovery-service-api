@@ -11,9 +11,10 @@ RUN ls -ltr /var/www
 
 COPY composer.* /var/www/
 
-RUN echo $COMPOSER_AUTH
-RUN ls -ltr /run/secrets
-RUN cat /run/secrets/composer_auth
+RUN --mount=type=secret,id=composer_auth \
+    echo "Listing /run/secrets:" && ls -ltr /run/secrets && \
+    echo "Showing first 80 chars of composer_auth:" && head -c 80 /run/secrets/composer_auth && echo
+
 
 RUN apt-get update && apt-get install -y \
     nodejs \
