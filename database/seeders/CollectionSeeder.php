@@ -23,7 +23,7 @@ class CollectionSeeder extends Seeder
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody CKD Dataset',
             pid: '00000000-0000-0000-0000-000000000000',
-            url: null,
+            url: "http://example.com",
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -33,7 +33,7 @@ class CollectionSeeder extends Seeder
         $this->seedCollectionWithDemographics(
             name: 'Various Conditions Dataset',
             pid: '00000000-0000-0000-0000-000000000001',
-            url: null,
+            url: "http://example.com",
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -43,7 +43,7 @@ class CollectionSeeder extends Seeder
         $this->seedCollectionWithDemographics(
             name: 'SARs-CoV-2 Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000002',
-            url: null,
+            url: "http://example.com",
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -53,7 +53,7 @@ class CollectionSeeder extends Seeder
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody and Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000003',
-            url: null,
+            url: "http://example.com",
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,

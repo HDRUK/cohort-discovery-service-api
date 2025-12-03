@@ -80,6 +80,68 @@ class CollectionController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/admin/collections",
+     *     summary="Get all collections, paginated for global admin",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *     @OA\Parameter(
+     *         name="state",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", example="active")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of collections for admin",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection"))
+     *     )
+     * )
+     */
+    public function indexForAdmin(Request $request): JsonResponse
+    {
+        try {
+            $perPage = $this->resolvePerPage();
+
+            $collections = Collection::query()
+            ->with([
+                'config',
+                'custodian',
+                'demographics',
+                'host',
+                'modelState.state',
+            ])
+                ->when($request->filled('state'), function ($q) use ($request) {
+                    if ($request->state !== 'all') {
+                        $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                    }
+                })
+                ->searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting()
+                ->paginate($perPage);
+
+            return $this->OKResponse($collections);
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@indexForAdmin - failed: '.
+                $e->getMessage());
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/collections/{id}",
      *     summary="Get a collection by ID",
      *     tags={"Collections"},
@@ -271,6 +333,12 @@ class CollectionController extends Controller
      *         required=true,
      *         @OA\Schema(type="string", example="cust_abc123")
      *     ),
+     *     @OA\Parameter(
+     *         name="state",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", example="active")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Paginated list of collections for the custodian",
@@ -293,7 +361,9 @@ class CollectionController extends Controller
                 ->with(['host', 'config', 'modelState.state'])
                 ->where('custodian_id', $custodian->id)
                 ->when($request->filled('state'), function ($q) use ($request) {
-                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                    if ($request->state !== 'all') {
+                        $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                    }
                 })
                 ->searchViaRequest()
                 ->filterViaRequest()

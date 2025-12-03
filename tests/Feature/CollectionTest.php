@@ -16,7 +16,7 @@ use Tests\TestCase;
 class CollectionTest extends TestCase
 {
     private const BASE_URL = '/api/v1/collections';
-
+    private const BASE_ADMIN_URL = '/api/v1/admin/collections';
     private const CUSTODIAN_BASE_URL = '/api/v1/custodians/%s/collections';
 
     private User $user;
@@ -620,6 +620,66 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals($initialNumLinkedWorkgroups, count($response->json('data.workgroups')));
+    }
+
+    public function test_it_can_list_all_collections_as_admin_only(): void
+    {
+        $fakeGatewayTeamId = 1111;
+        $anotherFakeGatewayTeamId = 2222;
+        $custodian = Custodian::factory()->create([
+            'gateway_team_id' => $fakeGatewayTeamId,
+        ]);
+
+        $anotherCustodian = Custodian::factory()->create([
+            'gateway_team_id' => $anotherFakeGatewayTeamId,
+        ]);
+
+        Collection::factory(5)->create([
+            'custodian_id' => $custodian->id,
+        ]);
+        Collection::factory(5)->create([
+            'custodian_id' => $anotherCustodian->id,
+        ]);
+        // global admin can list all collections
+        $overrides = [
+            'user' => [
+                'workgroups' => [
+                    [
+                        'id' => 1,
+                        'name' => 'cohort-admin',
+                    ]
+                ],
+            ],
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(self::BASE_ADMIN_URL);
+
+        $response->assertStatus(200);
+        $this->assertEquals(10, count($response->json('data.data')));
+
+        // custodian admin cannot use this endpoint
+        $overrides = [
+            'user' => [
+                'cohort_admin_teams' => [
+                    [
+                        'id' => $fakeGatewayTeamId,
+                        'name' => $custodian->name,
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides
+        )
+            ->getJson(self::BASE_ADMIN_URL);
+
+        $response->assertStatus(401);
     }
 
     // public function test_it_can_list_collections_integrated_mode(): void
