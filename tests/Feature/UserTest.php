@@ -46,7 +46,7 @@ class UserTest extends TestCase
         $workgroup = Workgroup::all()->random();
         $user = User::factory()->create();
 
-        $this->url .= '/'.$user->id.'/workgroup/add';
+        $this->url .= '/'.$user->id.'/workgroup';
 
         $response = $this->post($this->url, [
             'workgroup_id' => $workgroup->id,
@@ -73,9 +73,9 @@ class UserTest extends TestCase
             'workgroup_id' => $workgroup->id,
         ]);
 
-        $this->url .= '/'.$user->id.'/workgroup/remove';
+        $this->url .= '/'.$user->id.'/workgroup';
 
-        $response = $this->post($this->url, [
+        $response = $this->delete($this->url, [
             'workgroup_id' => $workgroup->id,
         ]);
         $response->assertStatus(200);
