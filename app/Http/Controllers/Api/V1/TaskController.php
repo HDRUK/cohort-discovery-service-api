@@ -18,6 +18,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Log;
 
 /**
  * @OA\Tag(
@@ -316,10 +317,41 @@ class TaskController extends Controller
 
                 $hash = hash('sha256', $decodedContent);
 
+
                 $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
 
-                // note: need to change this storage to a bucket??
-                Storage::disk('local')->put($path, $decodedContent);
+                try {
+                    Log::debug('About to write file to storage', [
+                        'disk' => config('filesystems.default'),
+                        'path' => $path,
+                        'task_id' => $task->id ?? null,
+                    ]);
+
+                    $ok = Storage::put($path, $decodedContent);
+
+                    if (! $ok) {
+                        Log::error('Storage::put returned false', [
+                            'disk' => config('filesystems.default'),
+                            'path' => $path,
+                            'size' => strlen($decodedContent),
+                        ]);
+                    } else {
+                        Log::info('File written to storage successfully', [
+                            'disk' => config('filesystems.default'),
+                            'path' => $path,
+                            'size' => strlen($decodedContent),
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Exception while writing to storage', [
+                        'disk' => config('filesystems.default'),
+                        'path' => $path,
+                        'message' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(), // optional, can be noisy
+                    ]);
+
+                    throw $e; // or handle however your job handles failures
+                }
 
                 $resultFile = ResultFile::create([
                     'pid' => $hash,

@@ -41,8 +41,11 @@ class ProcessDistributionFile implements ShouldQueue
 
         $file->markProcessing();
 
-        $stream = Storage::disk('local')->readStream($file->path);
+        $stream = Storage::readStream($file->path);
         if (! $stream) {
+            \Log::error('Failed to open file stream', [
+                'path'    => $file->path,
+            ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
