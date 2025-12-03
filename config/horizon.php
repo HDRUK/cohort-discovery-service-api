@@ -203,7 +203,20 @@ return [
                 'balanceCooldown' => 3,
             ],
         ],
-
+        'preprod' => [
+            'supervisor-1' => [
+                'maxProcesses' => 10,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+        ],
+        'dev' => [
+            'supervisor-1' => [
+                'maxProcesses' => 10,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+        ],
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
