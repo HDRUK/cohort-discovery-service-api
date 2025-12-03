@@ -601,7 +601,7 @@ class CollectionTest extends TestCase
             ->getJson(self::BASE_URL.'/'.$coll->id);
         $response->assertStatus(200);
 
-        $this->assertEquals($initialNumLinkedWorkgroups+1, count($response->json('data.workgroups')));
+        $this->assertEquals($initialNumLinkedWorkgroups + 1, count($response->json('data.workgroups')));
 
         $response = $this->actingAsJwt(
             $this->user,

@@ -244,6 +244,59 @@
                 }
             }
         },
+        "/api/v1/admin/collections": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get all collections, paginated for global admin",
+                "operationId": "23c98a2b90903d688e9266cec4b59d7c",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "active"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of collections for admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/collections/{id}": {
             "get": {
                 "tags": [
@@ -402,6 +455,15 @@
                         "schema": {
                             "type": "string",
                             "example": "cust_abc123"
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "active"
                         }
                     }
                 ],
