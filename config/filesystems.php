@@ -44,7 +44,7 @@ return [
             'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
             'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', ''),
             'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI', null),
-            'apiEndpoint' => env('GOOGLE_CLOUD_STORAGE_API_ENDPOINT', null),
+            'api_endpoint' => env('GOOGLE_CLOUD_STORAGE_API_ENDPOINT', null),
             'visibility' => 'noPredefinedVisibility',
             'visibility_handler' => null,
             'metadata' => ['cacheControl' => 'public,max-age=86400'],
