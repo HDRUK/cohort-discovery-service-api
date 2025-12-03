@@ -95,6 +95,12 @@ class CollectionController extends Controller
      *         required=false,
      *         @OA\Schema(type="integer", example=25)
      *     ),
+     *     @OA\Parameter(
+     *         name="state",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", example='active')
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Paginated list of collections for admin",
@@ -326,6 +332,12 @@ class CollectionController extends Controller
      *         description="Public pid of the custodian",
      *         required=true,
      *         @OA\Schema(type="string", example="cust_abc123")
+     *     ),
+     *     @OA\Parameter(
+     *         name="state",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", example='active')
      *     ),
      *     @OA\Response(
      *         response=200,
