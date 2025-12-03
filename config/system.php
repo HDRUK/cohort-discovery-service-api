@@ -50,5 +50,8 @@ return [
     'demo_user_email' => env('DEMO_USER_EMAIL', 'demo.user@domain.com', ),
     'demo_user_password' => env('DEMO_USER_PASSWORD', 'd3m0User_!'),
 
+    'demo_researcher_email' => env('DEMO_RESEARCHER_EMAIL', 'demo.researcher@domain.com', ),
+    'demo_researcher_password' => env('DEMO_RESEARCHER_PASSWORD', 'd3m0User_!'),
+
     'collection_activity_log_type' => env('COLLECTION_ACTIVITY_LOG_TYPE', 'log'),
 ];

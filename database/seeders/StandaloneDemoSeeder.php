@@ -41,11 +41,32 @@ class StandaloneDemoSeeder extends Seeder
             'gateway_team_name' => $custodian->name
         ]);
 
+        // --- Admin user ---
         $user = User::create([
             'name' => 'Demo User',
             'email' => config('system.demo_user_email'),
             'password' => Hash::make(config('system.demo_user_password')),
         ]);
+
+        CustodianHasUser::create([
+            'user_id' => $user->id,
+            'custodian_id' => $custodian->id
+        ]);
+
+        $this->addRole($user, 'admin');
+        $this->addToWorkgroup($user, 'ADMIN');
+        // ----------------------
+
+
+        // --- Researcher ---
+        $researcher = User::create([
+           'name' => 'Demo Researcher',
+           'email' => config('system.demo_researcher_email'),
+           'password' => Hash::make(config('system.demo_researcher_password')),
+        ]);
+        $this->addToWorkgroup($researcher, 'UK-RESEARCH');
+        // ----------------------
+
 
         if (! Client::where('provider', 'users')->exists()) {
             $client = Client::create([
@@ -59,24 +80,24 @@ class StandaloneDemoSeeder extends Seeder
                 'revoked' => 0,
             ]);
         }
+    }
 
-        CustodianHasUser::create([
-            'user_id' => $user->id,
-            'custodian_id' => $custodian->id
-        ]);
-
-        UserHasRole::create([
-            'user_id' => $user->id,
-            'role_id' => Role::where('name', 'admin')->first()->id,
-        ]);
-
-
-        $adminWorkgroup = Workgroup::where('name', 'ADMIN')->firstOrFail();
-
+    private function addToWorkgroup(User $user, string $workgroup): void
+    {
+        $workgroup = Workgroup::where('name', $workgroup)->firstOrFail();
         UserHasWorkgroup::create([
             'user_id' => $user->id,
-            'workgroup_id' => $adminWorkgroup->id
+            'workgroup_id' => $workgroup->id
         ]);
-
     }
+
+    private function addRole(User $user, string $role): void
+    {
+        $role = Role::where('name', $role)->firstOrFail();
+        UserHasRole::create([
+            'user_id' => $user->id,
+            'role_id' => $role->id,
+        ]);
+    }
+
 }

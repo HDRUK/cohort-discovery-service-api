@@ -24,16 +24,17 @@ class DevDatabaseSeeder extends Seeder
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-        $this->call([
-            StateSeeder::class,
-            CollectionSeeder::class,
-            CollectionHostSeeder::class,
-        ]);
 
         if (ApplicationMode::isStandalone()) {
             $this->call([
                 StandaloneDemoSeeder::class
             ]);
         }
+
+        $this->call([
+            StateSeeder::class,
+            CollectionSeeder::class,
+            CollectionHostSeeder::class,
+        ]);
     }
 }

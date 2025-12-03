@@ -20,7 +20,6 @@ class CollectionSeeder extends Seeder
 {
     public function run(): void
     {
-
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody CKD Dataset',
             pid: '00000000-0000-0000-0000-000000000000',
