@@ -478,13 +478,13 @@
                 }
             }
         },
-        "/api/v1/collections/{id}/transition": {
+        "/api/v1/collections/{id}/transition_to": {
             "post": {
                 "tags": [
                     "Collections"
                 ],
                 "summary": "Transition a Collection to a new state",
-                "operationId": "b565b8de2b2c41f86328dc4e6a08f2a5",
+                "operationId": "33dc2151c04ed80bd56bbfaded68ae9f",
                 "parameters": [
                     {
                         "name": "id",
@@ -567,6 +567,116 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{collectionId}/workgroup": {
+            "post": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Add a collection to a workgroup",
+                "operationId": "35f2087cda7ea3b62c441feffbb36686",
+                "parameters": [
+                    {
+                        "name": "collectionId",
+                        "in": "path",
+                        "description": "Collection ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "workgroup_id"
+                                ],
+                                "properties": {
+                                    "workgroup_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Collection added to workgroup",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkgroupHasCollection"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Collection or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Remove a collection from a workgroup",
+                "operationId": "2a4f0b3e8964b1bfa67a7fd314378e31",
+                "parameters": [
+                    {
+                        "name": "collectionId",
+                        "in": "path",
+                        "description": "Collection ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "workgroup_id"
+                                ],
+                                "properties": {
+                                    "workgroup_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Removed from workgroup"
+                    },
+                    "404": {
+                        "description": "Collection or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -3709,6 +3819,27 @@
                         "type": "string",
                         "format": "date-time",
                         "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "WorkgroupHasCollection": {
+                "title": "WorkgroupHasCollection",
+                "description": "Pivot linking a workgroup to a collection.",
+                "required": [
+                    "workgroup_id",
+                    "collection_id"
+                ],
+                "properties": {
+                    "workgroup_id": {
+                        "description": "ID of the workgroup",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "description": "ID of the collection",
+                        "type": "integer",
+                        "example": 1
                     }
                 },
                 "type": "object"
