@@ -58,6 +58,11 @@ if [ "${START_HORIZON:-1}" = "1" ]; then
     php artisan horizon &
 fi
 
+echo "Checking horizon...."
+php artisan horizon:status
+php artisan horizon:supervisors
+echo "Checked horizon...."
+
 echo "Starting Octane on port ${PORT}..."
 # exec so Octane becomes PID 1 and receives signals properly
 exec $base_command
