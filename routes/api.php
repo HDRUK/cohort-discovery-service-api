@@ -50,6 +50,8 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
     Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);
 
+    Route::get('/v1/admin/collections', [CollectionController::class, 'indexForAdmin']);
+
     Route::get('/v1/collection_hosts', [CollectionHostController::class, 'index']);
     Route::get('/v1/collection_hosts/{id}', [CollectionHostController::class, 'show']);
     Route::post('/v1/collection_hosts', [CollectionHostController::class, 'store']);
