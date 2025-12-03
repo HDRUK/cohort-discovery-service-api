@@ -319,7 +319,7 @@ class TaskController extends Controller
                 $hash = hash('sha256', $decodedContent);
 
 
-                $path = sprintf('%s-%s-%s-%s', $task->id, Carbon::now()->toDateTimeString(), $hash, $fileName);
+                $path = sprintf('%s-%s-%s-%s', $task->id, Carbon::now()->format('Ymd_His'), $hash, $fileName);
 
                 try {
                     Log::debug('About to write file to storage', [
