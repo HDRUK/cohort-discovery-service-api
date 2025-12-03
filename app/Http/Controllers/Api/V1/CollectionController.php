@@ -99,7 +99,7 @@ class CollectionController extends Controller
      *         name="state",
      *         in="query",
      *         required=false,
-     *         @OA\Schema(type="string", example='active')
+     *         @OA\Schema(type="string", example="active")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -337,7 +337,7 @@ class CollectionController extends Controller
      *         name="state",
      *         in="query",
      *         required=false,
-     *         @OA\Schema(type="string", example='active')
+     *         @OA\Schema(type="string", example="active")
      *     ),
      *     @OA\Response(
      *         response=200,
