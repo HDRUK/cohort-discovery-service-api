@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Log;
+use Carbon\Carbon;
 
 /**
  * @OA\Tag(
@@ -318,7 +319,7 @@ class TaskController extends Controller
                 $hash = hash('sha256', $decodedContent);
 
 
-                $path = sprintf('results/%s/%s-%s', $task->id, $hash, $fileName);
+                $path = sprintf('%s-%s-%s-%s', $task->id, Carbon::now()->toDateTimeString(), $hash, $fileName);
 
                 try {
                     Log::debug('About to write file to storage', [
@@ -347,10 +348,10 @@ class TaskController extends Controller
                         'disk' => config('filesystems.default'),
                         'path' => $path,
                         'message' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(), // optional, can be noisy
+                        'trace' => $e->getTraceAsString(),
                     ]);
 
-                    throw $e; // or handle however your job handles failures
+                    throw $e;
                 }
 
                 $resultFile = ResultFile::create([
