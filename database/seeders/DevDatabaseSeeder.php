@@ -32,7 +32,6 @@ class DevDatabaseSeeder extends Seeder
         }
 
         $this->call([
-            StateSeeder::class,
             CollectionSeeder::class,
             CollectionHostSeeder::class,
         ]);
