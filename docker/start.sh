@@ -10,7 +10,7 @@ REBUILD_DB="${REBUILD_DB:-0}"
 START_HORIZON="${START_HORIZON:-1}"
 PORT="${CLOUD_RUN_PORT}"
 
-base_command="php artisan octane:frankenphp --max-requests=250 --host=0.0.0.0 --port=${PORT}"
+base_command="php artisan octane:frankenphp --host=0.0.0.0 --port=${PORT}"
 
 if [ "${DB_CONNECTION:-}" = "sqlite" ]; then
     db_path="${DB_DATABASE:-database/database.sqlite}"
