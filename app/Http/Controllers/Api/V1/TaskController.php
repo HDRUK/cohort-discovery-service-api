@@ -123,7 +123,6 @@ class TaskController extends Controller
      */
     public function nextJob($collectionId, QueryContextManager $contextManager): JsonResponse|Response
     {
-        \Log::info('Looking for new job for '.$collectionId);
         $parts = explode('.', $collectionId);
         $parsedId = $parts[0];
         $rawType = $parts[1] ?? 'a';
@@ -134,7 +133,7 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info('Task type is '.$taskType->value);
+        \Log::info('Looking for new job for '.$collectionId);
         $collection = Collection::where('pid', $parsedId)->first();
 
         if (! $collection) {

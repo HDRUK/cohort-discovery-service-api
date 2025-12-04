@@ -26,6 +26,7 @@ class CollectionHostBasicAuth
         $authorisationHeader = $request->header('Authorization');
 
         if (! $authorisationHeader || ! preg_match('/Basic\s+(.*)$/i', $authorisationHeader, $matches)) {
+            \Log::error('No authorisation header ');
             return $this->UnauthorisedResponse();
         }
 
@@ -42,10 +43,12 @@ class CollectionHostBasicAuth
         $client = CollectionHost::where('client_id', $clientId)->first();
 
         if (! $client) {
+            \Log::error('Client cannot be found ');
             return $this->UnauthorisedResponse();
         }
 
         if (! hash_equals($client->client_secret, $clientSecret)) {
+            \Log::error('Client is not authorised ');
             return $this->UnauthorisedResponse();
         }
 

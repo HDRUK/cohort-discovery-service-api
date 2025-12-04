@@ -78,14 +78,14 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
 Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])
     ->name('task.nextjob')
     ->middleware([
-        'throttle:polling',
+        //'throttle:polling',
         CollectionHostBasicAuth::class,
     ]);
 
 Route::post('/v1/task/result/{uuid}/{collectionId}', [TaskController::class, 'receiveResult'])
     ->name('task.result')
     ->middleware([
-        'throttle:polling',
+        //'throttle:polling',
         CollectionHostBasicAuth::class,
     ]);
 
