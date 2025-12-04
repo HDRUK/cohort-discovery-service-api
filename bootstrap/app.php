@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->append(\App\Http\Middleware\LogHttpRequests::class);
         $middleware->append(\App\Http\Middleware\AuditRequests::class);
-        $middleware->append(\Hdruk\LaravelPluginCore\Middleware\InjectPlugins::class);
+        //$middleware->append(\Hdruk\LaravelPluginCore\Middleware\InjectPlugins::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
