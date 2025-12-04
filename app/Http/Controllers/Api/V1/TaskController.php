@@ -134,7 +134,7 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info('Task type is '.$taskType);
+        \Log::info('Task type is '.$taskType->value);
         $collection = Collection::where('pid', $parsedId)->first();
 
         if (! $collection) {
