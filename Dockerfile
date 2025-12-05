@@ -34,13 +34,9 @@ RUN mkdir -p /etc/pki/tls/certs && \
     ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 
 # Install Redis
-RUN apt-get update && apt-get install -y \
-    autoconf \
-    g++ \
-    make \
-    && pecl install -o -f redis \
-    && rm -rf /tmp/pear \
-    && docker-php-ext-enable redis
+RUN pecl install redis-6.3.0 \
+    && docker-php-ext-enable redis \
+    && rm -rf /tmp/pear
 
 
 # Install Composer
