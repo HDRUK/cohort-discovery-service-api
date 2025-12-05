@@ -22,7 +22,6 @@ class DecodeJwt
         $token = $request->bearerToken();
         $startMicrotime = microtime(true);
         try {
-
             if (! ApplicationMode::isStandalone()) {
                 if (! $token) {
                     return response()->json(['error' => 'No token'], 401);
