@@ -61,7 +61,7 @@ class ProfileRequest
                 '_profiler' => $resourceUsed,
             ]);
 
-            Log::info('Profiler finished in '.round($durationMs), [
+            Log::info('Profiler finished in '.round($durationMs) . 'ms', [
                 'method'        => $request->getMethod(),
                 'path'          => $request->path(),
                 'controller'    => $className,
