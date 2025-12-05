@@ -61,7 +61,7 @@ class ProfileRequest
                 '_profiler' => $resourceUsed,
             ]);
 
-            Log::info('Profiler finished', [
+            Log::info('Profiler finished in '.round($durationMs), [
                 'method'        => $request->getMethod(),
                 'path'          => $request->path(),
                 'controller'    => $className,
@@ -70,8 +70,7 @@ class ProfileRequest
                 'resource_usage' => $duration,
             ]);
         } else {
-            // You may still want to log even if it's not JSON
-            Log::info('Profiler finished (non-JSON response)', [
+            Log::info('Profiler finished in '.round($durationMs).' ms (non-JSON response)', [
                 'method'      => $request->getMethod(),
                 'path'        => $request->path(),
                 'finished_at' => $finishedAt->toIso8601String(),
