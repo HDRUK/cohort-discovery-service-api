@@ -54,7 +54,7 @@ php artisan config:cache
 
 if [ "${START_HORIZON:-1}" = "1" ]; then
     #echo "Starting Horizon in background..."
-    php artisan horizon:terminate
+    #php artisan horizon:terminate
     #php artisan horizon &
     #echo "Checking horizon...."
     #php artisan horizon:status
