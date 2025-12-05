@@ -20,8 +20,9 @@ class DecodeJwt
     public function handle(Request $request, Closure $next)
     {
         $token = $request->bearerToken();
+        $startMicrotime = microtime(true);
         try {
-            $startMicrotime = microtime(true);
+
             if (! ApplicationMode::isStandalone()) {
                 if (! $token) {
                     return response()->json(['error' => 'No token'], 401);

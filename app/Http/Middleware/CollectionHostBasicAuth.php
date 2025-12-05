@@ -22,11 +22,8 @@ class CollectionHostBasicAuth
         if (config('system.basic_auth_enabled') === false) {
             return $next($request);
         }
-
+        $startMicrotime = microtime(true);
         try {
-            $startMicrotime = microtime(true);
-
-
             $authorisationHeader = $request->header('Authorization');
 
             if (! $authorisationHeader || ! preg_match('/Basic\s+(.*)$/i', $authorisationHeader, $matches)) {
