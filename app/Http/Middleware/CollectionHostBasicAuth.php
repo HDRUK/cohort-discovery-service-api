@@ -19,6 +19,9 @@ class CollectionHostBasicAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $startMicrotime = microtime(true);
+
+
         if (config('system.basic_auth_enabled') === false) {
             return $next($request);
         }
@@ -53,6 +56,11 @@ class CollectionHostBasicAuth
         }
 
         $request->merge(['authenticated_client' => $client]);
+
+        $endMicrotime = microtime(true);
+        $durationMs = ($endMicrotime - $startMicrotime) * 1000;
+        \Log::info('Middleware CollectionHostBasicAuth to '. round($durationMs, 2) . 'ms to run');
+
 
         return $next($request);
     }
