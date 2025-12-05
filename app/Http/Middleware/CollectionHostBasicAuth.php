@@ -59,7 +59,7 @@ class CollectionHostBasicAuth
 
         $endMicrotime = microtime(true);
         $durationMs = ($endMicrotime - $startMicrotime) * 1000;
-        \Log::info('Middleware CollectionHostBasicAuth to '. round($durationMs, 2) . 'ms to run');
+        \Log::info('Middleware CollectionHostBasicAuth took '. round($durationMs, 2) . 'ms to run');
 
 
         return $next($request);
