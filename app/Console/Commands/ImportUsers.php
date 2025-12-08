@@ -51,16 +51,15 @@ class ImportUsers extends Command
         $this->custodian = Custodian::firstOrCreate(
             ['name' => 'Health Data Research UK'],
             [
-                'external_custodian_id' => null,
+                'external_custodian_id'   => null,
                 'external_custodian_name' => null,
             ]
         );
 
         $this->custodian->update([
-            'external_custodian_id' => $this->custodian->id,
-            'external_custodian_name' => $this->custodian->name
+            'external_custodian_id'   => $this->custodian->id,
+            'external_custodian_name' => $this->custodian->name,
         ]);
-
 
         if ($file) {
             $result = $this->importFromFile($file);
@@ -75,36 +74,14 @@ class ImportUsers extends Command
 
     protected function createSingleUser(): int
     {
-        $name  = $this->option('name') ?: $this->ask('Name');
-        $email = $this->option('email') ?: $this->ask('Email');
+        $name     = $this->option('name') ?: $this->ask('Name');
+        $email    = $this->option('email') ?: $this->ask('Email');
+        $password = $this->option('password'); // may be null
 
-        // If password option is not given, generate one.
-        $password = $this->option('password');
+        $user   = $this->createUserWithDefaults($email, $name, $password);
+        $action = $user->wasRecentlyCreated ? 'Created' : 'Existing';
 
-        if (! $password) {
-            $password = $this->generatePassword();
-            $this->generatedPasswords[] = [
-                'email'    => $email,
-                'password' => $password,
-            ];
-        }
-        $user = User::firstOrCreate([
-            'name'     => $name,
-            'email'    => $email,
-        ], [
-            'password' => Hash::make($password),
-        ]);
-
-        CustodianHasUser::firstOrCreate([
-           'user_id' => $user->id,
-           'custodian_id' => $this->custodian->id
-        ]);
-
-        $this->addRole($user, 'admin');
-        $this->addToWorkgroup($user, 'ADMIN');
-
-
-        $this->info("Created user #{$user->id} ({$user->email})");
+        $this->info("{$action} user #{$user->id} ({$user->email})");
 
         return self::SUCCESS;
     }
@@ -147,32 +124,14 @@ class ImportUsers extends Command
                 continue;
             }
 
-            if (! $password) {
-                $password = $this->generatePassword();
-                $this->generatedPasswords[] = [
-                    'email'    => $email,
-                    'password' => $password,
-                ];
+            $user   = $this->createUserWithDefaults($email, $name, $password);
+            $action = $user->wasRecentlyCreated ? 'created' : 'existing';
+
+            if ($user->wasRecentlyCreated) {
+                $created++;
             }
 
-            $user = User::firstOrCreate([
-                'name'     => $name ?: 'Unnamed User',
-                'email'    => $email
-            ], [
-                'password' => Hash::make($password),
-            ]);
-
-            CustodianHasUser::firstOrCreate([
-                'user_id' => $user->id,
-                'custodian_id' => $this->custodian->id
-            ]);
-
-            $this->addRole($user, 'admin');
-            $this->addToWorkgroup($user, 'ADMIN');
-
-
-            $created++;
-            $this->line("Row {$rowNumber}: created user #{$user->id} ({$user->email})");
+            $this->line("Row {$rowNumber}: {$action} user #{$user->id} ({$user->email})");
         }
 
         fclose($handle);
@@ -183,7 +142,64 @@ class ImportUsers extends Command
     }
 
     /**
-     * Generate a random password of 7 letters (A–Z, a–z).
+     * Create or get a user, attach custodian, role and workgroup.
+     */
+    private function createUserWithDefaults(string $email, ?string $name = null, ?string $password = null): User
+    {
+        $user = $this->createUser($email, $name, $password);
+
+        // Ensure user <-> custodian
+        CustodianHasUser::firstOrCreate([
+            'user_id'      => $user->id,
+            'custodian_id' => $this->custodian->id,
+        ]);
+
+        // Ensure role & workgroup
+        $this->addRole($user, 'admin');
+        $this->addToWorkgroup($user, 'ADMIN');
+
+        return $user;
+    }
+
+    /**
+     * Create (or fetch) a user and handle password generation + tracking.
+     */
+    private function createUser(string $email, ?string $name = null, ?string $password = null): User
+    {
+        $generated = false;
+
+        if (! $password) {
+            $password  = $this->generatePassword();
+            $generated = true;
+        }
+
+        $user = User::firstOrCreate(
+            [
+                'name'  => $name ?: 'Unnamed User',
+                'email' => $email,
+            ],
+            [
+                'password' => Hash::make($password),
+            ]
+        );
+
+        // Only store the generated password if we actually created a new user.
+        if ($generated && $user->wasRecentlyCreated) {
+            $this->generatedPasswords[] = [
+                'email'    => $email,
+                'password' => $password,
+            ];
+        }
+
+        return $user;
+    }
+
+    /**
+     * Generate a random password of 7 characters from:
+     *  - uppercase letters
+     *  - lowercase letters
+     *  - digits
+     *  - special characters
      */
     protected function generatePassword(int $length = 7): string
     {
@@ -196,15 +212,14 @@ class ImportUsers extends Command
         $digits    = '0123456789';
         $special   = '!?.,;:#^%';
 
-
         $all = $uppercase . $lowercase . $digits . $special;
 
         $password = [];
 
+        // Ensure at least one of each required type
         $password[] = $uppercase[random_int(0, strlen($uppercase) - 1)];
         $password[] = $digits[random_int(0, strlen($digits) - 1)];
         $password[] = $special[random_int(0, strlen($special) - 1)];
-
 
         for ($i = 3; $i < $length; $i++) {
             $password[] = $all[random_int(0, strlen($all) - 1)];
@@ -239,26 +254,25 @@ class ImportUsers extends Command
         $this->warn('Make sure to save these passwords somewhere secure; they will not be shown again.');
     }
 
-
-    private function addToWorkgroup(User $user, string $workgroup): void
+    private function addToWorkgroup(User $user, string $workgroupName): void
     {
-        $workgroup = Workgroup::where('name', $workgroup)->firstOrFail();
-        UserHasWorkgroup::create([
-            'user_id' => $user->id,
-            'workgroup_id' => $workgroup->id
+        $workgroup = Workgroup::where('name', $workgroupName)->firstOrFail();
+
+        UserHasWorkgroup::firstOrCreate([
+            'user_id'      => $user->id,
+            'workgroup_id' => $workgroup->id,
         ]);
 
-        $this->info("... added to workgroup {$user->id} {$workgroup->id}");
-
+        $this->info("... ensured user {$user->id} is in workgroup {$workgroup->id}");
     }
 
-    private function addRole(User $user, string $role): void
+    private function addRole(User $user, string $roleName): void
     {
-        $role = Role::where('name', $role)->firstOrFail();
-        UserHasRole::create([
+        $role = Role::where('name', $roleName)->firstOrFail();
+
+        UserHasRole::firstOrCreate([
             'user_id' => $user->id,
             'role_id' => $role->id,
         ]);
     }
-
 }
