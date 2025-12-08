@@ -35,15 +35,14 @@ RUN mkdir -p /etc/pki/tls/certs && \
 
 # Install Redis
 RUN pecl install redis-6.3.0 \
-    && docker-php-ext-enable redis \
     && rm -rf /tmp/pear
 
+COPY ./init/php.development.ini /usr/local/etc/php/php.ini
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- \
     --install-dir=/usr/local/bin --filename=composer
 
-COPY ./init/php.development.ini /usr/local/etc/php/php.ini
 
 # Copy the application
 COPY . /var/www
