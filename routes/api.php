@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
+use App\Http\Controllers\Api\V1\FeatureController;
 use App\Http\Middleware\CollectionHostBasicAuth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +74,9 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::delete('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'destroy']);
     Route::post('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'linkToNetwork']);
     Route::delete('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'unlinkFromNetwork']);
+
+    Route::get('/v1/features', [FeatureController::class, 'index']);
+    Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
 });
 
 Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])

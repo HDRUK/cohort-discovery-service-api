@@ -58,5 +58,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
         });
+
+        require_once(app_path('Features/FeatureDefinitions.php'));
     }
 }

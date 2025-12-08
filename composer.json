@@ -13,6 +13,7 @@
         "darkaonline/l5-swagger": "^9.0",
         "firebase/php-jwt": "^6.11",
         "hdruk/claims-based-access-control": "^0.1.11",
+        "hdruk/laravel-messenger": "dev-main",
         "hdruk/laravel-model-states": "dev-main",
         "hdruk/laravel-plugin-core": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
@@ -20,6 +21,7 @@
         "laravel/horizon": "^5.33",
         "laravel/octane": "^2.12",
         "laravel/passport": "^13.0",
+        "laravel/pennant": "^1.18",
         "laravel/tinker": "^2.10.1",
         "league/csv": "^9.27",
         "maatwebsite/excel": "^3.1",
@@ -114,6 +116,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-workflow-states"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hdruk/laravel-messenger"
         }
     ],
     "minimum-stability": "dev",

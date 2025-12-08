@@ -51,6 +51,14 @@ use Illuminate\Support\Facades\DB;
  *         description="Associated collection host(s)",
  *
  *         @OA\Items(ref="#/components/schemas/CollectionHost")
+ *     ),
+ *
+ *     @OA\Property(
+ *         property="workgroups",
+ *         type="array",
+ *         description="Associated workgroups",
+ *
+ *         @OA\Items(ref="#/components/schemas/Workgroup")
  *     )
  * )
  *
