@@ -83,7 +83,7 @@ RUN php artisan l5-swagger:generate
 # Cleanup unwanted files
 RUN rm /var/www/public/.htaccess
 
-RUN find /usr/local/lib/php/extensions/ -name "redis.so" -ls
+RUN php --ri redis
 
 # Starts both, laravel server and job queue
 CMD ["/var/www/docker/start.sh"]
