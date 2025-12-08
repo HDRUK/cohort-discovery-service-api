@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+# set -euo pipefail
 
 # Preserve Cloud Run's PORT (or default to 8080 if running locally)
 CLOUD_RUN_PORT="${PORT:-8080}"
