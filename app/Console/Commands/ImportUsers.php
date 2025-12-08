@@ -95,11 +95,7 @@ class ImportUsers extends Command
             'password' => Hash::make($password),
         ]);
 
-<<<<<<< HEAD
-        CustodianHasUser::create([
-=======
         CustodianHasUser::firstOrCreate([
->>>>>>> feat/DP-288-2
            'user_id' => $user->id,
            'custodian_id' => $this->custodian->id
         ]);
@@ -252,11 +248,8 @@ class ImportUsers extends Command
             'workgroup_id' => $workgroup->id
         ]);
 
-<<<<<<< HEAD
-=======
         $this->info("... added to workgroup {$user->id} {$workgroup->id}");
 
->>>>>>> feat/DP-288-2
     }
 
     private function addRole(User $user, string $role): void
