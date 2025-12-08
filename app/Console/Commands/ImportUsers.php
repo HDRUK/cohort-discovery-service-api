@@ -142,11 +142,6 @@ class ImportUsers extends Command
                 continue;
             }
 
-            if (User::where('email', $email)->exists()) {
-                $this->warn("Row {$rowNumber}: email [{$email}] already exists, skipping.");
-                continue;
-            }
-
             if (! $password) {
                 $password = $this->generatePassword();
                 $this->generatedPasswords[] = [
@@ -155,11 +150,21 @@ class ImportUsers extends Command
                 ];
             }
 
-            $user = User::create([
+            $user = User::firstOrCreate([
                 'name'     => $name ?: 'Unnamed User',
-                'email'    => $email,
+                'email'    => $email
+            ], [
                 'password' => Hash::make($password),
             ]);
+
+            CustodianHasUser::create([
+           'user_id' => $user->id,
+           'custodian_id' => $this->custodian->id
+        ]);
+
+            $this->addRole($user, 'admin');
+            $this->addToWorkgroup($user, 'ADMIN');
+
 
             $created++;
             $this->line("Row {$rowNumber}: created user #{$user->id} ({$user->email})");
