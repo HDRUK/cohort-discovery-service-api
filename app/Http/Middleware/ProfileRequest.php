@@ -28,7 +28,7 @@ class ProfileRequest
         $startedAt = now();
         $startMicrotime = microtime(true);
 
-        Log::info('Profiler started', [
+        Log::debug('Profiler started', [
             'method'      => $request->getMethod(),
             'path'        => $request->path(),
             'started_at'  => $startedAt->toIso8601String(),
@@ -61,7 +61,7 @@ class ProfileRequest
                 '_profiler' => $resourceUsed,
             ]);
 
-            Log::info('Profiler finished in '.round($durationMs, 2) . 'ms', [
+            Log::debug('Profiler finished in '.round($durationMs, 2) . 'ms', [
                 'method'        => $request->getMethod(),
                 'path'          => $request->path(),
                 'controller'    => $className,
@@ -70,7 +70,7 @@ class ProfileRequest
                 'resource_usage' => $duration,
             ]);
         } else {
-            Log::info('Profiler finished in '.round($durationMs, 2).' ms (non-JSON response)', [
+            Log::debug('Profiler finished in '.round($durationMs, 2).' ms (non-JSON response)', [
                 'method'      => $request->getMethod(),
                 'path'        => $request->path(),
                 'finished_at' => $finishedAt->toIso8601String(),

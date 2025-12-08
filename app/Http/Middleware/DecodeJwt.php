@@ -114,7 +114,7 @@ class DecodeJwt
         } finally {
             $endMicrotime = microtime(true);
             $durationMs = ($endMicrotime - $startMicrotime) * 1000;
-            \Log::info(
+            \Log::debug(
                 'Middleware DecodeJwt finished in '. round($durationMs, 2) . ' ms'
             );
 

@@ -59,7 +59,7 @@ class CollectionHostBasicAuth
         } finally {
             $endMicrotime = microtime(true);
             $durationMs = ($endMicrotime - $startMicrotime) * 1000;
-            \Log::info(
+            \Log::debug(
                 'Middleware CollectionHostBasicAuth finished in '. round($durationMs, 2) . ' ms',
                 [
                     'duration_ms' => round($durationMs, 2),
