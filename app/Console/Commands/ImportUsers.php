@@ -2,9 +2,15 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Custodian;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use App\Models\UserHasRole;
+use App\Models\Workgroup;
+use App\Models\UserHasWorkgroup;
+use App\Models\CustodianHasUser;
+use Spatie\Permission\Models\Role;
 
 class ImportUsers extends Command
 {
@@ -33,12 +39,23 @@ class ImportUsers extends Command
      */
     protected array $generatedPasswords = [];
 
+    protected Custodian $custodian;
+
     /**
      * Execute the console command.
      */
     public function handle()
     {
         $file = $this->option('file');
+
+        $this->custodian = Custodian::firstOrCreate(
+            ['name' => 'Health Data Research UK'],
+            [
+                'gateway_team_id' => null,
+                'gateway_team_name' => null,
+            ]
+        );
+
 
         if ($file) {
             $result = $this->importFromFile($file);
@@ -72,6 +89,15 @@ class ImportUsers extends Command
             'email'    => $email,
             'password' => Hash::make($password),
         ]);
+
+        CustodianHasUser::create([
+           'user_id' => $user->id,
+           'custodian_id' => $this->custodian->id
+        ]);
+
+        $this->addRole($user, 'admin');
+        $this->addToWorkgroup($user, 'ADMIN');
+
 
         $this->info("Created user #{$user->id} ({$user->email})");
 
@@ -158,7 +184,7 @@ class ImportUsers extends Command
         $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $lowercase = 'abcdefghijklmnopqrstuvwxyz';
         $digits    = '0123456789';
-        $special   = '!?.;:$£#^%';
+        $special   = '!?.,;:#^%';
 
 
         $all = $uppercase . $lowercase . $digits . $special;
@@ -202,4 +228,25 @@ class ImportUsers extends Command
         $this->newLine();
         $this->warn('Make sure to save these passwords somewhere secure; they will not be shown again.');
     }
+
+
+    private function addToWorkgroup(User $user, string $workgroup): void
+    {
+        $workgroup = Workgroup::where('name', $workgroup)->firstOrFail();
+        UserHasWorkgroup::create([
+            'user_id' => $user->id,
+            'workgroup_id' => $workgroup->id
+        ]);
+
+    }
+
+    private function addRole(User $user, string $role): void
+    {
+        $role = Role::where('name', $role)->firstOrFail();
+        UserHasRole::create([
+            'user_id' => $user->id,
+            'role_id' => $role->id,
+        ]);
+    }
+
 }
