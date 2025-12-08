@@ -22,7 +22,7 @@ class CustodianPolicy
             return false;
         }
 
-        $cohortAdminTeamIds = Arr::pluck($userObject['cohort_admin_teams'] ?? [], 'id');
+        $cohortAdminTeamIds = array_map('strval', Arr::pluck($userObject['cohort_admin_teams'] ?? [], 'id'));
 
         // note: this is currently quite specific to the gateway
         // - we map a custodian to a gateway 'team'
