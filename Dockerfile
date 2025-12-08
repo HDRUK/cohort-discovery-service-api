@@ -8,6 +8,8 @@ WORKDIR /var/www
 
 COPY composer.* /var/www/
 
+COPY ./init/php.development.ini /usr/local/etc/php/php.ini
+
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
@@ -32,8 +34,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir -p /etc/pki/tls/certs && \
     ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
-
-COPY ./init/php.development.ini /usr/local/etc/php/php.ini
 
 # Install Redis
 RUN pecl install redis-6.3.0 \
