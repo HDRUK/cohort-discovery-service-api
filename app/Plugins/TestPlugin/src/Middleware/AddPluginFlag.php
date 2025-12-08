@@ -10,7 +10,7 @@ class AddPluginFlag
 {
     public function handle(Request $request, Closure $next)
     {
-        \Log::info('AddPluginFlag running');
+        \Log::debug('AddPluginFlag running');
 
         $response = $next($request);
 

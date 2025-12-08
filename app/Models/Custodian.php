@@ -42,8 +42,8 @@ class Custodian extends Model implements ValidatableModel
     protected $fillable = [
         'pid',
         'name',
-        'gateway_team_id',
-        'gateway_team_name',
+        'external_custodian_id',
+        'external_custodian_name',
     ];
 
     protected static array $searchableColumns = [
@@ -66,14 +66,14 @@ class Custodian extends Model implements ValidatableModel
             ],
             'store' => [
                 'name' => 'required|string|max:255',
-                'gateway_team_id' => 'sometimes|integer',
-                'gateway_team_name' => 'sometimes|string',
+                'external_custodian_id' => 'sometimes|string',
+                'external_custodian_name' => 'sometimes|string',
             ],
             'update' => [
                 'id' => 'required|integer|exists:custodians,id',
                 'name' => 'sometimes|string|max:255',
-                'gateway_team_id' => 'sometimes|integer',
-                'gateway_team_name' => 'sometimes|integer',
+                'external_custodian_id' => 'sometimes|string',
+                'external_custodian_name' => 'sometimes|string',
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:custodians,id',

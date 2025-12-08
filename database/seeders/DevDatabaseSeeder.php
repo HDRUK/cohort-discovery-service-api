@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Custodian;
+use App\Support\ApplicationMode;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
+use App\Models\Collection;
+use App\Models\CollectionHost;
+use DB;
 
 class DevDatabaseSeeder extends Seeder
 {
@@ -14,19 +16,22 @@ class DevDatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            WorkgroupSeeder::class,
-            RolesAndPermissionsSeeder::class,
+            DatabaseSeeder::class
         ]);
 
-        Custodian::create([
-            'name' => 'Health Data Research UK',
-            'gateway_team_name' => 'Health Data Research UK',
-            'gateway_team_id' => env('GATEWAY_HDR_TEAM_ID', null),
-            'pid' => Str::uuid(),
-        ]);
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Collection::truncate();
+        CollectionHost::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+
+        if (ApplicationMode::isStandalone()) {
+            $this->call([
+                StandaloneDemoSeeder::class
+            ]);
+        }
 
         $this->call([
-            StateSeeder::class,
             CollectionSeeder::class,
             CollectionHostSeeder::class,
         ]);

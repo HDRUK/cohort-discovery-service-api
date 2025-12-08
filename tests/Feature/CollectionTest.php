@@ -42,11 +42,11 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId,
+            'external_custodian_id' => $anotherFakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
@@ -93,7 +93,7 @@ class CollectionTest extends TestCase
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
@@ -128,7 +128,7 @@ class CollectionTest extends TestCase
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
@@ -454,11 +454,11 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId,
+            'external_custodian_id' => $anotherFakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
@@ -508,7 +508,7 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
 
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         $collection = Collection::factory()->create([
@@ -561,7 +561,7 @@ class CollectionTest extends TestCase
     {
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         $collections = Collection::factory(5)->create([
@@ -629,11 +629,11 @@ class CollectionTest extends TestCase
         $fakeGatewayTeamId = 1111;
         $anotherFakeGatewayTeamId = 2222;
         $custodian = Custodian::factory()->create([
-            'gateway_team_id' => $fakeGatewayTeamId,
+            'external_custodian_id' => $fakeGatewayTeamId,
         ]);
 
         $anotherCustodian = Custodian::factory()->create([
-            'gateway_team_id' => $anotherFakeGatewayTeamId,
+            'external_custodian_id' => $anotherFakeGatewayTeamId,
         ]);
 
         Collection::factory(5)->create([
@@ -691,11 +691,11 @@ class CollectionTest extends TestCase
     //     $fakeGatewayTeamId = 1111;
     //     $anotherFakeGatewayTeamId = 2222;
     //     $custodian = Custodian::factory()->create([
-    //         'gateway_team_id' => $fakeGatewayTeamId
+    //         'external_custodian_id' => $fakeGatewayTeamId
     //     ]);
 
     //     $anotherCustodian = Custodian::factory()->create([
-    //         'gateway_team_id' => $anotherFakeGatewayTeamId
+    //         'external_custodian_id' => $anotherFakeGatewayTeamId
     //     ]);
 
     //     Collection::factory(5)->create([

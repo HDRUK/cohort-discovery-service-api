@@ -16,10 +16,22 @@ class LocalPersonalAccessTokenService
     public function __construct(
         protected PersonalAccessTokenFactory $factory
     ) {
+
+        $privateKeyEnv = config('passport.private_key');
+        $publicKeyEnv  = config('passport.public_key');
+
+        $privateKey = $privateKeyEnv
+            ? InMemory::plainText($privateKeyEnv)
+            : InMemory::file(storage_path('oauth-private.key'));
+
+        $publicKey = $publicKeyEnv
+            ? InMemory::plainText($publicKeyEnv)
+            : InMemory::file(storage_path('oauth-public.key'));
+
         $this->jwtConfig = Configuration::forAsymmetricSigner(
             new \Lcobucci\JWT\Signer\Rsa\Sha256(),
-            InMemory::file(storage_path('oauth-private.key')),
-            InMemory::file(storage_path('oauth-public.key'))
+            $privateKey,
+            $publicKey
         );
     }
 
@@ -48,6 +60,7 @@ class LocalPersonalAccessTokenService
                 'email' => $user->email,
                 'cohort_discovery_roles' => $user->role_names,
                 'workgroups' => $user->workgroups,
+                'cohort_admin_teams' => $user->custodians,
             ];
 
             $builder = $this->jwtConfig->builder()

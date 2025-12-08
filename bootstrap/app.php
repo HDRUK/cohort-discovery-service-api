@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use App\Http\Middleware\ClaimBasedAccessControl;
 use App\Http\Middleware\CollectionHostBasicAuth;
 use App\Http\Middleware\DecodeJwt;
@@ -22,8 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->append(\App\Http\Middleware\LogHttpRequests::class);
         $middleware->append(\App\Http\Middleware\AuditRequests::class);
-        $middleware->append(\Hdruk\LaravelPluginCore\Middleware\InjectPlugins::class);
+        $middleware->append(\App\Http\Middleware\ProfileRequest::class);
+        //$middleware->append(\Hdruk\LaravelPluginCore\Middleware\InjectPlugins::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
+            return true;
+        });
     })->create();

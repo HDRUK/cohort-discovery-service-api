@@ -43,8 +43,8 @@ jobs:
       - name: Run code sniffer
         run: "composer run lint"
 
-      #   - name: Run swagger check
-      #     run: php artisan l5-swagger:generate
+      - name: Run swagger check
+        run: php artisan l5-swagger:generate
 
       - name: Ensure storage directory exists
         run: mkdir -p storage
@@ -95,7 +95,7 @@ jobs:
 
       - name: Run main application migrations
         run: php artisan migrate:fresh --database=mysql
-      
+
       - name: Run main application seeding
         run: php artisan db:seed --class=DatabaseSeeder
 

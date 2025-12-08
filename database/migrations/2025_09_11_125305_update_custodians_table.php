@@ -22,8 +22,8 @@ return new class () extends Migration {
                 'user_id',
             ]);
             $table->uuid('pid')->unique()->after('id');
-            $table->unsignedBigInteger('gateway_team_id')->nullable()->after('name');
-            $table->string('gateway_team_name')->nullable()->after('gateway_team_id');
+            $table->string('external_custodian_id')->nullable()->after('name');
+            $table->string('external_custodian_name')->nullable()->after('external_custodian_id');
         });
     }
 
@@ -33,7 +33,7 @@ return new class () extends Migration {
     public function down(): void
     {
         Schema::table('custodians', function (Blueprint $table) {
-            $table->dropColumn(['pid', 'gateway_team_id', 'gateway_team_name']);
+            $table->dropColumn(['pid', 'external_custodian_id', 'external_custodian_name']);
 
             $table->string('street_address')->nullable();
             $table->string('city')->nullable();

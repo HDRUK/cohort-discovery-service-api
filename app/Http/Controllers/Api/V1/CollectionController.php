@@ -459,7 +459,7 @@ class CollectionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/collections/{id}/transition",
+     *     path="/api/v1/collections/{id}/transition_to",
      *     summary="Transition a Collection to a new state",
      *     tags={"Collections"},
      *     @OA\Parameter(
@@ -490,7 +490,6 @@ class CollectionController extends Controller
             if ($collection->isInState($validated['state'])) {
                 return $this->ErrorResponse('collection is already in state: \"'.$validated['state'].'\"');
             }
-
             $this->stateService->transition($collection, $validated['state'], $request->user());
 
             return $this->OKResponse($collection);

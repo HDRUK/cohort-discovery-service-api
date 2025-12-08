@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Illuminate\Support\Facades\Log;
 
 class ProcessDistributionFile implements ShouldQueue
 {
@@ -19,21 +20,31 @@ class ProcessDistributionFile implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public $timeout = 900;
+    public $timeout = 120;
 
-    public $tries = 3;
+    public $tries = 2;
 
-    public $backoff = [30, 120, 300];
+    public $backoff = 10;
 
     public $batchSize = 500;
 
     public function __construct(public int $resultFileId)
     {
+        Log::info('ProcessDistributionFile constructed', [
+             'result_file_id' => $resultFileId,
+        ]);
+
     }
 
     public function handle(): void
     {
         $file = ResultFile::findOrFail($this->resultFileId);
+
+        Log::info('ProcessDistributionFile starting', [
+                'result_file_id' => $this->resultFileId,
+                'path'           => $file->path,
+        ]);
+
 
         if ($file->status === ResultFile::STATUS_DONE) {
             return;
@@ -41,8 +52,11 @@ class ProcessDistributionFile implements ShouldQueue
 
         $file->markProcessing();
 
-        $stream = Storage::disk('local')->readStream($file->path);
+        $stream = Storage::readStream($file->path);
         if (! $stream) {
+            Log::error('Failed to open file stream', [
+                'path'    => $file->path,
+            ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
 

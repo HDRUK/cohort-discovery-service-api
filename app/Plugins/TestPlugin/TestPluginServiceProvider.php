@@ -10,7 +10,7 @@ class TestPluginServiceProvider extends ServiceProvider
     public function register()
     {
         // no bindings needed for this test plugin
-        \Log::info('TestPluginServiceProvider - registered');
+        //\Log::info('TestPluginServiceProvider - registered');
     }
 
     public function boot()
@@ -22,6 +22,6 @@ class TestPluginServiceProvider extends ServiceProvider
             fn () => response()->json(['success' => true], 200)
         );
 
-        \Log::info('TestPluginServiceProvider - booted');
+        //\Log::info('TestPluginServiceProvider - booted');
     }
 }
