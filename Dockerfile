@@ -36,9 +36,10 @@ RUN mkdir -p /etc/pki/tls/certs && \
     ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 
 # Install Redis
-RUN pecl install redis-6.3.0 \
-    && rm -rf /tmp/pear \
-    && docker-php-ext-enable redis
+RUN apt-get update && apt-get install -y $PHPIZE_DEPS \
+    pecl install redis-6.3.0 \
+    && docker-php-ext-enable redis \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- \
@@ -71,6 +72,8 @@ RUN php artisan l5-swagger:generate
 
 # Cleanup unwanted files
 RUN rm /var/www/public/.htaccess
+
+RUN find /usr/local/lib/php/extensions/ -name "redis.so" -ls
 
 # Starts both, laravel server and job queue
 CMD ["/var/www/docker/start.sh"]
