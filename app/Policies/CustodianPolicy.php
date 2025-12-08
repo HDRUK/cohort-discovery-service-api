@@ -30,7 +30,7 @@ class CustodianPolicy
         // - the user claims tell us what teams they are cohortAdmins on
         // - if so, we check if the custodian is linked to this gateway team
         // - access is granted based on this
-        return in_array($custodian->gateway_team_id, $cohortAdminTeamIds, true);
+        return in_array($custodian->external_custodian_id, $cohortAdminTeamIds, true);
     }
 
     private function toArray($value): array

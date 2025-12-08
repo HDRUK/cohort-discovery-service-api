@@ -49,10 +49,10 @@ class DecodeJwt
 
                         foreach ($teams as $team) {
                             $custodian = Custodian::updateOrCreate(
-                                ['gateway_team_id' => $team->id],
+                                ['external_custodian_id' => $team->id],
                                 [
                                     'name' => $team->name,
-                                    'gateway_team_name' => $team->name,
+                                    'external_custodian_name' => $team->name,
                                 ]
                             );
 

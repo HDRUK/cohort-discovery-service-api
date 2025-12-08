@@ -11,6 +11,7 @@ use App\Models\Workgroup;
 use App\Models\UserHasWorkgroup;
 use App\Models\CustodianHasUser;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Str;
 
 class ImportUsers extends Command
 {
@@ -51,8 +52,8 @@ class ImportUsers extends Command
         $this->custodian = Custodian::firstOrCreate(
             ['name' => 'Health Data Research UK'],
             [
-                'gateway_team_id' => null,
-                'gateway_team_name' => null,
+                'external_custodian_id' => Str::uuid(),
+                'external_custodian_name' => 'HDRUK',
             ]
         );
 
