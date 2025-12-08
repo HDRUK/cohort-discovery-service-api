@@ -83,10 +83,10 @@ class ImportUsers extends Command
                 'password' => $password,
             ];
         }
-
-        $user = User::create([
+        $user = User::firstOrCreate([
             'name'     => $name,
             'email'    => $email,
+        ], [
             'password' => Hash::make($password),
         ]);
 
@@ -237,6 +237,8 @@ class ImportUsers extends Command
             'user_id' => $user->id,
             'workgroup_id' => $workgroup->id
         ]);
+
+        $this->info("... added to workgroup {$user->id} {$workgroup->id}");
 
     }
 
