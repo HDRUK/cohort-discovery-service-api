@@ -32,13 +32,13 @@ class StandaloneDemoSeeder extends Seeder
 
         $custodian = Custodian::create([
             'name' => 'Demo Custodian',
-            'gateway_team_id' => null,
-            'gateway_team_name' => null,
+            'external_custodian_id' => null,
+            'external_custodian_name' => null,
         ]);
 
         $custodian->update([
-            'gateway_team_id' => $custodian->id,
-            'gateway_team_name' => $custodian->name
+            'external_custodian_id' => $custodian->id,
+            'external_custodian_name' => $custodian->name
         ]);
 
         // --- Admin user ---
