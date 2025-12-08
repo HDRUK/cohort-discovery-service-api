@@ -12,7 +12,7 @@ use App\Models\UserHasWorkgroup;
 use App\Models\CustodianHasUser;
 use Spatie\Permission\Models\Role;
 
-class ImportUsers extends Command
+class ImportAdminUsers extends Command
 {
     /**
      * The name and signature of the console command.
@@ -21,7 +21,7 @@ class ImportUsers extends Command
      *  php artisan user:import --name="John Doe" --email=john@example.com --password=secret
      *  php artisan user:import --file=/path/to/users.csv
      */
-    protected $signature = 'user:import
+    protected $signature = 'admin-user:import
                             {--name= : Name of the user}
                             {--email= : Email of the user}
                             {--password= : Plain text password}
