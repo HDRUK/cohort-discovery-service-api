@@ -7,6 +7,7 @@ use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\User;
 use App\Models\Workgroup;
+use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
 use Config;
 use DB;
@@ -582,7 +583,8 @@ class CollectionTest extends TestCase
             ],
         ];
         $coll = $collections->random();
-        $workgroup = Workgroup::inRandomOrder()->first();
+        $existingCollWorkgroupIds = WorkgroupHasCollection::where(['collection_id' => $coll->id])->select('workgroup_id')->get();
+        $workgroup = Workgroup::whereNotIn('id', $existingCollWorkgroupIds)->inRandomOrder()->first();
 
         $initialNumLinkedWorkgroups = count($coll->workgroups);
         $response = $this->actingAsJwt(

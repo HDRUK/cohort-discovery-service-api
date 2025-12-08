@@ -101,6 +101,12 @@ class CollectionController extends Controller
      *         required=false,
      *         @OA\Schema(type="string", example="active")
      *     ),
+     *     @OA\Parameter(
+     *         name="workgroup_id",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", example="1")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Paginated list of collections for admin",
@@ -120,11 +126,15 @@ class CollectionController extends Controller
                 'demographics',
                 'host',
                 'modelState.state',
+                'workgroups',
             ])
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {
                         $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
                     }
+                })
+                ->when($request->filled('workgroup_id'), function ($q) use ($request) {
+                    $q->whereRelation('workgroups', 'workgroups.id', $request->workgroup_id);
                 })
                 ->searchViaRequest()
                 ->filterViaRequest()
