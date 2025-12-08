@@ -23,6 +23,17 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     zip \
     default-mysql-client \
+    autoconf \
+    dpkg-dev \
+    file \
+    g++ \
+    gcc \
+    make \
+    pkg-config \
+    re2c \
+    libssl-dev \
+    libzstd-dev \
+    liblz4-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" gd pdo pdo_mysql soap zip iconv bcmath \
     && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
@@ -36,8 +47,7 @@ RUN mkdir -p /etc/pki/tls/certs && \
     ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 
 # Install Redis
-RUN apt-get update && apt-get install -y $PHPIZE_DEPS \
-    pecl install redis-6.3.0 \
+RUN pecl install redis-6.3.0 \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
 
