@@ -11,7 +11,6 @@ use App\Models\Workgroup;
 use App\Models\UserHasWorkgroup;
 use App\Models\CustodianHasUser;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Str;
 
 class ImportUsers extends Command
 {
@@ -52,10 +51,15 @@ class ImportUsers extends Command
         $this->custodian = Custodian::firstOrCreate(
             ['name' => 'Health Data Research UK'],
             [
-                'external_custodian_id' => Str::uuid(),
-                'external_custodian_name' => 'HDRUK',
+            'external_custodian_id' => null,
+            'external_custodian_name' => null,
             ]
         );
+
+        $this->custodian->update([
+            'external_custodian_id' => $this->custodian->id,
+            'external_custodian_name' => $this->custodian->name
+        ]);
 
 
         if ($file) {
