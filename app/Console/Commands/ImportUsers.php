@@ -90,7 +90,7 @@ class ImportUsers extends Command
             'password' => Hash::make($password),
         ]);
 
-        CustodianHasUser::create([
+        CustodianHasUser::firstOrCreate([
            'user_id' => $user->id,
            'custodian_id' => $this->custodian->id
         ]);
@@ -157,10 +157,10 @@ class ImportUsers extends Command
                 'password' => Hash::make($password),
             ]);
 
-            CustodianHasUser::create([
-           'user_id' => $user->id,
-           'custodian_id' => $this->custodian->id
-        ]);
+            CustodianHasUser::firstOrCreate([
+                'user_id' => $user->id,
+                'custodian_id' => $this->custodian->id
+            ]);
 
             $this->addRole($user, 'admin');
             $this->addToWorkgroup($user, 'ADMIN');
