@@ -16,6 +16,7 @@
         "hdruk/laravel-messenger": "dev-main",
         "hdruk/laravel-model-states": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
+        "hdruk/laravel-plugin-core": "dev-main",
         "laravel/framework": "^12.4",
         "laravel/horizon": "^5.33",
         "laravel/octane": "^2.12",
@@ -108,6 +109,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-search-and-filter"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hdruk/laravel-plugin-core"
         },
         {
             "type": "vcs",
