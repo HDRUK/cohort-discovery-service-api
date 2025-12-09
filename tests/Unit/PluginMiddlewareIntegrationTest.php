@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use Config;
-use Hdruk\LaravelPluginCore\Services\PluginManager;
+//use Hdruk\LaravelPluginCore\Services\PluginManager;
 use Illuminate\Support\Facades\Route;
 use Mockery;
 use Tests\TestCase;
@@ -32,8 +32,8 @@ class PluginMiddlewareIntegrationTest extends TestCase
 
         // Force a reload once the application has finished
         // booting.
-        $this->app->instance(PluginManager::class, new PluginManager(config('plugin-core.path')));
-        $this->app->register(\Hdruk\LaravelPluginCore\PluginCoreServiceProvider::class);
+        //$this->app->instance(PluginManager::class, new PluginManager(config('plugin-core.path')));
+        //$this->app->register(\Hdruk\LaravelPluginCore\PluginCoreServiceProvider::class);
 
         // Call the route registered within the plugin.
         $response = $this->getJson('api/v1/test-plugin-endpoint');
