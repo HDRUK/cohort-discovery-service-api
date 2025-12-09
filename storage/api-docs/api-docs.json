@@ -278,6 +278,15 @@
                             "type": "string",
                             "example": "active"
                         }
+                    },
+                    {
+                        "name": "workgroup_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "1"
+                        }
                     }
                 ],
                 "responses": {
@@ -2633,6 +2642,13 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/CollectionHost"
+                        }
+                    },
+                    "workgroups": {
+                        "description": "Associated workgroups",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Workgroup"
                         }
                     }
                 },
