@@ -7,6 +7,8 @@ use App\Models\CustodianHasUser;
 use App\Models\User;
 use App\Models\UserHasRole;
 use App\Models\Workgroup;
+use App\Models\CustodianNetwork;
+use App\Models\CustodianNetworkHasCustodian;
 use App\Models\UserHasWorkgroup;
 use DB;
 use Hash;
@@ -40,6 +42,18 @@ class StandaloneDemoSeeder extends Seeder
             'external_custodian_id' => $custodian->id,
             'external_custodian_name' => $custodian->name
         ]);
+
+        $network = CustodianNetwork::factory()->create(
+            [
+                'name' => 'Demo Network'
+            ]
+        );
+
+        CustodianNetworkHasCustodian::create([
+            'network_id' => $network->id,
+            'custodian_id' => $custodian->id,
+        ]);
+
 
         // --- Admin user ---
         $user = User::create([
