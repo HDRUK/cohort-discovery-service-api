@@ -83,7 +83,7 @@ class QueryControllerTest extends TestCase
         $response = $this->postJson(self::BASE_URL, []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'definition']);
+            ->assertJsonValidationErrors(['definition','task_type']);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
