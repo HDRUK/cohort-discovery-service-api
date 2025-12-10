@@ -94,7 +94,7 @@ class Query extends Model
                 ],
             ],
             'store' => [
-                'name' => 'required|string|min:3|max:255',
+                'name' => 'nullable|string|min:3|max:255',
                 'definition' => 'required|array',
                 'collection_filter' => 'nullable|array',
                 'task_type' => [

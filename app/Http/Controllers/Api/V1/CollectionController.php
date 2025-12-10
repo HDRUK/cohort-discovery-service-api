@@ -67,7 +67,7 @@ class CollectionController extends Controller
     {
         $collections = Collection::with([
             'demographics',
-            'custodian',
+            'custodian.network',
             'modelState.state',
         ])
             ->searchViaRequest()
