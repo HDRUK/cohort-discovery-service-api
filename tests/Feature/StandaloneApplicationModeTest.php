@@ -55,7 +55,7 @@ class StandaloneApplicationModeTest extends TestCase
 
         $token = $content['data']['access_token'];
         $payload = $this->decodeJwt($token);
-        $ttlMinutes = config('system.standalone_jwt_ttl_minutes');
+        $ttlMinutes = config('system.standalone_jwt_ttl_minutes', 60);
         $expectedExp = now()->addMinutes($ttlMinutes)->timestamp;
 
         // Allow for a slight drift in timing
