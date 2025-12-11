@@ -2,6 +2,7 @@
 
 namespace App\Services\Authentication;
 
+use Carbon\CarbonImmutable;
 use App\Models\User;
 use App\Support\ApplicationMode;
 use Laravel\Passport\PersonalAccessTokenFactory;
@@ -40,6 +41,9 @@ class LocalPersonalAccessTokenService
      */
     public function makeForUser(User $user, string $name = 'local_login', array $scopes = ['*'])
     {
+        $tokenTtl = config('system.standalone_jwt_ttl_minutes', 60);
+        $now = CarbonImmutable::now();
+
         // Generate the token using Passport
         $tokenResult = $this->factory->make(
             $user->getKey(),
@@ -65,8 +69,8 @@ class LocalPersonalAccessTokenService
 
             $builder = $this->jwtConfig->builder()
                 ->identifiedBy($jwt->claims()->get('jti'))
-                ->issuedAt($jwt->claims()->get('iat'))
-                ->expiresAt($jwt->claims()->get('exp'))
+                ->issuedAt($now)
+                ->expiresAt($now->addMinutes($tokenTtl))
                 ->withClaim('user', $userObj);
 
             $newToken = $builder->getToken(
