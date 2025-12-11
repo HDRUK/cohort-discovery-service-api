@@ -70,7 +70,7 @@ class LocalPersonalAccessTokenService
             $builder = $this->jwtConfig->builder()
                 ->identifiedBy($jwt->claims()->get('jti'))
                 ->issuedAt($now)
-                ->expiresAt($now->addMinutes($tokenTtl))
+                ->expiresAt($now->modify("+{$tokenTtl}" . ' minutes'))
                 ->withClaim('user', $userObj);
 
             $newToken = $builder->getToken(
