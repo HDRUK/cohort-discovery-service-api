@@ -52,6 +52,17 @@ class StandaloneApplicationModeTest extends TestCase
 
         $this->assertArrayHasKey('access_token', $content['data']);
         $this->assertNotEmpty($content['data']['access_token']);
+
+        $token = $content['data']['access_token'];
+        $payload = $this->decodeJwt($token);
+        $ttlMinutes = (int)config('system.standalone_jwt_ttl_minutes', 60);
+        $expectedExp = now()->addMinutes($ttlMinutes)->timestamp;
+
+        // Allow for a slight drift in timing
+        $this->assertTrue(
+            abs($payload['exp'] - $expectedExp) < 5,
+            'JWT expiration time is not as expected, even with drift factor'
+        );
     }
 
     public function test_the_application_can_logout_standalone_users(): void

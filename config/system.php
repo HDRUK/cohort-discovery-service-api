@@ -38,6 +38,7 @@ return [
     |
     */
     'operation_mode' => env('APP_OPERATION_MODE', 'standalone'),
+    'standalone_jwt_ttl_minutes' => (int)env('STANDALONE_JWT_TTL_MINUTES', 60),
 
     /*
     |--------------------------------------------------------------------------

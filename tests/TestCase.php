@@ -105,4 +105,10 @@ abstract class TestCase extends BaseTestCase
 
         return $this->withJwt($token);
     }
+
+    protected function decodeJwt(string $jwt): array
+    {
+        [$header, $payload, $signature] = explode('.', $jwt);
+        return json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+    }
 }
