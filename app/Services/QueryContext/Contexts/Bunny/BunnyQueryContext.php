@@ -20,10 +20,10 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
-        /*
-        - Note: this entire piece will need to be revisited
-        - - functions getting more complex - needs to be 
-        */
+    /*
+    - Note: this entire piece will need to be revisited
+    - - functions getting more complex - needs to be
+    */
     protected function processNode(array $node, array &$groups): void
     {
         $children = $node['rules'] ?? [];
