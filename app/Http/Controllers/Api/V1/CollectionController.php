@@ -368,7 +368,7 @@ class CollectionController extends Controller
         try {
             $perPage = $this->resolvePerPage();
             $collections = Collection::query()
-                ->with(['host', 'config', 'modelState.state', 'size.task', 'latestConcept.task'])
+                ->with(['host', 'config', 'modelState.state'])
                 ->where('custodian_id', $custodian->id)
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {
@@ -648,17 +648,4 @@ class CollectionController extends Controller
 
         return $this->BadRequestResponse();
     }
-
-
-    public function getCollectionTasks($pid): JsonResponse
-    {
-        $collection = Collection::where('pid', $pid)->first();
-        $tasks = $collection->tasks()
-            ->with('submittedQuery')
-            ->filterViaRequest()
-            ->applySorting('created_at', 'desc');
-
-        return $this->OKResponse($tasks->get());
-    }
-
 }

@@ -251,15 +251,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ->latest('created_at');
     }
 
-    public function latestConcept(): HasOne
-    {
-        return $this->hasOne(Distribution::class)
-            ->whereNotNull('concept_id')
-            ->where('concept_id', '>', 0)
-            ->latest('created_at');
-    }
-
-
     public function host(): BelongsToMany
     {
         return $this->belongsToMany(

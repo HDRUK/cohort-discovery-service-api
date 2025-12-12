@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\TaskType;
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,7 +39,6 @@ class Task extends Model
 {
     use HasFactory;
     use Search;
-    use Filter;
 
     public $timestamps = false;
 
@@ -66,12 +64,6 @@ class Task extends Model
 
     protected static array $sortableColumns = [
         'collection.name',
-    ];
-
-    protected static array $filterableColumns = [
-        'collection_id',
-        'query_id',
-        'task_type',
     ];
 
     protected static function booted(): void

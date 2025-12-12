@@ -18,7 +18,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Log;
 use Carbon\Carbon;
 
@@ -406,35 +405,6 @@ class TaskController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error($e->getMessage());
-            return $this->ErrorResponse($e->getMessage());
-        }
-    }
-
-
-    public function duplicateTask(Request $request, mixed $key = null): JsonResponse
-    {
-        try {
-            $task = Task::when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
-                ->first();
-
-            $query = $task->submittedQuery;
-            $collection = $task->collection;
-
-            $task = Task::create([
-                'pid' => Str::uuid(),
-                'query_id' => $query->id,
-                'collection_id' => $collection->id,
-                'created_at' => Carbon::now(),
-                'task_type' => $task->task_type
-            ]);
-
-            return $this->OKResponse($task);
-        } catch (\Throwable $e) {
-
             return $this->ErrorResponse($e->getMessage());
         }
     }

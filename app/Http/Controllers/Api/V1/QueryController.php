@@ -6,8 +6,6 @@ use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Query;
-use App\Services\QueryContext\QueryContextType;
-use App\Services\QueryContext\QueryContextManager;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -197,27 +195,6 @@ class QueryController extends Controller
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
-    public function translate(Request $request, QueryContextManager $contextManager): JsonResponse
-    {
-        $rawQuery = $request->json()->all();
-
-        $translatedQuery = null;
-        try {
-            $contextType = QueryContextType::Bunny;
-            $translatedQuery = $contextManager->handle($rawQuery, $contextType);
-        } catch (\ValueError $e) {
-            return $this->BadRequestResponseExtended('Unsupported collection type');
-        } catch (\Throwable $e) {
-            return $this->ErrorResponse($e->getMessage());
-        }
-
-        if (! $translatedQuery) {
-            return $this->BadRequestResponseExtended('Context manager failed to translate query');
-        }
-        return $this->OKResponse($translatedQuery);
-    }
-
 
     /**
      * @OA\Put(

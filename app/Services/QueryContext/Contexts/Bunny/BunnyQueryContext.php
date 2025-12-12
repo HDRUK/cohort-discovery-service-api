@@ -34,6 +34,7 @@ class BunnyQueryContext implements QueryContextInterface
 
             // note: bunny cannot handle both time and age constraints
             // - try time constraint then fallback to age constraint
+            $bunnyTime = null;
             if (count($timeConstraint) === 2) {
                 [$lower, $upper] = $timeConstraint;
                 $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
@@ -111,28 +112,29 @@ class BunnyQueryContext implements QueryContextInterface
             foreach ($children as $child) {
                 if ($isOperatorNode($child)) {
                     $pendingOp = strtoupper($child['combinator'] ?? 'AND');
-                } else {
-                    $leafRule = null;
-                    if ($isLeafNode($child)) {
-                        $leafRule = $makeLeafRule($child);
-                    } elseif ($isAgeFilter($child)) {
-                        $leafRule = $makeLeafAgeFilter($child);
-                    } elseif ($isGroupNode($child)) {
-                        //throw new \Error('No support for groups within groups yet');
-                        continue;
-                    } else {
-                        throw new \Error('unknown leaf rule' . json_encode($child));
-                    }
-                    $leafRules[] = $leafRule;
-                    $leafIndex = count($leafRules) - 1;
-
-                    // operator applies between previous leaf and this one
-                    if ($pendingOp !== null && $leafIndex > 0) {
-                        $ops[$leafIndex] = $pendingOp;
-                    }
-
-                    $pendingOp = null;
+                    continue;
                 }
+                $leafRule = null;
+                if ($isLeafNode($child)) {
+                    $leafRule = $makeLeafRule($child);
+                } elseif ($isAgeFilter($child)) {
+                    $leafRule = $makeLeafAgeFilter($child);
+                } elseif ($isGroupNode($child)) {
+                    //throw new \Error('No support for groups within groups yet');
+                    continue;
+                } else {
+                    throw new \Error('unknown leaf rule' . json_encode($child));
+                }
+                $leafRules[] = $leafRule;
+                $leafIndex = count($leafRules) - 1;
+
+                // operator applies between previous leaf and this one
+                if ($pendingOp !== null && $leafIndex > 0) {
+                    $ops[$leafIndex] = $pendingOp;
+                }
+
+                $pendingOp = null;
+
             }
 
             $n = count($leafRules);
