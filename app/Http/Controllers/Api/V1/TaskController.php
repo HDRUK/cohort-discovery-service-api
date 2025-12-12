@@ -18,6 +18,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Log;
 use Carbon\Carbon;
 
@@ -317,10 +318,11 @@ class TaskController extends Controller
                     continue;
                 }
 
-                $hash = hash('sha256', $decodedContent);
-
-
-                $path = sprintf('%s-%s-%s-%s', $task->id, Carbon::now()->format('Ymd_His'), $hash, $fileName);
+                $identifier = sprintf('%s-%s', $task->id, Carbon::now()->format('Ymd_His'));
+               
+                $hash = hash('sha256', $identifier);
+                $path = sprintf('%s-%s', $hash, $fileName);
+               
 
                 try {
                     Log::debug('About to write file to storage', [
@@ -354,6 +356,13 @@ class TaskController extends Controller
 
                     throw $e;
                 }
+
+                Log::info('Creating file', [
+                    'id' => $identifier,
+                    'pid' => $hash,
+                    'task_id' => $task->id,
+                    'task_pid' => $task->pid,
+                ]);
 
                 $resultFile = ResultFile::create([
                     'pid' => $hash,
@@ -396,7 +405,38 @@ class TaskController extends Controller
                 'message' => 'Result received successfully.',
             ]);
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            Log::error($e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
         }
     }
+
+
+    public function duplicateTask(Request $request, mixed $key = null): JsonResponse
+    {
+        try {
+            $task = Task::when(
+                ctype_digit($key),
+                fn ($q) => $q->where('id', $key),
+                fn ($q) => $q->where('pid', $key)
+            )
+                ->first();
+
+            $query = $task->submittedQuery;
+            $collection = $task->collection;
+
+            $task = Task::create([
+                'pid' => Str::uuid(),
+                'query_id' => $query->id,
+                'collection_id' => $collection->id,
+                'created_at' => Carbon::now(),
+                'task_type' => $task->task_type
+            ]);
+
+            return $this->OKResponse($task);
+            } catch (\Throwable $e) {
+
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
 }

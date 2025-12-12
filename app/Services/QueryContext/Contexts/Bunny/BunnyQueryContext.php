@@ -12,24 +12,54 @@ class BunnyQueryContext implements QueryContextInterface
     {
         $groups = [];
 
-        $makeLeafRule = function (array $concept, bool $isExcluded = false, array $timeConstraint = []): array {
+        $makeLeafRule = function (array $child): array {
+            $concept = $child['rule']['concept'];
+            $isExcluded = (bool) ($child['exclude'] ?? false);
+            $timeConstraint = $child['timeConstraint'] ?? [null, null];
+            $ageConstraint = $child['ageConstraint'] ?? [null, null];
+
+            $category = $concept['category'] ?? 'UNKNOWN';
+
+            if ($category === 'Gender' || $category === 'Ethnicity') {
+                $category = 'Person';
+            }
+
             $rule = [
                 'varname' => 'OMOP',
-                'varcat' => $concept['category'] ?? 'UNKNOWN',
+                'varcat' => $category,
                 'type' => 'TEXT',
                 'oper' => $isExcluded ? '!=' : '=',
                 'value' => (string) ($concept['concept_id'] ?? ''),
             ];
 
+            // note: bunny cannot handle both time and age constraints
+            // - try time constraint then fallback to age constraint
             if (count($timeConstraint) === 2) {
-                [$upper, $lower] = $timeConstraint;
-
+                [$lower, $upper] = $timeConstraint;
                 $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
-                if (! is_null($bunnyTime)) {
-                    $rule['time'] = $bunnyTime;
-                }
             }
 
+            if ($bunnyTime === null && count($ageConstraint) === 2) {
+                [$lower, $upper] = $ageConstraint;
+                $bunnyTime = $this->encodeBunnyAgeConstraint($lower, $upper);
+            }
+
+            if ($bunnyTime !== null) {
+                $rule['time'] = $bunnyTime;
+            }
+
+            return $rule;
+        };
+
+        $makeLeafAgeFilter = function (array $child): array {
+            $values = $child['value'];
+            $rule = [
+                'varname' => 'AGE',
+                'varcat' => 'Person',
+                'type' => 'NUM',
+                'oper' => '=',
+                'value' => $values[0].'|'.$values[1],
+            ];
             return $rule;
         };
 
@@ -42,11 +72,23 @@ class BunnyQueryContext implements QueryContextInterface
         $isGroupNode = function (array $node): bool {
             return isset($node['rules']);
         };
+        $isAgeFilter = function (array $node): bool {
+            return isset($node['value']) && ! isset($node['rules'])  && ! isset($node['rule']);
+        };
 
         /*
         - Note: this entire piece will need to be revisited
         */
-        $processNode = function (array $node) use (&$groups, &$processNode, $makeLeafRule, $isOperatorNode, $isLeafNode, $isGroupNode): void {
+        $processNode = function (array $node) use (
+            &$groups, 
+            &$processNode, 
+            $makeLeafRule, 
+            $makeLeafAgeFilter, 
+            $isOperatorNode, 
+            $isLeafNode, 
+            $isGroupNode, 
+            $isAgeFilter
+        ): void {
             $children = $node['rules'] ?? [];
             if (empty($children)) {
                 return;
@@ -69,15 +111,18 @@ class BunnyQueryContext implements QueryContextInterface
             foreach ($children as $child) {
                 if ($isOperatorNode($child)) {
                     $pendingOp = strtoupper($child['combinator'] ?? 'AND');
-
-                    continue;
-                }
-
-                if ($isLeafNode($child)) {
-                    $isExcluded = (bool) ($child['exclude'] ?? false);
-                    $timeConstraint = $child['timeConstraint'] ?? [null, null];
-                    $leafRule = $makeLeafRule($child['rule']['concept'], $isExcluded, $timeConstraint);
-
+                } else {
+                    $leafRule = null;
+                    if ($isLeafNode($child)) {
+                        $leafRule = $makeLeafRule($child);
+                    } elseif ($isAgeFilter($child)) {
+                        $leafRule = $makeLeafAgeFilter($child);
+                    } elseif ($isGroupNode($child)) {
+                         //throw new \Error('No support for groups within groups yet');
+                         continue;
+                    }else {
+                        throw new \Error('unknown leaf rule' . json_encode($child));
+                    }
                     $leafRules[] = $leafRule;
                     $leafIndex = count($leafRules) - 1;
 
@@ -167,8 +212,19 @@ class BunnyQueryContext implements QueryContextInterface
         return (int) round(abs($now->diffInMonths($other, false)));
     }
 
-    public function encodeBunnyTimeConstraint(?string $lower, ?string $upper): ?string
+    public function encodeBunnyAgeConstraint(?int $lower, ?int $upper): ?string
     {
+        if (is_null($lower) && is_null($upper)) {
+            return null;
+        }
+        return $lower !== null ? $lower.'|:AGE:Y' : '|'.$upper.':AGE:Y';
+    }
+
+    public function encodeBunnyTimeConstraint(
+        ?string $lower,
+        ?string $upper,
+    ): ?string {
+
         if (is_null($lower) && is_null($upper)) {
             return null;
         }
@@ -178,7 +234,16 @@ class BunnyQueryContext implements QueryContextInterface
         // - not an 'inbetween' and you'd think would be logical
         // - we have to default to use lower for now
 
-        [$date, $pattern] = ! is_null($lower) ? [$lower, '%d|:TIME:M'] : [$upper, '|%d:TIME:M'];
+        [$date, $pattern] = $lower !== null
+            ? [
+                $lower,
+                '%d|:TIME:M'
+            ]
+            : [
+                $upper,
+                '|%d:TIME:M'
+            ];
+
         $months = $this->getRelativeMonths($date);
 
         return sprintf($pattern, $months);
