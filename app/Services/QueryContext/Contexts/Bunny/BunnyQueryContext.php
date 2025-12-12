@@ -80,13 +80,13 @@ class BunnyQueryContext implements QueryContextInterface
         - Note: this entire piece will need to be revisited
         */
         $processNode = function (array $node) use (
-            &$groups, 
-            &$processNode, 
-            $makeLeafRule, 
-            $makeLeafAgeFilter, 
-            $isOperatorNode, 
-            $isLeafNode, 
-            $isGroupNode, 
+            &$groups,
+            &$processNode,
+            $makeLeafRule,
+            $makeLeafAgeFilter,
+            $isOperatorNode,
+            $isLeafNode,
+            $isGroupNode,
             $isAgeFilter
         ): void {
             $children = $node['rules'] ?? [];
@@ -118,9 +118,9 @@ class BunnyQueryContext implements QueryContextInterface
                     } elseif ($isAgeFilter($child)) {
                         $leafRule = $makeLeafAgeFilter($child);
                     } elseif ($isGroupNode($child)) {
-                         //throw new \Error('No support for groups within groups yet');
-                         continue;
-                    }else {
+                        //throw new \Error('No support for groups within groups yet');
+                        continue;
+                    } else {
                         throw new \Error('unknown leaf rule' . json_encode($child));
                     }
                     $leafRules[] = $leafRule;

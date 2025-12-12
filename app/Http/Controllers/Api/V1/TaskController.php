@@ -319,10 +319,10 @@ class TaskController extends Controller
                 }
 
                 $identifier = sprintf('%s-%s', $task->id, Carbon::now()->format('Ymd_His'));
-               
+
                 $hash = hash('sha256', $identifier);
                 $path = sprintf('%s-%s', $hash, $fileName);
-               
+
 
                 try {
                     Log::debug('About to write file to storage', [
@@ -433,7 +433,7 @@ class TaskController extends Controller
             ]);
 
             return $this->OKResponse($task);
-            } catch (\Throwable $e) {
+        } catch (\Throwable $e) {
 
             return $this->ErrorResponse($e->getMessage());
         }
