@@ -317,10 +317,11 @@ class TaskController extends Controller
                     continue;
                 }
 
-                $hash = hash('sha256', $decodedContent);
+                $identifier = sprintf('%s-%s', $task->id, Carbon::now()->format('Ymd_His'));
 
+                $hash = hash('sha256', $identifier);
+                $path = sprintf('%s-%s', $hash, $fileName);
 
-                $path = sprintf('%s-%s-%s-%s', $task->id, Carbon::now()->format('Ymd_His'), $hash, $fileName);
 
                 try {
                     Log::debug('About to write file to storage', [
@@ -354,6 +355,13 @@ class TaskController extends Controller
 
                     throw $e;
                 }
+
+                Log::info('Creating file', [
+                    'id' => $identifier,
+                    'pid' => $hash,
+                    'task_id' => $task->id,
+                    'task_pid' => $task->pid,
+                ]);
 
                 $resultFile = ResultFile::create([
                     'pid' => $hash,
@@ -396,7 +404,9 @@ class TaskController extends Controller
                 'message' => 'Result received successfully.',
             ]);
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            Log::error($e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
         }
     }
+
 }
