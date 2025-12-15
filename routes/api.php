@@ -96,8 +96,7 @@ Route::post('/v1/task/result/{uuid}/{collectionId}', [TaskController::class, 're
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
-    Route::get('/v1/task/re-run/{id}', [TaskController::class, 'duplicateTask'])->whereNumber('id');
-    Route::get('/v1/task/re-run/{pid}', [TaskController::class, 'duplicateTask'])->whereUuid('pid');
+    Route::get('/v1/task/re-run/{pid}', [TaskController::class, 'cloneTask'])->whereUuid('pid');
 
 
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);

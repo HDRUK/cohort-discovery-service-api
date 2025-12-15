@@ -368,7 +368,7 @@ class CollectionController extends Controller
         try {
             $perPage = $this->resolvePerPage();
             $collections = Collection::query()
-                ->with(['host', 'config', 'modelState.state', 'size.task', 'latestConcept.task'])
+                ->with(['host', 'custodian', 'config', 'modelState.state', 'size.task', 'latestConcept.task'])
                 ->where('custodian_id', $custodian->id)
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {

@@ -411,14 +411,10 @@ class TaskController extends Controller
     }
 
 
-    public function duplicateTask(Request $request, mixed $key = null): JsonResponse
+    public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
-            $task = Task::when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
+            $task = Task::where('pid', $pid)
                 ->first();
 
             $query = $task->submittedQuery;
