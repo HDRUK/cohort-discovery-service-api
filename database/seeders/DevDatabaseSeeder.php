@@ -31,9 +31,9 @@ class DevDatabaseSeeder extends Seeder
             ]);
         }
 
-        /*$this->call([
+        $this->call([
             CollectionSeeder::class,
             CollectionHostSeeder::class,
-        ]);*/
+        ]);
     }
 }
