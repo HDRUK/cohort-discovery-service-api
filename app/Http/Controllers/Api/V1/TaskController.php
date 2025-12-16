@@ -18,7 +18,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Log;
 use Carbon\Carbon;
 
@@ -410,6 +409,7 @@ class TaskController extends Controller
         }
     }
 
+<<<<<<< HEAD
 
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
@@ -435,4 +435,6 @@ class TaskController extends Controller
         }
     }
 
+=======
+>>>>>>> origin/dev
 }

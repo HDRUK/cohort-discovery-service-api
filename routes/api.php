@@ -103,7 +103,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/query/re-run/{id}', [QueryController::class, 'duplicateAndReRun'])->whereNumber('id');
     Route::get('/v1/query/re-run/{pid}', [QueryController::class, 'duplicateAndReRun'])->whereUuid('pid');
     Route::post('/v1/queries', [QueryController::class, 'store']);
-    Route::post('/v1/queries/translate', [QueryController::class, 'translate']);
     Route::put('/v1/query/{id}', [QueryController::class, 'update'])->whereNumber('id');
     Route::put('/v1/query/{pid}', [QueryController::class, 'update'])->whereUuid('pid');
     Route::delete('/v1/query/{id}', [QueryController::class, 'destroy'])->whereNumber('id');
@@ -129,7 +128,6 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
-    Route::get('/v1/collection/{pid}/tasks', [CollectionController::class, 'getCollectionTasks']);
 
     Route::post('/v1/collection/{pid}/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun'])->whereUuid('pid');
 
