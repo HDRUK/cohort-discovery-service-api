@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TaskType;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
+use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +40,7 @@ class Task extends Model
 {
     use HasFactory;
     use Search;
+    use Filter;
 
     public $timestamps = false;
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Task;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\CollectionStateService;
