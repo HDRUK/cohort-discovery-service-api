@@ -164,7 +164,7 @@ class QueryControllerTest extends TestCase
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
-            'task_type' => TaskType::A,
+            'task_type' => TaskType::A->value,
         ];
 
         $response = $this->actingAsJwt($this->user)

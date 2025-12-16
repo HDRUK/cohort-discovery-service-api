@@ -108,6 +108,10 @@ class Query extends Model
             'update' => [
                 'name' => 'sometimes|string|min:3|max:255',
                 'definition' => 'sometimes|array',
+                'task_type' => [
+                    'sometimes',
+                    new Enum(TaskType::class),
+                ],
             ],
             'delete' => [
                 'key' => [
