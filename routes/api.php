@@ -46,7 +46,6 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/custodians/{id}', [CustodianController::class, 'show'])->whereNumber('id');
     Route::get('/v1/custodians/{pid}', [CustodianController::class, 'show'])->whereUuid('pid');
 
-
     Route::post('/v1/custodians', [CustodianController::class, 'store']);
     Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
     Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);
@@ -65,8 +64,6 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
     Route::post('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'addToWorkgroup']);
     Route::delete('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'removeFromWorkgroup']);
-
-    Route::post('/v1/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun']);
 
     // Custodian Network - guarded routes.
     Route::post('/v1/custodian_networks', [CustodianNetworkController::class, 'store']);
@@ -96,6 +93,8 @@ Route::post('/v1/task/result/{uuid}/{collectionId}', [TaskController::class, 're
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
+    Route::get('/v1/task/re-run/{pid}', [TaskController::class, 'cloneTask'])->whereUuid('pid');
+
 
     Route::get('/v1/queries/latest', [QueryController::class, 'getLatestQuery']);
     Route::get('/v1/queries', [QueryController::class, 'index']);
@@ -129,6 +128,9 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
+
+    Route::post('/v1/collection/{pid}/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun'])->whereUuid('pid');
+
 
     Route::get('/v1/collection_config', [CollectionConfigController::class, 'index']);
     Route::get('/v1/collection_config/{id}', [CollectionConfigController::class, 'show']);

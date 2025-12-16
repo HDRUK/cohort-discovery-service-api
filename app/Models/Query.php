@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
+use App\Enums\QueryType;
+use Carbon\Carbon;
 
 /**
  * @OA\Schema(
@@ -54,6 +56,7 @@ class Query extends Model
         'user_id',
         'definition',
         'created_at',
+        'query_type',
     ];
 
     protected $casts = [
@@ -105,6 +108,10 @@ class Query extends Model
             'update' => [
                 'name' => 'sometimes|string|min:3|max:255',
                 'definition' => 'sometimes|array',
+                'task_type' => [
+                    'sometimes',
+                    new Enum(TaskType::class),
+                ],
             ],
             'delete' => [
                 'key' => [
@@ -115,6 +122,33 @@ class Query extends Model
             default => [],
         };
     }
+
+    public static function createDistributionQuery(Collection $collection, QueryType $type): self
+    {
+        $code = $type->value;
+        $name = sprintf('%s-%s-%s', $collection->name, $code, Carbon::now()->format('Ymd_His'));
+        $collectionId = $collection->id;
+
+        $query = self::create([
+            'pid' => (string) Str::uuid(),
+            'name' => $name,
+            'definition' => [
+                'code' => $code,
+            ],
+            'query_type' => $code
+        ]);
+
+        $query->tasks()->create([
+                'pid' => (string) Str::uuid(),
+                'collection_id' => $collectionId,
+                'task_type' => TaskType::B
+        ]);
+
+        $query->refresh()->load('tasks');
+        return  $query;
+
+    }
+
 
     protected static function booted(): void
     {

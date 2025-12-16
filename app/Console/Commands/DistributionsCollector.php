@@ -213,6 +213,7 @@ class DistributionsCollector implements ApiCommand
                         'definition' => [
                             'code' => QueryType::GENERIC->value,
                         ],
+                        'query_type' => QueryType::GENERIC->value,
                     ]);
 
                     Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
@@ -248,6 +249,7 @@ class DistributionsCollector implements ApiCommand
                         'definition' => [
                             'code' => QueryType::DEMOGRAPHICS->value,
                         ],
+                        'query_type' => QueryType::DEMOGRAPHICS->value,
                     ]);
 
                     Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Validation\Rules\Enum;
+use App\Enums\QueryType;
 use App\Contracts\ValidatableModel;
 use App\Models\Omop\Concept;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
@@ -78,7 +80,7 @@ class Distribution extends Model implements ValidatableModel
     {
         return match (strtolower($context)) {
             'store' => [
-                'collection_id' => 'required|integer|exists:collections,id',
+                'query_type'    => ['required', new Enum(QueryType::class)],
             ],
             default => [],
         };
