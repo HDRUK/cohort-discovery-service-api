@@ -131,7 +131,7 @@ class QueryController extends Controller
                         ->leftJoin('collections as collection', 'collection.id', '=', 'tasks.collection_id')
                         ->select('tasks.*')
                         ->with([
-                            'collection.size',
+                            'collection.latestDemographic',
                             'collection.custodian',
                             'result',
                         ])
@@ -333,7 +333,7 @@ class QueryController extends Controller
             return Query::searchViaRequest()
                 ->filterViaRequest()
                 ->with([
-                    'tasks.collection.size',
+                    'tasks.collection.latestDemographic',
                     'tasks.result',
                 ])
                 ->where('pid', $pid)

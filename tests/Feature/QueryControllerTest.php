@@ -177,6 +177,8 @@ class QueryControllerTest extends TestCase
         $response = $this->actingAsJwt($this->user)
             ->get(self::QUERY_URL.'/'.$pid);
 
+        dump($response->decodeResponseJson());
+
         $response->assertSuccessful();
 
         $response = $this->actingAsJwt($altUser)
