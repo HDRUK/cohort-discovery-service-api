@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
+use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -211,9 +213,40 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->belongsTo(Custodian::class);
     }
 
+    /**
+     * @return HasMany<Task, $this>
+     */
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    /**
+     * @return HasOne<Task, $this>
+     */
+    public function latestDemographicTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                  ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value);
+            }
+        );
+    }
+
+    /**
+     * @return HasOne<Task, $this>
+     */
+    public function latestConceptTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                  ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value);
+            }
+        );
     }
 
     public function resultFiles()
@@ -223,6 +256,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function demographics(): HasMany
     {
+        // refactor candidate
         $sub = Distribution::select(DB::raw('MAX(id) as id'))
             ->where('category', 'DEMOGRAPHICS')
             ->groupBy('name', 'collection_id');
@@ -231,17 +265,20 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ->whereIn('id', $sub);
     }
 
-    public function codes(): HasMany
+    public function concepts(): HasMany
     {
+        // refactor candidate
         $sub = Distribution::select(DB::raw('MAX(id) as id'))
             ->where('category', '!=', 'DEMOGRAPHICS')
+            ->whereNotNull('concept_id')
+            ->where('concept_id', '>', 0)
             ->groupBy('name', 'collection_id');
 
         return $this->hasMany(Distribution::class)
             ->whereIn('id', $sub);
     }
 
-    public function size(): HasOne
+    public function latestDemographic(): HasOne
     {
         return $this->hasOne(Distribution::class)
             ->where([

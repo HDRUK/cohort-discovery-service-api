@@ -120,14 +120,17 @@ class CollectionController extends Controller
             $perPage = $this->resolvePerPage();
 
             $collections = Collection::query()
-            ->with([
-                'config',
-                'custodian',
-                'demographics',
-                'host',
-                'modelState.state',
-                'workgroups',
-            ])
+                ->with([
+                    'host',
+                    'custodian',
+                    'config',
+                    'modelState.state',
+                    'latestDemographic.task',
+                    'latestConcept.task',
+                    'latestDemographicTask',
+                    'latestConceptTask',
+                ])
+                ->withCount(['concepts as n_concepts'])
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {
                         $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
@@ -321,7 +324,7 @@ class CollectionController extends Controller
     public function getCollection($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
-            ->with('size')
+            ->with('latestDemographic')
             ->first();
 
         if (! $collection) {
@@ -368,7 +371,17 @@ class CollectionController extends Controller
         try {
             $perPage = $this->resolvePerPage();
             $collections = Collection::query()
-                ->with(['host', 'custodian', 'config', 'modelState.state', 'size.task', 'latestConcept.task'])
+                ->with([
+                    'host',
+                    'custodian',
+                    'config',
+                    'modelState.state',
+                    'latestDemographic.task',
+                    'latestConcept.task',
+                    'latestDemographicTask',
+                    'latestConceptTask',
+                ])
+                ->withCount(['concepts as n_concepts'])
                 ->where('custodian_id', $custodian->id)
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {
@@ -385,7 +398,7 @@ class CollectionController extends Controller
             \Log::error('CollectionController@indexByCustodian - failed: '.
                 $e->getMessage());
 
-            return $this->NotFoundResponse();
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -650,9 +663,37 @@ class CollectionController extends Controller
     }
 
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/collection/{pid}/tasks",
+     *     summary="Get tasks for a collection",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         required=true,
+     *         description="Collection PID",
+     *         @OA\Schema(type="string", example="2")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of tasks for the collection",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Task")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Collection not found")
+     * )
+     */
     public function getCollectionTasks($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)->first();
+
+        if (!$collection) {
+            return $this->NotFoundResponse();
+        }
+
         $tasks = $collection->tasks()
             ->with('submittedQuery')
             ->filterViaRequest()

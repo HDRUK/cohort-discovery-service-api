@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Jobs\RunBeaconTask;
 use App\Models\Collection;
@@ -17,8 +18,9 @@ class CollectionObserver
         $query = Query::create([
             'name' => 'initial-distribution-job-'.$collection->name,
             'definition' => [
-                'code' => 'DEMOGRAPHICS',
+                'code' => QueryType::DEMOGRAPHICS->value,
             ],
+            'query_type' => QueryType::DEMOGRAPHICS->value
         ]);
 
         $task = Task::create([
@@ -37,8 +39,9 @@ class CollectionObserver
         $query = Query::create([
             'name' => 'initial-omop-concept-job-'.$collection->name,
             'definition' => [
-                'code' => 'GENERIC',
+                'code' => QueryType::GENERIC->value,
             ],
+            'query_type' => QueryType::GENERIC->value
         ]);
 
         $task = Task::create([
