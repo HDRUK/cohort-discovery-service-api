@@ -221,9 +221,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->hasMany(Task::class);
     }
 
-    /**
-     * @return HasOne<Task, $this>
-     */
     public function latestDemographicTask(): HasOne
     {
         return $this->hasOne(Task::class)->ofMany(
@@ -235,9 +232,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
-    /**
-     * @return HasOne<Task, $this>
-     */
     public function latestConceptTask(): HasOne
     {
         return $this->hasOne(Task::class)->ofMany(
@@ -285,6 +279,15 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'category' => 'DEMOGRAPHICS',
                 'name' => 'SEX',
             ])
+            ->latest('created_at');
+    }
+
+    public function latestConcept(): HasOne
+    {
+        return $this->hasOne(Distribution::class)
+            ->where('category', '!=', 'DEMOGRAPHICS')
+            ->whereNotNull('concept_id')
+            ->where('concept_id', '>', 0)
             ->latest('created_at');
     }
 

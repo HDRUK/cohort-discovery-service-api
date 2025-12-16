@@ -73,7 +73,7 @@ class QueryController extends Controller
             ->applySorting('created_at', 'desc')
             ->with([
                 'tasks.collection.custodian',
-                'tasks.collection.size',
+                'tasks.collection.latestDemographic',
                 'tasks.result',
             ])
             ->where('user_id', Auth::id())

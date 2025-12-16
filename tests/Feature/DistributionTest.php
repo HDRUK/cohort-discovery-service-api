@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\QueryType;
 use App\Models\Collection;
 use App\Models\Custodian;
 use App\Models\Query;
@@ -12,7 +13,7 @@ use Tests\TestCase;
 
 class DistributionTest extends TestCase
 {
-    private const BASE_URL = '/api/v1/distributions/run-manually';
+    private const BASE_URL = '/api/v1/collection/%s/distributions/run-manually';
 
     private User $user;
 
@@ -60,25 +61,28 @@ class DistributionTest extends TestCase
             ],
         ];
 
+        $type = QueryType::DEMOGRAPHICS->value;
+
         $response = $this->actingAsJwt(
             $this->user,
             $overrides
         )
             ->postJson(
-                self::BASE_URL,
+                sprintf(self::BASE_URL, $collection->pid, ),
                 [
-                    'collection_id' => $collection->id,
+                    'query_type' => $type
                 ]
             );
 
         $response->assertStatus(200);
         $content = $response->json('data');
 
-        $query = Query::where('name', 'manual-run-'.str_replace(' ', '-', $collection->name))->first();
+        $name = sprintf('%s-%s', $collection->name, $type);
+        $query = Query::where('name', 'like', '%'.$name.'%')->first();
         $task = Task::where('query_id', $query->id)->first();
 
         $this->assertNotNull($content);
-        $this->assertTrue($content['query']['id'] === $query->id);
-        $this->assertTrue($content['task']['id'] === $task->id);
+        $this->assertTrue($content['id'] === $query->id);
+        $this->assertTrue($content['tasks'][0]['id'] === $task->id);
     }
 }

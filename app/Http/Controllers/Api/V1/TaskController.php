@@ -409,8 +409,6 @@ class TaskController extends Controller
         }
     }
 
-<<<<<<< HEAD
-
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
@@ -435,6 +433,4 @@ class TaskController extends Controller
         }
     }
 
-=======
->>>>>>> origin/dev
 }
