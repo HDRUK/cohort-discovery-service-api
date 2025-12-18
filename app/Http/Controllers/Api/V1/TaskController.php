@@ -165,6 +165,7 @@ class TaskController extends Controller
 
         if ($nextAttempts === $nAttempts) {
             $task->failed_at = now();
+            $task->completed_at = now();
         }
 
         $task->save();
@@ -178,6 +179,9 @@ class TaskController extends Controller
             $allowedCodes = ['DEMOGRAPHICS', 'GENERIC', 'ICD-MAIN'];
 
             if (! in_array($code, $allowedCodes)) {
+                $task->failed_at = now();
+                $task->completed_at = now();
+                $task->save();
                 return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
             }
 
