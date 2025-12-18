@@ -72,7 +72,7 @@ class CollectionConfig extends Model implements ValidatableModel
             ],
             'store' => [
                 'collection_id' => 'required|exists:collections,id',
-                'run_time_hour' => 'required|integer|min:0|max:12',
+                'run_time_hour' => 'required|integer|min:0|max:23',
                 'run_time_minute' => 'required|integer|min:0|max:59',
                 'frequency_mode' => 'required|integer',
                 'run_time_frequency' => 'required|integer',
@@ -82,7 +82,7 @@ class CollectionConfig extends Model implements ValidatableModel
             'update' => [
                 'id' => 'required|exists:collection_config,id',
                 'collection_id' => 'sometimes|exists:collections,id',
-                'run_time_hour' => 'sometimes|integer|min:0|max:12',
+                'run_time_hour' => 'sometimes|integer|min:0|max:23',
                 'run_time_minute' => 'sometimes|integer|min:0|max:59',
                 'frequency_mode' => 'sometimes|integer',
                 'run_time_frequency' => 'sometimes|integer',
