@@ -238,7 +238,7 @@ class UserController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/users/{id}/workgroups",
+     *     path="/api/v1/users/{id}/workgroup/{workgroupId}",
      *     summary="Remove a user from a workgroup",
      *     tags={"Users"},
      *     @OA\Parameter(
@@ -248,24 +248,21 @@ class UserController extends Controller
      *         required=true,
      *         @OA\Schema(type="integer", example=2)
      *     ),
-     *     @OA\RequestBody(
+     *     @OA\Parameter(
+     *         name="workgroupId",
+     *         in="path",
+     *         description="Workgroup ID",
      *         required=true,
-     *         @OA\JsonContent(
-     *             type="object",
-     *             required={"workgroup_id"},
-     *             @OA\Property(property="workgroup_id", type="integer", example=1)
-     *         )
+     *         @OA\Schema(type="integer", example=2)
      *     ),
      *     @OA\Response(response=200, description="Removed from workgroup"),
      *     @OA\Response(response=404, description="User or Workgroup not found"),
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function removeFromWorkgroup(Request $request, int $id): JsonResponse
+    public function removeFromWorkgroup(Request $request, int $id, int $workgroupId): JsonResponse
     {
-        $input = $request->validate([
-            'workgroup_id' => 'required|exists:workgroups,id',
-        ]);
+        $input = $request->validate([]);
 
         try {
             $user = User::findOrFail($id);
@@ -274,14 +271,14 @@ class UserController extends Controller
         }
 
         try {
-            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+            $workgroup = Workgroup::findOrFail($workgroupId);
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
 
         $userHasWorkgroup = UserHasWorkgroup::where([
-            'user_id' => $user->id,
-            'workgroup_id' => $input['workgroup_id'],
+            'user_id' => $id,
+            'workgroup_id' => $workgroupId,
         ])->delete();
 
         if ($userHasWorkgroup) {
