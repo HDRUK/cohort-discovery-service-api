@@ -28,7 +28,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 Route::post('/v1/applications', [ApplicationController::class, 'store']);
 
 Route::post('/v1/users/{id}/workgroup', [UserController::class, 'addToWorkgroup'])->middleware('cbac:admin');
-Route::delete('/v1/users/{id}/workgroup', [UserController::class, 'removeFromWorkgroup'])->middleware('cbac:admin');
+Route::delete('/v1/users/{id}/workgroup/{workgroupId}', [UserController::class, 'removeFromWorkgroup'])->middleware('cbac:admin');
 
 Route::get('/v1/users', [UserController::class, 'index']);
 Route::get('/v1/users/{id}', [UserController::class, 'show']);
@@ -63,7 +63,7 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::get('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'indexByCustodian']);
     Route::post('/v1/custodians/{custodianPid}/collections', [CollectionController::class, 'storeByCustodian']);
     Route::post('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'addToWorkgroup']);
-    Route::delete('/v1/collections/{collectionId}/workgroup', [CollectionController::class, 'removeFromWorkgroup']);
+    Route::delete('/v1/collections/{collectionId}/workgroup/{workgroupId}', [CollectionController::class, 'removeFromWorkgroup']);
 
     // Custodian Network - guarded routes.
     Route::post('/v1/custodian_networks', [CustodianNetworkController::class, 'store']);

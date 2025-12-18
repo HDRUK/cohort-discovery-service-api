@@ -191,9 +191,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             'addtoworkgroup' => [
                 'workgroup_id' => 'required|integer|exists:workgroups,id',
             ],
-            'removefromworkgroup' => [
-                'workgroup_id' => 'required|integer|exists:workgroups,id',
-            ],
+            'removefromworkgroup' => [],
             default => [],
         };
     }
