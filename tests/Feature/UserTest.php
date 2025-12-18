@@ -73,11 +73,9 @@ class UserTest extends TestCase
             'workgroup_id' => $workgroup->id,
         ]);
 
-        $this->url .= '/'.$user->id.'/workgroup';
+        $this->url .= '/'.$user->id.'/workgroup/'.$workgroup->id;
 
-        $response = $this->delete($this->url, [
-            'workgroup_id' => $workgroup->id,
-        ]);
+        $response = $this->delete($this->url, []);
         $response->assertStatus(200);
 
         $content = $response->json();

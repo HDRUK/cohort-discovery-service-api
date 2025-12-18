@@ -609,9 +609,7 @@ class CollectionTest extends TestCase
             $this->user,
             $overrides
         )
-            ->deleteJson(self::BASE_URL.'/'.$coll->id.'/workgroup', [
-                'workgroup_id' => $workgroup->id,
-            ]);
+            ->deleteJson(self::BASE_URL.'/'.$coll->id.'/workgroup/'.$workgroup->id, []);
         $response->assertStatus(200);
 
         $response = $this->actingAsJwt(
