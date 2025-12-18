@@ -284,11 +284,23 @@ class TaskController extends Controller
     public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
         try {
+
+            $task = Task::where(['pid' => $task_pid])->first();
+            if (! $task) {
+                return $this->NotFoundResponse();
+            }
+
             $status = $request->get('status');
             $message = $request->get('message');
             $queryResult = $request->get('queryResult');
 
             if (! is_array($queryResult) || ! isset($queryResult['count']) || ! is_numeric($queryResult['count'])) {
+
+                $task->update([
+                    'completed_at' => now(),
+                    'failed_at' => now(),
+                ]);
+                $task->save();
                 return $this->BadRequestResponseExtended('Invalid or missing count in queryResult.');
             }
 
@@ -296,11 +308,7 @@ class TaskController extends Controller
 
             error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
 
-            $task = Task::where(['pid' => $task_pid])->first();
 
-            if (! $task) {
-                return $this->NotFoundResponse();
-            }
 
             $metadata = collect($queryResult)->except('count')->toArray();
             $storedFiles = [];
@@ -409,6 +417,13 @@ class TaskController extends Controller
                 'message' => 'Result received successfully.',
             ]);
         } catch (\Throwable $e) {
+
+            $task->update([
+               'completed_at' => now(),
+               'failed_at' => now(),
+            ]);
+            $task->save();
+
             Log::error($e->getMessage());
             return $this->ErrorResponse($e->getMessage());
         }
