@@ -283,13 +283,11 @@ class TaskController extends Controller
      */
     public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
+        $task = Task::where(['pid' => $task_pid])->first();
+        if (! $task) {
+            return $this->NotFoundResponse();
+        }
         try {
-
-            $task = Task::where(['pid' => $task_pid])->first();
-            if (! $task) {
-                return $this->NotFoundResponse();
-            }
-
             $status = $request->get('status');
             $message = $request->get('message');
             $queryResult = $request->get('queryResult');
