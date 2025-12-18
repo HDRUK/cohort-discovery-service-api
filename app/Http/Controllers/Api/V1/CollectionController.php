@@ -612,7 +612,7 @@ class CollectionController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/collections/{collectionId}/workgroup",
+     *     path="/api/v1/collections/{collectionId}/workgroup/{workgroupId}",
      *     summary="Remove a collection from a workgroup",
      *     tags={"Collections"},
      *     @OA\Parameter(
@@ -635,7 +635,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function removeFromWorkgroup(Request $request, int $collectionId): JsonResponse
+    public function removeFromWorkgroup(Request $request, int $collectionId, int $workgroupId): JsonResponse
     {
         $input = $request->validate(app(Collection::class)->getValidationRules('removeFromWorkgroup'));
 
@@ -646,14 +646,14 @@ class CollectionController extends Controller
         }
 
         try {
-            $workgroup = Workgroup::findOrFail($input['workgroup_id']);
+            $workgroup = Workgroup::findOrFail($workgroupId);
         } catch (ModelNotFoundException $e) {
             return $this->NotFoundResponse();
         }
 
         $workgroupHasCollection = WorkgroupHasCollection::where([
             'collection_id' => $collection->id,
-            'workgroup_id' => $input['workgroup_id'],
+            'workgroup_id' => $workgroupId,
         ])->delete();
 
         if ($workgroupHasCollection) {
