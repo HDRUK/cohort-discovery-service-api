@@ -622,13 +622,12 @@ class CollectionController extends Controller
      *         required=true,
      *         @OA\Schema(type="integer", example=2)
      *     ),
-     *     @OA\RequestBody(
+     *     @OA\Parameter(
+     *         name="workgroupId",
+     *         in="path",
+     *         description="Workgroup ID",
      *         required=true,
-     *         @OA\JsonContent(
-     *             type="object",
-     *             required={"workgroup_id"},
-     *             @OA\Property(property="workgroup_id", type="integer", example=1)
-     *         )
+     *         @OA\Schema(type="integer", example=2)
      *     ),
      *     @OA\Response(response=200, description="Removed from workgroup"),
      *     @OA\Response(response=404, description="Collection or Workgroup not found"),
