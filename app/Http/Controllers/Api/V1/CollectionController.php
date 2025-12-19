@@ -132,6 +132,7 @@ class CollectionController extends Controller
                     'latestConceptTask',
                 ])
                 ->withCount(['concepts as n_concepts'])
+                ->withTaskCounts()
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {
                         $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
@@ -383,6 +384,7 @@ class CollectionController extends Controller
                     'latestConceptTask',
                 ])
                 ->withCount(['concepts as n_concepts'])
+                ->withTaskCounts()
                 ->where('custodian_id', $custodian->id)
                 ->when($request->filled('state'), function ($q) use ($request) {
                     if ($request->state !== 'all') {

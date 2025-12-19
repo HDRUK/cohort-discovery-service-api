@@ -327,4 +327,15 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ]);
         }
     }
+
+    public function scopeWithTaskCounts(Builder $query): Builder
+    {
+        return $query->withCount([
+            'tasks as n_a_tasks' => fn ($q) =>
+                $q->whereNull('completed_at')->where('task_type', TaskType::A),
+
+            'tasks as n_b_tasks' => fn ($q) =>
+                $q->whereNull('completed_at')->where('task_type', TaskType::B),
+        ]);
+    }
 }

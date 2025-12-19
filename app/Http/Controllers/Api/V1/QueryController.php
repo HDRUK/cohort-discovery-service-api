@@ -95,7 +95,7 @@ class QueryController extends Controller
      *         name="key",
      *         in="path",
      *         description="Database id or public pid of the query",
-     *         required=true,
+     *         required=true,fu
      *
      *         @OA\Schema(type="string", example="1")
      *     ),

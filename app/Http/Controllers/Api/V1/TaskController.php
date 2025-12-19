@@ -328,7 +328,7 @@ class TaskController extends Controller
                     continue;
                 }
 
-                $identifier = sprintf('%s-%s', $task->id, Carbon::now()->format('Ymd_His'));
+                $identifier = sprintf('%s-%s-%s', $task->id, Carbon::now()->format('Ymd_His'), $task->attempts);
 
                 $hash = hash('sha256', $identifier);
                 $path = sprintf('%s-%s', $hash, $fileName);
