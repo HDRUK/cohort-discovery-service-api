@@ -34,7 +34,6 @@ class NLPConceptExtractor
             // passed through as-is for some reason - to investigate
         ]);
 
-
         return $response->json('entities', []);
     }
 }
