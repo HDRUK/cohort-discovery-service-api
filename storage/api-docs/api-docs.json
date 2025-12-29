@@ -701,13 +701,15 @@
                         "description": "Validation error"
                     }
                 }
-            },
+            }
+        },
+        "/api/v1/collections/{collectionId}/workgroup/{workgroupId}": {
             "delete": {
                 "tags": [
                     "Collections"
                 ],
                 "summary": "Remove a collection from a workgroup",
-                "operationId": "2a4f0b3e8964b1bfa67a7fd314378e31",
+                "operationId": "aa5d3cd7015c178dd9a66facc3fc1b30",
                 "parameters": [
                     {
                         "name": "collectionId",
@@ -718,27 +720,18 @@
                             "type": "integer",
                             "example": 2
                         }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "workgroup_id"
-                                ],
-                                "properties": {
-                                    "workgroup_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
-                            }
+                    },
+                    {
+                        "name": "workgroupId",
+                        "in": "path",
+                        "description": "Workgroup ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "Removed from workgroup"
@@ -748,6 +741,45 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collection/{pid}/tasks": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get tasks for a collection",
+                "operationId": "ddc6eb1ee127c4bb745b1f543a992d74",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Collection PID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "2"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of tasks for the collection",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Task"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
                     }
                 }
             }
@@ -2339,13 +2371,15 @@
                         "description": "Validation error"
                     }
                 }
-            },
+            }
+        },
+        "/api/v1/users/{id}/workgroup/{workgroupId}": {
             "delete": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Remove a user from a workgroup",
-                "operationId": "57c0853469b0718963989a8b8f571c0b",
+                "operationId": "405aaa634ece5491b971a33ff537bfb2",
                 "parameters": [
                     {
                         "name": "id",
@@ -2356,27 +2390,18 @@
                             "type": "integer",
                             "example": 2
                         }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "workgroup_id"
-                                ],
-                                "properties": {
-                                    "workgroup_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
-                            }
+                    },
+                    {
+                        "name": "workgroupId",
+                        "in": "path",
+                        "description": "Workgroup ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "Removed from workgroup"
