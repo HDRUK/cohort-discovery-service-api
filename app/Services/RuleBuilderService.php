@@ -32,29 +32,53 @@ class RuleBuilderService
         $this->loadNlpEntities($segment);
 
         $rules = [];
-        foreach ($this->nlpEntities as $ent) {
+
+        foreach (($this->nlpEntities ?? []) as $textKey => $candidates) {
+            if (empty($candidates)) {
+                continue;
+            }
+
+            usort($candidates, function ($a, $b) {
+                $sa = $a['attributes']['match_score'] ?? 0;
+                $sb = $b['attributes']['match_score'] ?? 0;
+                return $sb <=> $sa;
+            });
+
+            $primary = $candidates[0];
+            $alts = array_slice($candidates, 1);
+
             $rules[] = $this->makeRule([
-                'concept_id' => $ent['attributes']['concept_id'],
-                'description' => $ent['attributes']['description'],
-                'category' => $ent['attributes']['domain_id'],
+                'concept_id' => $primary['attributes']['concept_id'] ?? null,
+                'name' => $primary['attributes']['concept_name'] ?? ($primary['text'] ?? $textKey),
+                'description' => $primary['attributes']['description'] ?? '',
+                'category' => $primary['attributes']['domain_id'] ?? 'Condition',
                 'children' => [],
+                'alternatives' => array_map(function ($ent) {
+                    return [
+                        'concept_id' => $ent['attributes']['concept_id'] ?? null,
+                        'name' => $ent['attributes']['concept_name'] ?? ($ent['text'] ?? ''),
+                        'description' => $ent['attributes']['description'] ?? '',
+                        'category' => $ent['attributes']['domain_id'] ?? 'Condition',
+                        'children' => [],
+                    ];
+                }, $alts),
             ]);
         }
 
         return $rules;
     }
-
     /**
      * Parses a query string into a structured rules array.
      */
     public function parseToRules(string $query): array
     {
         $segments = $this->splitTopLevelOr($query);
-
+        $segmentCount = count($segments);
         $rules = [];
         foreach ($segments as $i => $segment) {
             \Log::info('Finding OMOP concepts for segment: '.$segment);
             $concepts = $this->getConceptsForSegment($segment);
+            \Log::info('Found '.count($concepts));
 
             // If there are multiple concepts, wrap in AND group
             if (count($concepts) > 1) {
@@ -73,8 +97,7 @@ class RuleBuilderService
                 $rules[] = $concepts[0];
             }
 
-            // Inject OR between top level segments
-            if ($i < count($concepts) - 1) {
+            if ($i < $segmentCount - 1) {
                 $rules[] = $this->makeOperator('or');
             }
         }

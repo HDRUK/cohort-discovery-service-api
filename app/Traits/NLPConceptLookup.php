@@ -2,7 +2,6 @@
 
 namespace App\Traits;
 
-use App\Services\NLPConceptExtractor;
 use Illuminate\Support\Facades\App;
 
 trait NLPConceptLookup
@@ -11,10 +10,15 @@ trait NLPConceptLookup
 
     protected function loadNlpEntities(string $query, float $threshold = 80): void
     {
-        \Log::info('Calling NLP Extractor with: '.$query);
-        $nlp = App::make(NLPConceptExtractor::class);
+        \Log::info('Calling NLP Extractor with: "'.$query.'"');
+
+        $nlp = App::make(\App\Services\NLPConceptExtractor::class);
+
+        \Log::info(json_encode(collect($nlp->extract($query, $threshold))));
+
         $this->nlpEntities = collect($nlp->extract($query, $threshold))
-            ->mapWithKeys(fn ($e) => [strtolower(trim($e['text'])) => $e])
+            ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
+            ->map(fn ($group) => $group->values()->all())
             ->toArray();
     }
 
