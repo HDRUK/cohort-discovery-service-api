@@ -39,9 +39,9 @@ class RuleBuilderService
             }
 
             usort($candidates, function ($a, $b) {
-                $sa = $a['score'] ?? $a['confidence'] ?? 0;
-                $sb = $b['score'] ?? $b['confidence'] ?? 0;
-                return $sb <=> $sa; // desc
+                $sa = $a['attributes']['match_score'] ?? 0;
+                $sb = $b['attributes']['match_score'] ?? 0;
+                return $sb <=> $sa;
             });
 
             $primary = $candidates[0];

@@ -10,9 +10,11 @@ trait NLPConceptLookup
 
     protected function loadNlpEntities(string $query, float $threshold = 80): void
     {
-        \Log::info('Calling NLP Extractor with: '.$query);
+        \Log::info('Calling NLP Extractor with: "'.$query.'"');
 
         $nlp = App::make(\App\Services\NLPConceptExtractor::class);
+
+        \Log::info(json_encode(collect($nlp->extract($query, $threshold))));
 
         $this->nlpEntities = collect($nlp->extract($query, $threshold))
             ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))

@@ -60,7 +60,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
                     d.created_at,
                     d.updated_at
                 FROM {$this->distributionTable} d
-                LEFT JOIN {$this->conceptTable} c
+                INNER JOIN {$this->conceptTable} c
                     ON d.concept_id = c.concept_id;
         ");
     }
