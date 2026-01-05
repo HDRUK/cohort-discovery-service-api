@@ -480,7 +480,7 @@ class TaskController extends Controller
                 ]);
             }
 
-            Log::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error($e->getMessage());
             return $this->ErrorResponse($e->getMessage());
         }
     }
