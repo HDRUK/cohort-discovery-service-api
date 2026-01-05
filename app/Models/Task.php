@@ -32,7 +32,8 @@ use Illuminate\Support\Str;
  *     @OA\Property(property="leased_by", type="string", format="string", nullable=true, example="127.0.1"),
  *     @OA\Property(property="leased_until", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:30Z"),
  *     @OA\Property(property="result", ref="#/components/schemas/Result", description="Optional associated result object"),
- *     @OA\Property(property="resultFiles", type="array", @OA\Items(ref="#/components/schemas/ResultFile"), description="Optional files produced by the task")
+ *     @OA\Property(property="resultFiles", type="array", @OA\Items(ref="#/components/schemas/ResultFile"), description="Optional files produced by the task"),
+ *     @OA\Property(property="latestRun", type="array", @OA\Items(ref="#/components/schemas/TaskRun"), description="Latest run attempt")
  * )
  *
  * @property int $id
