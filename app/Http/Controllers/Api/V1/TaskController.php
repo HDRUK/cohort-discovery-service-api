@@ -140,7 +140,6 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info(json_encode($request->header()));
         \Log::info($workerId. ' - Looking for new job for '.$collectionId);
         $collection = Collection::where('pid', $parsedId)->first();
 
