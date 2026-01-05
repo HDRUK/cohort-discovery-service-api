@@ -36,7 +36,7 @@ class QuerySubmissionService
                     'user_id' => $userId,
                 ]);
 
-                if (is_null($query->name)) {
+                if (is_null($data['name'])) {
                     $query->update(['name' => $query->pid]);
                 }
 
