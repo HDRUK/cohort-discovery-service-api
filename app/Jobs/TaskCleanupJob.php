@@ -18,7 +18,7 @@ class TaskCleanupJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function handle(): void
+    public function handle()
     {
         $timeoutSeconds = (int) config('tasks.default_timeout_seconds', 60);
         $now = Carbon::now();
