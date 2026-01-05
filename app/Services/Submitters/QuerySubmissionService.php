@@ -36,6 +36,10 @@ class QuerySubmissionService
                     'user_id' => $userId,
                 ]);
 
+                if (is_null($data['name'])) {
+                    $query->update(['name' => $query->pid]);
+                }
+
                 // Get relevant collections
                 $collections = Collection::query()
                     ->when(! empty($data['collection_filter']), function ($q) use ($data) {
