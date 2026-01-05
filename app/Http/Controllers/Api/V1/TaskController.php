@@ -180,7 +180,7 @@ class TaskController extends Controller
             $newAttempt = (int) $task->attempts + 1;
 
             $task->update([
-                'leased_until' => $now->copy()->addSecond($leaseSeconds),
+                'leased_until' => $now->copy()->addSeconds($leaseSeconds),
                 'leased_by' => $workerId,
             ]);
 
