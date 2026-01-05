@@ -362,7 +362,7 @@ class QueryController extends Controller
                 ->toArray();
 
             // We don't save this as we just need the reference for the duplicate.
-            $query['name'] .= ' - ReRun ('.now()->format('Ymd').')';
+            $query['name'] .= ' - ReRun ('.now()->format('Y-m-d H:i:s').')';
             // Force a rerun of query type - we can safely assume this as users
             // cannot create a distribution query
             $query['task_type'] = TaskType::A;
