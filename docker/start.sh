@@ -61,7 +61,8 @@ if [ "${START_HORIZON:-1}" = "1" ]; then
     echo "Checked horizon...."
 fi
 
-
+echo "Starting the scheduler"
+php artisan schedule:run &
 
 echo "Starting Octane on port ${PORT}..."
 

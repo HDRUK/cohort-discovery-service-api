@@ -97,4 +97,14 @@ class Task extends Model
     {
         return $this->hasMany(ResultFile::class);
     }
+
+    public function runs()
+    {
+        return $this->hasMany(TaskRun::class);
+    }
+
+    public function latestRun()
+    {
+        return $this->hasOne(TaskRun::class)->latestOfMany();
+    }
 }

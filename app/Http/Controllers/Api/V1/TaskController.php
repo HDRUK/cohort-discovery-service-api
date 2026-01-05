@@ -9,6 +9,7 @@ use App\Models\Collection;
 use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
+use App\Models\TaskRun;
 use App\Services\QueryContext\QueryContextManager;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Storage;
 use Str;
 use Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -122,8 +124,12 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function nextJob($collectionId, QueryContextManager $contextManager): JsonResponse|Response
+    public function nextJob(Request $request, string $collectionId, QueryContextManager $contextManager): JsonResponse|Response
     {
+        // note - it'd be better if BUNNY could give us a worker ID in the headers
+        // - also could give us some information like the BUNNY version it is using (git sha?)
+        $workerId =  $request->ip();
+
         $parts = explode('.', $collectionId);
         $parsedId = $parts[0];
         $rawType = $parts[1] ?? 'a';
@@ -134,7 +140,8 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info('Looking for new job for '.$collectionId);
+        \Log::info(json_encode($request->header()));
+        \Log::info($workerId. ' - Looking for new job for '.$collectionId);
         $collection = Collection::where('pid', $parsedId)->first();
 
         if (! $collection) {
@@ -144,14 +151,51 @@ class TaskController extends Controller
         // Always log activity, regardless of if jobs exist
         Collection::logActivity($collection, $taskType);
 
-        $nAttempts = config('api.default_max_attempts', 3);
-        $task = Task::where([
-            'task_type' => $taskType,
-            'completed_at' => null,
-            'collection_id' => $collection->id,
-        ])
-            ->where('attempts', '<', $nAttempts)
-            ->first();
+        $nMaxAttempts = config('tasks.default_max_attempts', 3);
+        $leaseSeconds =  config('tasks.default_lease_seconds', 60);
+
+        $task = DB::transaction(function () use ($taskType, $collection, $nMaxAttempts, $leaseSeconds, $workerId) {
+            $now = Carbon::now();
+
+            $q = Task::where([
+                    'task_type' => $taskType,
+                    'completed_at' => null,
+                    'collection_id' => $collection->id,
+                ])
+                ->where('attempts', '<', $nMaxAttempts)
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('leased_until')
+                      ->orWhere('leased_until', '<', $now);
+                })
+                ->orderBy('id')
+                ->lockForUpdate();
+
+
+            $task = $q->first();
+
+            if (! $task) {
+                return null;
+            }
+
+            $newAttempt = (int) $task->attempts + 1;
+
+            $task->update([
+                'leased_until' => $now->copy()->addSecond($leaseSeconds),
+                'leased_by' => $workerId,
+            ]);
+
+
+            TaskRun::create([
+                'task_id' => $task->id,
+                'attempt' => $newAttempt,
+                'worker_id' => $workerId,
+                'status' => 'claimed',
+                'claimed_at' => $now,
+                'started_at' => $now,
+            ]);
+
+            return $task->fresh();
+        });
 
         if (! $task) {
             error_log('returning no content');
@@ -163,7 +207,7 @@ class TaskController extends Controller
         $task->attempts = $nextAttempts;
         $task->attempted_at = now();
 
-        if ($nextAttempts === $nAttempts) {
+        if ($nextAttempts === $nMaxAttempts) {
             $task->failed_at = now();
             $task->completed_at = now();
         }
@@ -283,151 +327,164 @@ class TaskController extends Controller
      */
     public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
-        $task = Task::where(['pid' => $task_pid])->first();
-        if (! $task) {
-            return $this->NotFoundResponse();
-        }
+
         try {
-            $status = $request->get('status');
-            $message = $request->get('message');
-            $queryResult = $request->get('queryResult');
+            DB::transaction(function () use ($request, $task_pid) {
 
-            if (! is_array($queryResult) || ! isset($queryResult['count']) || ! is_numeric($queryResult['count'])) {
-
-                $task->update([
-                    'completed_at' => now(),
-                    'failed_at' => now(),
-                ]);
-                $task->save();
-                return $this->BadRequestResponseExtended('Invalid or missing count in queryResult.');
-            }
-
-            $count = $queryResult['count'];
-
-            error_log("\033[32m[RESULT RECEIVED]\033[0m Status: {$status}, Count: {$count}, Task PID: {$task_pid}");
-
-
-
-            $metadata = collect($queryResult)->except('count')->toArray();
-            $storedFiles = [];
-
-            foreach ($metadata['files'] ?? [] as $file) {
-
-                if (! isset($file['file_data'])) {
-                    continue;
+                $task = Task::where('pid', $task_pid)->lockForUpdate()->first();
+                if (! $task) {
+                    throw new \RuntimeException('Task not found');
                 }
 
-                $fileName = $file['file_name'] ?? 'unknown';
-                $fileType = $file['file_type'] ?? null;
-                $fileDescription = $file['file_description'] ?? null;
-                $fileDataBase64 = $file['file_data'];
-
-                $decodedContent = base64_decode($fileDataBase64, true);
-
-                if (! $decodedContent) {
-                    continue;
+                if ($task->completed_at) {
+                    return;
                 }
 
-                $fileName = $file['file_name'] ?? 'unknown';
 
-                $hash = hash('sha256', "{$task->id}-{$task->attempts}-{$fileName}");
-                $path = "{$hash}-{$fileName}";
+                $status = $request->get('status');
+                $message = $request->get('message');
+                $queryResult = $request->get('queryResult');
 
-
-                try {
-                    Log::debug('About to write file to storage', [
-                        'disk' => config('filesystems.default'),
-                        'path' => $path,
-                        'task_id' => $task->id ?? null,
-                    ]);
-
-                    $ok = Storage::put($path, $decodedContent);
-
-                    if (! $ok) {
-                        Log::error('Storage::put returned false', [
-                            'disk' => config('filesystems.default'),
-                            'path' => $path,
-                            'size' => strlen($decodedContent),
-                        ]);
-                    } else {
-                        Log::info('File written to storage successfully', [
-                            'disk' => config('filesystems.default'),
-                            'path' => $path,
-                            'size' => strlen($decodedContent),
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('Exception while writing to storage', [
-                        'disk' => config('filesystems.default'),
-                        'path' => $path,
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-
-                    throw $e;
+                if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
+                    throw new \InvalidArgumentException('Invalid or missing count in queryResult.');
                 }
 
-                Log::info('Creating file', [
-                    'pid' => $hash,
-                    'task_id' => $task->id,
-                    'task_pid' => $task->pid,
-                ]);
+                $count = (int) $queryResult['count'];
 
-                $resultFile = ResultFile::updateOrCreate(
-                    ['pid' => $hash],
+                // a header from BUNNY would be better if multiple runners on the same IP
+                $workerId =  $request->ip();
+
+                $run = TaskRun::firstOrCreate(
                     [
                         'task_id' => $task->id,
-                        'collection_id' => $task->collection->id,
-                        'path' => $path,
-                        'file_name' => $fileName,
-                        'file_type' => $fileType,
-                        'file_description' => $fileDescription,
-                        'status' => ResultFile::STATUS_QUEUED,
+                        'attempt' => $task->attempts,
+                    ],
+                    [
+                        'worker_id' => $workerId,
+                        'status' => 'claimed',
+                        'claimed_at' => $task->started_at ?? Carbon::now(),
+                        'started_at' => $task->started_at ?? Carbon::now(),
                     ]
                 );
 
-                ProcessDistributionFile::dispatch($resultFile->id);
 
-                $storedFiles[] = [
-                    'file_name' => $fileName,
-                    'file_type' => $fileType,
-                    'file_description' => $fileDescription,
-                    'path' => $path,
-                ];
-            }
+                $metadata = collect($queryResult)->except('count')->toArray();
+                $storedFiles = [];
 
-            $resultMetadata = ! empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
+                foreach ($metadata['files'] ?? [] as $file) {
+                    if (!isset($file['file_data'])) {
+                        continue;
+                    }
 
-            Result::create([
-                'task_id' => $task->id,
-                'count' => (int) $count,
-                'metadata' => $resultMetadata,
-                'status' => $status,
-                'message' => $message,
-            ]);
+                    $fileName = $file['file_name'] ?? 'unknown';
+                    $fileType = $file['file_type'] ?? null;
+                    $fileDescription = $file['file_description'] ?? null;
 
-            $task->update([
-                'completed_at' => now(),
-                'failed_at' => null,
-            ]);
-            $task->save();
+                    $decoded = base64_decode($file['file_data'], true);
+                    if ($decoded === false) {
+                        continue;
+                    }
+
+                    $pid = hash('sha256', "{$task->id}-{$task->attempts}-{$fileName}");
+                    $path = "{$pid}-{$fileName}";
+
+                    Storage::put($path, $decoded);
+
+                    $resultFile = ResultFile::updateOrCreate(
+                        ['pid' => $pid],
+                        [
+                            'task_id' => $task->id,
+                            'collection_id' => $task->collection->id,
+                            'path' => $path,
+                            'file_name' => $fileName,
+                            'file_type' => $fileType,
+                            'file_description' => $fileDescription,
+                            'status' => ResultFile::STATUS_QUEUED,
+                        ]
+                    );
+
+                    ProcessDistributionFile::dispatch($resultFile->id)->afterCommit();
+
+                    $storedFiles[] = [
+                        'file_name' => $fileName,
+                        'file_type' => $fileType,
+                        'file_description' => $fileDescription,
+                        'path' => $path,
+                    ];
+                }
+
+                $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
+
+                Result::updateOrCreate(
+                    ['task_id' => $task->id],
+                    [
+                        'count' => $count,
+                        'metadata' => $resultMetadata,
+                        'status' => $status,
+                        'message' => $message,
+                    ]
+                );
+
+                $finishedAt = now();
+                $durationMs = $run->started_at ? $run->started_at->diffInMilliseconds($finishedAt) : null;
+
+                $run->update([
+                    'finished_at' => $finishedAt,
+                    'duration_ms' => $durationMs,
+                    'result_status' => $status,
+                    'error_class' => null,
+                    'error_message' => null,
+                ]);
+
+                $task->update([
+                    'completed_at' => $finishedAt,
+                    'failed_at' => null,
+                    'leased_until' => null,
+                    'leased_by' => null,
+                ]);
+            });
 
             return $this->CreatedResponse([
                 'message' => 'Result received successfully.',
             ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $task = Task::where('pid', $task_pid)->first();
+            if ($task) {
+                TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)->update([
+                    'finished_at' => Carbon::now(),
+                    'error_class' => get_class($e),
+                    'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                ]);
+
+                $task->update([
+                    'completed_at' => Carbon::now(),
+                    'failed_at' => Carbon::now(),
+                    'leased_until' => null,
+                    'leased_by' => null,
+                ]);
+            }
+
+            return $this->BadRequestResponseExtended($e->getMessage());
+
         } catch (\Throwable $e) {
+            $task = Task::where('pid', $task_pid)->first();
+            if ($task) {
+                TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)->update([
+                    'finished_at' => Carbon::now(),
+                    'error_class' => get_class($e),
+                    'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                ]);
 
-            $task->update([
-               'completed_at' => now(),
-               'failed_at' => now(),
-            ]);
-            $task->save();
+                $task->update([
+                    'failed_at' => Carbon::now(),
+                ]);
+            }
 
-            Log::error($e->getMessage());
+            Log::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
