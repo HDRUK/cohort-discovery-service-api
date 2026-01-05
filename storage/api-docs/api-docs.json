@@ -3804,6 +3804,67 @@
                         "items": {
                             "$ref": "#/components/schemas/ResultFile"
                         }
+                    },
+                    "latestRun": {
+                        "description": "Latest run attempt",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TaskRun"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "TaskRun": {
+                "title": "TaskRun",
+                "description": "Logs when tasks have been attempted.",
+                "required": [
+                    "task_id",
+                    "attempt",
+                    "worker_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "task_id": {
+                        "description": "FK to the saved tasked",
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "worker_id": {
+                        "description": "Worker id returned by BUNNY via the request and/or IP address",
+                        "type": "string",
+                        "example": 10
+                    },
+                    "attempt": {
+                        "description": "Number of the attempt made so far",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "claimed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:35:00Z",
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:36:00Z",
+                        "nullable": true
+                    },
+                    "result_status": {
+                        "type": "string",
+                        "format": "string",
+                        "example": "127.0.1",
+                        "nullable": true
                     }
                 },
                 "type": "object"
