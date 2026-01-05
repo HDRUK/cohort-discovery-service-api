@@ -54,9 +54,12 @@ class Task extends Model
         'failed_at',
         'attempts',
         'task_type',
+        'leased_by',
+        'leased_until',
     ];
 
     protected $casts = [
+          'leased_until' => 'datetime',
         'created_at' => 'datetime',
         'completed_at' => 'datetime',
         'attempted_at' => 'datetime',

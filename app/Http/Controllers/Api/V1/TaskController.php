@@ -328,10 +328,10 @@ class TaskController extends Controller
                     continue;
                 }
 
-                $identifier = sprintf('%s-%s-%s', $task->id, Carbon::now()->format('Ymd_His'), $task->attempts);
+                $fileName = $file['file_name'] ?? 'unknown';
 
-                $hash = hash('sha256', $identifier);
-                $path = sprintf('%s-%s', $hash, $fileName);
+                $hash = hash('sha256', "{$task->id}-{$task->attempts}-{$fileName}");
+                $path = "{$hash}-{$fileName}";
 
 
                 try {
@@ -368,22 +368,23 @@ class TaskController extends Controller
                 }
 
                 Log::info('Creating file', [
-                    'id' => $identifier,
                     'pid' => $hash,
                     'task_id' => $task->id,
                     'task_pid' => $task->pid,
                 ]);
 
-                $resultFile = ResultFile::create([
-                    'pid' => $hash,
-                    'task_id' => $task->id,
-                    'collection_id' => $task->collection->id,
-                    'path' => $path,
-                    'file_name' => $fileName,
-                    'file_type' => $fileType,
-                    'file_description' => $fileDescription,
-                    'status' => ResultFile::STATUS_QUEUED,
-                ]);
+                $resultFile = ResultFile::updateOrCreate(
+                    ['pid' => $hash],
+                    [
+                        'task_id' => $task->id,
+                        'collection_id' => $task->collection->id,
+                        'path' => $path,
+                        'file_name' => $fileName,
+                        'file_type' => $fileType,
+                        'file_description' => $fileDescription,
+                        'status' => ResultFile::STATUS_QUEUED,
+                    ]
+                );
 
                 ProcessDistributionFile::dispatch($resultFile->id);
 
