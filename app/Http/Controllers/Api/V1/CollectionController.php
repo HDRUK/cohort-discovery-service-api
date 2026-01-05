@@ -130,6 +130,7 @@ class CollectionController extends Controller
                     'latestConcept.task',
                     'latestDemographicTask',
                     'latestConceptTask',
+                    'workgroups',
                 ])
                 ->withCount(['concepts as n_concepts'])
                 ->withTaskCounts()
@@ -256,7 +257,7 @@ class CollectionController extends Controller
         $validated = $request->validated();
 
         try {
-            $collection = Collection::with(['host','config'])->findOrFail($validated['id']);
+            $collection = Collection::with(['host','config','custodian'])->findOrFail($validated['id']);
             if ($collection->update($validated)) {
                 return $this->OKResponse($collection);
             }
@@ -474,7 +475,7 @@ class CollectionController extends Controller
     }
 
     /**
-     * @OA\Post(
+     * @OA\Put(
      *     path="/api/v1/collections/{id}/transition_to",
      *     summary="Transition a Collection to a new state",
      *     tags={"Collections"},
