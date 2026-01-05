@@ -383,6 +383,7 @@ class CollectionController extends Controller
                     'latestConcept.task',
                     'latestDemographicTask',
                     'latestConceptTask',
+                    'workgroups',
                 ])
                 ->withCount(['concepts as n_concepts'])
                 ->withTaskCounts()
