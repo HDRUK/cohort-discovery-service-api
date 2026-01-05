@@ -244,8 +244,21 @@ class TaskController extends Controller
             $contextType = $collection->type;
             $translatedQuery = $contextManager->handle($rawQuery, $contextType);
         } catch (\ValueError $e) {
-            return $this->BadRequestResponseExtended('Unsupported collection type');
+            $message = 'Unsupported collection type';
+            TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
+            ->update([
+                    'finished_at' => Carbon::now(),
+                    'error_class' => get_class($e),
+                    'error_message' => $message,
+            ]);
+            return $this->BadRequestResponseExtended($message);
         } catch (\Throwable $e) {
+            TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
+            ->update([
+                    'finished_at' => Carbon::now(),
+                    'error_class' => get_class($e),
+                    'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                ]);
             return $this->ErrorResponse($e->getMessage());
         }
 

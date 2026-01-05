@@ -103,7 +103,7 @@ class Task extends Model
         return $this->hasMany(TaskRun::class);
     }
 
-    public function latestRun()
+    public function latestRun(): HasOne
     {
         return $this->hasOne(TaskRun::class)->latestOfMany();
     }
