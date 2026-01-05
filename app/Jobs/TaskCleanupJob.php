@@ -27,7 +27,6 @@ class TaskCleanupJob implements ShouldQueue
         Task::query()
             ->whereNull('completed_at')
             ->where('created_at', '<', $cutoff)
-            ->orderBy('id')
             ->chunkById(100, function ($tasks) use ($now, $timeoutSeconds) {
                 foreach ($tasks as $t) {
                     $task = Task::whereKey($t->id)->lockForUpdate()->first();
