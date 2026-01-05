@@ -550,12 +550,12 @@
             }
         },
         "/api/v1/collections/{id}/transition_to": {
-            "post": {
+            "put": {
                 "tags": [
                     "Collections"
                 ],
                 "summary": "Transition a Collection to a new state",
-                "operationId": "33dc2151c04ed80bd56bbfaded68ae9f",
+                "operationId": "7f616209df2e975437ec570bae6ec9a9",
                 "parameters": [
                     {
                         "name": "id",
@@ -2589,6 +2589,33 @@
                 "responses": {
                     "200": {
                         "description": "List of workgroups with users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Workgroup"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No workgroups found"
+                    }
+                }
+            }
+        },
+        "/api/v1/workgroups/search/collections": {
+            "get": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Get collections by workgroups",
+                "operationId": "c48baf86dd051bb6db4f6675dcb328ee",
+                "responses": {
+                    "200": {
+                        "description": "List of workgroups with collections",
                         "content": {
                             "application/json": {
                                 "schema": {
