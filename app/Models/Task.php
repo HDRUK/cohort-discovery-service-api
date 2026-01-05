@@ -8,6 +8,7 @@ use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
@@ -28,6 +29,8 @@ use Illuminate\Support\Str;
  *     @OA\Property(property="attempted_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:35:00Z"),
  *     @OA\Property(property="completed_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:00Z"),
  *     @OA\Property(property="failed_at", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:30Z"),
+ *     @OA\Property(property="leased_by", type="string", format="string", nullable=true, example="127.0.1"),
+ *     @OA\Property(property="leased_until", type="string", format="date-time", nullable=true, example="2025-08-06T12:36:30Z"),
  *     @OA\Property(property="result", ref="#/components/schemas/Result", description="Optional associated result object"),
  *     @OA\Property(property="resultFiles", type="array", @OA\Items(ref="#/components/schemas/ResultFile"), description="Optional files produced by the task")
  * )
@@ -59,7 +62,7 @@ class Task extends Model
     ];
 
     protected $casts = [
-          'leased_until' => 'datetime',
+        'leased_until' => 'datetime',
         'created_at' => 'datetime',
         'completed_at' => 'datetime',
         'attempted_at' => 'datetime',
@@ -98,7 +101,7 @@ class Task extends Model
         return $this->hasMany(ResultFile::class);
     }
 
-    public function runs()
+    public function runs(): HasMany
     {
         return $this->hasMany(TaskRun::class);
     }
