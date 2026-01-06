@@ -10,7 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "darkaonline/l5-swagger": "9.0.0",
+        "darkaonline/l5-swagger": "9.0",
         "firebase/php-jwt": "^6.11",
         "hdruk/claims-based-access-control": "^0.1.11",
         "hdruk/laravel-messenger": "dev-main",
