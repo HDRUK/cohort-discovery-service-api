@@ -6,6 +6,9 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @OA\Ignore()
+ */
 class AddPluginFlag
 {
     public function handle(Request $request, Closure $next)

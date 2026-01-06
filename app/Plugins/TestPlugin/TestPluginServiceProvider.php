@@ -5,6 +5,9 @@ namespace App\Plugins\TestPlugin;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * @OA\Ignore()
+ */
 class TestPluginServiceProvider extends ServiceProvider
 {
     public function register()
