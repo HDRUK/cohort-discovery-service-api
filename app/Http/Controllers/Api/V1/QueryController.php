@@ -134,6 +134,7 @@ class QueryController extends Controller
                             'collection.latestDemographic',
                             'collection.custodian',
                             'result',
+                            'latestRun'
                         ])
                         ->applySorting();
                 },
