@@ -98,7 +98,9 @@ return [
              * @deprecated Please use `scanOptions.exclude`
              * `scanOptions.exclude` overwrites this
              */
-            'excludes' => [],
+            'excludes' => [
+                base_path('app/Plugins'),
+            ],
         ],
 
         'scanOptions' => [
