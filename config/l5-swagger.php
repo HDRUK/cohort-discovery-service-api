@@ -143,7 +143,6 @@ return [
              */
             'processors' => [
                 // new \App\SwaggerProcessors\SchemaQueryParameter(),
-                new \App\SwaggerProcessors\IgnorePluginsProcessor(),
             ],
 
             /**
