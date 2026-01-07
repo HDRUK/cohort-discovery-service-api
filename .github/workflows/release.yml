@@ -79,7 +79,7 @@ jobs:
       - name: Read VERSION file
         id: getversion
         run: |
-          sed -n 's/^appVersion:\(.*\)/\1/p' < chart/soursd-api/Chart.yaml > version
+          sed -n 's/^appVersion:\(.*\)/\1/p' < chart/cohort-api/Chart.yaml > version
           echo "version=$(sed '/.*\"\(.*\)\".*/ s//\1/g' version)" >> $GITHUB_OUTPUT
 
       - name: Google Auth
