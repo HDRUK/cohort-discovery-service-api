@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\NLP;
 
 use App\Models\NlpQueryLog;
 use Illuminate\Support\Facades\Auth;

@@ -12,7 +12,7 @@ trait NLPConceptLookup
     {
         \Log::info('Calling NLP Extractor with: "'.$query.'"');
 
-        $nlp = App::make(\App\Services\NLPConceptExtractor::class);
+        $nlp = App::make(\App\Services\NLP\NLPConceptExtractor::class);
 
         \Log::info(json_encode(collect($nlp->extract($query, $threshold))));
 

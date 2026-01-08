@@ -1,0 +1,111 @@
+name: Deploy Release
+run-name: ${{ github.actor }} triggered deploy to ${{ github.event.inputs.env }} pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Select environment to deploy'
+        required: true
+        default: 'preprod'
+        type: choice
+        options:
+          - preprod
+          - prod
+      tag_version:
+        description: 'Tag version to be deployed'
+        required: true
+        default: ''
+
+env:
+  PROJECT_ID: "${{ secrets.PROJECT_ID }}"
+  GAR_LOCATION: "${{ secrets.GAR_LOCATION }}"
+  SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL}}"
+  SLACK_CHANNEL: "${{ secrets.GITHUBACTIONS_SLACK_CHANNEL }}"
+
+jobs:
+  deploy:
+    permissions:
+      contents: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    environment:  ${{ github.event.inputs.env }}
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Google Auth
+        id: auth
+        uses: "google-github-actions/auth@v2"
+        with:
+          token_format: "access_token"
+          project_id: "${{ secrets.PROJECT_ID }}"
+          workload_identity_provider: "${{ secrets.WIF_PROVIDER }}"
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
+
+      - name: Deploy to Cloud Run
+        uses: actions-hub/gcloud@540.0.0
+        id: deploy
+        env:
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          PROD_PROJECT_ID: ${{ secrets.PROD_PROJECT_ID }}
+          GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+          GAR_NAME: ${{ secrets.GAR_NAME }}
+          SERVICE_NAME: "${{ secrets.SERVICE_NAME }}"
+          SERVICE_REGION: "${{ secrets.SERVICE_REGION }}"
+        with:
+          args: run services update '${{ env.SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROD_PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ github.event.inputs.tag_version }}:latest --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
+
+      - name: Trigger AppCheck scan
+        id: appcheck-scan
+        if: ${{ success() && github.event.inputs.env == 'preprod' }}
+        env:
+          APPCHECK_API_KEY: ${{ secrets.APPCHECK_API_KEY }}
+          APPCHECK_SCAN_ID: ${{ secrets.APPCHECK_SCAN_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          if [[ -z "${APPCHECK_API_KEY:-}" || -z "${APPCHECK_SCAN_ID:-}" ]]; then
+            echo "AppCheck secrets are not set. Skipping scan trigger." >&2
+            exit 0
+          fi
+          
+          BASE_URL="https://api.appcheck-ng.com/api/v1/${APPCHECK_API_KEY}/scan/${APPCHECK_SCAN_ID}"
+          
+          echo "Checking AppCheck scan status..."
+          
+          STATUS_JSON=$(curl -fsSL "${BASE_URL}/status" || true)
+          # Extract the 'status' field from the response
+          if command -v jq >/dev/null 2>&1; then
+            STATUS=$(echo "$STATUS_JSON" | jq -r '.status // empty' | tr '[:upper:]' '[:lower:]')
+          else
+            STATUS=$(echo "$STATUS_JSON" | sed -n 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | tr '[:upper:]' '[:lower:]')
+          fi
+          echo "Current status: ${STATUS:-unknown}"
+          case "${STATUS}" in
+            running|paused|detached)
+              echo "Existing scan appears active (${STATUS}). Aborting before starting a new one..."
+              curl -fsSL -X POST "${BASE_URL}/abort" -H "Content-Length: 0" || true
+              sleep 60
+              ;;
+            *)
+              echo "No active scan detected or status unknown; proceeding to start."
+              ;;
+          esac
+          echo "Starting new AppCheck scan..."
+          curl -fsSL -X POST "${BASE_URL}/start" -H "Content-Length: 0"
+
+      - name: Run Notification
+        id: runnotificationsent
+        uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: ${{ env.SLACK_CHANNEL }}
+          message: Deploying tag ${{ github.event.inputs.tag_version }} to ENV ${{ github.event.inputs.env }} ${{ job.status }}
+        if: always()
