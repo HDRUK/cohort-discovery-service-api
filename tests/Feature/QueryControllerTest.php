@@ -313,5 +313,10 @@ class QueryControllerTest extends TestCase
             ]);
 
         $response->assertStatus(200);
+
+        $queries = Query::whereIn('pid', $pids)->get();
+        foreach ($queries as $query) {
+            $this->assertTrue($query->deleted_at !== null);
+        }
     }
 }
