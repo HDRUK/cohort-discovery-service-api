@@ -8,6 +8,7 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
 use App\Models\Task;
+use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\CollectionStateService;
@@ -21,6 +22,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @OA\Tag(
@@ -66,11 +68,21 @@ class CollectionController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
+
+        $userWorkgroupIds = UserHasWorkgroup::where('user_id', Auth::id())
+            ->pluck('workgroup_id')
+            ->values()
+            ->all();
+
+
         $collections = Collection::with([
             'demographics',
             'custodian.network',
             'modelState.state',
         ])
+             ->whereHas('workgroups', function ($query) use ($userWorkgroupIds) {
+                 $query->whereIn('workgroups.id', $userWorkgroupIds);
+             })
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()

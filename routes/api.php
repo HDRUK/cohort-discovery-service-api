@@ -33,7 +33,16 @@ Route::delete('/v1/users/{id}/workgroup/{workgroupId}', [UserController::class, 
 Route::get('/v1/users', [UserController::class, 'index']);
 Route::get('/v1/users/{id}', [UserController::class, 'show']);
 
-Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
+Route::middleware(['decode.jwt'])->group(function () {
+    Route::get('/v1/features', [FeatureController::class, 'index']);
+    Route::get('/v1/custodians', [CustodianController::class, 'index']);
+
+    Route::get('/v1/custodians/{id}', [CustodianController::class, 'show'])->whereNumber('id');
+    Route::get('/v1/custodians/{pid}', [CustodianController::class, 'show'])->whereUuid('pid');
+
+});
+
+Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
     Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
@@ -42,9 +51,7 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
 
     Route::get('/v1/workgroups/search/users', [WorkgroupController::class, 'usersByWorkgroup']);
 
-    Route::get('/v1/custodians', [CustodianController::class, 'index']);
-    Route::get('/v1/custodians/{id}', [CustodianController::class, 'show'])->whereNumber('id');
-    Route::get('/v1/custodians/{pid}', [CustodianController::class, 'show'])->whereUuid('pid');
+    //Route::get('/v1/custodians', [CustodianController::class, 'index']);
 
     Route::post('/v1/custodians', [CustodianController::class, 'store']);
     Route::put('/v1/custodians/{id}', [CustodianController::class, 'update']);
@@ -72,7 +79,7 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::post('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'linkToNetwork']);
     Route::delete('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'unlinkFromNetwork']);
 
-    Route::get('/v1/features', [FeatureController::class, 'index']);
+
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
 });
 
@@ -118,7 +125,8 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
 
-    Route::get('/v1/collections', [CollectionController::class, 'index']);
+    Route::get('/v1/collections', [CollectionController::class, 'index']);//    ->middleware(['cbac:admin']);
+
     Route::get('/v1/collections/{id}', [CollectionController::class, 'show']);
     Route::post('/v1/collections', [CollectionController::class, 'store']);
     Route::put('/v1/collections/{id}', [CollectionController::class, 'update']);
