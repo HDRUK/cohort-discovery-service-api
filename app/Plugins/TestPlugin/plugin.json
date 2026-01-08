@@ -1,0 +1,16 @@
+{
+    "name": "Test Plugin",
+    "slug": "test-plugin",
+    "namespace": "App\\Plugins\\TestPlugin\\",
+    "version": "1.0.0",
+    "service_provider": "App\\Plugins\\TestPlugin\\TestPluginServiceProvider",
+    "activation": {
+        "routes": [
+            "api/v1/test-plugin-endpoint"
+        ]
+    },
+    "middleware": [
+        "App\\Plugins\\TestPlugin\\Middleware\\AddPluginFlag"
+    ],
+    "disabled": true
+}

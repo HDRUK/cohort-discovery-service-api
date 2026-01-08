@@ -1,0 +1,124 @@
+{
+    "rules": [
+        {
+            "rules": [
+                {
+                    "exclude": false,
+                    "rule": {
+                        "concept": {
+                            "concept_id": 3955320,
+                            "description": "Moderna - SARS-CoV-2 (COVID-19) vaccine",
+                            "category": "Drug",
+                            "children": []
+                        }
+                    }
+                },
+                {
+                    "combinator": "or",
+                    "exclude": false
+                },
+                {
+                    "exclude": false,
+                    "rule": {
+                        "concept": {
+                            "concept_id": 3955321,
+                            "description": "Pfizer - SARS-CoV-2 (COVID-19) vaccine",
+                            "category": "Drug",
+                            "children": []
+                        }
+                    }
+                }
+            ],
+            "exclude": false
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": true,
+            "rule": {
+                "concept": {
+                    "concept_id": 3955322,
+                    "description": "Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222",
+                    "category": "Drug",
+                    "children": []
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": 37153074,
+                    "description": "In-person supervision by healthcare professional of specimen collection by subject",
+                    "category": "Observation",
+                    "children": [
+                        {
+                            "concept_id": 441840,
+                            "description": "Clinical finding",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": 602245,
+                    "description": "SARS-CoV-2 (severe acute respiratory syndrome coronavirus 2) anti-spike IgG detection result positive",
+                    "category": "Measurement",
+                    "children": [
+                        {
+                            "concept_id": 441840,
+                            "description": "Clinical finding",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "combinator": "and",
+            "exclude": false
+        },
+        {
+            "exclude": false,
+            "rule": {
+                "concept": {
+                    "concept_id": 443597,
+                    "description": "Chronic kidney disease stage 3",
+                    "category": "Condition",
+                    "children": [
+                        {
+                            "concept_id": 4030518,
+                            "description": "Renal impairment",
+                            "category": "Condition"
+                        },
+                        {
+                            "concept_id": 4134595,
+                            "description": "Chronic disease of genitourinary system",
+                            "category": "Condition"
+                        },
+                        {
+                            "concept_id": 46271022,
+                            "description": "Chronic kidney disease",
+                            "category": "Condition"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "valid": true
+}

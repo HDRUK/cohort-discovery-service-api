@@ -1,0 +1,4071 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Cohort Discovery Service API",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/v1/collection-configs": {
+            "get": {
+                "tags": [
+                    "CollectionConfig"
+                ],
+                "summary": "Get all collection configs",
+                "operationId": "dccc7b7429ab57cb0613a970beaf92d4",
+                "responses": {
+                    "200": {
+                        "description": "List of collection configs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CollectionConfig"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "CollectionConfig"
+                ],
+                "summary": "Create a new collection config",
+                "operationId": "771d64f8b2c4888ab14810fd833f1701",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CollectionConfig"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "CollectionConfig created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionConfig"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collection-configs/{id}": {
+            "get": {
+                "tags": [
+                    "CollectionConfig"
+                ],
+                "summary": "Get a collection config by ID",
+                "operationId": "27a714c958d225a0345cc0192d32bd9c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CollectionConfig found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionConfig"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "CollectionConfig not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "CollectionConfig"
+                ],
+                "summary": "Update an existing collection config",
+                "operationId": "0b96eb23cf5c12b398635c94866425b5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CollectionConfig"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "CollectionConfig updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionConfig"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "CollectionConfig not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "CollectionConfig"
+                ],
+                "summary": "Delete a collection config",
+                "operationId": "51e0d2a627151793316a25703d94d74e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CollectionConfig deleted"
+                    },
+                    "404": {
+                        "description": "CollectionConfig not found"
+                    },
+                    "500": {
+                        "description": "CollectionConfig cannot be deleted due to unknown error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get all collections",
+                "operationId": "a43886311ec672ee48ac50e3d891eb93",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of collections",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Create a new collection",
+                "operationId": "7fe3dedbb5828e75412306ea8350dbca",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Collection"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Collection created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/collections": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get all collections, paginated for global admin",
+                "operationId": "23c98a2b90903d688e9266cec4b59d7c",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "active"
+                        }
+                    },
+                    {
+                        "name": "workgroup_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of collections for admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{id}": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get a collection by ID",
+                "operationId": "879c1ecc5b85bcc343a6f733a6503f8b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Update a collection by ID",
+                "operationId": "f52028cd5c258f360481b17f3f2f37a6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Collection"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Collection updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Delete a collection by ID",
+                "operationId": "6a9745d555442eb9a157cc035b75c587",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection deleted"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/pid/{pid}": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get a collection by public PID",
+                "operationId": "d2445f9bea030b74922cf333f2ee189a",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "col_abc123"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/custodians/{custodianPid}/collections": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get collections for a specific custodian",
+                "operationId": "1048627126b03a1573afe20bf12f2f06",
+                "parameters": [
+                    {
+                        "name": "custodianPid",
+                        "in": "path",
+                        "description": "Public pid of the custodian",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "cust_abc123"
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "active"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of collections for the custodian",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Custodian not found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Create a collection for a given custodian",
+                "operationId": "59485d66129d51f1ecaac5eb01e9a61a",
+                "parameters": [
+                    {
+                        "name": "custodianPid",
+                        "in": "path",
+                        "description": "Public pid of the custodian",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "cust_abc123"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Collection"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Collection created for custodian",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Custodian not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{id}/transition_to": {
+            "put": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Transition a Collection to a new state",
+                "operationId": "7f616209df2e975437ec570bae6ec9a9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "state": {
+                                        "type": "string",
+                                        "example": "active"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Collection state transitioned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/status/{status}": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get collections by status",
+                "operationId": "e1bec34811975a1dd5184167d048a517",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "path",
+                        "description": "Status name (case-insensitive)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "active"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated collections matching the status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{collectionId}/workgroup": {
+            "post": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Add a collection to a workgroup",
+                "operationId": "35f2087cda7ea3b62c441feffbb36686",
+                "parameters": [
+                    {
+                        "name": "collectionId",
+                        "in": "path",
+                        "description": "Collection ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "workgroup_id"
+                                ],
+                                "properties": {
+                                    "workgroup_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Collection added to workgroup",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkgroupHasCollection"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Collection or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{collectionId}/workgroup/{workgroupId}": {
+            "delete": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Remove a collection from a workgroup",
+                "operationId": "aa5d3cd7015c178dd9a66facc3fc1b30",
+                "parameters": [
+                    {
+                        "name": "collectionId",
+                        "in": "path",
+                        "description": "Collection ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    },
+                    {
+                        "name": "workgroupId",
+                        "in": "path",
+                        "description": "Workgroup ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from workgroup"
+                    },
+                    "404": {
+                        "description": "Collection or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collection/{pid}/tasks": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get tasks for a collection",
+                "operationId": "ddc6eb1ee127c4bb745b1f543a992d74",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Collection PID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "2"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of tasks for the collection",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Task"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/collection-hosts": {
+            "get": {
+                "tags": [
+                    "CollectionHosts"
+                ],
+                "summary": "Get all collection hosts",
+                "operationId": "f8482b8b125f1ebf824a80e1f730bffb",
+                "responses": {
+                    "200": {
+                        "description": "List of collection hosts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CollectionHost"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "CollectionHosts"
+                ],
+                "summary": "Create a new collection host",
+                "operationId": "341d4ec41157de15dd43eff901313f51",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CollectionHost"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Collection host created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionHost"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/collection-hosts/{id}": {
+            "get": {
+                "tags": [
+                    "CollectionHosts"
+                ],
+                "summary": "Get a collection host by ID",
+                "operationId": "1da6b5742b88442a42af84db5965fb32",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection host found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionHost"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection host not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "CollectionHosts"
+                ],
+                "summary": "Update a collection host",
+                "operationId": "9d42f88b33773100a42253fd37f255a9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CollectionHost"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Collection host updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CollectionHost"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection host not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "CollectionHosts"
+                ],
+                "summary": "Delete a collection host",
+                "operationId": "711c9d00662172b73d558a6350cbafd3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection host deleted"
+                    },
+                    "404": {
+                        "description": "Collection host not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/concept-sets": {
+            "get": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "List concept sets for the authenticated user",
+                "operationId": "94a94607bddd989aec1e9c8232c98b0f",
+                "parameters": [
+                    {
+                        "name": "domain",
+                        "in": "query",
+                        "description": "Filter by OMOP domain",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of concept sets",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ConceptSet"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Create a new concept set",
+                "operationId": "0650a7afe901b5cd443eaae0cb8afdf2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConceptSet"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "ConceptSet created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConceptSet"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/concept-sets/{conceptSet}": {
+            "get": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Get a single concept set by ID",
+                "operationId": "a15dd7ecc1eb0f23a90fc3f3b58f65db",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConceptSet record",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConceptSet"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Update an existing concept set",
+                "operationId": "6153634ea40bc57aaa2dcbf150619282",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConceptSet"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated concept set",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConceptSet"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Delete a concept set",
+                "operationId": "0b22735bbd0c662954bc51c8ac96c0e8",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/concept-sets/{conceptSet}/concepts/{conceptId}": {
+            "post": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Attach a concept to a concept set",
+                "operationId": "9caf85b3e86b165876f93e6a956cd491",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "conceptId",
+                        "in": "path",
+                        "description": "OMOP concept id to attach",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Concept attached to set",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConceptSetHasConcept"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Concept not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Detach a concept from a concept set",
+                "operationId": "968c83fd98196076caf0d277c76f569c",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "conceptId",
+                        "in": "path",
+                        "description": "OMOP concept id to detach",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detached"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/concept-sets/{conceptSet}/concepts": {
+            "delete": {
+                "tags": [
+                    "ConceptSets"
+                ],
+                "summary": "Clear all concepts from a concept set",
+                "operationId": "3e1b763600801422ebedf851fe3377f0",
+                "parameters": [
+                    {
+                        "name": "conceptSet",
+                        "in": "path",
+                        "description": "ID of the ConceptSet",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Concept set cleared"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/custodians": {
+            "get": {
+                "tags": [
+                    "Custodians"
+                ],
+                "summary": "Get all custodians",
+                "operationId": "9059e89c8b4f8fbe189466be80f63471",
+                "responses": {
+                    "200": {
+                        "description": "List of custodians",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Custodian"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Custodians"
+                ],
+                "summary": "Create a new custodian",
+                "operationId": "db138a1bb1458a88f3b521e42deec775",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Custodian"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Custodian created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Custodian"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/custodians/{id}": {
+            "get": {
+                "tags": [
+                    "Custodians"
+                ],
+                "summary": "Get a custodian by ID",
+                "operationId": "e3b0323c4a147591ee7bf1df6f7d0012",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Custodian found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Custodian"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Custodian not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Custodians"
+                ],
+                "summary": "Update a custodian",
+                "operationId": "96ef7c8ef5e377142ec5bba4df2481b7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Custodian"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Custodian updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Custodian"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Custodian not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Custodians"
+                ],
+                "summary": "Delete a custodian",
+                "operationId": "42a0fb2fc35fa3cd4737634e94540ac9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Custodian deleted"
+                    },
+                    "404": {
+                        "description": "Custodian not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/custodian-networks": {
+            "get": {
+                "tags": [
+                    "CustodianNetworks"
+                ],
+                "summary": "Get all custodian networks",
+                "operationId": "a4429fcc53c0c3fc90a6503a71117d13",
+                "responses": {
+                    "200": {
+                        "description": "List of custodian networks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CustodianNetwork"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "CustodianNetworks"
+                ],
+                "summary": "Create a new custodian network",
+                "operationId": "9345049fef539398cda7c9c0fd415108",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustodianNetwork"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Custodian network created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustodianNetwork"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/custodian-networks/{id}": {
+            "get": {
+                "tags": [
+                    "CustodianNetworks"
+                ],
+                "summary": "Get a custodian network by ID",
+                "operationId": "cd6eb43f2b670f70a28a406f3dc09b54",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Custodian network found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustodianNetwork"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "CustodianNetworks"
+                ],
+                "summary": "Update a custodian network",
+                "operationId": "6a7552715b37b5a50a5e587298e3ec37",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustodianNetwork"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Custodian network updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustodianNetwork"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "CustodianNetworks"
+                ],
+                "summary": "Delete a custodian network",
+                "operationId": "237b11663a65e6e111bc6f898a269165",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/queries": {
+            "get": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "List queries for the authenticated user",
+                "operationId": "83d4c8cfd0361ba3173db16ba127847d",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Results per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of queries",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Query"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Create and submit a new query",
+                "operationId": "e8f157d94686adf23d54ba8612feda6f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Query"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created and submitted query result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Query"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/api/v1/queries/{key}": {
+            "get": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Get a single query by id or pid",
+                "operationId": "c45855fb50b838b4af26f643ce0cc2ff",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Database id or public pid of the query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Query record",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Query"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Update an existing query (by id or pid)",
+                "operationId": "b50fe1ac92d51202351a06cdce919156",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Database id or public pid of the query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "col_abc123"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Query"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated query",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Query"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Delete a query by id or pid",
+                "operationId": "36839b2d4517ddd975f93d99ce33e1e0",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Database id or public pid of the query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/queries/{pid}/download": {
+            "get": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Download query results for a saved query",
+                "operationId": "28cc28c8a59bb1ddf465e2f93d3ce0bd",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Public pid of the saved query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "qry_abc123"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Output format (csv|json)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "csv"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Streamed file download (binary)",
+                        "content": {
+                            "application/octet-stream": {}
+                        }
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/api/v1/queries/parse": {
+            "post": {
+                "tags": [
+                    "Query Parsing"
+                ],
+                "summary": "Parse a natural language query into structured rules",
+                "operationId": "3980865e0fd31f738598e540c9810f57",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "query"
+                                ],
+                                "properties": {
+                                    "query": {
+                                        "description": "Natural language query to parse",
+                                        "type": "string",
+                                        "example": "diabetes and hypertension"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Parsed rules returned as JSON string",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": ""
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "List tasks submitted by the authenticated user",
+                "operationId": "3d5f186a1552f3d9eff61ba7595aeb3e",
+                "responses": {
+                    "200": {
+                        "description": "List of tasks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Task"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{taskPid}": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get a single task by public pid",
+                "operationId": "84a716eb3c8d6d869836384774b48e76",
+                "parameters": [
+                    {
+                        "name": "taskPid",
+                        "in": "path",
+                        "description": "Public task pid (uuid)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "tsk_abc123"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task object with related query, collection and result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Task"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/next/{collectionPid}": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Retrieve the next job for a collection from the queue (Bunny worker)",
+                "operationId": "43384360f353922a85338bc3fe164761",
+                "parameters": [
+                    {
+                        "name": "collectionPid",
+                        "in": "path",
+                        "description": "Collection pid, optionally suffixed with a dot and task type (e.g. col_abc123.a)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "col_abc123.a"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job payload required by the worker",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "task_id": {
+                                            "type": "integer",
+                                            "example": 22
+                                        },
+                                        "uuid": {
+                                            "type": "string",
+                                            "example": "tsk_abc123"
+                                        },
+                                        "cohort": {
+                                            "type": "object",
+                                            "nullable": true
+                                        },
+                                        "analysis": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "collection": {
+                                            "type": "string",
+                                            "example": "col_abc123"
+                                        },
+                                        "protocol_version": {
+                                            "type": "string",
+                                            "example": "v2"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "204": {
+                        "description": "No job available for this collection"
+                    },
+                    "400": {
+                        "description": "Bad Request - invalid task type or other input"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{taskPid}/collections/{collectionPid}/result": {
+            "post": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Receive task result payload from worker",
+                "operationId": "0f663eb2cd52808e093bc74faabcfebc",
+                "parameters": [
+                    {
+                        "name": "taskPid",
+                        "in": "path",
+                        "description": "Task public pid (uuid)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "tsk_abc123"
+                        }
+                    },
+                    {
+                        "name": "collectionPid",
+                        "in": "path",
+                        "description": "Collection public pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "col_abc123"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status",
+                                    "queryResult"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "COMPLETED"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Completed successfully",
+                                        "nullable": true
+                                    },
+                                    "queryResult": {
+                                        "required": [
+                                            "count"
+                                        ],
+                                        "properties": {
+                                            "count": {
+                                                "type": "integer",
+                                                "example": 123
+                                            },
+                                            "files": {
+                                                "type": "array",
+                                                "items": {
+                                                    "properties": {
+                                                        "file_name": {
+                                                            "type": "string",
+                                                            "example": "res_abc123.csv"
+                                                        },
+                                                        "file_type": {
+                                                            "type": "string",
+                                                            "example": "text/csv"
+                                                        },
+                                                        "file_description": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "file_data": {
+                                                            "description": "Base64-encoded file contents",
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Result received and stored",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Result received successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - invalid payload"
+                    },
+                    "404": {
+                        "description": "Task not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List users",
+                "operationId": "12e989554c281d650dff75443acabf54",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create a new user",
+                "operationId": "64da9b5a20fa4f20e947ed61b2bbb6da",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get a single user by ID",
+                "operationId": "a9d321d5dc6bc2613c6cf5ba92b76c89",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update an existing user",
+                "operationId": "5bcda8371b3cb9f863a47620e636be9b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete a user",
+                "operationId": "0446b3779430bbd9ca0f106d9fd0a2ed",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/users/me": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get the authenticated user's details",
+                "operationId": "9368281998c939d43f37ec2a55477bad",
+                "responses": {
+                    "200": {
+                        "description": "Authenticated user object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/api/v1/users/{id}/workgroups": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Add a user to a workgroup",
+                "operationId": "b7f5941d154d012e4ece434157967280",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "workgroup_id"
+                                ],
+                                "properties": {
+                                    "workgroup_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User added to workgroup",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserHasWorkgroup"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "User or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/users/{id}/workgroup/{workgroupId}": {
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Remove a user from a workgroup",
+                "operationId": "405aaa634ece5491b971a33ff537bfb2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    },
+                    {
+                        "name": "workgroupId",
+                        "in": "path",
+                        "description": "Workgroup ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from workgroup"
+                    },
+                    "404": {
+                        "description": "User or Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/workgroups/{id}": {
+            "get": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Get a workgroup by ID",
+                "operationId": "dc8a54c5936301d3b6c839ad218ee667",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Workgroup found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Workgroup"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workgroup not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Update a workgroup",
+                "operationId": "1313824e22c36587042c175eaa742d98",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Updated Team"
+                                    },
+                                    "active": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Workgroup updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Workgroup"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workgroup not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Delete a workgroup",
+                "operationId": "76451927c73524b4f1de573771787c78",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Workgroup deleted"
+                    },
+                    "404": {
+                        "description": "Workgroup not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/workgroups": {
+            "post": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Create a new workgroup",
+                "operationId": "1dcce42a123a535912d8d24ca3532732",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Research Team"
+                                    },
+                                    "active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Workgroup created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Workgroup"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/workgroups/search/users": {
+            "get": {
+                "tags": [
+                    "Workgroups"
+                ],
+                "summary": "Get users by workgroups",
+                "operationId": "089880b5fbd6afe7fb41bf0869151db6",
+                "responses": {
+                    "200": {
+                        "description": "List of workgroups with users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Workgroup"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No workgroups found"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Collection": {
+                "title": "Collection",
+                "description": "A data collection (cohort) containing tasks, distributions and host relationship metadata.",
+                "required": [
+                    "name",
+                    "pid",
+                    "type"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Cardiology Cohort"
+                    },
+                    "pid": {
+                        "type": "string",
+                        "example": "col_abc123"
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "https://example.org/collections/col_abc123"
+                    },
+                    "type": {
+                        "description": "Query context type (enum)",
+                        "type": "string",
+                        "example": "FHIR"
+                    },
+                    "custodian_id": {
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "tasks": {
+                        "description": "Tasks associated with this collection",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Task"
+                        }
+                    },
+                    "host": {
+                        "description": "Associated collection host(s)",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CollectionHost"
+                        }
+                    },
+                    "workgroups": {
+                        "description": "Associated workgroups",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Workgroup"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CollectionActivityLog": {
+                "title": "CollectionActivityLog",
+                "description": "Activity log entry for collection-level events or task runs",
+                "required": [
+                    "collection_id",
+                    "task_type"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "task_type": {
+                        "description": "Task type code",
+                        "type": "string",
+                        "example": "A"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CollectionConfig": {
+                "title": "CollectionConfig",
+                "description": "Configuration settings for scheduled distribution runs for a Collection",
+                "required": [
+                    "collection_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "run_time_hour": {
+                        "description": "Hour of day for distribution run (0-23)",
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "run_time_minute": {
+                        "description": "Minute of hour for distribution run (0-59)",
+                        "type": "integer",
+                        "example": 30,
+                        "nullable": true
+                    },
+                    "frequency_mode": {
+                        "description": "Frequency mode (e.g. daily, weekly, monthly)",
+                        "type": "string",
+                        "example": "daily",
+                        "nullable": true
+                    },
+                    "run_time_frequency": {
+                        "description": "Frequency multiplier (e.g. every N days/weeks/months)",
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "enabled": {
+                        "description": "Whether scheduled distributions are enabled",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CollectionConfigRun": {
+                "title": "CollectionConfigRun",
+                "description": "Represents an execution run of a CollectionConfig - records the query and task run details",
+                "required": [
+                    "collection_config_id",
+                    "ran_at",
+                    "successful"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_config_id": {
+                        "description": "FK to collection_config",
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "query_id": {
+                        "description": "FK to the saved query executed (if any)",
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    },
+                    "task_id": {
+                        "description": "Associated task id for the run",
+                        "type": "integer",
+                        "example": 22,
+                        "nullable": true
+                    },
+                    "ran_at": {
+                        "description": "Timestamp when the run occurred",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "successful": {
+                        "description": "Whether the run completed successfully",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "errors": {
+                        "description": "Error details if the run failed",
+                        "type": "string",
+                        "example": "Database timeout",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CollectionHost": {
+                "title": "CollectionHost",
+                "required": [
+                    "name",
+                    "query_context_type",
+                    "user_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Host A"
+                    },
+                    "query_context_type": {
+                        "type": "string",
+                        "example": "FHIR"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "client_id": {
+                        "type": "string",
+                        "example": "abc123"
+                    },
+                    "client_secret": {
+                        "type": "string",
+                        "example": "secretXYZ"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CollectionHostHasCollection": {
+                "title": "CollectionHostHasCollection",
+                "description": "A pivot model linking a CollectionHost to a Collection",
+                "required": [
+                    "collection_host_id",
+                    "collection_id"
+                ],
+                "properties": {
+                    "collection_host_id": {
+                        "description": "FK to collection_hosts",
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "collection_id": {
+                        "description": "FK to collections",
+                        "type": "integer",
+                        "example": 10
+                    }
+                },
+                "type": "object"
+            },
+            "ConceptSet": {
+                "title": "ConceptSet",
+                "description": "A user-defined set of concepts (used for query building / cohort definitions).",
+                "required": [
+                    "user_id",
+                    "domain",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "description": "FK to the user who owns the concept set",
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "domain": {
+                        "description": "OMOP domain for the concepts in this set",
+                        "type": "string",
+                        "example": "Condition"
+                    },
+                    "name": {
+                        "description": "Human readable name",
+                        "type": "string",
+                        "example": "Diabetes Concepts"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Set containing diabetes related concepts",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z",
+                        "nullable": true
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "concepts": {
+                        "description": "List of concepts within this set",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "concept_id": {
+                                    "type": "integer",
+                                    "example": 12345
+                                },
+                                "concept_name": {
+                                    "type": "string",
+                                    "example": "Type 2 diabetes mellitus"
+                                },
+                                "domain": {
+                                    "type": "string",
+                                    "example": "Condition"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ConceptSetHasConcept": {
+                "title": "ConceptSetHasConcept",
+                "description": "Pivot linking a concept to a ConceptSet",
+                "required": [
+                    "concept_set_id",
+                    "concept_id"
+                ],
+                "properties": {
+                    "concept_set_id": {
+                        "description": "FK to concept_sets",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "concept_id": {
+                        "description": "FK to the concept (distribution/concept id)",
+                        "type": "integer",
+                        "example": 12345
+                    }
+                },
+                "type": "object"
+            },
+            "Custodian": {
+                "title": "Custodian",
+                "required": [
+                    "name",
+                    "street_address",
+                    "city",
+                    "postal_code",
+                    "country"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Health Data Custodian"
+                    },
+                    "street_address": {
+                        "type": "string",
+                        "example": "123 Main St"
+                    },
+                    "city": {
+                        "type": "string",
+                        "example": "London"
+                    },
+                    "postal_code": {
+                        "type": "string",
+                        "example": "SW1A 1AA"
+                    },
+                    "country": {
+                        "type": "string",
+                        "example": "United Kingdom"
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "https://custodian.org"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "info@custodian.org"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "+44 1234 567890"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CustodianNetwork": {
+                "title": "CustodianNetwork",
+                "description": "A network grouping of custodians",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "North West Network"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CustodianNetworkHasCustodian": {
+                "title": "CustodianNetworkHasCustodian",
+                "description": "Pivot linking a CustodianNetwork to a Custodian",
+                "required": [
+                    "network_id",
+                    "custodian_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "network_id": {
+                        "description": "FK to custodian_networks",
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "custodian_id": {
+                        "description": "FK to custodians",
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Distribution": {
+                "title": "Distribution",
+                "description": "A distribution (result) produced from running a query on a collection (e.g., a count or measurement summary).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "description": "FK to collections",
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "task_id": {
+                        "description": "FK to task that produced this distribution",
+                        "type": "integer",
+                        "example": 22,
+                        "nullable": true
+                    },
+                    "category": {
+                        "description": "Category for the distribution (e.g. DEMOGRAPHICS, MEASUREMENT)",
+                        "type": "string",
+                        "example": "DEMOGRAPHICS"
+                    },
+                    "name": {
+                        "description": "Distribution name",
+                        "type": "string",
+                        "example": "SEX"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Sex distribution for cohort",
+                        "nullable": true
+                    },
+                    "concept_id": {
+                        "description": "OMOP concept identifier if applicable",
+                        "type": "integer",
+                        "example": 12345,
+                        "nullable": true
+                    },
+                    "count": {
+                        "description": "Count of matching records",
+                        "type": "integer",
+                        "example": 100
+                    },
+                    "q1": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1.23,
+                        "nullable": true
+                    },
+                    "q3": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.56,
+                        "nullable": true
+                    },
+                    "min": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.5,
+                        "nullable": true
+                    },
+                    "max": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 99.9,
+                        "nullable": true
+                    },
+                    "mean": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 12.34,
+                        "nullable": true
+                    },
+                    "median": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 10.5,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "DistributionConcept": {
+                "title": "DistributionConcept",
+                "description": "A denormalised representation of a concept within a distribution; used for exporting and reporting distribution concepts.",
+                "properties": {
+                    "distribution_id": {
+                        "description": "FK to the distribution",
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "collection_id": {
+                        "description": "FK to the collection",
+                        "type": "integer",
+                        "example": 10,
+                        "nullable": true
+                    },
+                    "task_id": {
+                        "description": "FK to the task",
+                        "type": "integer",
+                        "example": 22,
+                        "nullable": true
+                    },
+                    "distribution_name": {
+                        "description": "Name of the distribution",
+                        "type": "string",
+                        "example": "SEX",
+                        "nullable": true
+                    },
+                    "category": {
+                        "description": "Category of the distribution",
+                        "type": "string",
+                        "example": "DEMOGRAPHICS",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Sex distribution for cohort",
+                        "nullable": true
+                    },
+                    "concept_id": {
+                        "description": "OMOP concept identifier",
+                        "type": "integer",
+                        "example": 12345,
+                        "nullable": true
+                    },
+                    "concept_name": {
+                        "type": "string",
+                        "example": "Type 2 diabetes mellitus",
+                        "nullable": true
+                    },
+                    "domain_id": {
+                        "type": "string",
+                        "example": "Condition",
+                        "nullable": true
+                    },
+                    "vocabulary_id": {
+                        "type": "string",
+                        "example": "SNOMED",
+                        "nullable": true
+                    },
+                    "concept_class_id": {
+                        "type": "string",
+                        "example": "Clinical Finding",
+                        "nullable": true
+                    },
+                    "standard_concept": {
+                        "description": "Standard concept flag",
+                        "type": "string",
+                        "example": "S",
+                        "nullable": true
+                    },
+                    "concept_code": {
+                        "type": "string",
+                        "example": "44054006",
+                        "nullable": true
+                    },
+                    "count": {
+                        "description": "Count of matching records",
+                        "type": "integer",
+                        "example": 100,
+                        "nullable": true
+                    },
+                    "q1": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1.23,
+                        "nullable": true
+                    },
+                    "q3": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.56,
+                        "nullable": true
+                    },
+                    "min": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.5,
+                        "nullable": true
+                    },
+                    "max": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 99.9,
+                        "nullable": true
+                    },
+                    "mean": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 12.34,
+                        "nullable": true
+                    },
+                    "median": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 10.5,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Job": {
+                "title": "Job",
+                "description": "Represents an enqueued background job (queue payload and metadata).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "description": "FK to related collection if applicable",
+                        "type": "integer",
+                        "example": 10,
+                        "nullable": true
+                    },
+                    "queue": {
+                        "description": "Name of the queue the job belongs to",
+                        "type": "string",
+                        "example": "default"
+                    },
+                    "payload": {
+                        "description": "Serialized payload for the queued job (JSON string)",
+                        "type": "string",
+                        "example": ""
+                    },
+                    "attempts": {
+                        "description": "Number of attempts so far",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "reserved_at": {
+                        "description": "Timestamp when job was reserved (processing started)",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z",
+                        "nullable": true
+                    },
+                    "available_at": {
+                        "description": "Timestamp when job becomes available for processing",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:35:00Z",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "description": "Timestamp when job was enqueued",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "collection": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Collection"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Optional collection relationship, if the job is related to a collection",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "LocalConceptAncestor": {
+                "title": "LocalConceptAncestor",
+                "description": "Represents an ancestor/descendant relationship between OMOP concepts, used to map hierarchy within local concept dataset.",
+                "required": [
+                    "parent_concept_id",
+                    "child_concept_id"
+                ],
+                "properties": {
+                    "parent_concept_id": {
+                        "description": "OMOP concept_id of the ancestor/parent concept",
+                        "type": "integer",
+                        "example": 12345
+                    },
+                    "child_concept_id": {
+                        "description": "OMOP concept_id of the descendant/child concept",
+                        "type": "integer",
+                        "example": 67890
+                    }
+                },
+                "type": "object"
+            },
+            "NlpQueryLog": {
+                "title": "NlpQueryLog",
+                "description": "Records of user-submitted natural language queries and the NLP-extracted entities returned for logging/diagnostics.",
+                "required": [
+                    "query"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "query": {
+                        "description": "Original user query string",
+                        "type": "string",
+                        "example": "diabetes and hypertension"
+                    },
+                    "nlp_extracted": {
+                        "description": "JSON-serialized NLP entities extracted from the query",
+                        "type": "string",
+                        "example": ""
+                    },
+                    "user_id": {
+                        "description": "FK to the user who submitted the query",
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Query": {
+                "title": "Query",
+                "required": [
+                    "pid",
+                    "name",
+                    "definition"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "pid": {
+                        "type": "string",
+                        "example": "qry_abc123"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Cardiology cohort query"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "definition": {
+                        "description": "Structured query definition (array of rule objects)",
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "RequestAudit": {
+                "title": "RequestAudit",
+                "description": "Records of incoming HTTP requests for auditing and diagnostics.",
+                "required": [
+                    "method",
+                    "uri",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "description": "FK to the authenticated user (if any)",
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "method": {
+                        "description": "HTTP method used by the request",
+                        "type": "string",
+                        "example": "GET"
+                    },
+                    "uri": {
+                        "description": "Request URI",
+                        "type": "string",
+                        "example": "/api/v1/queries"
+                    },
+                    "status": {
+                        "description": "HTTP response status code",
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "ip_address": {
+                        "description": "Origin IP address",
+                        "type": "string",
+                        "format": "ipv4",
+                        "example": "203.0.113.10",
+                        "nullable": true
+                    },
+                    "user_agent": {
+                        "description": "User agent header",
+                        "type": "string",
+                        "example": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                        "nullable": true
+                    },
+                    "payload": {
+                        "description": "JSON-serialized request payload/body",
+                        "type": "string",
+                        "example": "",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Result": {
+                "title": "Result",
+                "description": "Result record produced from running a task (counts, metadata and status).",
+                "required": [
+                    "task_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "pid": {
+                        "description": "Public identifier for the result",
+                        "type": "string",
+                        "example": "res_abc123"
+                    },
+                    "task_id": {
+                        "description": "FK to the Task that produced this result",
+                        "type": "integer",
+                        "example": 22
+                    },
+                    "collection_id": {
+                        "description": "FK to the Collection this result is associated with (if any)",
+                        "type": "integer",
+                        "example": 10,
+                        "nullable": true
+                    },
+                    "count": {
+                        "description": "Count of matching records",
+                        "type": "integer",
+                        "example": 123,
+                        "nullable": true
+                    },
+                    "metadata": {
+                        "description": "JSON metadata describing the result (statistics, parameters, etc.)",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "status": {
+                        "description": "Processing status",
+                        "type": "string",
+                        "example": "COMPLETED",
+                        "nullable": true
+                    },
+                    "message": {
+                        "description": "Optional human readable message",
+                        "type": "string",
+                        "example": "Processed successfully",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "ResultFile": {
+                "title": "ResultFile",
+                "description": "Represents a file produced from a result export or processing task.",
+                "required": [
+                    "task_id",
+                    "path",
+                    "file_name",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "App\\Models\\ResultFile",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "pid": {
+                        "description": "Public identifier for the result file",
+                        "type": "string",
+                        "example": "rf_abc123"
+                    },
+                    "task_id": {
+                        "description": "FK to the Task that created this file",
+                        "type": "integer",
+                        "example": 22
+                    },
+                    "collection_id": {
+                        "description": "FK to the Collection related to this file",
+                        "type": "integer",
+                        "example": 10,
+                        "nullable": true
+                    },
+                    "path": {
+                        "description": "File system path to the file",
+                        "type": "string",
+                        "example": "/var/www/storage/results/res_abc123.csv"
+                    },
+                    "file_name": {
+                        "description": "Filename",
+                        "type": "string",
+                        "example": "res_abc123.csv"
+                    },
+                    "file_type": {
+                        "description": "MIME type of the file",
+                        "type": "string",
+                        "example": "text/csv",
+                        "nullable": true
+                    },
+                    "file_description": {
+                        "description": "Human readable description of the file",
+                        "type": "string",
+                        "example": "CSV export of query results",
+                        "nullable": true
+                    },
+                    "status": {
+                        "description": "File processing status: queued|processing|done|failed",
+                        "type": "string",
+                        "example": "queued"
+                    },
+                    "rows_processed": {
+                        "description": "Number of rows processed/written to the file",
+                        "type": "integer",
+                        "example": 250,
+                        "nullable": true
+                    },
+                    "error": {
+                        "description": "Error message if processing failed",
+                        "type": "string",
+                        "example": "CSV writer failed",
+                        "nullable": true
+                    },
+                    "hash": {
+                        "description": "Optional file checksum/hash",
+                        "type": "string",
+                        "example": "e3b0c44298fc1c149afbf4c8996fb924",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "task": {
+                        "$ref": "#/components/schemas/Task"
+                    },
+                    "collection": {
+                        "$ref": "#/components/schemas/Collection"
+                    }
+                },
+                "type": "object"
+            },
+            "Task": {
+                "title": "Task",
+                "description": "A background processing task that executes a saved query against a collection.",
+                "required": [
+                    "pid",
+                    "query_id",
+                    "collection_id",
+                    "task_type"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "pid": {
+                        "description": "Public identifier for the task",
+                        "type": "string",
+                        "example": "tsk_abc123"
+                    },
+                    "query_id": {
+                        "description": "FK to the saved query",
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "collection_id": {
+                        "description": "FK to the collection the task targets",
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "task_type": {
+                        "description": "Type of task (enum)",
+                        "type": "string",
+                        "example": "A"
+                    },
+                    "attempts": {
+                        "description": "Number of attempts so far",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "attempted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:35:00Z",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:36:00Z",
+                        "nullable": true
+                    },
+                    "failed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:36:30Z",
+                        "nullable": true
+                    },
+                    "leased_by": {
+                        "type": "string",
+                        "format": "string",
+                        "example": "127.0.1",
+                        "nullable": true
+                    },
+                    "leased_until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:36:30Z",
+                        "nullable": true
+                    },
+                    "result": {
+                        "$ref": "#/components/schemas/Result"
+                    },
+                    "resultFiles": {
+                        "description": "Optional files produced by the task",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ResultFile"
+                        }
+                    },
+                    "latestRun": {
+                        "description": "Latest run attempt",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TaskRun"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "TaskRun": {
+                "title": "TaskRun",
+                "description": "Logs when tasks have been attempted.",
+                "required": [
+                    "task_id",
+                    "attempt",
+                    "worker_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "task_id": {
+                        "description": "FK to the saved tasked",
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "worker_id": {
+                        "description": "Worker id returned by BUNNY via the request and/or IP address",
+                        "type": "string",
+                        "example": 10
+                    },
+                    "attempt": {
+                        "description": "Number of the attempt made so far",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "claimed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:35:00Z",
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:36:00Z",
+                        "nullable": true
+                    },
+                    "result_status": {
+                        "type": "string",
+                        "format": "string",
+                        "example": "127.0.1",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "title": "User",
+                "required": [
+                    "name",
+                    "email",
+                    "password"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Jane Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane@example.com"
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "UserHasRole": {
+                "title": "UserHasRole",
+                "description": "Pivot model linking a User to a Role",
+                "required": [
+                    "user_id",
+                    "role_id"
+                ],
+                "properties": {
+                    "user_id": {
+                        "description": "FK to users",
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "role_id": {
+                        "description": "FK to roles",
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "type": "object"
+            },
+            "UserHasWorkgroup": {
+                "title": "UserHasWorkgroup",
+                "description": "Pivot linking a User to a Workgroup",
+                "required": [
+                    "user_id",
+                    "workgroup_id"
+                ],
+                "properties": {
+                    "user_id": {
+                        "description": "FK to users",
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "workgroup_id": {
+                        "description": "FK to workgroups",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Optional related User object"
+                    },
+                    "workgroup": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Workgroup"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Optional related Workgroup object"
+                    }
+                },
+                "type": "object"
+            },
+            "Workgroup": {
+                "title": "Workgroup",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Research Team"
+                    },
+                    "active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-08-06T12:34:56Z"
+                    }
+                },
+                "type": "object"
+            },
+            "WorkgroupHasCollection": {
+                "title": "WorkgroupHasCollection",
+                "description": "Pivot linking a workgroup to a collection.",
+                "required": [
+                    "workgroup_id",
+                    "collection_id"
+                ],
+                "properties": {
+                    "workgroup_id": {
+                        "description": "ID of the workgroup",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "description": "ID of the collection",
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Collections",
+            "description": "API Endpoints for managing Collections"
+        },
+        {
+            "name": "CollectionHosts",
+            "description": "API Endpoints for managing collection hosts"
+        },
+        {
+            "name": "ConceptSets",
+            "description": "Endpoints for managing user-defined concept sets"
+        },
+        {
+            "name": "Custodians",
+            "description": "API Endpoints for managing custodians"
+        },
+        {
+            "name": "CustodianNetworks",
+            "description": "API Endpoints for managing custodian networks"
+        },
+        {
+            "name": "Queries",
+            "description": "Endpoints for managing saved queries and query downloads"
+        },
+        {
+            "name": "Query Parsing",
+            "description": "Endpoints for parsing natural language queries into structured rules"
+        },
+        {
+            "name": "Tasks",
+            "description": "Endpoints for managing and retrieving background processing tasks"
+        },
+        {
+            "name": "Users",
+            "description": "Endpoints for managing users and their workgroup memberships"
+        },
+        {
+            "name": "Workgroups",
+            "description": "API Endpoints for managing workgroups"
+        },
+        {
+            "name": "CollectionConfig",
+            "description": "CollectionConfig"
+        }
+    ]
+}

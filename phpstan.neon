@@ -1,0 +1,20 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+
+    paths:
+        - app/
+        - database/seeders
+
+    # Level 10 is the highest level
+    level: 5
+
+    ignoreErrors:
+        - '#Method App\\Http\\Controllers\\Api\\V1\\QueryController::download\(\) should return Illuminate\\Http\\JsonResponse\|Symfony\\Component\\HttpFoundation\\BinaryFileResponse\|Symfony\\Component\\HttpFoundation\\StreamedResponse but returns Illuminate\\Database\\Eloquent\\Builder<App\\Models\\Query>#'
+#        - '#PHPDoc tag @var#'
+
+#
+#    excludePaths:
+#        - ./*/*/FileToBeExcluded.php
