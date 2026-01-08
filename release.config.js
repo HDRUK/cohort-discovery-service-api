@@ -30,7 +30,7 @@ module.exports = {
 
             ],
 
-            issuePrefixes: ["GAT", "TPD", "OS"], // Jira prefixes
+            issuePrefixes: ["GAT", "DP"], // Jira prefixes
 
             issueUrlFormat: process.env.JIRA_URL + "{{prefix}}{{id}}"
 
