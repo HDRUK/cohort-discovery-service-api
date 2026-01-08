@@ -11,6 +11,7 @@ env:
   GAR_LOCATION: "${{ secrets.GAR_LOCATION }}"
   SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL}}"
   SLACK_CHANNEL: "${{ secrets.GITHUBACTIONS_SLACK_CHANNEL }}"
+  GITHUB_TOKEN: "${{ secrets.GH_TOKEN }}"
 
 jobs:
   semantic: 
