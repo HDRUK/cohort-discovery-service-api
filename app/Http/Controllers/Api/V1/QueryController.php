@@ -291,6 +291,22 @@ class QueryController extends Controller
         }
     }
 
+    public function destroyBulk(Request $request): JsonResponse
+    {
+        $input = $request->validate(app(Query::class)->getValidationRules('deletebulk'));
+
+        try {
+            Query::whereIn('pid', $input['keys'])->delete();
+            return $this->OKResponse([]);
+
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@destroyBulk - failed: '.
+                json_encode($input).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse();
+        }
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/queries/{pid}/download",

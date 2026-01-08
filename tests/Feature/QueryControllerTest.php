@@ -238,4 +238,80 @@ class QueryControllerTest extends TestCase
             $this->assertEquals($t->completed_at, null);
         }
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_delete_a_single_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pid = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now delete the query
+        $response = $this->actingAsJwt($this->user)
+            ->deleteJson(self::QUERY_URL.'/'.$pid);
+
+        $response->assertStatus(200);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_delete_queries_in_bulk(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $pids = [];
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pids[] = $response->decodeResponseJson()['data']['query_pid'];
+
+        $payload = [
+            'name' => 'Test Query 123456',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pids[] = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now delete the queries in bulk
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL . '/delete/bulk', [
+                'keys' => $pids,
+            ]);
+
+        $response->assertStatus(200);
+    }
 }
