@@ -10,6 +10,7 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
 use App\Enums\QueryType;
@@ -47,6 +48,7 @@ class Query extends Model
     use Filter;
     use HasFactory;
     use Search;
+    use SoftDeletes;
 
     public $timestamps = false;
 
@@ -56,6 +58,7 @@ class Query extends Model
         'user_id',
         'definition',
         'created_at',
+        'updated_at',
         'query_type',
     ];
 
@@ -115,6 +118,13 @@ class Query extends Model
             ],
             'delete' => [
                 'key' => [
+                    'required',
+                    new IdOrUuid(),
+                ],
+            ],
+            'deletebulk' => [
+                'keys' => 'required|array|min:1',
+                'keys.*' => [
                     'required',
                     new IdOrUuid(),
                 ],
