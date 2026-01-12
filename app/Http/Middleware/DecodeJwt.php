@@ -99,6 +99,7 @@ class DecodeJwt
                 }
 
                 Auth::setUser($user);
+                $request->attributes->set('jwt_claims', $jwt->claims()->all());
             }
 
             return $next($request);
