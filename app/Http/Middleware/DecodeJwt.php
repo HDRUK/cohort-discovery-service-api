@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Role;
+use Spatie\Permission\Models\Role;
 use App\Models\Custodian;
 use App\Models\User;
 use App\Models\Workgroup;
