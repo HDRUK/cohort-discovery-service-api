@@ -153,6 +153,10 @@ class User extends Authenticatable implements OAuthenticatable
         )->using(UserHasWorkgroup::class);
     }
 
+
+    /**
+     * @return BelongsToMany<Custodian, $this, CustodianHasUser>
+     */
     public function custodians(): BelongsToMany
     {
         return $this->belongsToMany(

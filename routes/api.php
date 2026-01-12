@@ -33,7 +33,9 @@ Route::delete('/v1/users/{id}/workgroup/{workgroupId}', [UserController::class, 
 Route::get('/v1/users', [UserController::class, 'index']);
 Route::get('/v1/users/{id}', [UserController::class, 'show']);
 
-Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
+// turning off cbac:admin
+// - permissions to be fixed in DP-354
+Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);
     Route::get('/v1/workgroups/{id}', [WorkgroupController::class, 'show']);
     Route::post('/v1/workgroups', [WorkgroupController::class, 'store']);
@@ -51,6 +53,7 @@ Route::middleware(['decode.jwt', 'cbac:admin'])->group(function () {
     Route::delete('/v1/custodians/{id}', [CustodianController::class, 'destroy']);
 
     Route::get('/v1/admin/collections', [CollectionController::class, 'indexForAdmin']);
+    Route::get('/v1/user/collections', [CollectionController::class, 'indexForUser']);
 
     Route::get('/v1/collection_hosts', [CollectionHostController::class, 'index']);
     Route::get('/v1/collection_hosts/{id}', [CollectionHostController::class, 'show']);

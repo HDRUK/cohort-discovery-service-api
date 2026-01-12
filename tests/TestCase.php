@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Traits\RefreshDatabaseLite;
+use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -110,5 +111,11 @@ abstract class TestCase extends BaseTestCase
     {
         [$header, $payload, $signature] = explode('.', $jwt);
         return json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+    }
+
+    protected function idsFromOkResponse(TestResponse $response): array
+    {
+        $rows = $response->assertOk()->json('data.data') ?? $response->json('data');
+        return collect($rows)->pluck('id')->all();
     }
 }

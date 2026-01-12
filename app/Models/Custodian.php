@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\ValidatableModel;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use App\Rules\IdOrUuid;
 
@@ -27,6 +28,7 @@ use App\Rules\IdOrUuid;
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
  * )
+ *
  */
 class Custodian extends Model implements ValidatableModel
 {
@@ -97,5 +99,13 @@ class Custodian extends Model implements ValidatableModel
             'id',
             'network_id',
         );
+    }
+
+    /**
+     * @return HasMany<Collection, $this>
+     */
+    public function collections(): HasMany
+    {
+        return $this->hasMany(Collection::class, 'custodian_id');
     }
 }
