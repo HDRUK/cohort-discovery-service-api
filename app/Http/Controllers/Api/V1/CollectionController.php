@@ -121,10 +121,12 @@ class CollectionController extends Controller
 
         $isAdmin = $user->roles()->where('name', 'admin')->exists();
 
-        $collections = $user->custodians
-            ->flatMap(fn ($c) => $c->collections)
-            ->unique('id')
-            ->values();
+        $collections = $user->custodians()
+               ->with('collections')
+               ->get()
+               ->flatMap(fn (Custodian $c) => $c->collections)
+               ->unique('id')
+               ->values();
 
 
         $collections = Collection::with([
