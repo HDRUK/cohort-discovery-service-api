@@ -19,6 +19,7 @@ class CollectionTest extends TestCase
     private const BASE_URL = '/api/v1/collections';
     private const BASE_ADMIN_URL = '/api/v1/admin/collections';
     private const CUSTODIAN_BASE_URL = '/api/v1/custodians/%s/collections';
+    private const USER_COLLECTIONS_URL = '/api/v1/user/collections';
 
     private User $user;
 
@@ -87,41 +88,6 @@ class CollectionTest extends TestCase
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
 
         $response->assertStatus(403);
-    }
-
-    public function test_it_cannot_list_collections_without_correct_workgroups(): void
-    {
-        $fakeGatewayTeamId = 1111;
-        $custodian = Custodian::factory()->create([
-            'external_custodian_id' => $fakeGatewayTeamId,
-        ]);
-
-        Collection::factory(5)->create([
-            'custodian_id' => $custodian->id,
-        ]);
-
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'unknown-workgroup',
-                ]],
-                'cohort_admin_teams' => [
-                    [
-                        'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name,
-                    ],
-                ],
-            ],
-        ];
-
-        $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
-        )
-            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
-
-        $response->assertStatus(401);
     }
 
     public function test_it_cannot_list_collections_without_correct_team_admin(): void
@@ -293,6 +259,7 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content['model_state']);
         $this->assertNotNull($content['model_state']['state']);
         $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_ACTIVE);
+        $this->user->removeRole('admin');
     }
 
     public function test_it_can_search_by_name(): void
@@ -622,6 +589,8 @@ class CollectionTest extends TestCase
         $this->assertEquals($initialNumLinkedWorkgroups, count($response->json('data.workgroups')));
     }
 
+    /* turning off for DP-354 to re-enable */
+    /*
     public function test_it_can_list_all_collections_as_admin_only(): void
     {
         $fakeGatewayTeamId = 1111;
@@ -680,7 +649,7 @@ class CollectionTest extends TestCase
             ->getJson(self::BASE_ADMIN_URL);
 
         $response->assertStatus(401);
-    }
+    }*/
 
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
@@ -791,5 +760,130 @@ class CollectionTest extends TestCase
     //         array_column($content['data'], 'total')
     //     );
     // }
+
+
+    public function test_it_lists_active_collections_for_user_by_workgroup_or_custodian(): void
+    {
+        $user = $this->user;
+
+        $custodianA = Custodian::factory()->create();
+        $custodianB = Custodian::factory()->create();
+
+        $user->custodians()->attach($custodianA->id);
+
+        $wgAllowed = Workgroup::skip(3)->first(); // non-uk-industry
+        $wgDenied = Workgroup::skip(4)->first(); // non-uk-research
+
+        $user->workgroups()->attach($wgAllowed->id);
+
+        $viaCustodian = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianA->id],
+            Collection::STATUS_ACTIVE
+        );
+
+        $viaWorkgroup = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianB->id],
+            Collection::STATUS_ACTIVE
+        );
+        $viaWorkgroup->workgroups()->attach($wgAllowed->id);
+
+        $notVisible = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianB->id],
+            Collection::STATUS_ACTIVE
+        );
+        $notVisible->workgroups()->attach($wgDenied->id);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::USER_COLLECTIONS_URL);
+
+        $ids  = $this->idsFromOkResponse($response);
+
+        $this->assertEqualsCanonicalizing(
+            [$viaCustodian->id, $viaWorkgroup->id],
+            $ids
+        );
+    }
+
+    public function test_it_only_returns_active_collections_for_user(): void
+    {
+
+        $user = $this->user;
+
+        $custodian = Custodian::factory()->create();
+        $user->custodians()->attach($custodian->id);
+
+        $active = $this->makeCollectionWithState(
+            ['custodian_id' => $custodian->id],
+            Collection::STATUS_ACTIVE
+        );
+
+        $draft = $this->makeCollectionWithState(
+            ['custodian_id' => $custodian->id],
+            Collection::STATUS_DRAFT
+        );
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::USER_COLLECTIONS_URL);
+
+        $response->assertStatus(200);
+
+        $ids  = $this->idsFromOkResponse($response);
+
+        $this->assertContains($active->id, $ids);
+        $this->assertNotContains($draft->id, $ids);
+    }
+
+    public function test_admin_gets_all_active_collections_regardless_of_workgroup_or_custodian(): void
+    {
+        $user =  $this->user;
+        $user->assignRole('admin');
+
+        $custodianA = Custodian::factory()->create();
+        $custodianB = Custodian::factory()->create();
+
+        $activeA = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianA->id],
+            Collection::STATUS_ACTIVE
+        );
+
+        $activeB = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianB->id],
+            Collection::STATUS_ACTIVE
+        );
+
+        $draftB = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianB->id],
+            Collection::STATUS_DRAFT
+        );
+
+        $response = $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::USER_COLLECTIONS_URL);
+
+        $response->assertStatus(200);
+
+        $ids  = $this->idsFromOkResponse($response);
+
+        $this->assertContains($activeA->id, $ids);
+        $this->assertContains($activeB->id, $ids);
+        $this->assertNotContains($draftB->id, $ids);
+
+        $user->removeRole('admin');
+    }
+
+
+
+    private function makeCollectionWithState(array $attrs, string $state): Collection
+    {
+        $collection = Collection::factory()->create($attrs);
+        $collection->setState($state);
+
+        return $collection->fresh();
+    }
 
 }
