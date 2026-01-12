@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Support\ApplicationMode;
 use App\Traits\Responses;
+use App\Traits\Workgroups;
 use Closure;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 class ClaimBasedAccessControl
 {
     use Responses;
+    use Workgroups;
 
     /**
      * Handle an incoming request.
@@ -45,9 +47,8 @@ class ClaimBasedAccessControl
             $claimResolverService = app(ClaimResolverService::class);
 
             // normalise the workgroup claims to determine access
-            $newArr = $this->normaliseWorkgroups($user['workgroups']);
+            $this->normaliseUserWorkgroups($user);
 
-            $user['workgroups'] = $newArr['workgroups']; // cohort-admin
 
             foreach ($claims as $claim) {
                 $resolution = $claimResolverService->hasWorkgroup(
