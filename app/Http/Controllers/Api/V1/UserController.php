@@ -47,7 +47,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $users = User::with('workgroups')
+        $users = User::with(['workgroups','custodians'])
             ->searchViaRequest()
             ->withStatus()
             ->applySorting()
@@ -162,7 +162,7 @@ class UserController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/users/me",
+     *     path="/api/v1/user",
      *     summary="Get the authenticated user's details",
      *     tags={"Users"},
      *     @OA\Response(
@@ -175,7 +175,8 @@ class UserController extends Controller
      */
     public function getMe(Request $request)
     {
-        $user = User::with(['workgroups', 'roles'])->findOrFail(Auth::id());
+        $user = User::with(['workgroups', 'roles', 'custodians'])
+            ->findOrFail(Auth::id());
 
         return $this->OKResponse($user);
     }
