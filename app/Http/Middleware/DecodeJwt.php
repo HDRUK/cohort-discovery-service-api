@@ -63,9 +63,6 @@ class DecodeJwt
 
                     Auth::setUser($user);
 
-                    //$jti = $this->claimsJtiOrFail($claims);
-                    //$this->forgetIntegratedTokenSyncCacheByJti($jti);
-
                     $this->syncIntegratedOncePerToken($claims, $user, $jwtUser);
                 } catch (\Exception $e) {
                     return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
