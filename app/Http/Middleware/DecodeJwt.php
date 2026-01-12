@@ -125,8 +125,9 @@ class DecodeJwt
             return;
         }
 
-        $lockSeconds = config('claimsaccesscontrol.sync_lock_seconds', 10);
-        $waitSeconds = config('claimsaccesscontrol.sync_lock_wait_seconds', 2);
+        $lockSeconds = config('claimsaccesscontrol.sync_lock_seconds', 30);
+        $waitSeconds = config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
+
 
         Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser) {
             if (Cache::get($cacheKey)) {
