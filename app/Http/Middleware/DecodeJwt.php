@@ -23,20 +23,19 @@ class DecodeJwt
 {
     use Workgroups;
 
+    private const CACHE_DONE_PREFIX = 'jwt_sync_done:v1:integrated:';
+    private const CACHE_LOCK_PREFIX = 'jwt_sync_lock:v1:integrated:';
+
     public function handle(Request $request, Closure $next)
     {
-        $cms = app(ClaimMappingService::class);
-        $roleMap = config('claimsaccesscontrol.role_mappings');
-
         $token = $request->bearerToken();
         $startMicrotime = microtime(true);
-
-        $this->forgetIntegratedTokenSyncCache($token);
 
         try {
             if (! $token) {
                 return response()->json(['error' => 'No token'], 401);
             }
+
             if (! ApplicationMode::isStandalone()) {
                 try {
                     $key = config('integrated.jwt_secret');
@@ -65,12 +64,14 @@ class DecodeJwt
 
                     Auth::setUser($user);
 
-                    $this->syncIntegratedOncePerToken($token, $claims, $user, $jwtUser, $cms, $roleMap);
+                    //$jti = $this->claimsJtiOrFail($claims);
+                    //$this->forgetIntegratedTokenSyncCacheByJti($jti);
+
+                    $this->syncIntegratedOncePerToken($claims, $user, $jwtUser);
                 } catch (\Exception $e) {
                     return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
                 }
             } else {
-
                 $privateKeyEnv = config('passport.private_key');
                 $publicKeyEnv  = config('passport.public_key');
 
@@ -113,27 +114,27 @@ class DecodeJwt
     }
 
     protected function syncIntegratedOncePerToken(
-        string $token,
         object $claims,
         User $user,
         object $jwtUser,
-        ClaimMappingService $cms,
-        array $roleMap
     ): void {
         $ttl = $this->claimsTtlSeconds($claims);
-        $fingerprint = $this->claimsFingerprint($claims, $token);
+        $jti = $this->claimsJtiOrFail($claims);
 
-        $cacheKey = "jwt_sync_done:v1:integrated:{$fingerprint}";
-        $lockKey  = "jwt_sync_lock:v1:integrated:{$fingerprint}";
+        $cacheKey = $this->cacheDoneKey($jti);
+        $lockKey  = $this->cacheLockKey($jti);
 
         if (Cache::get($cacheKey)) {
             return;
         }
 
-        Cache::lock($lockKey, 10)->block(2, function () use ($cacheKey, $ttl, $user, $jwtUser, $cms, $roleMap) {
+        Cache::lock($lockKey, 10)->block(2, function () use ($cacheKey, $ttl, $user, $jwtUser) {
+            if (Cache::get($cacheKey)) {
+                return;
+            }
 
-            $this->syncWorkgroups($user, $jwtUser, $cms);
-            $this->syncRoles($user, $jwtUser, $roleMap);
+            $this->syncWorkgroups($user, $jwtUser);
+            $this->syncRoles($user, $jwtUser);
             $this->syncCustodians($user, $jwtUser);
 
             Cache::put($cacheKey, true, $ttl);
@@ -143,21 +144,39 @@ class DecodeJwt
     protected function claimsTtlSeconds(object $claims): int
     {
         $now = time();
-        $exp = isset($claims->exp) ? (int) $claims->exp : ($now + 3600);
+        $exp = isset($claims->exp) ? (int) $claims->exp : null;
+
+        if (! $exp) {
+            throw new \Exception('Invalid token: exp claim is required');
+        }
+
         return max(1, $exp - $now);
     }
 
-    protected function claimsFingerprint(object $claims, string $token): string
+    protected function claimsJtiOrFail(object $claims): string
     {
-        if (isset($claims->jti) && is_string($claims->jti) && $claims->jti !== '') {
-            return $claims->jti;
+        $jti = $claims->jti ?? null;
+
+        if (! is_string($jti) || $jti === '') {
+            throw new \Exception('Invalid token: jti claim is required');
         }
 
-        return hash('sha256', $token);
+        return $jti;
     }
 
-    protected function syncWorkgroups(User $user, object $jwtUser, ClaimMappingService $cms): void
+    protected function cacheDoneKey(string $jti): string
     {
+        return self::CACHE_DONE_PREFIX.$jti;
+    }
+
+    protected function cacheLockKey(string $jti): string
+    {
+        return self::CACHE_LOCK_PREFIX.$jti;
+    }
+
+    protected function syncWorkgroups(User $user, object $jwtUser): void
+    {
+        $cms = app(ClaimMappingService::class);
         $workgroupMap = $cms->getMap()[config('claims-access.default_system')] ?? [];
         $externalWorkgroups = $jwtUser->workgroups ?? null;
 
@@ -166,7 +185,6 @@ class DecodeJwt
         }
 
         $externalNames = collect($externalWorkgroups)
-            ->pluck('name')
             ->values()
             ->all();
 
@@ -184,8 +202,9 @@ class DecodeJwt
         $user->workgroups()->sync($workgroupIds);
     }
 
-    protected function syncRoles(User $user, object $jwtUser, array $roleMap): void
+    protected function syncRoles(User $user, object $jwtUser): void
     {
+        $roleMap = config('claimsaccesscontrol.role_mappings');
         $externalRoles = $jwtUser->cohort_discovery_roles ?? null;
 
         if (! isset($externalRoles)) {
@@ -222,6 +241,7 @@ class DecodeJwt
         ])->all();
 
         if (count($rows) === 0) {
+            $user->custodians()->sync([]);
             return;
         }
 
@@ -232,9 +252,9 @@ class DecodeJwt
         );
 
         $externalIds = collect($teams)
-        ->pluck('id')
-        ->values()
-        ->all();
+            ->pluck('id')
+            ->values()
+            ->all();
 
         $custodianIds = Custodian::query()
             ->whereIn('external_custodian_id', $externalIds)
@@ -244,15 +264,9 @@ class DecodeJwt
         $user->custodians()->sync($custodianIds);
     }
 
-    public static function forgetIntegratedTokenSyncCache(string $tokenOrJti): void
+    public static function forgetIntegratedTokenSyncCacheByJti(string $jti): void
     {
-        $asJti = $tokenOrJti;
-        $asHash = hash('sha256', $tokenOrJti);
-
-        Cache::forget("jwt_sync_done:v1:integrated:{$asJti}");
-        Cache::forget("jwt_sync_lock:v1:integrated:{$asJti}");
-
-        Cache::forget("jwt_sync_done:v1:integrated:{$asHash}");
-        Cache::forget("jwt_sync_lock:v1:integrated:{$asHash}");
+        Cache::forget(self::CACHE_DONE_PREFIX.$jti);
+        Cache::forget(self::CACHE_LOCK_PREFIX.$jti);
     }
 }

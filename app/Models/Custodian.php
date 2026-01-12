@@ -98,4 +98,9 @@ class Custodian extends Model implements ValidatableModel
             'network_id',
         );
     }
+
+    public function collections(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Collection::class, 'custodian_id');
+    }
 }

@@ -7,8 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
-use App\Models\Task;
-use App\Models\UserHasWorkgroup;
+use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\CollectionStateService;
@@ -69,10 +68,63 @@ class CollectionController extends Controller
     public function index(ModelBackedRequest $request): JsonResponse
     {
 
-        $userWorkgroupIds = UserHasWorkgroup::where('user_id', Auth::id())
-            ->pluck('workgroup_id')
-            ->values()
-            ->all();
+        $collections = Collection::with([
+            'demographics',
+            'custodian.network',
+            'modelState.state',
+        ])
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting()
+            ->get();
+
+        return $this->OKResponse($collections);
+    }
+
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/user/collections",
+     *     summary="Get all collections for a user",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of collections for a user",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection"))
+     *     )
+     * )
+     */
+    public function indexForUser(ModelBackedRequest $request): JsonResponse
+    {
+
+        $user = User::with('custodians.collections')->find(Auth::id());
+
+        $userWorkgroupsSubquery = $user
+            ->workgroups()
+            ->select('workgroups.id');
+
+        $userCustodianIdsSubquery = $user
+            ->custodians()
+            ->select('custodians.id');
+
+        $isAdmin = $user->roles()->where('name', 'admin')->exists();
+
+        $collections = $user->custodians
+            ->flatMap(fn ($c) => $c->collections)
+            ->unique('id')
+            ->values();
 
 
         $collections = Collection::with([
@@ -80,9 +132,20 @@ class CollectionController extends Controller
             'custodian.network',
             'modelState.state',
         ])
-             ->whereHas('workgroups', function ($query) use ($userWorkgroupIds) {
-                 $query->whereIn('workgroups.id', $userWorkgroupIds);
-             })
+            ->when(
+                !$isAdmin,
+                fn ($query) => $query->where(
+                    fn ($q) =>
+                        $q->whereHas(
+                            'workgroups',
+                            fn ($wq) => $wq->whereIn(
+                                'workgroups.id',
+                                $userWorkgroupsSubquery
+                            )
+                        )->orWhereIn('custodian_id', $userCustodianIdsSubquery)
+                )
+            )
+            ->whereRelation('modelState.state', 'states.slug', Collection::STATUS_ACTIVE)
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
