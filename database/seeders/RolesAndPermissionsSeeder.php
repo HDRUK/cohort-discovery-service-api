@@ -32,7 +32,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cohorts:update',
             'cohorts:query',
         ],
-        'researcher' => [
+        'user' => [
             'cohorts:read',
             'cohorts:query',
         ],

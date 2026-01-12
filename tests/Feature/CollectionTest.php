@@ -248,9 +248,9 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content['model_state']['state']);
         $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_PENDING);
 
-        // Now swap to a researcher who can do nothing with collections
+        // Now swap to a user who can do nothing with collections
         $this->user->removeRole('custodian');
-        $this->user->assignRole('researcher');
+        $this->user->assignRole('user');
 
         // This fails because a researcher isn't allowed to edit collections
         $response = $this->actingAsJwt(
@@ -271,7 +271,7 @@ class CollectionTest extends TestCase
         $collection->setState(Collection::STATUS_DRAFT);
 
         // Now swap to an admin who can do everything with a collection (??)
-        $this->user->removeRole('researcher');
+        $this->user->removeRole('user');
         $this->user->assignRole('admin');
 
         $response = $this->actingAsJwt(
