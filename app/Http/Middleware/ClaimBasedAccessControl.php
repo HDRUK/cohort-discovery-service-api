@@ -67,17 +67,4 @@ class ClaimBasedAccessControl
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
-    public function normaliseWorkgroups(array $data): array
-    {
-        $normalised = [];
-
-        foreach ($data as $workgroup) {
-            if (is_array($workgroup) && isset($workgroup['name'])) {
-                $normalised[] = strtolower($workgroup['name']);
-            }
-        }
-
-        return ['workgroups' => [config('claims-access.default_system') => $normalised]];
-    }
 }
