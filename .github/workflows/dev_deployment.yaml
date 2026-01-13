@@ -121,7 +121,7 @@ jobs:
           INT_SERVICE_NAME: "${{ secrets.INT_SERVICE_NAME }}"
           SERVICE_REGION: "${{ secrets.SERVICE_REGION }}"
         with:
-          args:run services update '${{ env.INT_SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
+          args: run services update '${{ env.INT_SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
 
       - name: Run Notification
         id: runnotificationsent
