@@ -105,6 +105,11 @@ class QueryControllerTest extends TestCase
         $response = $this->actingAsJwt($this->user)
             ->postJson(self::BASE_URL, $payload);
 
+        $content = $response->json('data');
+
+        $queryPid = $content['query_pid'];
+        $this->assertNotNull($queryPid);
+
         $response->assertCreated()
             ->assertJsonStructure([
                 'data' => [
@@ -116,6 +121,10 @@ class QueryControllerTest extends TestCase
 
         $this->assertDatabaseCount(Task::class, $n);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
+
+        $q = Query::where('pid', $queryPid)->first();
+        $this->assertNotNull($q->created_at);
+        $this->assertNotNull($q->updated_at);
 
         $this->enableObservers();
     }
