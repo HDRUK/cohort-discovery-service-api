@@ -50,7 +50,7 @@ class Query extends Model
     use Search;
     use SoftDeletes;
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'pid',
@@ -59,6 +59,7 @@ class Query extends Model
         'definition',
         'created_at',
         'updated_at',
+        'deleted_at',
         'query_type',
     ];
 
