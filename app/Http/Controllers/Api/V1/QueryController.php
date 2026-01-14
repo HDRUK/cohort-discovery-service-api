@@ -368,24 +368,23 @@ class QueryController extends Controller
     {
         $validated = $request->validated();
         $query = null;
+        $data = [];
 
         try {
-            $query = Query::when(
+            $query = Query::with('tasks.collection')->when(
                 ctype_digit($key),
                 fn ($q) => $q->where('id', $key),
                 fn ($q) => $q->where('pid', $key)
             )
-                ->first()
-                ->toArray();
+                ->first();
 
-            // We don't save this as we just need the reference for the duplicate.
-            $query['name'] .= ' - ReRun ('.now()->format('Y-m-d H:i:s').')';
-            // Force a rerun of query type - we can safely assume this as users
-            // cannot create a distribution query
-            $query['task_type'] = TaskType::A;
+            $data['name'] = $query->name .= ' - ReRun ('.now()->format('Y-m-d H:i:s').')';
+            $data['task_type'] = TaskType::A;
+            $data['definition'] = $query->definition;
+            $data['collection_filter'] = $query->tasks->pluck('collection.pid')->toArray();
 
             $result = app(QuerySubmissionService::class)
-                ->handle($query, Auth::id());
+                ->handle($data, Auth::id());
 
             return $this->OKResponse($result);
         } catch (\Throwable $e) {
