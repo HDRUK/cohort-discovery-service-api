@@ -389,7 +389,6 @@ class QueryController extends Controller
 
             return $this->OKResponse($result);
         } catch (\Throwable $e) {
-            dd($e->getMessage());
             \Log::error('QueryController@duplicateAndReRun/'.$validated['key'].' - failed: '.
                 json_encode($validated).' and duplicate: '.json_encode($query).' (exception: '.$e->getMessage().')');
 
