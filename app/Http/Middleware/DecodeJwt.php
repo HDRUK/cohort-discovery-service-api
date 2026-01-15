@@ -131,6 +131,7 @@ class DecodeJwt
 
         Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser) {
             if (Cache::get($cacheKey)) {
+                \Log::info('Sync Cache locked - aborting');
                 return;
             }
 
@@ -139,6 +140,8 @@ class DecodeJwt
             $this->syncCustodians($user, $jwtUser);
 
             Cache::put($cacheKey, true, $ttl);
+
+            \Log::info('Cached sync and locked');
         });
     }
 
@@ -177,7 +180,7 @@ class DecodeJwt
 
     protected function syncWorkgroups(User $user, object $jwtUser): void
     {
-
+        $workgroupMap = config('claimsaccesscontrol.workgroup_mappings', []);
         $externalWorkgroups = $jwtUser->workgroups ?? null;
 
         if (! isset($externalWorkgroups)) {
@@ -185,19 +188,17 @@ class DecodeJwt
         }
 
         $externalNames = collect($externalWorkgroups)
+            ->pluck('name')
             ->values()
             ->all();
 
-        // The following is temporary
-        // -- to be properly implemented by DP-353
-        $workgroupMap = [
-            'admin' => 'SYSTEM_ADMIN',
-            'custodian' => 'CUSTODIAN',
-            'user' => 'GENERAL_ACCESS'
-        ];
-
+        // Check if externalNames match either the keys (internal names that are also external)
+        // or the values (configured external names) in the workgroupMap
         $internalNames = collect($workgroupMap)
-            ->filter(fn ($internal) => in_array($internal, $externalNames, true))
+            ->filter(fn ($externalValue, $internalKey) => 
+                in_array($internalKey, $externalNames, true) || 
+                in_array($externalValue, $externalNames, true)
+            )
             ->keys()
             ->values()
             ->all();
@@ -237,6 +238,8 @@ class DecodeJwt
             ->toArray();
 
         $user->roles()->sync($roleIds);
+
+        \Log::info('syncing roles against user (' . $user->id . '): ' . json_encode($roleIds));
     }
 
     protected function syncCustodians(User $user, object $jwtUser): void

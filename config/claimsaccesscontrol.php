@@ -26,4 +26,10 @@ return [
         'uk-research' => 'external-uk-research',
         'nhs-sde' => 'external-nhs-sde',
     ],
+
+    'role_mappings' => [
+        'user' => 'GENERAL_ACCESS',
+        'admin' => 'SYSTEM_ADMIN',
+        'custodian' => 'CUSTODIAN',
+    ],
 ];
