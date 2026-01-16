@@ -55,6 +55,9 @@ class RuleBuilderService
                 'description' => $primary['attributes']['description'] ?? ($primary['text'] ?? $textKey),
                 'category' => $primary['attributes']['domain_id'] ?? 'Condition',
                 'children' => $children,
+                'match_score' => $primary['attributes']['match_score'] ?? 0,
+                'tokens' => $primary['attributes']['tokens'] ?? [],
+                'phrase_tokens' => $primary['attributes']['phrase_tokens'] ?? [],
                 'alternatives' => array_map(function ($ent) {
                     return [
                         'concept_id' => $ent['attributes']['concept_id'] ?? null,
