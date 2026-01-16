@@ -24,6 +24,7 @@ class CollectionSeeder extends Seeder
             name: 'COVID-19 Antibody CKD Dataset',
             pid: '00000000-0000-0000-0000-000000000000',
             url: "http://example.com",
+            description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -34,6 +35,7 @@ class CollectionSeeder extends Seeder
             name: 'Various Conditions Dataset',
             pid: '00000000-0000-0000-0000-000000000001',
             url: "http://example.com",
+            description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -44,6 +46,7 @@ class CollectionSeeder extends Seeder
             name: 'SARs-CoV-2 Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000002',
             url: "http://example.com",
+            description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -54,6 +57,7 @@ class CollectionSeeder extends Seeder
             name: 'COVID-19 Antibody and Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000003',
             url: "http://example.com",
+            description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
@@ -61,13 +65,14 @@ class CollectionSeeder extends Seeder
         );
     }
 
-    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, QueryContextType $type, int $maleCount, int $femaleCount, int $status): void
+    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, ?string $description, QueryContextType $type, int $maleCount, int $femaleCount, int $status): void
     {
         $custodianId = Custodian::first()->id;
         $collection = Collection::create([
             'name' => $name,
             'pid' => $pid,
             'url' => $url,
+            'description' => $description,
             'type' => $type,
             'custodian_id' => $custodianId,
             'status' => $status,
