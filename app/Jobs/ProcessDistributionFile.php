@@ -142,7 +142,8 @@ class ProcessDistributionFile implements ShouldQueue
                     $rowsProcessed += count($batch);
                     $batch = [];
                 } else {
-                    \Log::info('[' . $this->tag . '] Batch size less than threshold - Ignoring');
+                    \Log::info('[' . $this->tag . '] Batch size (' . count($batch) . 
+                        ') less than threshold (' . $this->batchSize . ') - Ignoring');
                 }
             }
 
