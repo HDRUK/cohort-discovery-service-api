@@ -10,10 +10,12 @@ use App\Models\UserHasRole;
 use App\Models\Workgroup;
 use App\Models\UserHasWorkgroup;
 use App\Models\CustodianHasUser;
+use App\Traits\HelperFunctions;
 use Spatie\Permission\Models\Role;
 
 class ImportAdminUsers extends Command
 {
+    use HelperFunctions;
     /**
      * The name and signature of the console command.
      *
@@ -192,46 +194,6 @@ class ImportAdminUsers extends Command
         }
 
         return $user;
-    }
-
-    /**
-     * Generate a random password of 7 characters from:
-     *  - uppercase letters
-     *  - lowercase letters
-     *  - digits
-     *  - special characters
-     */
-    protected function generatePassword(int $length = 7): string
-    {
-        if ($length < 3) {
-            throw new \InvalidArgumentException('Password length must be at least 3.');
-        }
-
-        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
-        $digits    = '0123456789';
-        $special   = '!?.,;:#^%';
-
-        $all = $uppercase . $lowercase . $digits . $special;
-
-        $password = [];
-
-        // Ensure at least one of each required type
-        $password[] = $uppercase[random_int(0, strlen($uppercase) - 1)];
-        $password[] = $digits[random_int(0, strlen($digits) - 1)];
-        $password[] = $special[random_int(0, strlen($special) - 1)];
-
-        for ($i = 3; $i < $length; $i++) {
-            $password[] = $all[random_int(0, strlen($all) - 1)];
-        }
-
-        // Shuffle
-        for ($i = count($password) - 1; $i > 0; $i--) {
-            $j = random_int(0, $i);
-            [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
-        }
-
-        return implode('', $password);
     }
 
     /**

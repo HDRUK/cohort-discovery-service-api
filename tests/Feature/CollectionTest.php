@@ -808,7 +808,6 @@ class CollectionTest extends TestCase
 
     public function test_it_only_returns_active_collections_for_user(): void
     {
-
         $user = $this->user;
 
         $custodian = Custodian::factory()->create();
