@@ -80,15 +80,21 @@ class ProcessDistributionFile implements ShouldQueue
                 $line = rtrim($line, "\r\n");
 
                 if ($header === null) {
-                    $header = explode("\t", $line);
-                    $header = array_map('trim', $header);
-
-                    if (empty($header)) {
+                    if (trim($line) === '') {
                         $skipped['bad_header']++;
                         continue;
                     }
 
-                    $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
+                    $tmpHeader = array_map('trim', explode("\t", $line));
+                    $tmpHeader[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $tmpHeader[0]);
+
+                    if (count(array_filter($tmpHeader, fn ($h) => $h !== '')) === 0) {
+                        $skipped['bad_header']++;
+                        continue;
+                    }
+
+
+                    $header = $tmpHeader;
                     continue;
                 }
 
