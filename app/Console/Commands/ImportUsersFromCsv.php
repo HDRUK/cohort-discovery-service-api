@@ -12,6 +12,7 @@ use App\Traits\HelperFunctions;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
 
 class ImportUsersFromCsv extends Command
 {
@@ -20,7 +21,8 @@ class ImportUsersFromCsv extends Command
     protected $signature = 'user:import-csv
                             {--file= : Path to CSV file}
                             {--delimiter=, : CSV delimiter (default: ,)}
-                            {--password-length=12 : Generated password length (default: 12)}';
+                            {--password-length=12 : Generated password length (default: 12)}
+                            {--remove : Remove (delete) users listed in the CSV instead of importing}';
 
     protected $description = 'Import users from a CSV (name,email,custodian,workgroup,role). Generates passwords for newly-created users and prints them at the end.';
 
@@ -34,6 +36,11 @@ class ImportUsersFromCsv extends Command
      */
     protected array $processedUsers = [];
 
+    /**
+     * @var array<int, array{email:string, id:int|null}>
+     */
+    protected array $deletedUsers = [];
+
     protected int $skippedRows = 0;
 
     public function handle(): int
@@ -42,134 +49,102 @@ class ImportUsersFromCsv extends Command
         $delimiter = (string) ($this->option('delimiter') ?? ',');
         $passwordLength = (int) ($this->option('password-length') ?? 12);
 
-        if (! $file) {
-            $this->error('Missing required option: --file=/path/to/users.csv');
-            return self::FAILURE;
-        }
-
-        if (! file_exists($file) || ! is_readable($file)) {
-            $this->error("File [{$file}] does not exist or is not readable.");
-            return self::FAILURE;
-        }
-
-        $handle = fopen($file, 'r');
-        if ($handle === false) {
-            $this->error("Could not open file [{$file}].");
-            return self::FAILURE;
-        }
-
-        $header = fgetcsv($handle, 0, $delimiter);
-        if (! $header) {
-            $this->error('CSV appears to be empty.');
-            fclose($handle);
-            return self::FAILURE;
-        }
-
-        $header = array_map(fn ($h) => strtolower(trim((string) $h)), $header);
-
         $required = ['name', 'email', 'custodian', 'workgroup', 'role'];
-        $missing = array_values(array_diff($required, $header));
-        if (! empty($missing)) {
-            $this->error('CSV is missing required column(s): ' . implode(', ', $missing));
-            $this->line('Expected header: name,email,custodian,workgroup,role');
-            fclose($handle);
+
+        try {
+            $this->processCsvFile($this, $file, $delimiter, $required, function (array $data, int $rowNumber) use ($passwordLength) {
+                if (!empty($data['__parse_error__'])) {
+                    $this->warn("Row {$rowNumber}: could not parse, skipping.");
+                    $this->skippedRows++;
+                    return;
+                }
+
+                $name          = $this->clean($data['name'] ?? null);
+                $email         = $this->clean($data['email'] ?? null);
+                $custodianName = $this->clean($data['custodian'] ?? null);
+                $workgroupName = $this->clean($data['workgroup'] ?? null);
+                $roleName      = $this->clean($data['role'] ?? null);
+
+                if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $this->warn("Row {$rowNumber}: invalid or missing email, skipping.");
+                    $this->skippedRows++;
+                    return;
+                }
+
+                if ($this->option('remove')) {
+                    $this->forceDeleteUserByEmail($email, $rowNumber);
+                    return;
+                }
+
+                if (! $custodianName || ! $workgroupName || ! $roleName) {
+                    $this->warn("Row {$rowNumber}: custodian/workgroup/role must be present, skipping.");
+                    $this->skippedRows++;
+                    return;
+                }
+
+                $workgroup = Workgroup::where('name', $workgroupName)->first();
+                if (! $workgroup) {
+                    $this->warn("Row {$rowNumber}: workgroup [{$workgroupName}] not found, skipping.");
+                    $this->skippedRows++;
+                    return;
+                }
+
+                $role = Role::where('name', $roleName)->first();
+                if (! $role) {
+                    $this->warn("Row {$rowNumber}: role [{$roleName}] not found, skipping.");
+                    $this->skippedRows++;
+                    return;
+                }
+
+                $custodian = $this->getOrCreateCustodian($custodianName);
+                [$user, $status, $generatedPassword] = $this->getOrCreateUser($email, $name, $passwordLength);
+
+                CustodianHasUser::firstOrCreate([
+                    'user_id'      => $user->id,
+                    'custodian_id' => $custodian->id,
+                ]);
+
+                UserHasRole::firstOrCreate([
+                    'user_id' => $user->id,
+                    'role_id' => $role->id,
+                ]);
+
+                UserHasWorkgroup::firstOrCreate([
+                    'user_id'      => $user->id,
+                    'workgroup_id' => $workgroup->id,
+                ]);
+
+                $this->processedUsers[] = [
+                    'email'  => $email,
+                    'status' => $status,
+                    'id'     => $user->id,
+                ];
+
+                $this->line("Row {$rowNumber}: {$status} user #{$user->id} ({$user->email}) | custodian={$custodian->name} workgroup={$workgroup->name} role={$role->name}");
+
+                if ($generatedPassword !== null) {
+                    $this->generatedPasswords[] = [
+                        'email'    => $email,
+                        'password' => $generatedPassword,
+                    ];
+                }
+            });
+        } catch (\Throwable $e) {
+            // processCsvFile already printed a useful error; just return failure
             return self::FAILURE;
         }
-
-        $rowNumber = 1;
-
-        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-            $rowNumber++;
-
-            if (count($row) < count($header)) {
-                $row = array_pad($row, count($header), null);
-            }
-
-            $data = array_combine($header, $row);
-            if ($data === false) {
-                $this->warn("Row {$rowNumber}: could not parse, skipping.");
-                $this->skippedRows++;
-                continue;
-            }
-
-            $name          = $this->clean($data['name'] ?? null);
-            $email         = $this->clean($data['email'] ?? null);
-            $custodianName = $this->clean($data['custodian'] ?? null);
-            $workgroupName = $this->clean($data['workgroup'] ?? null);
-            $roleName      = $this->clean($data['role'] ?? null);
-
-            if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $this->warn("Row {$rowNumber}: invalid or missing email, skipping.");
-                $this->skippedRows++;
-                continue;
-            }
-
-            if (! $custodianName || ! $workgroupName || ! $roleName) {
-                $this->warn("Row {$rowNumber}: custodian/workgroup/role must be present, skipping.");
-                $this->skippedRows++;
-                continue;
-            }
-
-            $workgroup = Workgroup::where('name', $workgroupName)->first();
-            if (! $workgroup) {
-                $this->warn("Row {$rowNumber}: workgroup [{$workgroupName}] not found, skipping.");
-                $this->skippedRows++;
-                continue;
-            }
-
-            $role = Role::where('name', $roleName)->first();
-            if (! $role) {
-                $this->warn("Row {$rowNumber}: role [{$roleName}] not found, skipping.");
-                $this->skippedRows++;
-                continue;
-            }
-
-            $custodian = $this->getOrCreateCustodian($custodianName);
-
-            [$user, $status, $generatedPassword] = $this->getOrCreateUser($email, $name, $passwordLength);
-
-
-            CustodianHasUser::firstOrCreate([
-                'user_id'      => $user->id,
-                'custodian_id' => $custodian->id,
-            ]);
-
-            UserHasRole::firstOrCreate([
-                'user_id' => $user->id,
-                'role_id' => $role->id,
-            ]);
-
-            UserHasWorkgroup::firstOrCreate([
-                'user_id'      => $user->id,
-                'workgroup_id' => $workgroup->id,
-            ]);
-
-            $this->processedUsers[] = [
-                'email'  => $email,
-                'status' => $status,
-                'id'     => $user->id,
-            ];
-
-            $msg = "Row {$rowNumber}: {$status} user #{$user->id} ({$user->email}) "
-                 . "| custodian={$custodian->name} workgroup={$workgroup->name} role={$role->name}";
-            $this->line($msg);
-
-            if ($generatedPassword !== null) {
-                $this->generatedPasswords[] = [
-                    'email'    => $email,
-                    'password' => $generatedPassword,
-                ];
-            }
-        }
-
-        fclose($handle);
 
         $this->newLine();
-        $this->info('Import complete.');
-        $this->line('Processed users: ' . count($this->processedUsers));
-        $this->line('Skipped rows: ' . $this->skippedRows);
+        if ($this->option('remove')) {
+            $this->info('Removal complete.');
+            $this->line('Deleted users: ' . count($this->deletedUsers ?? []));
+        } else {
+            $this->info('Import complete.');
+            $this->line('Processed users: ' . count($this->processedUsers));
+            $this->printGeneratedPasswordsSummary();
+        }
 
-        $this->printGeneratedPasswordsSummary();
+        $this->line('Skipped rows: ' . $this->skippedRows);
 
         return self::SUCCESS;
     }
@@ -224,6 +199,29 @@ class ImportUsersFromCsv extends Command
         }
 
         return [$user, 'existing', null];
+    }
+
+    private function forceDeleteUserByEmail(string $email, int $rowNumber): void
+    {
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            $this->warn("Row {$rowNumber}: user not found for email [{$email}], skipping.");
+            $this->skippedRows++;
+            return;
+        }
+
+        DB::transaction(function () use ($user) {
+            CustodianHasUser::where('user_id', $user->id)->delete();
+            UserHasWorkgroup::where('user_id', $user->id)->delete();
+            UserHasRole::where('user_id', $user->id)->delete();
+
+            $user->forceDelete();
+
+        });
+
+        $this->deletedUsers[] = ['email' => $email, 'id' => $user->id];
+        $this->line("Row {$rowNumber}: force deleted user #{$user->id} ({$email})");
     }
 
     protected function printGeneratedPasswordsSummary(): void

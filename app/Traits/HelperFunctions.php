@@ -2,6 +2,9 @@
 
 namespace App\Traits;
 
+use Illuminate\Console\Command;
+use Closure;
+
 trait HelperFunctions
 {
     /**
@@ -44,6 +47,77 @@ trait HelperFunctions
         }
 
         return config('api.per_page', 25);
+    }
+
+    /**
+     * Open a CSV, validate required headers, and process each row with a callback.
+     *
+     * @param  Command  $cmd            The calling Command instance for output helpers.
+     * @param  string   $file           Path to CSV.
+     * @param  string   $delimiter      CSV delimiter.
+     * @param  array    $requiredCols   Required column names (lowercase).
+     * @param  Closure  $processRow     function(array $data, int $rowNumber): void
+     *
+     * @return array{0:resource|null,1:array<int,string>} Returns [handle, header] if you need it (usually not).
+     */
+    protected function processCsvFile(
+        Command $cmd,
+        string $file,
+        string $delimiter,
+        array $requiredCols,
+        Closure $processRow
+    ): void {
+        if (! $file) {
+            $cmd->error('Missing required option: --file=/path/to/users.csv');
+            throw new \RuntimeException('Missing file');
+        }
+
+        if (! file_exists($file) || ! is_readable($file)) {
+            $cmd->error("File [{$file}] does not exist or is not readable.");
+            throw new \RuntimeException('File not readable');
+        }
+
+        $handle = fopen($file, 'r');
+        if ($handle === false) {
+            $cmd->error("Could not open file [{$file}].");
+            throw new \RuntimeException('Could not open file');
+        }
+
+        try {
+            $header = fgetcsv($handle, 0, $delimiter);
+            if (! $header) {
+                $cmd->error('CSV appears to be empty.');
+                throw new \RuntimeException('Empty CSV');
+            }
+
+            $header = array_map(fn ($h) => strtolower(trim((string) $h)), $header);
+
+            $missing = array_values(array_diff($requiredCols, $header));
+            if (! empty($missing)) {
+                $cmd->error('CSV is missing required column(s): ' . implode(', ', $missing));
+                $cmd->line('Expected header: ' . implode(',', $requiredCols));
+                throw new \RuntimeException('Missing required columns');
+            }
+
+            $rowNumber = 1;
+            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                $rowNumber++;
+
+                if (count($row) < count($header)) {
+                    $row = array_pad($row, count($header), null);
+                }
+
+                $data = array_combine($header, $row);
+                if ($data === false) {
+                    $processRow(['__parse_error__' => true], $rowNumber);
+                    continue;
+                }
+
+                $processRow($data, $rowNumber);
+            }
+        } finally {
+            fclose($handle);
+        }
     }
 
     /**
