@@ -30,7 +30,7 @@ class ProcessDistributionFile implements ShouldQueue
 
     public function __construct(public int $resultFileId)
     {
-        $this->batchSize = (int) (config('system.distribution_batch_file_size') ?? 1000);
+        $this->batchSize = (int) (config('system.distribution_batch_file_size') ?? 100);
 
         Log::info("[{$this->tag}] constructed", [
             'result_file_id' => $resultFileId,
@@ -42,11 +42,11 @@ class ProcessDistributionFile implements ShouldQueue
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
-        Log::info("[{$this->tag}] starting", [
-            'result_file_id' => $this->resultFileId,
-            'path'           => $file->path,
-            'file_name'      => $file->file_name,
-        ]);
+        Log::info('[' . $this->tag . '] starting', [
+              'result_file_id' => $this->resultFileId,
+              'path'           => $file->path,
+              'file_name'      => $file->file_name,
+          ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
             return;
@@ -56,7 +56,9 @@ class ProcessDistributionFile implements ShouldQueue
 
         $stream = Storage::readStream($file->path);
         if (! $stream) {
-            Log::error("[{$this->tag}] Failed to open file stream", ['path' => $file->path]);
+            Log::error('[' . $this->tag . '] Failed to open file stream', [
+                'path'    => $file->path,
+            ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -187,12 +189,12 @@ class ProcessDistributionFile implements ShouldQueue
                 $this->persistBatchUpsert($batch);
             }
 
-            Log::info("[{$this->tag}] Refreshing DistributionConcepts view");
+            Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
             RefreshDistributionConceptsView::dispatch();
 
             $file->markDone($rowsSeen);
 
-            Log::info("[{$this->tag}] finished", [
+            Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
                 'task_id'        => $file->task_id,
                 'rows_seen'      => $rowsSeen,
