@@ -195,8 +195,9 @@ class DecodeJwt
         // Check if externalNames match either the keys (internal names that are also external)
         // or the values (configured external names) in the workgroupMap
         $internalNames = collect($workgroupMap)
-            ->filter(fn ($externalValue, $internalKey) => 
-                in_array($internalKey, $externalNames, true) || 
+            ->filter(
+                fn ($externalValue, $internalKey) =>
+                in_array($internalKey, $externalNames, true) ||
                 in_array($externalValue, $externalNames, true)
             )
             ->keys()
