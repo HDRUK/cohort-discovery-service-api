@@ -130,7 +130,6 @@ class ImportUsersFromCsv extends Command
                 }
             });
         } catch (\Throwable $e) {
-            // processCsvFile already printed a useful error; just return failure
             return self::FAILURE;
         }
 
