@@ -20,6 +20,8 @@ class ProcessDistributionFile implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    private $tag = 'ProcessDistributionFile';
+
     public $timeout = 120;
 
     public $tries = 2;
@@ -30,7 +32,7 @@ class ProcessDistributionFile implements ShouldQueue
 
     public function __construct(public int $resultFileId)
     {
-        Log::info('ProcessDistributionFile constructed', [
+        Log::info('[' . $this->tag . '] constructed', [
              'result_file_id' => $resultFileId,
         ]);
 
@@ -40,7 +42,7 @@ class ProcessDistributionFile implements ShouldQueue
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
-        Log::info('ProcessDistributionFile starting', [
+        Log::info('[' . $this->tag . '] starting', [
                 'result_file_id' => $this->resultFileId,
                 'path'           => $file->path,
         ]);
@@ -54,7 +56,7 @@ class ProcessDistributionFile implements ShouldQueue
 
         $stream = Storage::readStream($file->path);
         if (! $stream) {
-            Log::error('Failed to open file stream', [
+            Log::error('[' . $this->tag . '] Failed to open file stream', [
                 'path'    => $file->path,
             ]);
             throw new RuntimeException("Cannot open {$file->path}");
@@ -139,12 +141,16 @@ class ProcessDistributionFile implements ShouldQueue
                     $this->persistBatchWithCreate($batch);
                     $rowsProcessed += count($batch);
                     $batch = [];
+                } else {
+                    \Log::info('[' . $this->tag . '] Batch size less than threshold - Ignoring');
                 }
             }
 
             if (! empty($batch)) {
                 $this->persistBatchWithCreate($batch);
                 $rowsProcessed += count($batch);
+            } else {
+                \Log::info('[' . $this->tag . '] Batch is empty - Ignoring');
             }
 
             $file->markDone($rowsProcessed);
@@ -165,6 +171,8 @@ class ProcessDistributionFile implements ShouldQueue
         foreach ($rows as $data) {
             Distribution::create($data);
         }
+
+        \Log::info('[' . $this->tag . '] Refreshing DistributionConcepts view');
 
         RefreshDistributionConceptsView::dispatch();
         // note - to be revisited
