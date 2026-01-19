@@ -49,17 +49,6 @@ trait HelperFunctions
         return config('api.per_page', 25);
     }
 
-    /**
-     * Open a CSV, validate required headers, and process each row with a callback.
-     *
-     * @param  Command  $cmd            The calling Command instance for output helpers.
-     * @param  string   $file           Path to CSV.
-     * @param  string   $delimiter      CSV delimiter.
-     * @param  array    $requiredCols   Required column names (lowercase).
-     * @param  Closure  $processRow     function(array $data, int $rowNumber): void
-     *
-     * @return array{0:resource|null,1:array<int,string>} Returns [handle, header] if you need it (usually not).
-     */
     protected function processCsvFile(
         Command $cmd,
         string $file,
@@ -107,11 +96,8 @@ trait HelperFunctions
                     $row = array_pad($row, count($header), null);
                 }
 
+                /** @var array<string, string|null> $data */
                 $data = array_combine($header, $row);
-                if ($data === false) {
-                    $processRow(['__parse_error__' => true], $rowNumber);
-                    continue;
-                }
 
                 $processRow($data, $rowNumber);
             }
