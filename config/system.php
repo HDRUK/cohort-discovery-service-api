@@ -58,4 +58,6 @@ return [
 
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
     'default_child_age_max' => (int)env('DEFAULT_CHILD_AGE_MAX', 17),
+
+    'distribution_batch_file_size' => (int)env('DISTRIBUTION_BATCH_FILE_SIZE', 500),
 ];

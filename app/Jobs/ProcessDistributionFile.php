@@ -23,12 +23,9 @@ class ProcessDistributionFile implements ShouldQueue
     private $tag = 'ProcessDistributionFile';
 
     public $timeout = 120;
-
     public $tries = 2;
-
     public $backoff = 10;
-
-    public $batchSize = 500;
+    public $batchSize = null;
 
     public function __construct(public int $resultFileId)
     {
@@ -36,6 +33,7 @@ class ProcessDistributionFile implements ShouldQueue
              'result_file_id' => $resultFileId,
         ]);
 
+        $this->batchSize = config('system.distribution_batch_file_size');
     }
 
     public function handle(): void
@@ -46,7 +44,6 @@ class ProcessDistributionFile implements ShouldQueue
                 'result_file_id' => $this->resultFileId,
                 'path'           => $file->path,
         ]);
-
 
         if ($file->status === ResultFile::STATUS_DONE) {
             return;
@@ -81,7 +78,6 @@ class ProcessDistributionFile implements ShouldQueue
                     }
 
                     $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
-
                     continue;
                 }
 
@@ -174,8 +170,8 @@ class ProcessDistributionFile implements ShouldQueue
         }
 
         \Log::info('[' . $this->tag . '] Refreshing DistributionConcepts view');
-
         RefreshDistributionConceptsView::dispatch();
+
         // note - to be revisited
         //      - this can copy over ancestors locally
         //        based on what distributions we have
