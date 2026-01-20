@@ -151,7 +151,10 @@ class TaskController extends Controller
         Collection::logActivity($collection, $taskType);
 
         $nMaxAttempts = config('tasks.default_max_attempts', 3);
-        $leaseSeconds =  config('tasks.default_lease_seconds', 60);
+        $leaseSeconds =  config('tasks.default_lease_seconds', 10);
+        /*
+        //Note - temporary disable - this locking of tasks logic might be bugged
+
 
         $task = DB::transaction(function () use ($taskType, $collection, $nMaxAttempts, $leaseSeconds, $workerId) {
             $now = Carbon::now();
@@ -195,6 +198,44 @@ class TaskController extends Controller
 
             return $task->fresh();
         });
+        */
+
+        $now = Carbon::now();
+        $q = Task::where([
+                'task_type' => $taskType,
+                'completed_at' => null,
+                'collection_id' => $collection->id,
+            ])
+            ->where('attempts', '<', $nMaxAttempts)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('leased_until')
+                  ->orWhere('leased_until', '<', $now);
+            })
+            ->orderBy('id');
+        // ->lockForUpdate(); // DISABLED
+
+        $task = $q->first();
+
+        if ($task) {
+            $newAttempt = (int) $task->attempts + 1;
+
+            $task->update([
+                'leased_until' => $now->copy()->addSeconds($leaseSeconds),
+                'leased_by' => $workerId,
+            ]);
+
+            TaskRun::create([
+                'task_id' => $task->id,
+                'attempt' => $newAttempt,
+                'worker_id' => $workerId,
+                'status' => 'claimed',
+                'claimed_at' => $now,
+                'started_at' => $now,
+            ]);
+
+            $task = $task->fresh();
+        }
+
 
         if (! $task) {
             error_log('returning no content');
