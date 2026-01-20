@@ -45,6 +45,7 @@ class CollectionTest extends TestCase
         $custodian = Custodian::factory()->create([
             'external_custodian_id' => $fakeGatewayTeamId,
         ]);
+        $this->user->custodians()->attach($custodian->id);
 
         $anotherCustodian = Custodian::factory()->create([
             'external_custodian_id' => $anotherFakeGatewayTeamId,
@@ -57,24 +58,10 @@ class CollectionTest extends TestCase
             'custodian_id' => $anotherCustodian->id,
         ]);
 
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'cohort-admin',
-                ]],
-                'cohort_admin_teams' => [
-                    [
-                        'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name,
-                    ],
-                ],
-            ],
-        ];
 
         $response = $this->actingAsJwt(
             $this->user,
-            $overrides
+            []
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
 
@@ -83,7 +70,7 @@ class CollectionTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            $overrides
+            []
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $anotherCustodian->pid));
 
@@ -92,6 +79,11 @@ class CollectionTest extends TestCase
 
     public function test_it_cannot_list_collections_without_correct_team_admin(): void
     {
+        //note - using a new user here now
+        // - a test is interfering but I cant see where
+        // - something must be assigning $this->user an admin role
+        // - using $this->user the test works on its own, but fails when the full suite runs
+        $user = User::factory()->create();
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
             'external_custodian_id' => $fakeGatewayTeamId,
@@ -101,19 +93,9 @@ class CollectionTest extends TestCase
             'custodian_id' => $custodian->id,
         ]);
 
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'cohort-admin',
-                ]],
-                'cohort_admin_teams' => [],
-            ],
-        ];
-
         $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
+            $user,
+            []
         )
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
 
