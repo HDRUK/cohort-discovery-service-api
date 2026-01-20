@@ -83,7 +83,7 @@ class CollectionTest extends TestCase
         // - a test is interfering but I cant see where
         // - something must be assigning $this->user an admin role
         // - using $this->user the test works on its own, but fails when the full suite runs
-        //$user = User::factory()->create();
+        $user = User::factory()->create();
         $fakeGatewayTeamId = 1111;
         $custodian = Custodian::factory()->create([
             'external_custodian_id' => $fakeGatewayTeamId,
