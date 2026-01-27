@@ -8,6 +8,7 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @OA\Schema(
@@ -96,5 +97,10 @@ class CollectionHost extends Model implements ValidatableModel
             'id',
             'collection_id'
         );
+    }
+
+    public function custodian(): BelongsTo
+    {
+        return $this->belongsTo(Custodian::class, 'custodian_id');
     }
 }

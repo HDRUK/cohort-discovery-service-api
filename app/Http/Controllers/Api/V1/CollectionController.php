@@ -531,6 +531,7 @@ class CollectionController extends Controller
                 ],
             ]);
         } catch (ValidationException $e) {
+            \Log::info(json_encode($e->errors()));
             return $this->ValidationErrorResponse($e->errors());
         }
 

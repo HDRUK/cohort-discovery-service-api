@@ -37,7 +37,7 @@ class CollectionHostController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $hosts = CollectionHost::with('collections')
+        $hosts = CollectionHost::with(['collections','custodian'])
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
@@ -51,7 +51,9 @@ class CollectionHostController extends Controller
         $custodian = Custodian::where('pid', $custodianPid)->first();
         $custodianId = $custodian->id;
 
-        return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)->with('collections')->get());
+        return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)
+                ->with(['collections','custodian'])
+                ->get());
     }
 
     /**
@@ -86,7 +88,8 @@ class CollectionHostController extends Controller
         $validated = $request->validated();
 
         try {
-            $collectionHost = CollectionHost::with('collections')->findOrFail($validated['id']);
+            $collectionHost = CollectionHost::with(['collections','custodian'])
+            ->findOrFail($validated['id']);
 
             return $this->OKResponse($collectionHost);
         } catch (\Exception $e) {
