@@ -72,9 +72,6 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
 
             $token = $config->parser()->parse($tokenString);
 
-            $url = $token->claims()->get('cohort_discovery_url');
-
-
             /** @phpstan-ignore-next-line */
             return $token->claims()->get('cohort_discovery_url');
         } catch (\Throwable $e) {
