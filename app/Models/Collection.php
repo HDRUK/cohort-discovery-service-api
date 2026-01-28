@@ -184,6 +184,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'custodian_id' => 'sometimes|integer|exists:custodians,id',
                 'status' => 'sometimes|boolean',
                 'state' => 'sometimes|string',
+                'host_id' => 'sometimes|integer|exists:collection_hosts,id',
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:collections,id',
