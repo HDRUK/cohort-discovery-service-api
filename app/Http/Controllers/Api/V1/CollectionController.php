@@ -336,6 +336,7 @@ class CollectionController extends Controller
         try {
             $collection = Collection::with(['host','config','custodian'])->findOrFail($validated['id']);
             if ($collection->update($validated)) {
+                $collection->host()->sync([$validated['host_id']]);
                 return $this->OKResponse($collection);
             }
         } catch (\Throwable $e) {
