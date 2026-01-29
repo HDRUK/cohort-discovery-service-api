@@ -28,9 +28,13 @@ class RuleBuilderService
         return array_map('trim', $segments);
     }
 
-    private function getConceptsForSegment(string $segment): array
-    {
+    private function getConceptsForSegment(
+        string $segment,
+        ConstraintAccumulator $constraints,
+        array &$warnings
+    ): array {
         $this->loadNlpEntities($segment);
+        $this->applyNlpAgeConstraints($constraints, $warnings);
 
         $rules = [];
 
@@ -93,7 +97,7 @@ class RuleBuilderService
 
         foreach ($segments as $i => $segment) {
             \Log::info('Finding OMOP concepts for segment: '.$segment);
-            $concepts = $this->getConceptsForSegment($segment);
+            $concepts = $this->getConceptsForSegment($segment, $constraints, $warnings);
             \Log::info('Found '.count($concepts));
 
             // If there are multiple concepts, wrap in AND group
@@ -118,10 +122,13 @@ class RuleBuilderService
             }
         }
 
+        $constraintPayload = $constraints->toArray();
+        $this->applyRuleConstraints($rules, $constraintPayload);
+
         return [
             'id' => Str::uuid()->toString(),
             'rules' => $rules,
-            'constraints' => $constraints->toArray(),
+            'constraints' => $constraintPayload,
             'warnings' => array_values(array_unique($warnings)),
             'valid' => true,
         ];
@@ -190,5 +197,88 @@ class RuleBuilderService
         if (preg_match('/region|regions|locale|area|areas|england|scotland|wales|northern ireland/i', $query)) {
             $warnings[] = 'Geographic filtering is not supported yet';
         }
+    }
+
+    private function applyNlpAgeConstraints(ConstraintAccumulator $constraints, array &$warnings): void
+    {
+        if (empty($this->nlpEntities)) {
+            return;
+        }
+
+        $seen = [];
+
+        foreach ($this->nlpEntities as $candidates) {
+            foreach ($candidates as $entity) {
+                $ageConstraints = $entity['age_constraints'] ?? [];
+                foreach ($ageConstraints as $constraint) {
+                    $op = (string)($constraint['operator'] ?? '');
+                    $values = [];
+                    foreach (($constraint['values'] ?? []) as $rawValue) {
+                        if (is_numeric($rawValue)) {
+                            $values[] = (int) $rawValue;
+                        }
+                    }
+
+                    $key = $op.':'.implode(',', $values);
+                    if ($key === ':' || isset($seen[$key])) {
+                        continue;
+                    }
+                    $seen[$key] = true;
+
+                    if (in_array($op, ['>', '>='], true) && isset($values[0])) {
+                        $constraints->addAgeMin($values[0], true);
+                        $warnings[] = 'Age ' . $op . ' ' . $values[0] . ' (from NLP)';
+                        continue;
+                    }
+
+                    if (in_array($op, ['<', '<='], true) && isset($values[0])) {
+                        $constraints->addAgeMax($values[0], true);
+                        $warnings[] = 'Age ' . $op . ' ' . $values[0] . ' (from NLP)';
+                        continue;
+                    }
+
+                    if (in_array($op, ['between', 'range'], true) && count($values) >= 2) {
+                        $min = min($values[0], $values[1]);
+                        $max = max($values[0], $values[1]);
+                        $constraints->addAgeMin($min, true);
+                        $constraints->addAgeMax($max, true);
+                        $warnings[] = 'Age between ' . $min . ' and ' . $max . ' (from NLP)';
+                        continue;
+                    }
+
+                    if (in_array($op, ['=', '=='], true) && isset($values[0])) {
+                        $constraints->addAgeMin($values[0], true);
+                        $constraints->addAgeMax($values[0], true);
+                        $warnings[] = 'Age = ' . $values[0] . ' (from NLP)';
+                    }
+                }
+            }
+        }
+    }
+
+    private function applyRuleConstraints(array &$rules, array $constraintPayload): void
+    {
+        foreach ($rules as &$node) {
+            if (isset($node['rule'])) {
+                if (! isset($node['ageConstraint'])) {
+                    $ageConstraint = $constraintPayload['ageConstraint'] ?? [null, null];
+                    if ($ageConstraint !== [null, null]) {
+                        $node['ageConstraint'] = $ageConstraint;
+                    }
+                }
+                if (! isset($node['timeConstraint'])) {
+                    $timeConstraint = $constraintPayload['timeConstraint'] ?? [null, null];
+                    if ($timeConstraint !== [null, null]) {
+                        $node['timeConstraint'] = $timeConstraint;
+                    }
+                }
+                continue;
+            }
+
+            if (isset($node['rules']) && is_array($node['rules'])) {
+                $this->applyRuleConstraints($node['rules'], $constraintPayload);
+            }
+        }
+        unset($node);
     }
 }

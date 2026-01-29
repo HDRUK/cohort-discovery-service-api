@@ -44,8 +44,8 @@ class ConstraintAccumulator
                 $this->ageMax
             ],
             'timeConstraint' => [
-                Carbon::parse($this->timeFrom)->toISOString(),
-                Carbon::parse($this->timeTo)->toISOString()
+                $this->timeFrom ? Carbon::parse($this->timeFrom)->toISOString() : null,
+                $this->timeTo ? Carbon::parse($this->timeTo)->toISOString() : null
             ],
         ];
     }
