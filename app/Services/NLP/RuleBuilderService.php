@@ -123,7 +123,22 @@ class RuleBuilderService
         }
 
         $constraintPayload = $constraints->toArray();
-        $this->applyRuleConstraints($rules, $constraintPayload);
+        $ageConstraint = $constraintPayload['ageConstraint'] ?? [null, null];
+        if ($ageConstraint !== [null, null]) {
+            $ageFilter = $this->makeAgeFilterNode($ageConstraint);
+
+            if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
+                $targetRules = &$rules[0]['rules'];
+            } else {
+                $rules = [$this->makeGroup($rules)];
+                $targetRules = &$rules[0]['rules'];
+            }
+
+            if (! empty($targetRules)) {
+                $targetRules[] = $this->makeOperator('and');
+            }
+            $targetRules[] = $ageFilter;
+        }
 
         return [
             'id' => Str::uuid()->toString(),
@@ -256,29 +271,11 @@ class RuleBuilderService
         }
     }
 
-    private function applyRuleConstraints(array &$rules, array $constraintPayload): void
+    private function makeAgeFilterNode(array $ageConstraint): array
     {
-        foreach ($rules as &$node) {
-            if (isset($node['rule'])) {
-                if (! isset($node['ageConstraint'])) {
-                    $ageConstraint = $constraintPayload['ageConstraint'] ?? [null, null];
-                    if ($ageConstraint !== [null, null]) {
-                        $node['ageConstraint'] = $ageConstraint;
-                    }
-                }
-                if (! isset($node['timeConstraint'])) {
-                    $timeConstraint = $constraintPayload['timeConstraint'] ?? [null, null];
-                    if ($timeConstraint !== [null, null]) {
-                        $node['timeConstraint'] = $timeConstraint;
-                    }
-                }
-                continue;
-            }
-
-            if (isset($node['rules']) && is_array($node['rules'])) {
-                $this->applyRuleConstraints($node['rules'], $constraintPayload);
-            }
-        }
-        unset($node);
+        return [
+            'id' => Str::uuid()->toString(),
+            'value' => $ageConstraint,
+        ];
     }
 }
