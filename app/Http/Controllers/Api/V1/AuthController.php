@@ -50,6 +50,8 @@ class AuthController extends Controller
             return $this->UnauthorisedResponse();
         }
 
+        error_log(config('integrated.auth_uri'));
+
         $response = Http::asForm()->post(config('integrated.auth_uri'), [
             'grant_type' => 'authorization_code',
             'client_id' => config('integrated.client_id'),

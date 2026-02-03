@@ -83,6 +83,8 @@ RUN --mount=type=secret,id=github_token \
     # && php artisan optimize:clear \
     # && php artisan optimize \
     && php artisan config:clear \
+    && php artisan cache:clear \
+    && php artisan config:cache \
     && chmod -R 777 storage bootstrap/cache \
     && chown -R www-data:www-data storage \
     && composer dump-autoload
