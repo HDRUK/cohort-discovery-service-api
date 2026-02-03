@@ -4,7 +4,7 @@ run-name: ${{ github.actor }} triggered deploy to DEV pipeline
 on:
   push:
     branches:
-      - feat/DP-161 # override for branch deployment
+      - dev # override for branch deployment
 
 env:
   PROJECT_ID: "${{ secrets.PROJECT_ID }}"
@@ -26,7 +26,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: feat/DP-161 # override for branch deployment
+          ref: dev # override for branch deployment
 
       - name: Read VERSION file
         id: getversion
@@ -83,7 +83,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: feat/DP-161 # override for branch deployment
+          ref: dev # override for branch deployment
 
       - name: Google Auth
         id: auth
@@ -99,17 +99,17 @@ jobs:
           sed -n 's/^appVersion:\(.*\)/\1/p' < chart/cohort-api/Chart.yaml > version
           echo "version=$(sed '/.*\"\(.*\)\".*/ s//\1/g' version)" >> $GITHUB_OUTPUT
 
-      #- name: Deploy to Cloud Run Standalone
-      #  uses: actions-hub/gcloud@540.0.0
-      #  id: deploy-standalone
-      #  env:
-      #    PROJECT_ID: ${{ secrets.PROJECT_ID }}
-      #    GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
-      #    GAR_NAME: ${{ secrets.GAR_NAME }}
-      #    SERVICE_NAME: "${{ secrets.SERVICE_NAME }}"
-      #    SERVICE_REGION: "${{ secrets.SERVICE_REGION }}"
-      #  with:
-      #    args: run services update '${{ env.SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
+      - name: Deploy to Cloud Run Standalone
+        uses: actions-hub/gcloud@540.0.0
+        id: deploy-standalone
+        env:
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+          GAR_NAME: ${{ secrets.GAR_NAME }}
+          SERVICE_NAME: "${{ secrets.SERVICE_NAME }}"
+          SERVICE_REGION: "${{ secrets.SERVICE_REGION }}"
+        with:
+          args: run services update '${{ env.SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
 
       - name: Deploy to Cloud Run Integrated
         uses: actions-hub/gcloud@540.0.0
