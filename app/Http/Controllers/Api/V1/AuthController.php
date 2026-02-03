@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Config;
 
 class AuthController extends Controller
 {
@@ -50,7 +51,11 @@ class AuthController extends Controller
             return $this->UnauthorisedResponse();
         }
 
-        error_log(config('integrated.auth_uri'));
+        return response()->json([
+            'full_config' => config('integrated'),
+            'url' => config('integrated.auth_uri'),
+            'url2' => Config::get('integrated.auth_uri', 'no-value-found')
+        ]);
 
         $response = Http::asForm()->post(config('integrated.auth_uri'), [
             'grant_type' => 'authorization_code',
