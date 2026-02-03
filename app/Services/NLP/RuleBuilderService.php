@@ -5,6 +5,7 @@ namespace App\Services\NLP;
 use App\Traits\NLPConceptLookup;
 use App\Traits\RuleBuilder;
 use App\Services\NLP\Constraints\ConstraintAccumulator;
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -21,6 +22,7 @@ class RuleBuilderService
     use RuleBuilder;
 
     private bool $hasEntityAgeConstraints = false;
+    private bool $hasEntityTimeConstraints = false;
 
     private function splitTopLevelOr(string $query): array
     {
@@ -38,6 +40,7 @@ class RuleBuilderService
         $this->loadNlpEntities($segment);
         $this->mergeNlpWarnings($warnings);
         $this->applyNlpAgeConstraints($constraints, $warnings);
+        $this->applyNlpTimeConstraints($constraints, $warnings);
 
         $rules = [];
 
@@ -81,6 +84,16 @@ class RuleBuilderService
                 exclude: (bool)($primary['attributes']['negates'] ?? false)
             );
 
+            $entityTimeConstraints = $this->selectTimeConstraints($primary['time_constraints'] ?? [], 'entity');
+            if (! empty($entityTimeConstraints)) {
+                $this->hasEntityTimeConstraints = true;
+            }
+
+            $entityTime = $this->normalizeTimeConstraints($entityTimeConstraints);
+            if ($entityTime !== null) {
+                $rule['timeConstraint'] = $entityTime;
+            }
+
             $entityConstraints = $this->selectAgeConstraints($primary['age_constraints'] ?? [], 'entity');
             if (! empty($entityConstraints)) {
                 $this->hasEntityAgeConstraints = true;
@@ -112,6 +125,7 @@ class RuleBuilderService
     public function parseToRules(string $query): array
     {
         $this->hasEntityAgeConstraints = false;
+        $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
         $segments = $this->splitTopLevelOr($query);
 
@@ -150,6 +164,7 @@ class RuleBuilderService
 
         $constraintPayload = $constraints->toArray();
         $ageConstraint = $constraintPayload['ageConstraint'] ?? [null, null];
+        $timeConstraint = $constraintPayload['timeConstraint'] ?? [null, null];
 
         if ($this->hasEntityAgeConstraints) {
             $constraintPayload['ageConstraint'] = [null, null];
@@ -176,6 +191,11 @@ class RuleBuilderService
                     $targetRules[] = $ageFilter;
                 }
             }
+        }
+
+        if ($this->hasEntityTimeConstraints) {
+            $constraintPayload['timeConstraint'] = [null, null];
+            $warnings = $this->removeTimeWarnings($warnings);
         }
 
         return [
@@ -277,6 +297,31 @@ class RuleBuilderService
         $this->applyAgeRangeToAccumulator($constraints, $warnings, $min, $max, 'from NLP (query)');
     }
 
+    private function applyNlpTimeConstraints(ConstraintAccumulator $constraints, array &$warnings): void
+    {
+        if ($this->hasEntityTimeConstraints) {
+            return;
+        }
+
+        $entityScoped = $this->collectEntityTimeConstraints();
+        if (! empty($entityScoped)) {
+            return;
+        }
+
+        $queryConstraints = $this->selectTimeConstraints($this->nlpRootTimeConstraints ?? [], 'query');
+        if (empty($queryConstraints)) {
+            return;
+        }
+
+        $range = $this->normalizeTimeConstraints($queryConstraints);
+        if ($range === null) {
+            return;
+        }
+
+        [$from, $to] = $range;
+        $this->applyTimeRangeToAccumulator($constraints, $warnings, $from, $to, 'from NLP (query)');
+    }
+
     private function makeAgeFilterNode(array $ageConstraint): array
     {
         return [
@@ -303,7 +348,33 @@ class RuleBuilderService
         ));
     }
 
+    private function removeTimeWarnings(array $warnings): array
+    {
+        return array_values(array_filter(
+            $warnings,
+            fn ($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Recorded ')
+        ));
+    }
+
     private function selectAgeConstraints(array $constraints, string $scope): array
+    {
+        $selected = [];
+
+        foreach ($constraints as $constraint) {
+            if (! is_array($constraint)) {
+                continue;
+            }
+
+            $constraintScope = $constraint['scope'] ?? null;
+            if ($constraintScope === null || $constraintScope === $scope) {
+                $selected[] = $constraint;
+            }
+        }
+
+        return $selected;
+    }
+
+    private function selectTimeConstraints(array $constraints, string $scope): array
     {
         $selected = [];
 
@@ -400,6 +471,43 @@ class RuleBuilderService
         return [$min, $max];
     }
 
+    private function normalizeTimeConstraints(array $constraints): ?array
+    {
+        $from = null;
+        $to = null;
+        $hasConstraint = false;
+
+        foreach ($constraints as $constraint) {
+            if (! is_array($constraint)) {
+                continue;
+            }
+
+            $rawFrom = $constraint['from'] ?? null;
+            $rawTo = $constraint['to'] ?? null;
+
+            if ($rawFrom !== null) {
+                $fromValue = Carbon::parse($rawFrom);
+                $from = $from === null ? $fromValue : $from->max($fromValue);
+                $hasConstraint = true;
+            }
+
+            if ($rawTo !== null) {
+                $toValue = Carbon::parse($rawTo);
+                $to = $to === null ? $toValue : $to->min($toValue);
+                $hasConstraint = true;
+            }
+        }
+
+        if (! $hasConstraint) {
+            return null;
+        }
+
+        return [
+            $from ? $from->toISOString() : null,
+            $to ? $to->toISOString() : null,
+        ];
+    }
+
     private function applyAgeRangeToAccumulator(
         ConstraintAccumulator $constraints,
         array &$warnings,
@@ -425,6 +533,30 @@ class RuleBuilderService
         }
     }
 
+    private function applyTimeRangeToAccumulator(
+        ConstraintAccumulator $constraints,
+        array &$warnings,
+        ?string $from,
+        ?string $to,
+        string $sourceLabel
+    ): void {
+        if ($from !== null && $to !== null) {
+            $constraints->setTimeRange($from, $to, true);
+            $warnings[] = 'Recorded between ' . $from . ' and ' . $to . ' (' . $sourceLabel . ')';
+            return;
+        }
+
+        if ($from !== null) {
+            $constraints->setTimeRange($from, null, true);
+            $warnings[] = 'Recorded after ' . $from . ' (' . $sourceLabel . ')';
+        }
+
+        if ($to !== null) {
+            $constraints->setTimeRange(null, $to, true);
+            $warnings[] = 'Recorded before ' . $to . ' (' . $sourceLabel . ')';
+        }
+    }
+
     private function collectEntityAgeConstraints(): array
     {
         if (empty($this->nlpEntities)) {
@@ -437,6 +569,29 @@ class RuleBuilderService
             foreach ($candidates as $entity) {
                 $entityConstraints = $this->selectAgeConstraints(
                     $entity['age_constraints'] ?? [],
+                    'entity'
+                );
+                foreach ($entityConstraints as $constraint) {
+                    $constraints[] = $constraint;
+                }
+            }
+        }
+
+        return $constraints;
+    }
+
+    private function collectEntityTimeConstraints(): array
+    {
+        if (empty($this->nlpEntities)) {
+            return [];
+        }
+
+        $constraints = [];
+
+        foreach ($this->nlpEntities as $candidates) {
+            foreach ($candidates as $entity) {
+                $entityConstraints = $this->selectTimeConstraints(
+                    $entity['time_constraints'] ?? [],
                     'entity'
                 );
                 foreach ($entityConstraints as $constraint) {
