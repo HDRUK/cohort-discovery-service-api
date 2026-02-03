@@ -20,6 +20,8 @@ class RuleBuilderService
     use NLPConceptLookup;
     use RuleBuilder;
 
+    private bool $hasEntityAgeConstraints = false;
+
     private function splitTopLevelOr(string $query): array
     {
         $q = strtolower($query);
@@ -34,6 +36,7 @@ class RuleBuilderService
         array &$warnings
     ): array {
         $this->loadNlpEntities($segment);
+        $this->mergeNlpWarnings($warnings);
         $this->applyNlpAgeConstraints($constraints, $warnings);
 
         $rules = [];
@@ -73,10 +76,32 @@ class RuleBuilderService
                 }, $alts),
             ];
 
-            $rules[] = $this->makeRule(
+            $rule = $this->makeRule(
                 $concept,
                 exclude: (bool)($primary['attributes']['negates'] ?? false)
             );
+
+            $entityConstraints = $this->selectAgeConstraints($primary['age_constraints'] ?? [], 'entity');
+            if (! empty($entityConstraints)) {
+                $this->hasEntityAgeConstraints = true;
+            }
+
+            $entityAge = $this->normalizeAgeConstraints($entityConstraints);
+            if ($entityAge !== null) {
+                $hasRange = $entityAge[0] !== null && $entityAge[1] !== null;
+                if ($hasRange) {
+                    $rules[] = $this->makeGroup([
+                        $rule,
+                        $this->makeOperator('and'),
+                        $this->makeAgeFilterNode($entityAge),
+                    ]);
+                    continue;
+                }
+
+                $rule['ageConstraint'] = $entityAge;
+            }
+
+            $rules[] = $rule;
         }
 
         return $rules;
@@ -86,6 +111,7 @@ class RuleBuilderService
      */
     public function parseToRules(string $query): array
     {
+        $this->hasEntityAgeConstraints = false;
         $constraints = new ConstraintAccumulator();
         $segments = $this->splitTopLevelOr($query);
 
@@ -124,20 +150,32 @@ class RuleBuilderService
 
         $constraintPayload = $constraints->toArray();
         $ageConstraint = $constraintPayload['ageConstraint'] ?? [null, null];
-        if ($ageConstraint !== [null, null]) {
-            $ageFilter = $this->makeAgeFilterNode($ageConstraint);
 
-            if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
-                $targetRules = &$rules[0]['rules'];
-            } else {
-                $rules = [$this->makeGroup($rules)];
-                $targetRules = &$rules[0]['rules'];
-            }
+        if ($this->hasEntityAgeConstraints) {
+            $constraintPayload['ageConstraint'] = [null, null];
+            $warnings = $this->removeAgeWarnings($warnings);
+        } elseif ($ageConstraint !== [null, null]) {
+            $hasRange = $ageConstraint[0] !== null && $ageConstraint[1] !== null;
+            if ($hasRange) {
+                $ageFilter = $this->makeAgeFilterNode($ageConstraint);
+                $constraintPayload['ageConstraint'] = [null, null];
 
-            if (! empty($targetRules)) {
-                $targetRules[] = $this->makeOperator('and');
+                if (empty($rules)) {
+                    $rules = [$ageFilter];
+                } else {
+                    if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
+                        $targetRules = &$rules[0]['rules'];
+                    } else {
+                        $rules = [$this->makeGroup($rules)];
+                        $targetRules = &$rules[0]['rules'];
+                    }
+
+                    if (! empty($targetRules)) {
+                        $targetRules[] = $this->makeOperator('and');
+                    }
+                    $targetRules[] = $ageFilter;
+                }
             }
-            $targetRules[] = $ageFilter;
         }
 
         return [
@@ -216,59 +254,27 @@ class RuleBuilderService
 
     private function applyNlpAgeConstraints(ConstraintAccumulator $constraints, array &$warnings): void
     {
-        if (empty($this->nlpEntities)) {
+        if ($this->hasEntityAgeConstraints) {
             return;
         }
 
-        $seen = [];
-
-        foreach ($this->nlpEntities as $candidates) {
-            foreach ($candidates as $entity) {
-                $ageConstraints = $entity['age_constraints'] ?? [];
-                foreach ($ageConstraints as $constraint) {
-                    $op = (string)($constraint['operator'] ?? '');
-                    $values = [];
-                    foreach (($constraint['values'] ?? []) as $rawValue) {
-                        if (is_numeric($rawValue)) {
-                            $values[] = (int) $rawValue;
-                        }
-                    }
-
-                    $key = $op.':'.implode(',', $values);
-                    if ($key === ':' || isset($seen[$key])) {
-                        continue;
-                    }
-                    $seen[$key] = true;
-
-                    if (in_array($op, ['>', '>='], true) && isset($values[0])) {
-                        $constraints->addAgeMin($values[0], true);
-                        $warnings[] = 'Age ' . $op . ' ' . $values[0] . ' (from NLP)';
-                        continue;
-                    }
-
-                    if (in_array($op, ['<', '<='], true) && isset($values[0])) {
-                        $constraints->addAgeMax($values[0], true);
-                        $warnings[] = 'Age ' . $op . ' ' . $values[0] . ' (from NLP)';
-                        continue;
-                    }
-
-                    if (in_array($op, ['between', 'range'], true) && count($values) >= 2) {
-                        $min = min($values[0], $values[1]);
-                        $max = max($values[0], $values[1]);
-                        $constraints->addAgeMin($min, true);
-                        $constraints->addAgeMax($max, true);
-                        $warnings[] = 'Age between ' . $min . ' and ' . $max . ' (from NLP)';
-                        continue;
-                    }
-
-                    if (in_array($op, ['=', '=='], true) && isset($values[0])) {
-                        $constraints->addAgeMin($values[0], true);
-                        $constraints->addAgeMax($values[0], true);
-                        $warnings[] = 'Age = ' . $values[0] . ' (from NLP)';
-                    }
-                }
-            }
+        $entityScoped = $this->collectEntityAgeConstraints();
+        if (! empty($entityScoped)) {
+            return;
         }
+
+        $queryConstraints = $this->selectAgeConstraints($this->nlpRootAgeConstraints ?? [], 'query');
+        if (empty($queryConstraints)) {
+            return;
+        }
+
+        $range = $this->normalizeAgeConstraints($queryConstraints);
+        if ($range === null) {
+            return;
+        }
+
+        [$min, $max] = $range;
+        $this->applyAgeRangeToAccumulator($constraints, $warnings, $min, $max, 'from NLP (query)');
     }
 
     private function makeAgeFilterNode(array $ageConstraint): array
@@ -276,6 +282,169 @@ class RuleBuilderService
         return [
             'id' => Str::uuid()->toString(),
             'value' => $ageConstraint,
+            'valid' => true,
         ];
+    }
+
+    private function mergeNlpWarnings(array &$warnings): void
+    {
+        foreach (($this->nlpWarnings ?? []) as $warning) {
+            if (is_string($warning) && $warning !== '') {
+                $warnings[] = $warning;
+            }
+        }
+    }
+
+    private function removeAgeWarnings(array $warnings): array
+    {
+        return array_values(array_filter(
+            $warnings,
+            fn ($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Age ')
+        ));
+    }
+
+    private function selectAgeConstraints(array $constraints, string $scope): array
+    {
+        $selected = [];
+
+        foreach ($constraints as $constraint) {
+            if (! is_array($constraint)) {
+                continue;
+            }
+
+            $constraintScope = $constraint['scope'] ?? null;
+            if ($constraintScope === null || $constraintScope === $scope) {
+                $selected[] = $constraint;
+            }
+        }
+
+        return $selected;
+    }
+
+    private function normalizeAgeConstraints(array $constraints): ?array
+    {
+        $min = null;
+        $max = null;
+        $hasConstraint = false;
+
+        foreach ($constraints as $constraint) {
+            if (! is_array($constraint)) {
+                continue;
+            }
+
+            if (array_key_exists('min', $constraint) || array_key_exists('max', $constraint)) {
+                $inclusive = $constraint['inclusive'] ?? true;
+                $cMin = is_numeric($constraint['min'] ?? null) ? (int) $constraint['min'] : null;
+                $cMax = is_numeric($constraint['max'] ?? null) ? (int) $constraint['max'] : null;
+
+                if ($inclusive === false) {
+                    if ($cMin !== null) {
+                        $cMin += 1;
+                    }
+                    if ($cMax !== null) {
+                        $cMax -= 1;
+                    }
+                }
+
+                if ($cMin !== null) {
+                    $min = max($min ?? $cMin, $cMin);
+                    $hasConstraint = true;
+                }
+                if ($cMax !== null) {
+                    $max = min($max ?? $cMax, $cMax);
+                    $hasConstraint = true;
+                }
+                continue;
+            }
+
+            $op = (string)($constraint['operator'] ?? '');
+            $values = [];
+            foreach (($constraint['values'] ?? []) as $rawValue) {
+                if (is_numeric($rawValue)) {
+                    $values[] = (int) $rawValue;
+                }
+            }
+
+            if (in_array($op, ['>', '>='], true) && isset($values[0])) {
+                $min = max($min ?? $values[0], $values[0]);
+                $hasConstraint = true;
+                continue;
+            }
+
+            if (in_array($op, ['<', '<='], true) && isset($values[0])) {
+                $max = min($max ?? $values[0], $values[0]);
+                $hasConstraint = true;
+                continue;
+            }
+
+            if (in_array($op, ['between', 'range'], true) && count($values) >= 2) {
+                $candidateMin = min($values[0], $values[1]);
+                $candidateMax = max($values[0], $values[1]);
+                $min = max($min ?? $candidateMin, $candidateMin);
+                $max = min($max ?? $candidateMax, $candidateMax);
+                $hasConstraint = true;
+                continue;
+            }
+
+            if (in_array($op, ['=', '=='], true) && isset($values[0])) {
+                $min = max($min ?? $values[0], $values[0]);
+                $max = min($max ?? $values[0], $values[0]);
+                $hasConstraint = true;
+            }
+        }
+
+        if (! $hasConstraint) {
+            return null;
+        }
+
+        return [$min, $max];
+    }
+
+    private function applyAgeRangeToAccumulator(
+        ConstraintAccumulator $constraints,
+        array &$warnings,
+        ?int $min,
+        ?int $max,
+        string $sourceLabel
+    ): void {
+        if ($min !== null && $max !== null) {
+            $constraints->addAgeMin($min, true);
+            $constraints->addAgeMax($max, true);
+            $warnings[] = 'Age between ' . $min . ' and ' . $max . ' (' . $sourceLabel . ')';
+            return;
+        }
+
+        if ($min !== null) {
+            $constraints->addAgeMin($min, true);
+            $warnings[] = 'Age >= ' . $min . ' (' . $sourceLabel . ')';
+        }
+
+        if ($max !== null) {
+            $constraints->addAgeMax($max, true);
+            $warnings[] = 'Age <= ' . $max . ' (' . $sourceLabel . ')';
+        }
+    }
+
+    private function collectEntityAgeConstraints(): array
+    {
+        if (empty($this->nlpEntities)) {
+            return [];
+        }
+
+        $constraints = [];
+
+        foreach ($this->nlpEntities as $candidates) {
+            foreach ($candidates as $entity) {
+                $entityConstraints = $this->selectAgeConstraints(
+                    $entity['age_constraints'] ?? [],
+                    'entity'
+                );
+                foreach ($entityConstraints as $constraint) {
+                    $constraints[] = $constraint;
+                }
+            }
+        }
+
+        return $constraints;
     }
 }
