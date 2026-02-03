@@ -46,7 +46,7 @@ class QueryParserController extends Controller
         ]);
 
         $query = $request->input('query');
-        $query = $ruleBuilderService->normalise_characters($query);
+        $query = $ruleBuilderService->normaliseCharacters($query);
         $rules = $ruleBuilderService->parseToRules($query);
 
         return $this->OKResponse(json_encode($rules));

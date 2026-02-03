@@ -35,14 +35,14 @@ trait RuleBuilder
         ];
     }
 
-    public function normalise_characters(string $s): string
+    public function normaliseCharacters(string $s): string
     {
         if (class_exists('Normalizer')) {
             $s = \Normalizer::normalize($s, \Normalizer::FORM_KC);
         }
 
         $map = [
-            // Dashes / minus / hyphens
+            // Dashes
             "\u{2010}" => '-', // Hyphen
             "\u{2011}" => '-', // Non-breaking hyphen
             "\u{2012}" => '-', // Figure dash
@@ -50,7 +50,7 @@ trait RuleBuilder
             "\u{2014}" => '-', // Em dash
             "\u{2212}" => '-', // Minus sign
 
-            // Spaces for sanity sake
+            // Spaces (for sanity sake)
             "\u{00A0}" => ' ', // Non-breaking space
             "\u{202F}" => ' ', // Narrow no-break space
             "\u{200B}" => ' ', // Zero width space
