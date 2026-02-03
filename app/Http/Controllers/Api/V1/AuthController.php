@@ -52,25 +52,22 @@ class AuthController extends Controller
 
         error_log(config('integrated.auth_uri'));
 
-        return response()->json(config('integrated'));
-        /*
+        $response = Http::asForm()->post(config('integrated.auth_uri'), [
+            'grant_type' => 'authorization_code',
+            'client_id' => config('integrated.client_id'),
+            'client_secret' => config('integrated.client_secret'),
+            'redirect_uri' => config('integrated.internal_oauth_callback_uri'),
+            'code' => $code,
+        ]);
 
-                $response = Http::asForm()->post(config('integrated.auth_uri'), [
-                    'grant_type' => 'authorization_code',
-                    'client_id' => config('integrated.client_id'),
-                    'client_secret' => config('integrated.client_secret'),
-                    'redirect_uri' => config('integrated.internal_oauth_callback_uri'),
-                    'code' => $code,
-                ]);
+        if ($response->failed()) {
+            return $this->UnauthorisedResponse();
+        }
 
-                if ($response->failed()) {
-                    return $this->UnauthorisedResponse();
-                }
+        $token = $response->json()['token'];
 
-                $token = $response->json()['token'];
-
-                return redirect()->to('auth/callback2')
-                    ->with(['token' => $token]);*/
+        return redirect()->to('auth/callback2')
+            ->with(['token' => $token]);
     }
 
     public function postDeviceCodeAuth(Request $request): JsonResponse
