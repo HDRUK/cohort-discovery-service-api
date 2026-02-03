@@ -37,14 +37,14 @@ RUN apt-get update && apt-get install -y \
     liblz4-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
-        gd \
-        pdo \
-        pdo_mysql \
-        soap \
-        zip \
-        iconv \
-        bcmath \
-        intl \
+    gd \
+    pdo \
+    pdo_mysql \
+    soap \
+    zip \
+    iconv \
+    bcmath \
+    intl \
     && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
     && docker-php-ext-install sockets \
     && docker-php-ext-install exif \
@@ -83,8 +83,6 @@ RUN --mount=type=secret,id=github_token \
     # && php artisan optimize:clear \
     # && php artisan optimize \
     && php artisan config:clear \
-    && php artisan cache:clear \
-    && php artisan config:cache \
     && chmod -R 777 storage bootstrap/cache \
     && chown -R www-data:www-data storage \
     && composer dump-autoload
