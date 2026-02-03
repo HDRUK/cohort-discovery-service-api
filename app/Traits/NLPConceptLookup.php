@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\App;
 trait NLPConceptLookup
 {
     protected ?array $nlpEntities = null;
+    protected array $nlpRootAgeConstraints = [];
+    protected array $nlpWarnings = [];
 
     protected function loadNlpEntities(string $query, float $threshold = 80): void
     {
@@ -14,9 +16,14 @@ trait NLPConceptLookup
 
         $nlp = App::make(\App\Services\NLP\NLPConceptExtractor::class);
 
-        \Log::info(json_encode(collect($nlp->extract($query, $threshold))));
+        $payload = $nlp->extract($query, $threshold);
+        \Log::info(json_encode(collect($payload)));
 
-        $this->nlpEntities = collect($nlp->extract($query, $threshold))
+        $entities = $payload['entities'] ?? $payload;
+        $this->nlpRootAgeConstraints = $payload['age_constraints'] ?? [];
+        $this->nlpWarnings = $payload['warnings'] ?? [];
+
+        $this->nlpEntities = collect($entities)
             ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
             ->map(fn ($group) => $group->values()->all())
             ->toArray();
