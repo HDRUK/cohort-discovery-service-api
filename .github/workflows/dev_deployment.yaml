@@ -110,7 +110,7 @@ jobs:
           SERVICE_REGION: "${{ secrets.SERVICE_REGION }}"
         with:
           args: run services update '${{ env.SERVICE_NAME }}' --image='${{ env.GAR_LOCATION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.GAR_NAME }}'/${{ steps.getversion.outputs.version }}:${{ github.sha }} --region='${{ env.SERVICE_REGION }}' --project='${{ env.PROJECT_ID }}'
-
+            
       - name: Deploy to Cloud Run Integrated
         uses: actions-hub/gcloud@540.0.0
         id: deploy-integrated
