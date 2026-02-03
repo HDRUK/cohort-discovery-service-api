@@ -58,7 +58,7 @@ class DecodeJwt
 
                     $user = User::where('email', strtolower($userEmail))->first();
                     if (! $user) {
-                        return response()->json(['error' => 'Cannot find token user in local database'], 401);
+                        return response()->json(['error' => 'Cannot find token user in local database'], 404);
                     }
 
                     Auth::setUser($user);
@@ -218,6 +218,7 @@ class DecodeJwt
         $externalRoles = $jwtUser->cohort_discovery_roles ?? null;
 
         if (! isset($externalRoles)) {
+            $user->roles()->sync([]);
             throw new \Exception('Invalid token: no roles set');
         }
 
