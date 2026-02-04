@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Laravel\Pennant\Feature;
 
 class DecodeJwt
 {
@@ -180,6 +181,10 @@ class DecodeJwt
 
     protected function syncWorkgroups(User $user, object $jwtUser): void
     {
+        if (Feature::active('manage-workgroups-internal')) {
+            return;
+        }
+
         $workgroupMap = config('claimsaccesscontrol.workgroup_mappings', []);
         $externalWorkgroups = $jwtUser->workgroups ?? null;
 
