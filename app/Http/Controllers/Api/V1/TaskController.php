@@ -438,7 +438,7 @@ class TaskController extends Controller
                         continue;
                     }
 
-                    $pid = hash('sha256', "{$task->id}-{$task->attempts}-{$fileName}");
+                    $pid  = (string) Str::uuid();
                     $path = "{$pid}-{$fileName}";
 
                     Storage::put($path, $decoded);
