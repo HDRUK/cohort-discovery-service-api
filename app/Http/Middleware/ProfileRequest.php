@@ -49,8 +49,16 @@ class ProfileRequest
         if ($response instanceof JsonResponse) {
             // Stop our profiler
             $duration = (new ResourceUsageFormatter())->resourceUsage($timer->stop());
-            $parts = explode('\\', $request->route()->getAction()['controller']);
-            $className = $parts[count($parts) - 1];
+
+            $route = $request->route();
+            $actionName = $route?->getActionName();
+            $className = 'Unknown';
+            if (is_string($actionName) && $actionName !== 'Closure') {
+                [$class, $method] = array_pad(explode('@', $actionName, 2), 2, null);
+                $className = class_basename($class) . ($method ? "@{$method}" : '');
+            } else {
+                $className = $route?->getName() ?? $request->path();
+            }
 
             $resourceUsed = [
                 'explicitOperation' => $className,
