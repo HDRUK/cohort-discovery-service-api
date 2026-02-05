@@ -43,10 +43,10 @@ class ProcessDistributionFile implements ShouldQueue
         $file = ResultFile::findOrFail($this->resultFileId);
 
         Log::info('[' . $this->tag . '] starting', [
-              'result_file_id' => $this->resultFileId,
-              'path'           => $file->path,
-              'file_name'      => $file->file_name,
-          ]);
+            'result_file_id' => $this->resultFileId,
+            'path'           => $file->path,
+            'file_name'      => $file->file_name,
+        ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
             return;
@@ -57,7 +57,7 @@ class ProcessDistributionFile implements ShouldQueue
         $stream = Storage::readStream($file->path);
         if (! $stream) {
             Log::error('[' . $this->tag . '] Failed to open file stream', [
-                'path'    => $file->path,
+                'path' => $file->path,
             ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
@@ -77,6 +77,28 @@ class ProcessDistributionFile implements ShouldQueue
         $codeField = $file->file_name === 'code.distribution' ? 'OMOP' : 'CODE';
         $descField = $file->file_name === 'code.distribution' ? 'OMOP_DESCR' : 'DESCRIPTION';
 
+        $rowTemplate = [
+            'collection_id'  => null,
+            'task_id'        => null,
+            'result_file_id' => null,
+
+            'category'       => null,
+            'name'           => null,
+            'description'    => null,
+            'concept_id'     => null,
+
+            'count'          => null,
+            'q1'             => null,
+            'q3'             => null,
+            'min'            => null,
+            'max'            => null,
+            'mean'           => null,
+            'median'         => null,
+
+            'created_at'     => null,
+            'updated_at'     => null,
+        ];
+
         try {
             while (($line = fgets($stream)) !== false) {
                 $line = rtrim($line, "\r\n");
@@ -94,7 +116,6 @@ class ProcessDistributionFile implements ShouldQueue
                         $skipped['bad_header']++;
                         continue;
                     }
-
 
                     $header = $tmpHeader;
                     continue;
@@ -151,7 +172,7 @@ class ProcessDistributionFile implements ShouldQueue
                     'updated_at'     => $now,
                 ];
 
-                $batch[] = $base;
+                $batch[] = array_merge($rowTemplate, $base);
 
                 if (! empty($row['ALTERNATIVES'])) {
                     $segments = explode('^', trim((string) $row['ALTERNATIVES'], '^'));
@@ -161,7 +182,7 @@ class ProcessDistributionFile implements ShouldQueue
 
                             $altName = trim((string) $altName);
 
-                            $batch[] = [
+                            $altRow = [
                                 'collection_id'  => $file->collection_id,
                                 'task_id'        => $file->task_id,
                                 'result_file_id' => $file->id,
@@ -172,9 +193,12 @@ class ProcessDistributionFile implements ShouldQueue
                                 'concept_id'     => null,
 
                                 'count'          => (int) $altCount,
+
                                 'created_at'     => $now,
                                 'updated_at'     => $now,
                             ];
+
+                            $batch[] = array_merge($rowTemplate, $altRow);
                         }
                     }
                 }
@@ -214,7 +238,6 @@ class ProcessDistributionFile implements ShouldQueue
 
     private function persistBatchUpsert(array $rows): void
     {
-
         $uniqueBy = ['task_id', 'result_file_id', 'category', 'name'];
 
         $update = [
