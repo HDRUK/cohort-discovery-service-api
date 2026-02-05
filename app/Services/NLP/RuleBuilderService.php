@@ -170,26 +170,23 @@ class RuleBuilderService
             $constraintPayload['ageConstraint'] = [null, null];
             $warnings = $this->removeAgeWarnings($warnings);
         } elseif ($ageConstraint !== [null, null]) {
-            $hasRange = $ageConstraint[0] !== null && $ageConstraint[1] !== null;
-            if ($hasRange) {
-                $ageFilter = $this->makeAgeFilterNode($ageConstraint);
-                $constraintPayload['ageConstraint'] = [null, null];
+            $ageFilter = $this->makeAgeFilterNode($ageConstraint);
+            $constraintPayload['ageConstraint'] = [null, null];
 
-                if (empty($rules)) {
-                    $rules = [$ageFilter];
+            if (empty($rules)) {
+                $rules = [$ageFilter];
+            } else {
+                if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
+                    $targetRules = &$rules[0]['rules'];
                 } else {
-                    if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
-                        $targetRules = &$rules[0]['rules'];
-                    } else {
-                        $rules = [$this->makeGroup($rules)];
-                        $targetRules = &$rules[0]['rules'];
-                    }
-
-                    if (! empty($targetRules)) {
-                        $targetRules[] = $this->makeOperator('and');
-                    }
-                    $targetRules[] = $ageFilter;
+                    $rules = [$this->makeGroup($rules)];
+                    $targetRules = &$rules[0]['rules'];
                 }
+
+                if (! empty($targetRules)) {
+                    $targetRules[] = $this->makeOperator('and');
+                }
+                $targetRules[] = $ageFilter;
             }
         }
 
