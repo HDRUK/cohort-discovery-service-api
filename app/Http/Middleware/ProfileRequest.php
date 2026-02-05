@@ -60,7 +60,6 @@ class ProfileRequest
                 $className = $route?->getName() ?? $request->path();
             }
 
-
             $resourceUsed = [
                 'explicitOperation' => $className,
                 'operationResource' => $duration,
