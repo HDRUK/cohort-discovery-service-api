@@ -26,8 +26,8 @@ class RuleBuilderService
 
     private function splitTopLevelOr(string $query): array
     {
-        $q = strtolower($query);
-        $segments = preg_split('/\s+or\s+/', $q);
+        // $q = strtolower($query); // LS: Ruins work done with Acronyms. Removing.
+        $segments = preg_split('/\s+or\s+/i', $query);
 
         return array_map('trim', $segments);
     }
