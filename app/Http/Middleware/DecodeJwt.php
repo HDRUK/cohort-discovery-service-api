@@ -181,7 +181,10 @@ class DecodeJwt
 
     protected function syncWorkgroups(User $user, object $jwtUser): void
     {
+        $defaultWgId = Workgroup::where('name', 'DEFAULT')->value('id');
+
         if (Feature::active('manage-workgroups-internal')) {
+            $user->workgroups()->sync([$defaultWgId]);
             return;
         }
 
@@ -214,7 +217,8 @@ class DecodeJwt
             ->pluck('id')
             ->toArray();
 
-        $user->workgroups()->sync($workgroupIds);
+        $finalIds = array_values(array_unique(array_merge([$defaultWgId], $workgroupIds)));
+        $user->workgroups()->sync($finalIds);
     }
 
     protected function syncRoles(User $user, object $jwtUser): void
