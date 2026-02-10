@@ -43,4 +43,9 @@ class WorkgroupPolicy
     {
         return $user->hasRole('admin');
     }
+
+    public function searchUsers(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
 }

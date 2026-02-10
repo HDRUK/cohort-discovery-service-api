@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+
 use App\Models\Workgroup;
 use App\Traits\Responses;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 
 /**
  * @OA\Tag(
@@ -17,12 +21,15 @@ use Illuminate\Http\Request;
 class WorkgroupController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * Intentionally left out of Swagger documentation as this is not a public endpoint.
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Workgroup::class);
+
         $workgroup = Workgroup::all();
 
         return $this->OKResponse($workgroup);
@@ -62,6 +69,10 @@ class WorkgroupController extends Controller
 
         try {
             $workgroup = Workgroup::with('collections')->findOrFail($validated['id']);
+            $this->authorize('view', $workgroup);
+
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
@@ -102,11 +113,14 @@ class WorkgroupController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('store'));
+        $this->authorize('create', Workgroup::class);
 
         try {
             $workgroup = Workgroup::create($validated);
 
             return $this->CreatedResponse($workgroup);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Log::error('WorkgroupController@store - failed: '.json_encode($validated));
 
@@ -163,9 +177,13 @@ class WorkgroupController extends Controller
 
         try {
             $workgroup = Workgroup::findOrFail($validated['id']);
+            $this->authorize('update', $workgroup);
+
             $workgroup->update($validated);
 
             return $this->OKResponse($workgroup);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             \Log::error('WorkgroupController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -205,11 +223,12 @@ class WorkgroupController extends Controller
 
         try {
             $workgroup = Workgroup::findOrFail($validated['id']);
-            if ($workgroup->delete()) {
-                return $this->OKResponse([]);
-            }
+            $this->authorize('delete', $workgroup);
 
-            return $this->ErrorResponse();
+            $workgroup->delete();
+            return $this->OKResponse([]);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             \Log::error('WorkgroupController@destroy/'.$validated['id'].' - failed: '.
                 $e->getMessage());
@@ -239,14 +258,20 @@ class WorkgroupController extends Controller
      */
     public function usersByWorkgroup(Request $request): JsonResponse
     {
-        $workgroups = Workgroup::searchViaRequest()
-            ->with('users')
-            ->get();
+        try {
+            $this->authorize('searchUsers', Workgroup::class);
 
-        if ($workgroups->isEmpty()) {
-            return $this->NotFoundResponse();
+            $workgroups = Workgroup::searchViaRequest()
+                ->with('users')
+                ->get();
+
+            if ($workgroups->isEmpty()) {
+                return $this->NotFoundResponse();
+            }
+
+            return $this->OKResponse($workgroups);
+        } catch (AuthorizationException $e) {
+            throw $e;
         }
-
-        return $this->OKResponse($workgroups);
     }
 }

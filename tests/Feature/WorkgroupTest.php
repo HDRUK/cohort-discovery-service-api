@@ -11,6 +11,7 @@ use Tests\TestCase;
 class WorkgroupTest extends TestCase
 {
     private string $url = '/api/v1/workgroups';
+    private User $user;
 
     private array $workgroups = [
         'ADMIN',
@@ -36,11 +37,24 @@ class WorkgroupTest extends TestCase
                 'active' => true,
             ]);
         }
+
+        $this->enableMiddleware();
+        $this->user = User::factory()->create();
+
+        $this->user->assignRole('admin');
     }
 
     public function test_the_application_can_list_workgroups(): void
     {
-        $response = $this->get($this->url);
+        $this->user->removeRole('admin');
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url);
+        $response->assertStatus(403);
+
+        $this->user->assignRole('admin');
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url);
+
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -51,21 +65,38 @@ class WorkgroupTest extends TestCase
     {
         $workgroup = Workgroup::all()->random();
 
-        $response = $this->get($this->url.'/'.$workgroup->id);
+        $this->user->removeRole('admin');
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url);
+        $response->assertStatus(403);
+
+        $this->user->assignRole('admin');
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url.'/'.$workgroup->id);
         $response->assertStatus(200);
 
         $content = $response->json();
         $this->assertEquals($workgroup->id, $content['data']['id']);
     }
 
-    public function test_the_application_can_create_a_workgroup(): void
+    public function test_the_application_can_create_a_workgroup_with_admin_roles(): void
     {
+        $this->user->removeRole('admin');
+
         $payload = [
             'name' => 'New Workgroup',
             'active' => true,
         ];
 
-        $response = $this->post($this->url, $payload);
+        $response = $this->actingAsJwt($this->user, [])
+            ->postJson($this->url, $payload);
+        $response->assertStatus(403);
+
+        $this->user->assignRole('admin');
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->postJson($this->url, $payload);
         $response->assertStatus(201);
 
         $content = $response->json();
@@ -75,6 +106,7 @@ class WorkgroupTest extends TestCase
 
     public function test_the_application_can_update_a_workgroup(): void
     {
+        $this->user->removeRole('admin');
         $workgroup = Workgroup::all()->random();
 
         $payload = [
@@ -82,7 +114,13 @@ class WorkgroupTest extends TestCase
             'active' => false,
         ];
 
-        $response = $this->put($this->url.'/'.$workgroup->id, $payload);
+        $response = $this->actingAsJwt($this->user, [])
+            ->putJson($this->url.'/'.$workgroup->id, $payload);
+        $response->assertStatus(403);
+        
+        $this->user->assignRole('admin');
+        $response = $this->actingAsJwt($this->user, [])
+            ->putJson($this->url.'/'.$workgroup->id, $payload);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -92,22 +130,31 @@ class WorkgroupTest extends TestCase
 
     public function test_the_application_can_delete_a_workgroup(): void
     {
+        $this->user->removeRole('admin');
         $workgroup = Workgroup::all()->random();
 
-        $response = $this->delete($this->url.'/'.$workgroup->id);
+        $response = $this->actingAsJwt($this->user, [])
+            ->deleteJson($this->url.'/'.$workgroup->id);
+        $response->assertStatus(403);
+
+        $this->user->assignRole('admin');
+        $response = $this->actingAsJwt($this->user, [])
+            ->deleteJson($this->url.'/'.$workgroup->id);
         $response->assertStatus(200);
 
         $content = $response->json();
         $this->assertEmpty($content['data']);
     }
 
-    public function test_the_application_can_search_users_by_workgroup(): void
+    public function test_only_admin_can_search_users_by_workgroup(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         User::factory()->count(5)->create();
+        $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
 
         $users = User::all();
 
@@ -123,7 +170,8 @@ class WorkgroupTest extends TestCase
             ]);
         }
 
-        $response = $this->get($this->url.'/search/users?name[]=DEFAULT');
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url.'/search/users?name[]=DEFAULT');
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -133,5 +181,11 @@ class WorkgroupTest extends TestCase
             $this->assertTrue(in_array($group['name'], $this->workgroups));
             $this->assertTrue(count($group['users']) > 0);
         }
+
+        $this->user->removeRole('admin');
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson($this->url.'/search/users?name[]=DEFAULT');
+        $response->assertStatus(403);
     }
 }
