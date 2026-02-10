@@ -16,9 +16,35 @@ class CustodianPolicy
         if ($user->hasRole('admin')) {
             return true;
         } else {
-            return CustodianHasUser::where(['user_id' => $user->id,'custodian_id' => $custodian->id])->exists();
+            return CustodianHasUser::where([
+                'user_id' => $user->id,
+                'custodian_id' => $custodian->id
+            ])->exists();
         }
     }
 
+    public function viewAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
 
+    public function view(User $user, Custodian $custodian): bool
+    {
+        return $this->access($user, $custodian);
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    public function update(User $user, Custodian $custodian): bool
+    {
+        return $this->access($user, $custodian);
+    }
+
+    public function delete(User $user, Custodian $custodian): bool
+    {
+        return $user->hasRole('admin');
+    }
 }

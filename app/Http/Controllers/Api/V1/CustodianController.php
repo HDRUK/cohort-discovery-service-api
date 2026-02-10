@@ -8,6 +8,9 @@ use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Traits\Responses;
+
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,6 +23,7 @@ use Illuminate\Http\Request;
 class CustodianController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -37,6 +41,8 @@ class CustodianController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
+        $this->authorize('viewAny', Custodian::class);
+
         return $this->OKResponse(
             Custodian::with([
                 'hosts',
@@ -90,11 +96,11 @@ class CustodianController extends Controller
             )
             ->firstOrFail();
 
-            // gate to be added here to protect who can see this
-            // - admins
-            // - or users with this custodian in their custodian_team_admins (token)
+            $this->authorize('view', $custodian);
 
             return $this->OKResponse($custodian);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
         }
@@ -128,11 +134,14 @@ class CustodianController extends Controller
     public function store(ModelBackedRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $this->authorize('create', Custodian::class);
 
         try {
             $custodian = Custodian::create($validated);
 
             return $this->CreatedResponse($custodian);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Log::error('CustodianController@store - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -184,9 +193,13 @@ class CustodianController extends Controller
 
         try {
             $custodian = Custodian::findOrFail($validated['id']);
+            $this->authorize('update', $custodian);
+
             $custodian->update($validated);
 
             return $this->OKResponse($custodian);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Log::error('CustodianController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -225,9 +238,13 @@ class CustodianController extends Controller
 
         try {
             $custodian = Custodian::findOrFail($validated['id']);
+            $this->authorize('delete', $custodian);
+
             $custodian->delete();
 
             return $this->OKResponse([]);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Log::error('CustodianController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');

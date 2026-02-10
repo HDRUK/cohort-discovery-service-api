@@ -2,12 +2,17 @@
 
 namespace Tests\Feature;
 
+use DB;
+
+use App\Models\User;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
-use DB;
+use App\Models\CustodianHasUser;
+
 use Illuminate\Support\Str;
+
 use Tests\TestCase;
 
 class CustodianTest extends TestCase
@@ -15,6 +20,7 @@ class CustodianTest extends TestCase
     private string $url = '/api/v1/custodians';
 
     private array $payload;
+    private User $user;
 
     protected function setUp(): void
     {
@@ -25,6 +31,10 @@ class CustodianTest extends TestCase
         CustodianNetwork::truncate();
         CustodianNetworkHasCustodian::truncate();
 
+        $this->enableMiddleware();
+        $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
+
         $this->payload = [
             'pid' => (string) Str::uuid(),
             'name' => fake()->company,
@@ -33,21 +43,64 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_list_custodians(): void
     {
-        $custodians = Custodian::factory(5)->create();
+        $this->user->removeRole('admin');
+
+        $fakeGatewayId = 1111;
+        $anotherFakeGatewayId = 2222;
+
+        $custodian = Custodian::factory()->create([
+            'external_custodian_id' => $fakeGatewayId,
+        ]);
+
+        $anotherCustodian = Custodian::factory()->create([
+            'external_custodian_id' => $anotherFakeGatewayId,
+        ]);
+
         $network = CustodianNetwork::factory()->create();
-        foreach ($custodians as $c) {
-            CollectionHost::factory()->create([
-                'custodian_id' => $c->id,
-            ]);
 
-            CustodianNetworkHasCustodian::create([
-                'custodian_id' => $c->id,
-                'network_id' => $network->id,
-            ]);
-        }
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
 
-        $response = $this->get($this->url);
-        $response->assertStatus(200);
+        CollectionHost::factory()->create([
+            'custodian_id' => $anotherCustodian->id,
+        ]);
+
+        CustodianNetworkHasCustodian::create([
+            'custodian_id' => $custodian->id,
+            'network_id' => $network->id,
+        ]);
+
+        CustodianNetworkHasCustodian::create([
+            'custodian_id' => $anotherCustodian->id,
+            'network_id' => $network->id,
+        ]);
+
+        $this->user->custodians()->attach($custodian->id);
+
+        $overrides = [
+            'user' => [
+                'workgroups' => [[
+                    'id' => 1,
+                    'name' => 'admin',
+                    'enabled' => 1,
+                ]],
+            ],
+        ];
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides)
+            ->getJson($this->url);
+
+        $response->assertStatus(403);
+
+        $this->user->assignRole('admin');
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            $overrides)
+            ->getJson($this->url);
 
         $content = $response->json();
         $this->assertIsArray($content['data']);
@@ -57,7 +110,7 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_list_custodians_sorted(): void
     {
-        $response = $this->get($this->url.'?sort=name:desc');
+        $response = $this->actingAsJwt($this->user, [])->getJson($this->url.'?sort=name:desc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -67,7 +120,7 @@ class CustodianTest extends TestCase
 
         $this->assertEquals($sortedArray, $content);
 
-        $response = $this->get($this->url.'?sort=name:asc');
+        $response = $this->actingAsJwt($this->user, [])->getJson($this->url.'?sort=name:asc');
         $response->assertStatus(200);
 
         $content = $response->json('data.*.name');
@@ -84,7 +137,10 @@ class CustodianTest extends TestCase
 
         $cust = Custodian::all()->random(1)->first();
 
-        $response = $this->get($this->url.'?name[]='.$cust->name);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->getJson($this->url.'?name[]='.$cust->name);
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -107,7 +163,11 @@ class CustodianTest extends TestCase
             'network_id' => $network->id,
         ]);
 
-        $response = $this->get($this->url.'/'.$custodian->id);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->getJson($this->url.'/'.$custodian->id);
+
         $response->assertStatus(200);
 
         $content = $response->json();
@@ -119,13 +179,36 @@ class CustodianTest extends TestCase
     public function test_the_application_can_create_a_custodian(): void
     {
         DB::table('custodians')->truncate();
-        $response = $this->post($this->url, $this->payload);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->postJson($this->url, $this->payload);
+            
         $response->assertStatus(201);
 
         $content = $response->json();
 
         $this->assertArrayHasKey('id', $content['data']);
         $this->assertEquals($this->payload['name'], $content['data']['name']);
+    }
+
+    public function test_only_admin_can_create_a_custodian(): void
+    {
+        DB::table('custodians')->truncate();
+
+        $nonAdmin = User::factory()->create();
+
+        $response = $this->actingAsJwt(
+            $nonAdmin,
+            [])
+            ->postJson($this->url, $this->payload);
+        $response->assertStatus(403);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->postJson($this->url, $this->payload);
+        $response->assertStatus(201);
     }
 
     public function test_the_application_can_update_a_custodian(): void
@@ -137,10 +220,33 @@ class CustodianTest extends TestCase
         $updatePayload = [
             'name' => 'Updated Custodian Name',
         ];
-        $response = $this->put($this->url.'/'.$custodian->id, $updatePayload);
+        $response = $this->actingAsJwt(
+            $this->user, 
+            [])
+            ->putJson($this->url.'/'.$custodian->id, $updatePayload);
+        
         $response->assertStatus(200);
         $content = $response->json();
         $this->assertEquals($updatePayload['name'], $content['data']['name']);
+    }
+
+    public function test_only_admin_can_delete_a_custodian(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        $nonAdmin = User::factory()->create();
+
+        $response = $this->actingAsJwt(
+            $nonAdmin,
+            [])
+            ->deleteJson($this->url.'/'.$custodian->id);
+        $response->assertStatus(403);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->deleteJson($this->url.'/'.$custodian->id);
+        $response->assertStatus(200);
     }
 
     public function test_the_application_can_delete_a_custodian(): void
@@ -149,7 +255,11 @@ class CustodianTest extends TestCase
 
         $custodian = Custodian::all()->random();
 
-        $response = $this->delete($this->url.'/'.$custodian->id);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->deleteJson($this->url.'/'.$custodian->id);
+            
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('custodians', [
@@ -162,7 +272,11 @@ class CustodianTest extends TestCase
         $custodian = Custodian::factory()->create();
         $network = CustodianNetwork::factory()->create();
 
-        $response = $this->post($this->url.'/'.$custodian->id.'/networks/'.$network->id);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->postJson($this->url.'/'.$custodian->id.'/networks/'.$network->id);
+
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('custodian_network_has_custodians', [
@@ -176,12 +290,107 @@ class CustodianTest extends TestCase
         $custodian = Custodian::factory()->create();
         $network = CustodianNetwork::factory()->create();
 
-        $response = $this->delete($this->url.'/'.$custodian->id.'/networks/'.$network->id);
+        $response = $this->actingAsJwt(
+            $this->user,
+            [])
+            ->deleteJson($this->url.'/'.$custodian->id.'/networks/'.$network->id);
+
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('custodian_network_has_custodians', [
             'custodian_id' => $custodian->id,
             'network_id' => $network->id,
         ]);
+    }
+
+    public function test_one_custodian_cannot_update_another_custodian(): void
+    {
+        $custodians = Custodian::factory(2)->create();
+
+        $user1 = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $user1->id,
+            'custodian_id' => $custodians[0]->id,
+        ]);
+
+        $user2 = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $user2->id,
+            'custodian_id' => $custodians[1]->id,
+        ]);
+
+        $response = $this->actingAsJwt(
+            $user1,
+            [])
+            ->putJson($this->url.'/'.$custodians[0]->id, [
+                'name' => 'Updated Custodian One',
+            ]);
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $user2,
+            [])
+            ->putJson($this->url.'/'.$custodians[1]->id, [
+                'name' => 'Updated Custodian Two',
+            ]);
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $user1,
+            [])
+            ->putJson($this->url.'/'.$custodians[1]->id, [
+                'name' => 'Should Not Update Two',
+            ]);
+        $response->assertStatus(403);
+
+        $response = $this->actingAsJwt(
+            $user2,
+            [])
+            ->putJson($this->url.'/'.$custodians[0]->id, [
+                'name' => 'Should Not Update One',
+            ]);
+        $response->assertStatus(403);
+    }
+
+    public function test_one_custodian_cannot_see_another_custodian(): void
+    {
+        $custodians = Custodian::factory(2)->create();
+
+        $user1 = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $user1->id,
+            'custodian_id' => $custodians[0]->id,
+        ]);
+
+        $user2 = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $user2->id,
+            'custodian_id' => $custodians[1]->id,
+        ]);
+
+        $response = $this->actingAsJwt(
+            $user1,
+            [])
+            ->getJson($this->url .'/'.$custodians[0]->id);
+
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $user2,
+            [])
+            ->getJson($this->url .'/'.$custodians[1]->id);
+        $response->assertStatus(200);
+
+        $response = $this->actingAsJwt(
+            $user1,
+            [])
+            ->getJson($this->url .'/'.$custodians[1]->id);
+        $response->assertStatus(403);
+
+        $response = $this->actingAsJwt(
+            $user2,
+            [])
+            ->getJson($this->url .'/'.$custodians[0]->id);
+        $response->assertStatus(403);
     }
 }
