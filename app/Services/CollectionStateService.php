@@ -21,12 +21,10 @@ class CollectionStateService
      */
     public function canUserTransition(Collection $collection, string $state, User $user)
     {
-
         $isCustodianUser = CustodianHasUser::query()
                 ->where('custodian_id', $collection->custodian_id)
                 ->where('user_id', $user->id)
                 ->exists();
-
 
         switch (strtolower($state)) {
             case Collection::STATUS_PENDING:
