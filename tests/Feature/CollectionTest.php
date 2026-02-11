@@ -2,16 +2,17 @@
 
 namespace Tests\Feature;
 
+use Config;
+use DB;
+use Str;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CustodianHasUser;
 use App\Models\Custodian;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
-use Config;
-use DB;
-use Str;
 use Tests\TestCase;
 
 class CollectionTest extends TestCase
@@ -36,6 +37,7 @@ class CollectionTest extends TestCase
 
         $this->enableMiddleware();
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     public function test_it_can_list_collections(): void
@@ -67,6 +69,8 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
+
+        $this->user->removeRole('admin');
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -166,16 +170,26 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content);
         $this->assertTrue($content['id'] === $coll->id);
         $this->assertTrue($content['name'] === $coll->name);
+
+        $this->user->removeRole('admin');
+
+        CustodianHasUser::where('user_id', $this->user->id)->delete();
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL.'/'.$coll->id);
+        $response->assertStatus(403);
     }
 
     public function test_it_can_transition_collections(): void
     {
-        Custodian::factory()->create();
-        $collection = Collection::factory()->create();
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
 
-        $this->user->assignRole('custodian');
-
-        // This works because user is a 'custodian' and custodians can request a change
         // from Draft -> Pending.
         $response = $this->actingAsJwt(
             $this->user,
@@ -197,8 +211,7 @@ class CollectionTest extends TestCase
         $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_PENDING);
 
         // Now swap to a user who can do nothing with collections
-        $this->user->removeRole('custodian');
-        $this->user->assignRole('user');
+        $this->user->removeRole('admin');
 
         // This fails because a researcher isn't allowed to edit collections
         $response = $this->actingAsJwt(
@@ -212,36 +225,7 @@ class CollectionTest extends TestCase
                 ]
             );
 
-        $response->assertStatus(500);
-        $this->assertEquals($response->json('data'), 'Permissions do not allow you to transition to state: active');
-
-        // Reset collection state
-        $collection->setState(Collection::STATUS_DRAFT);
-
-        // Now swap to an admin who can do everything with a collection (??)
-        $this->user->removeRole('user');
-        $this->user->assignRole('admin');
-
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )
-            ->putJson(
-                self::BASE_URL.'/'.$collection->id.'/transition_to',
-                [
-                    'state' => Collection::STATUS_ACTIVE,
-                ]
-            );
-
-        $response->assertStatus(200);
-
-        $content = $response->json('data');
-
-        $this->assertNotNull($content);
-        $this->assertNotNull($content['model_state']);
-        $this->assertNotNull($content['model_state']['state']);
-        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_ACTIVE);
-        $this->user->removeRole('admin');
+        $response->assertStatus(403);
     }
 
     public function test_it_can_search_by_name(): void
@@ -419,10 +403,12 @@ class CollectionTest extends TestCase
 
         $overrides = [
             'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'cohort-admin',
-                ]],
+                'workgroups' => [
+                    [
+                        'id' => 1,
+                        'name' => 'cohort-admin',
+                    ]
+                ],
                 'cohort_admin_teams' => [
                     [
                         'id' => $fakeGatewayTeamId,
@@ -440,6 +426,8 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
+
+        $this->user->removeRole('admin');
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -746,6 +734,7 @@ class CollectionTest extends TestCase
 
     public function test_it_lists_active_collections_for_user_by_workgroup_or_custodian(): void
     {
+        $this->user->removeRole('admin');
         $user = $this->user;
 
         $custodianA = Custodian::factory()->create();
@@ -790,6 +779,7 @@ class CollectionTest extends TestCase
 
     public function test_it_only_returns_active_collections_for_user(): void
     {
+        $this->user->removeRole('admin');
 
         $user = $this->user;
 

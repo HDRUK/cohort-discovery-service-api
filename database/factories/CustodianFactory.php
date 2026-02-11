@@ -19,7 +19,7 @@ class CustodianFactory extends Factory
     {
         return [
             'pid' => Str::uuid(),
-            'name' => $this->faker->company,
+            'name' => $this->faker->unique()->company,
         ];
     }
 }

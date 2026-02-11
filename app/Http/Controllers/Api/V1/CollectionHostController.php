@@ -7,6 +7,8 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Traits\Responses;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Str;
@@ -20,6 +22,7 @@ use Str;
 class CollectionHostController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -37,13 +40,24 @@ class CollectionHostController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $hosts = CollectionHost::with(['collections','custodian'])
-            ->searchViaRequest()
-            ->filterViaRequest()
-            ->applySorting()
-            ->get();
+        try {
+            $this->authorize('viewAny', CollectionHost::class);
 
-        return $this->OKResponse($hosts);
+            $hosts = CollectionHost::with(['collections','custodian'])
+                ->searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting()
+                ->get();
+
+            return $this->OKResponse($hosts);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@index - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getTraceAsString().')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
@@ -89,9 +103,13 @@ class CollectionHostController extends Controller
 
         try {
             $collectionHost = CollectionHost::with(['collections','custodian'])
-            ->findOrFail($validated['id']);
+                ->findOrFail($validated['id']);
+
+            $this->authorize('view', $collectionHost);
 
             return $this->OKResponse($collectionHost);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Exception $e) {
             return $this->NotFoundResponse();
         }
@@ -127,6 +145,9 @@ class CollectionHostController extends Controller
         $validated = $request->validated();
 
         try {
+            $custodian = Custodian::findOrFail($validated['custodian_id']);
+            $this->authorize('create', $custodian);
+
             $rawClientId = Str::uuid()->toString();
             $rawClientSecret = Str::random(64);
 
@@ -139,6 +160,8 @@ class CollectionHostController extends Controller
             ]);
 
             return $this->CreatedResponse($collectionHost);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionHostController@store - failed: '.
                 json_encode($validated).' (exception: '.$e->getTraceAsString().')');
@@ -190,9 +213,13 @@ class CollectionHostController extends Controller
 
         try {
             $collectionHost = CollectionHost::findOrFail($validated['id']);
+            $this->authorize('update', $collectionHost);
+
             $collectionHost->update($validated);
 
             return $this->OKResponse($collectionHost);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionHostController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getTraceAsString().')');
@@ -231,9 +258,13 @@ class CollectionHostController extends Controller
 
         try {
             $collectionHost = CollectionHost::findOrFail($validated['id']);
+            $this->authorize('delete', $collectionHost);
+
             $collectionHost->delete();
 
             return $this->OKResponse([]);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Exception $e) {
             \Log::error('CollectionHostController@destroy - failed: '.
                 json_encode($validated).' (exception: '.$e->getTraceAsString().')');

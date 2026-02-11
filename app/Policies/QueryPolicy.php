@@ -7,8 +7,37 @@ use App\Models\User;
 
 class QueryPolicy
 {
+    public function access(User $user, Query $query): bool
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        } else {
+            return $query->user_id === $user->id;
+        }
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     public function view(User $user, Query $query): bool
     {
-        return $query->user_id === $user->id;
+        return $this->access($user, $query);
+    }
+
+    public function update(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
+    }
+
+    public function delete(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
+    }
+
+    public function download(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
     }
 }

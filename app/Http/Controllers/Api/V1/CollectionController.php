@@ -22,6 +22,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 
 /**
  * @OA\Tag(
@@ -33,6 +35,7 @@ class CollectionController extends Controller
 {
     use HelperFunctions;
     use Responses;
+    use AuthorizesRequests;
 
     protected CollectionStateService $stateService;
 
@@ -67,18 +70,28 @@ class CollectionController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
+        try {
+            $this->authorize('viewAny', Collection::class);
 
-        $collections = Collection::with([
-            'demographics',
-            'custodian.network',
-            'modelState.state',
-        ])
-            ->searchViaRequest()
-            ->filterViaRequest()
-            ->applySorting()
-            ->get();
+            $collections = Collection::with([
+                'demographics',
+                'custodian.network',
+                'modelState.state',
+            ])
+                ->searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting()
+                ->get();
 
-        return $this->OKResponse($collections);
+            return $this->OKResponse($collections);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@index - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
 
@@ -265,8 +278,15 @@ class CollectionController extends Controller
                 'workgroups',
             ])->findOrFail($validated['id']);
 
+            $this->authorize('view', $collection);
+
             return $this->OKResponse($collection);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
+            \Log::error('CollectionController@show - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+
             return $this->NotFoundResponse();
         }
     }
@@ -293,9 +313,14 @@ class CollectionController extends Controller
         $validated = $request->validated();
 
         try {
+            $custodian = Custodian::findOrFail($validated['custodian_id']);
+            $this->authorize('create', $custodian);
+
             $collection = Collection::create($validated);
 
             return $this->CreatedResponse($collection);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionController@store - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -335,10 +360,14 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::with(['host','config','custodian'])->findOrFail($validated['id']);
+            $this->authorize('update', $collection);
+
             if ($collection->update($validated)) {
                 $collection->host()->sync([$validated['host_id']]);
                 return $this->OKResponse($collection);
             }
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -370,9 +399,13 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::findOrFail($validated['id']);
+            $this->authorize('delete', $collection);
+
             if ($collection->delete()) {
                 return $this->OKResponse([]);
             }
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionController@destroy - failed: '.
                 $e->getMessage());
@@ -583,13 +616,16 @@ class CollectionController extends Controller
 
         try {
             $collection = Collection::findOrFail($validated['id']);
+            $this->authorize('update', $collection);
+
             if ($collection->isInState($validated['state'])) {
                 return $this->ErrorResponse('collection is already in state: \"'.$validated['state'].'\"');
             }
             $this->stateService->transition($collection, $validated['state'], $request->user());
 
             return $this->OKResponse($collection);
-
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             return $this->ErrorResponse($e->getMessage());
         }
