@@ -735,6 +735,7 @@ class CollectionTest extends TestCase
 
     public function test_it_lists_active_collections_for_user_by_workgroup_or_custodian(): void
     {
+        $this->user->removeRole('admin');
         $user = $this->user;
 
         $custodianA = Custodian::factory()->create();
@@ -779,6 +780,7 @@ class CollectionTest extends TestCase
 
     public function test_it_only_returns_active_collections_for_user(): void
     {
+        $this->user->removeRole('admin');
 
         $user = $this->user;
 
