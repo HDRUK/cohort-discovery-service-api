@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Custodian;
 use App\Models\CollectionHost;
 use App\Models\CustodianHasUser;
 
@@ -31,14 +30,14 @@ class CollectionHostPolicy
         return $this->access($user, $collectionHosts);
     }
 
-    public function create(User $user, Custodian $custodian): bool
+    public function create(User $user, int $custodianId): bool
     {
         if ($user->hasRole('admin')) {
             return true;
         } else {
             return CustodianHasUser::where([
                 'user_id' => $user->id,
-                'custodian_id' => $custodian->id
+                'custodian_id' => $custodianId
             ])->exists();
         }
     }

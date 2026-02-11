@@ -71,8 +71,6 @@ class CollectionController extends Controller
     public function index(ModelBackedRequest $request): JsonResponse
     {
         try {
-            $this->authorize('viewAny', Collection::class);
-
             $collections = Collection::with([
                 'demographics',
                 'custodian.network',
@@ -84,8 +82,6 @@ class CollectionController extends Controller
                 ->get();
 
             return $this->OKResponse($collections);
-        } catch (AuthorizationException $e) {
-            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionController@index - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getMessage().')');

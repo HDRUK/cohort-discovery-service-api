@@ -21,9 +21,9 @@ class CollectionPolicy
         }
     }
 
-    public function viewAny(User $user): bool
+    public function viewAny(User $user, Collection $collection): bool
     {
-        return $user->hasRole('admin');
+        return $this->access($user, $collection);
     }
 
     /**
