@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use Config;
 use DB;
 use Str;
-
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CustodianHasUser;
@@ -14,7 +13,6 @@ use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
-
 use Tests\TestCase;
 
 class CollectionTest extends TestCase
@@ -195,7 +193,8 @@ class CollectionTest extends TestCase
         // from Draft -> Pending.
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->putJson(
                 self::BASE_URL.'/'.$collection->id.'/transition_to',
                 [

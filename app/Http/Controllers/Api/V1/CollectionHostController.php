@@ -7,12 +7,10 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Traits\Responses;
-
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
 use Str;
 
 /**
@@ -44,7 +42,7 @@ class CollectionHostController extends Controller
     {
         try {
             $this->authorize('viewAny', CollectionHost::class);
-            
+
             $hosts = CollectionHost::with(['collections','custodian'])
                 ->searchViaRequest()
                 ->filterViaRequest()
@@ -106,7 +104,7 @@ class CollectionHostController extends Controller
         try {
             $collectionHost = CollectionHost::with(['collections','custodian'])
                 ->findOrFail($validated['id']);
-            
+
             $this->authorize('view', $collectionHost);
 
             return $this->OKResponse($collectionHost);

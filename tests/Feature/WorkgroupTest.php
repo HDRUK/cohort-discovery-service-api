@@ -117,7 +117,7 @@ class WorkgroupTest extends TestCase
         $response = $this->actingAsJwt($this->user, [])
             ->putJson($this->url.'/'.$workgroup->id, $payload);
         $response->assertStatus(403);
-        
+
         $this->user->assignRole('admin');
         $response = $this->actingAsJwt($this->user, [])
             ->putJson($this->url.'/'.$workgroup->id, $payload);

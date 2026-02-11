@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Collection;
 use App\Models\User;
+use App\Models\Custodian;
 use App\Models\CustodianHasUser;
 
 class CollectionPolicy
@@ -38,7 +39,10 @@ class CollectionPolicy
         if ($user->hasRole('admin')) {
             return true;
         } else {
-            return $custodian->users()->where('id', $user->id)->exists();
+            return CustodianHasUser::where([
+                'custodian_id' => $custodian->id,
+                'user_id' => $user->id
+            ])->exists();
         }
     }
 

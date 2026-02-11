@@ -3,16 +3,13 @@
 namespace Tests\Feature;
 
 use DB;
-
 use App\Models\User;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Models\CustodianHasUser;
-
 use Illuminate\Support\Str;
-
 use Tests\TestCase;
 
 class CustodianTest extends TestCase
@@ -90,7 +87,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            $overrides)
+            $overrides
+        )
             ->getJson($this->url);
 
         $response->assertStatus(403);
@@ -99,7 +97,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            $overrides)
+            $overrides
+        )
             ->getJson($this->url);
 
         $content = $response->json();
@@ -139,7 +138,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->getJson($this->url.'?name[]='.$cust->name);
         $response->assertStatus(200);
 
@@ -165,7 +165,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->getJson($this->url.'/'.$custodian->id);
 
         $response->assertStatus(200);
@@ -181,9 +182,10 @@ class CustodianTest extends TestCase
         DB::table('custodians')->truncate();
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->postJson($this->url, $this->payload);
-            
+
         $response->assertStatus(201);
 
         $content = $response->json();
@@ -200,13 +202,15 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $nonAdmin,
-            [])
+            []
+        )
             ->postJson($this->url, $this->payload);
         $response->assertStatus(403);
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->postJson($this->url, $this->payload);
         $response->assertStatus(201);
     }
@@ -221,10 +225,11 @@ class CustodianTest extends TestCase
             'name' => 'Updated Custodian Name',
         ];
         $response = $this->actingAsJwt(
-            $this->user, 
-            [])
+            $this->user,
+            []
+        )
             ->putJson($this->url.'/'.$custodian->id, $updatePayload);
-        
+
         $response->assertStatus(200);
         $content = $response->json();
         $this->assertEquals($updatePayload['name'], $content['data']['name']);
@@ -238,13 +243,15 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $nonAdmin,
-            [])
+            []
+        )
             ->deleteJson($this->url.'/'.$custodian->id);
         $response->assertStatus(403);
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->deleteJson($this->url.'/'.$custodian->id);
         $response->assertStatus(200);
     }
@@ -257,9 +264,10 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->deleteJson($this->url.'/'.$custodian->id);
-            
+
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('custodians', [
@@ -274,7 +282,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->postJson($this->url.'/'.$custodian->id.'/networks/'.$network->id);
 
         $response->assertStatus(200);
@@ -292,7 +301,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->deleteJson($this->url.'/'.$custodian->id.'/networks/'.$network->id);
 
         $response->assertStatus(200);
@@ -321,7 +331,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $user1,
-            [])
+            []
+        )
             ->putJson($this->url.'/'.$custodians[0]->id, [
                 'name' => 'Updated Custodian One',
             ]);
@@ -329,7 +340,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $user2,
-            [])
+            []
+        )
             ->putJson($this->url.'/'.$custodians[1]->id, [
                 'name' => 'Updated Custodian Two',
             ]);
@@ -337,7 +349,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $user1,
-            [])
+            []
+        )
             ->putJson($this->url.'/'.$custodians[1]->id, [
                 'name' => 'Should Not Update Two',
             ]);
@@ -345,7 +358,8 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $user2,
-            [])
+            []
+        )
             ->putJson($this->url.'/'.$custodians[0]->id, [
                 'name' => 'Should Not Update One',
             ]);
@@ -370,26 +384,30 @@ class CustodianTest extends TestCase
 
         $response = $this->actingAsJwt(
             $user1,
-            [])
+            []
+        )
             ->getJson($this->url .'/'.$custodians[0]->id);
 
         $response->assertStatus(200);
 
         $response = $this->actingAsJwt(
             $user2,
-            [])
+            []
+        )
             ->getJson($this->url .'/'.$custodians[1]->id);
         $response->assertStatus(200);
 
         $response = $this->actingAsJwt(
             $user1,
-            [])
+            []
+        )
             ->getJson($this->url .'/'.$custodians[1]->id);
         $response->assertStatus(403);
 
         $response = $this->actingAsJwt(
             $user2,
-            [])
+            []
+        )
             ->getJson($this->url .'/'.$custodians[0]->id);
         $response->assertStatus(403);
     }

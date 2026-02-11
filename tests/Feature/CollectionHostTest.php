@@ -3,13 +3,11 @@
 namespace Tests\Feature;
 
 use DB;
-
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\User;
-
 use Tests\TestCase;
 
 class CollectionHostTest extends TestCase
@@ -64,7 +62,8 @@ class CollectionHostTest extends TestCase
 
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->getJson(self::BASE_URL.'/'.$host->id);
 
         $response->assertStatus(200)
@@ -73,7 +72,8 @@ class CollectionHostTest extends TestCase
         $this->user->removeRole('admin');
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->getJson(self::BASE_URL.'/'.$host->id);
         $response->assertStatus(403);
     }
@@ -137,7 +137,8 @@ class CollectionHostTest extends TestCase
         $host = CollectionHost::factory()->create();
         $response = $this->actingAsJwt(
             $this->user,
-            [])
+            []
+        )
             ->getJson(self::BASE_URL.'?name[]='.str_replace(' ', '%20', $host->name));
 
         $content = $response->json('data');

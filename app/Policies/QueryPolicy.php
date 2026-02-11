@@ -7,7 +7,6 @@ use App\Models\User;
 
 class QueryPolicy
 {
-
     public function access(User $user, Query $query): bool
     {
         if ($user->hasRole('admin')) {

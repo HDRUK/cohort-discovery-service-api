@@ -3,13 +3,10 @@
 namespace Tests;
 
 use DB;
-
 use App\Models\User;
 use App\Support\ApplicationMode;
 use Tests\Traits\RefreshDatabaseLite;
-
 use Firebase\JWT\JWT;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Arr;

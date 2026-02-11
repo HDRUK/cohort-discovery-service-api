@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Workgroup;
+use App\Models\UserHasWorkgroup;
 
 class WorkgroupPolicy
 {
@@ -12,7 +13,7 @@ class WorkgroupPolicy
         if ($user->hasRole('admin')) {
             return true;
         } else {
-            return WorkgroupHasUser::where([
+            return UserHasWorkgroup::where([
                 'user_id' => $user->id,
                 'workgroup_id' => $workgroup->id
             ])->exists();

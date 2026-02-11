@@ -9,11 +9,9 @@ use App\Models\Query;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
-
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -98,6 +96,7 @@ class QueryController extends Controller
         } catch (\Throwable $e) {
             \Log::error('QueryController@index - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getMessage().')');
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
