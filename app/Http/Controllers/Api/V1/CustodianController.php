@@ -40,7 +40,7 @@ class CustodianController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $this->authorize('viewAny', Custodian::class);
+        //$this->authorize('viewAny', Custodian::class);
 
         return $this->OKResponse(
             Custodian::with([
