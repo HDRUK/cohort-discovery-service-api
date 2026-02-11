@@ -26,4 +26,19 @@ class QueryPolicy
     {
         return $this->access($user, $query);
     }
+
+    public function update(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
+    }
+
+    public function delete(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
+    }
+
+    public function download(User $user, Query $query): bool
+    {
+        return $this->access($user, $query);
+    }
 }

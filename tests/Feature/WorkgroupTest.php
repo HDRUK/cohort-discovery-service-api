@@ -150,6 +150,7 @@ class WorkgroupTest extends TestCase
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
+        UserHasWorkgroup::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         User::factory()->count(5)->create();

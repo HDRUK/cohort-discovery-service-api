@@ -9,10 +9,13 @@ use App\Models\Query;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,6 +29,7 @@ class QueryController extends Controller
 {
     use HelperFunctions;
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -66,23 +70,35 @@ class QueryController extends Controller
      */
     public function index(ModelBackedRequest $request): JsonResponse
     {
-        $perPage = $this->resolvePerPage();
+        try {
+            $perPage = $this->resolvePerPage();
 
-        $queries = Query::searchViaRequest()
-            ->filterViaRequest()
-            ->applySorting('created_at', 'desc')
-            ->with([
-                'tasks.collection.custodian',
-                'tasks.collection.latestDemographic',
-                'tasks.result',
-            ])
-            ->where('user_id', Auth::id())
-            ->whereHas('tasks', function ($query) {
-                $query->where('task_type', TaskType::A);
-            })
-            ->paginate($perPage);
+            $queryBuilder = Query::searchViaRequest()
+                ->filterViaRequest()
+                ->applySorting('created_at', 'desc')
+                ->with([
+                    'tasks.collection.custodian',
+                    'tasks.collection.latestDemographic',
+                    'tasks.result',
+                ])
+                ->where('user_id', Auth::id())
+                ->whereHas('tasks', function ($query) {
+                    $query->where('task_type', TaskType::A);
+                });
 
-        return $this->OKResponse($queries);
+            $queries = (clone $queryBuilder)->get();
+            foreach ($queries as $query) {
+                $this->authorize('view', $query);
+            }
+            unset($queries);
+
+            return $this->OKResponse($queryBuilder->paginate($perPage));
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@index - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+        }
     }
 
     /**
@@ -146,11 +162,11 @@ class QueryController extends Controller
                 )
                 ->firstOrFail();
 
-            if (Gate::denies('view', $query)) {
-                return $this->ForbiddenResponse();
-            }
+            $this->authorize('view', $query);
 
             return $this->OKResponse($query);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@show - failed: '.json_encode($validated));
 
@@ -234,11 +250,16 @@ class QueryController extends Controller
                 fn ($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
+
+            $this->authorize('update', $query);
+
             if ($query->update($validated)) {
                 return $this->OKResponse($query);
             }
 
             return $this->ErrorResponse();
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@update - failed: '.
                 json_encode($validated).' (exception: '.
@@ -278,11 +299,16 @@ class QueryController extends Controller
                 fn ($q) => $q->where('pid', $key)
             )
                 ->firstOrFail();
+
+            $this->authorize('delete', $query);
+
             if ($query->delete()) {
                 return $this->OKResponse([]);
             }
 
             return $this->ErrorResponse();
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@destroy/'.$validated['id'].' - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
@@ -347,15 +373,24 @@ class QueryController extends Controller
     public function download(Request $request, string $pid, string $format = 'csv'): StreamedResponse|BinaryFileResponse|JsonResponse
     {
         try {
-            return Query::searchViaRequest()
+            $queryBuilder = Query::searchViaRequest()
                 ->filterViaRequest()
                 ->with([
                     'tasks.collection.latestDemographic',
                     'tasks.result',
                 ])
                 ->where('pid', $pid)
-                ->orderBy('created_at', 'desc')
-                ->download($format);
+                ->orderBy('created_at', 'desc');
+
+            $queries = (clone $queryBuilder)->get();
+            foreach ($queries as $query) {
+                $this->authorize('download', $query);
+            }
+            unset($queries);
+
+            return $queryBuilder->download($format);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@download/'.$format.' - failed'.
                 ' (exception: '.$e->getMessage().')');
