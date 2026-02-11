@@ -16,15 +16,14 @@ return [
      * unknown to ClaimsBasedAccessControl package.
      */
     'workgroup_mappings' => [
-        'admin' => 'cohort-admin',
-        'default' => 'external-lowest',
+        //'admin' => 'cohort-admin',
+        //'default' => 'external-lowest',
         //'custodian' => 'cohort-custodian',
-        'non-uk-industry' => 'external-non-uk-industry',
-        'non-uk-research' => 'external-non-uk-research',
-        'other' => 'external-other',
-        'uk-industry' => 'external-uk-industry',
-        'uk-research' => 'external-uk-research',
-        'nhs-sde' => 'external-nhs-sde',
+        'non-uk-industry' => 'non-uk-industry',
+        'non-uk-research' => 'non-uk-research',
+        'uk-industry' => 'uk-industry',
+        'uk-research' => 'uk-research',
+        'nhs-sde' => 'nhs-sde',
     ],
 
     'role_mappings' => [

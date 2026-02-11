@@ -116,7 +116,7 @@ class DecodeJwt
         User $user,
         object $jwtUser,
     ): void {
-        error_log('yoodasdasdasoo');
+
         $ttl = $this->claimsTtlSeconds($claims);
         $jti = $this->claimsJtiOrFail($claims);
 
@@ -131,7 +131,6 @@ class DecodeJwt
         $waitSeconds = config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
 
 
-        error_log('yooo');
         $this->syncWorkgroups($user, $jwtUser);
         $this->syncRoles($user, $jwtUser);
         $this->syncCustodians($user, $jwtUser);
