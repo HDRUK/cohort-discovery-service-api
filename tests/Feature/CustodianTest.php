@@ -91,7 +91,7 @@ class CustodianTest extends TestCase
         )
             ->getJson($this->url);
 
-        $response->assertStatus(403);
+        $response->assertStatus(200);
 
         $this->user->assignRole('admin');
 

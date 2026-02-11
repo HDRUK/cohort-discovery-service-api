@@ -7,6 +7,7 @@ use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
+use App\Models\CustodianHasUser;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -105,6 +106,19 @@ class CollectionHostTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonFragment(['name' => 'Host Test']);
+
+        $altUser = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $altUser->id,
+            'custodian_id' => $data['custodian_id'],
+        ]);
+
+        $data['name'] = 'Host Test 2';
+
+        $response = $this->actingAsJwt($altUser, [])
+            ->postJson(self::BASE_URL, $data);
+        $response->assertStatus(201)
+            ->assertJsonFragment(['name' => 'Host Test 2']);
     }
 
     public function test_it_can_update_a_collection_host()

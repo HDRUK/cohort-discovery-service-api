@@ -25,7 +25,7 @@ class CustodianPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin');
+        return true;
     }
 
     public function view(User $user, Custodian $custodian): bool

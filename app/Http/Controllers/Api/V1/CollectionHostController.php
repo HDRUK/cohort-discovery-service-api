@@ -145,8 +145,7 @@ class CollectionHostController extends Controller
         $validated = $request->validated();
 
         try {
-            $custodian = Custodian::findOrFail($validated['custodian_id']);
-            $this->authorize('create', $custodian);
+            $this->authorize('create', [CollectionHost::class, $validated['custodian_id']]);
 
             $rawClientId = Str::uuid()->toString();
             $rawClientSecret = Str::random(64);

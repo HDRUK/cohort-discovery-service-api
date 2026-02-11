@@ -240,6 +240,7 @@ class CollectionTest extends TestCase
             []
         )
             ->getJson(self::BASE_URL.'?name[]='.$coll->name);
+
         $response->assertStatus(200);
 
         $content = $response->json('data');
