@@ -48,15 +48,7 @@ class CollectionPolicy
 
     public function update(User $user, Collection $collection): bool
     {
-        $custodian = $collection->custodian;
-        if ($user->hasRole('admin')) {
-            return true;
-        } else {
-            return CustodianHasUser::where([
-                'custodian_id' => $custodian->id,
-                'user_id' => $user->id
-            ])->exists();
-        }
+        return $this->access($user, $collection);
     }
 
     public function delete(User $user, Collection $collection): bool

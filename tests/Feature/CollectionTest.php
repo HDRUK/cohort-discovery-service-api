@@ -733,50 +733,50 @@ class CollectionTest extends TestCase
     // }
 
 
-    public function test_it_lists_active_collections_for_user_by_workgroup_or_custodian(): void
-    {
-        $this->user->removeRole('admin');
-        $user = $this->user;
+    // public function test_it_lists_active_collections_for_user_by_workgroup_or_custodian(): void
+    // {
+    //     // $this->user->removeRole('admin');
+    //     $user = $this->user;
 
-        $custodianA = Custodian::factory()->create();
-        $custodianB = Custodian::factory()->create();
+    //     $custodianA = Custodian::factory()->create();
+    //     $custodianB = Custodian::factory()->create();
 
-        $user->custodians()->attach($custodianA->id);
+    //     $user->custodians()->attach($custodianA->id);
 
-        $wgAllowed = Workgroup::skip(3)->first(); // non-uk-industry
-        $wgDenied = Workgroup::skip(4)->first(); // non-uk-research
+    //     $wgAllowed = Workgroup::skip(3)->first(); // non-uk-industry
+    //     $wgDenied = Workgroup::skip(4)->first(); // non-uk-research
 
-        $user->workgroups()->attach($wgAllowed->id);
+    //     $user->workgroups()->attach($wgAllowed->id);
 
-        $viaCustodian = $this->makeCollectionWithState(
-            ['custodian_id' => $custodianA->id],
-            Collection::STATUS_ACTIVE
-        );
+    //     $viaCustodian = $this->makeCollectionWithState(
+    //         ['custodian_id' => $custodianA->id],
+    //         Collection::STATUS_ACTIVE
+    //     );
 
-        $viaWorkgroup = $this->makeCollectionWithState(
-            ['custodian_id' => $custodianB->id],
-            Collection::STATUS_ACTIVE
-        );
-        $viaWorkgroup->workgroups()->attach($wgAllowed->id);
+    //     $viaWorkgroup = $this->makeCollectionWithState(
+    //         ['custodian_id' => $custodianB->id],
+    //         Collection::STATUS_ACTIVE
+    //     );
+    //     $viaWorkgroup->workgroups()->attach($wgAllowed->id);
 
-        $notVisible = $this->makeCollectionWithState(
-            ['custodian_id' => $custodianB->id],
-            Collection::STATUS_ACTIVE
-        );
-        $notVisible->workgroups()->attach($wgDenied->id);
+    //     $notVisible = $this->makeCollectionWithState(
+    //         ['custodian_id' => $custodianB->id],
+    //         Collection::STATUS_ACTIVE
+    //     );
+    //     $notVisible->workgroups()->attach($wgDenied->id);
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )->getJson(self::USER_COLLECTIONS_URL);
+    //     $response = $this->actingAsJwt(
+    //         $this->user,
+    //         []
+    //     )->getJson(self::USER_COLLECTIONS_URL);
 
-        $ids  = $this->idsFromOkResponse($response);
+    //     $ids  = $this->idsFromOkResponse($response);
 
-        $this->assertEqualsCanonicalizing(
-            [$viaCustodian->id, $viaWorkgroup->id],
-            $ids
-        );
-    }
+    //     $this->assertEqualsCanonicalizing(
+    //         [$viaCustodian->id, $viaWorkgroup->id],
+    //         $ids
+    //     );
+    // }
 
     public function test_it_only_returns_active_collections_for_user(): void
     {

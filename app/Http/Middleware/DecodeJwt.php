@@ -18,6 +18,7 @@ use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Laravel\Pennant\Feature;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 
 class DecodeJwt
 {
@@ -116,41 +117,39 @@ class DecodeJwt
         User $user,
         object $jwtUser,
     ): void {
-
         $ttl = $this->claimsTtlSeconds($claims);
         $jti = $this->claimsJtiOrFail($claims);
 
         $cacheKey = $this->cacheDoneKey($jti);
         $lockKey  = $this->cacheLockKey($jti);
 
+        // Fast path: already synced for this JTI
         if (Cache::get($cacheKey)) {
-            //return;
+            return;
         }
 
-        $lockSeconds = config('claimsaccesscontrol.sync_lock_seconds', 30);
-        $waitSeconds = config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
+        $lockSeconds = (int) config('claimsaccesscontrol.sync_lock_seconds', 30);
+        $waitSeconds = (int) config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
 
+        try {
+            Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
+                if (Cache::get($cacheKey)) {
+                    \Log::info("JWT sync already done for jti={$jti} - skipping");
+                    return;
+                }
 
-        $this->syncWorkgroups($user, $jwtUser);
-        $this->syncRoles($user, $jwtUser);
-        $this->syncCustodians($user, $jwtUser);
+                $this->syncWorkgroups($user, $jwtUser);
+                $this->syncRoles($user, $jwtUser);
+                $this->syncCustodians($user, $jwtUser);
 
+                Cache::put($cacheKey, true, $ttl);
 
-        /*
-                Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser) {
-                    if (Cache::get($cacheKey)) {
-                        \Log::info('Sync Cache locked - aborting');
-                        return;
-                    }
-
-                    $this->syncWorkgroups($user, $jwtUser);
-                    $this->syncRoles($user, $jwtUser);
-                    $this->syncCustodians($user, $jwtUser);
-
-                    Cache::put($cacheKey, true, $ttl);
-
-                    \Log::info('Cached sync and locked');
-                });*/
+                \Log::info("JWT synced + cached done for jti={$jti}");
+            });
+        } catch (LockTimeoutException $e) {
+            \Log::warning("JWT sync lock timeout for jti={$jti} (waitSeconds={$waitSeconds}) - skipping sync this request");
+            return;
+        }
     }
 
     protected function claimsTtlSeconds(object $claims): int
