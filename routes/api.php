@@ -32,7 +32,7 @@ Route::post('/v1/applications', [ApplicationController::class, 'store']);
 Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::get('/v1/users', [UserController::class, 'index']);
     Route::get('/v1/users/{id}', [UserController::class, 'show']);
-    Route::post('/v1/users/{id}/workgroup', [UserController::class, 'addToWorkgroup']); 
+    Route::post('/v1/users/{id}/workgroup', [UserController::class, 'addToWorkgroup']);
     Route::delete('/v1/users/{id}/workgroup/{workgroupId}', [UserController::class, 'removeFromWorkgroup']);
 
     Route::get('/v1/workgroups', [WorkgroupController::class, 'index']);

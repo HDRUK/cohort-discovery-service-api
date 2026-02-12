@@ -2,15 +2,16 @@
 
 namespace Tests;
 
+use DB;
 use App\Models\User;
 use App\Support\ApplicationMode;
+use Tests\Traits\RefreshDatabaseLite;
 use Firebase\JWT\JWT;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
-use Tests\Traits\RefreshDatabaseLite;
 use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
@@ -21,6 +22,14 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         $this->liteSetUp();
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('user_has_roles')->truncate();
+        DB::table('model_has_roles')->truncate();
+        DB::table('model_has_permissions')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        // Hack to clear Spatie permission cache between tests, otherwise permissions leak between runs
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         if (ApplicationMode::isStandalone()) {
             Config::set('api.jwt_secret', Config::get('api.jwt_secret', 'test_secret'));

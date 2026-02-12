@@ -30,9 +30,12 @@ class QueryControllerTest extends TestCase
         Collection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->enableObservers();
 
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
