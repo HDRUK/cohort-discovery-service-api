@@ -123,7 +123,6 @@ class DecodeJwt
         $cacheKey = $this->cacheDoneKey($jti);
         $lockKey  = $this->cacheLockKey($jti);
 
-        // Fast path: already synced for this JTI
         if (Cache::get($cacheKey)) {
             return;
         }
