@@ -1,3 +1,25 @@
+## [1.1.0](https://github.com/HDRUK/project-daphne-api/compare/v1.0.0...v1.1.0) (2026-02-12)
+
+### ✨ Features
+
+* **DP-335:** ...but not really. Puts User lists behind auth middleware ([3d3a414](https://github.com/HDRUK/project-daphne-api/commit/3d3a414e87a7822daa0ef8999ab428d108af34ab)), closes [DP-335](DP-335)
+* **DP-335:** #10 - api updates required for nlp changes ([36b81e7](https://github.com/HDRUK/project-daphne-api/commit/36b81e74dff7bdaa81ff5dd1a3011427758caeaf)), closes [DP-335](DP-335)
+* **DP-335:** #17 Tweaks to handle constraints to ages, and those inferred as general query scope ([38441ef](https://github.com/HDRUK/project-daphne-api/commit/38441ef481f45609932a37205183bcac313053df)), closes [DP-335](DP-335)
+* **DP-335:** #2 adds score and token criteria to the payload ([a36a397](https://github.com/HDRUK/project-daphne-api/commit/a36a397003235ee7726cd76e3d55d2d34cdad807)), closes [DP-335](DP-335)
+* **DP-335:** #21 - changes to remove the eager strtolower killing acronyms for detection ([a72379d](https://github.com/HDRUK/project-daphne-api/commit/a72379d1dfde2c5ae8ac70f69b4347f6f0dd2769)), closes [DP-335](DP-335)
+* **DP-335:** #3 - implements view count and logging to determine if anything is happening in dev ([dac7c11](https://github.com/HDRUK/project-daphne-api/commit/dac7c11af8afabe656a4e15275f0070bcb1ec8b9)), closes [DP-335](DP-335)
+* **DP-335:** #5 logging batch size to see what we can reduce to for testing ([a0b6c5c](https://github.com/HDRUK/project-daphne-api/commit/a0b6c5cac0173e83dc3bca497bd45545271b4ad9)), closes [DP-335](DP-335)
+* **DP-335:** Makes batchSize configurable for distribution file processing ([15ea1fc](https://github.com/HDRUK/project-daphne-api/commit/15ea1fc1b1b24adfba0313f0f4d1b9d806418d4f)), closes [DP-335](DP-335)
+* **DP-345:** Add ability to delete queries alone and in bulk ([3c3fb26](https://github.com/HDRUK/project-daphne-api/commit/3c3fb265b6c95c76ccb960d5035536f37023af98)), closes [DP-345](DP-345)
+* **DP-353:** Implements role sync fully ([303c8c9](https://github.com/HDRUK/project-daphne-api/commit/303c8c98273bc1ab6541312ce2f77d96b05af26a)), closes [DP-353](DP-353)
+* **DP-433:** Ensures age constraints are applied to every rule built from nlp query parse ([55d6a49](https://github.com/HDRUK/project-daphne-api/commit/55d6a490917c0873e1428c2846abca0558f6778f)), closes [DP-433](DP-433)
+
+### 🐛 Bug Fixes
+
+* **DP-335:** #10 - fixes broken Dockerfile ([5956915](https://github.com/HDRUK/project-daphne-api/commit/5956915536088884fe547060630513ce4b822b71))
+* **DP-370:** Fixes query timestamps after move to laravel generated ([bb2b3d0](https://github.com/HDRUK/project-daphne-api/commit/bb2b3d07d004c9573b3e01129c35721bbbddbc16))
+* **DP-373:** Updates re-runs to only run against set collections ([2a49949](https://github.com/HDRUK/project-daphne-api/commit/2a4994970c64b732a5a5c40cbaa2e1a09ae36e1d)), closes [DP-373](DP-373)
+
 ## 1.0.0 (2026-01-08)
 
 ### ✨ Features
