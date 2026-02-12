@@ -48,7 +48,7 @@ class CollectionPolicy
 
     public function update(User $user, Collection $collection): bool
     {
-        return $user->hasRole('admin');
+        return $this->access($user, $collection);
     }
 
     public function delete(User $user, Collection $collection): bool
