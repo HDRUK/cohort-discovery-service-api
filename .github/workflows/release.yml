@@ -11,7 +11,7 @@ env:
   GAR_LOCATION: "${{ secrets.GAR_LOCATION }}"
   SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL}}"
   SLACK_CHANNEL: "${{ secrets.GITHUBACTIONS_SLACK_CHANNEL }}"
-
+  NODE_VERSION: "${{ vars.NODE_VERSION }}"
 jobs:
   semantic: 
     permissions: write-all
