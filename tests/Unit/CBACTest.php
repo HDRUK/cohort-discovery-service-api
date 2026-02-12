@@ -48,7 +48,7 @@ class CBACTest extends TestCase
         // Manually create a workgroup array to simulate valid claims
         $workgroups['workgroups'] = [
             config('claims-access.default_system') => [
-                'cohort-admin',
+                'admin',
                 'uk-research',
             ],
         ];
