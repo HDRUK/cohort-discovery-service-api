@@ -30,9 +30,12 @@ class QueryControllerTest extends TestCase
         Collection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->enableObservers();
 
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -105,6 +108,11 @@ class QueryControllerTest extends TestCase
         $response = $this->actingAsJwt($this->user)
             ->postJson(self::BASE_URL, $payload);
 
+        $content = $response->json('data');
+
+        $queryPid = $content['query_pid'];
+        $this->assertNotNull($queryPid);
+
         $response->assertCreated()
             ->assertJsonStructure([
                 'data' => [
@@ -116,6 +124,10 @@ class QueryControllerTest extends TestCase
 
         $this->assertDatabaseCount(Task::class, $n);
         $this->assertDatabaseHas(Query::class, ['name' => 'Test Query']);
+
+        $q = Query::where('pid', $queryPid)->first();
+        $this->assertNotNull($q->created_at);
+        $this->assertNotNull($q->updated_at);
 
         $this->enableObservers();
     }
@@ -236,6 +248,87 @@ class QueryControllerTest extends TestCase
         foreach ($tasks as $t) {
             $this->assertEquals($t->query_id, $query->id);
             $this->assertEquals($t->completed_at, null);
+        }
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_delete_a_single_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pid = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now delete the query
+        $response = $this->actingAsJwt($this->user)
+            ->deleteJson(self::QUERY_URL.'/'.$pid);
+
+        $response->assertStatus(200);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_delete_queries_in_bulk(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $pids = [];
+
+        $collections = Collection::factory()->bunny()->count(3)->create();
+
+        $payload = [
+            'name' => 'Test Query 123',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pids[] = $response->decodeResponseJson()['data']['query_pid'];
+
+        $payload = [
+            'name' => 'Test Query 123456',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL, $payload);
+
+        $response->assertCreated();
+
+        $pids[] = $response->decodeResponseJson()['data']['query_pid'];
+
+        // Now delete the queries in bulk
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL . '/delete/bulk', [
+                'keys' => $pids,
+            ]);
+
+        $response->assertStatus(200);
+
+        $queries = Query::whereIn('pid', $pids)->get();
+        foreach ($queries as $query) {
+            $this->assertTrue($query->deleted_at !== null);
         }
     }
 }

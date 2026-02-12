@@ -41,9 +41,9 @@ class RBACTest extends TestCase
         $this->assertFalse($user->can('cohorts:delete'));
 
         $user->removeRole('custodian');
-        $user->assignRole('researcher');
+        $user->assignRole('user');
 
-        $this->assertTrue($user->hasRole('researcher'));
+        $this->assertTrue($user->hasRole('user'));
         $this->assertFalse($user->hasRole('custodian'));
 
         $this->assertTrue($user->can('cohorts:read'));

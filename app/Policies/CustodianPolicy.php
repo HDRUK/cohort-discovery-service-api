@@ -3,8 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Custodian;
+use App\Models\CustodianHasUser;
 use App\Models\User;
-use Illuminate\Support\Arr;
 
 class CustodianPolicy
 {
@@ -13,35 +13,38 @@ class CustodianPolicy
      */
     public function access(User $user, Custodian $custodian): bool
     {
-        $userObject = null;
-
-        $claims = $this->toArray(request()->attributes->get('jwt_claims', []));
-        $userObject = $this->toArray($claims['user'] ?? []);
-
-        if (! $userObject || ($userObject['email'] ?? null) !== $user->email) {
-            return false;
+        if ($user->hasRole('admin')) {
+            return true;
+        } else {
+            return CustodianHasUser::where([
+                'user_id' => $user->id,
+                'custodian_id' => $custodian->id
+            ])->exists();
         }
-
-        $cohortAdminTeamIds = array_map('strval', Arr::pluck($userObject['cohort_admin_teams'] ?? [], 'id'));
-
-        // note: this is currently quite specific to the gateway
-        // - we map a custodian to a gateway 'team'
-        // - we check if this user is a team cohortAdmin on this gateway team
-        // - the user claims tell us what teams they are cohortAdmins on
-        // - if so, we check if the custodian is linked to this gateway team
-        // - access is granted based on this
-        return in_array($custodian->external_custodian_id, $cohortAdminTeamIds, true);
     }
 
-    private function toArray($value): array
+    public function viewAny(User $user): bool
     {
-        if (is_array($value)) {
-            return $value;
-        }
-        if (is_object($value)) {
-            return json_decode(json_encode($value), true);
-        }
+        return true;
+    }
 
-        return (array) $value;
+    public function view(User $user, Custodian $custodian): bool
+    {
+        return $this->access($user, $custodian);
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    public function update(User $user, Custodian $custodian): bool
+    {
+        return $this->access($user, $custodian);
+    }
+
+    public function delete(User $user, Custodian $custodian): bool
+    {
+        return $user->hasRole('admin');
     }
 }

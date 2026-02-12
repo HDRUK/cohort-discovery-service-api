@@ -28,12 +28,15 @@ class DownloadableTest extends TestCase
         ];
 
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     public function test_it_can_export_queries_to_json(): void
     {
         $this->enableMiddleware();
         $this->enableObservers();
+
+        $altUser = User::factory()->create();
 
         $collections = Collection::factory(3)->create();
 
@@ -43,6 +46,7 @@ class DownloadableTest extends TestCase
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
             'task_type' => TaskType::A,
+            'user_id' => $this->user->id,
         ]);
 
         $response = $this->actingAsJwt(
@@ -58,12 +62,35 @@ class DownloadableTest extends TestCase
         $this->assertEquals($data[0]['id'], $query->id);
         $this->assertEquals($data[0]['pid'], $query->pid);
         $this->assertEquals($data[0]['name'], $query->name);
+
+        $response = $this->actingAsJwt($altUser)
+            ->getJson(str_replace('{pid}', $query->pid, $this->urls[0]));
+        $response->assertForbidden();
+
+
+        $query = Query::create([
+            'pid' => Str::uuid(),
+            'name' => 'Test Query',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+            'user_id' => $altUser->id,
+        ]);
+
+        $response = $this->actingAsJwt(
+            $altUser,
+            []
+        )
+            ->getJson(str_replace('{pid}', $query->pid, $this->urls[0]));
+        $response->assertStatus(200);
     }
 
     public function test_it_can_export_queries_to_csv(): void
     {
         $this->enableMiddleware();
         $this->enableObservers();
+
+        $altUser = User::factory()->create();
 
         $collections = Collection::factory(3)->create();
 
@@ -73,6 +100,7 @@ class DownloadableTest extends TestCase
             'definition' => ['some' => 'definition'],
             'collection_filter' => $collections->pluck('pid')->toArray(),
             'task_type' => TaskType::A,
+            'user_id' => $this->user->id,
         ]);
 
         $response = $this->actingAsJwt(
@@ -97,5 +125,25 @@ class DownloadableTest extends TestCase
         $this->assertEquals($records[0][0], $query->id);
         $this->assertEquals($records[0][1], $query->pid);
         $this->assertEquals($records[0][2], $query->name);
+
+        $response = $this->actingAsJwt($altUser)
+            ->getJson(str_replace('{pid}', $query->pid, $this->urls[1]));
+        $response->assertForbidden();
+
+        $query = Query::create([
+            'pid' => Str::uuid(),
+            'name' => 'Test Query',
+            'definition' => ['some' => 'definition'],
+            'collection_filter' => $collections->pluck('pid')->toArray(),
+            'task_type' => TaskType::A,
+            'user_id' => $altUser->id,
+        ]);
+
+        $response = $this->actingAsJwt(
+            $altUser,
+            []
+        )
+            ->getJson(str_replace('{pid}', $query->pid, $this->urls[1]));
+        $response->assertStatus(200);
     }
 }

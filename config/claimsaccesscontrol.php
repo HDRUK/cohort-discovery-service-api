@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'sync_lock_seconds' => env('JWT_READ_LOCK_SECONDS', 10),
+    'sync_lock_wait_seconds' => env('JWT_LOCK_WAIT_SECONDS', 2),
     /**
      * Workgroup mappings allow us to override the known workgroups within
      * Hdruk's ClaimsBasedAccessControl package. This basically allows
@@ -23,5 +25,11 @@ return [
         'uk-industry' => 'external-uk-industry',
         'uk-research' => 'external-uk-research',
         'nhs-sde' => 'external-nhs-sde',
+    ],
+
+    'role_mappings' => [
+        'user' => 'GENERAL_ACCESS',
+        'admin' => 'SYSTEM_ADMIN',
+        'custodian' => 'CUSTODIAN',
     ],
 ];

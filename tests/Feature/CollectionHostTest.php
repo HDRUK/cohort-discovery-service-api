@@ -2,12 +2,13 @@
 
 namespace Tests\Feature;
 
+use DB;
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
+use App\Models\CustodianHasUser;
 use App\Models\User;
-use DB;
 use Tests\TestCase;
 
 class CollectionHostTest extends TestCase
@@ -27,6 +28,9 @@ class CollectionHostTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
+
+        $this->enableMiddleware();
     }
 
     public function test_it_can_list_collection_hosts()
@@ -39,14 +43,18 @@ class CollectionHostTest extends TestCase
             'collection_id' => $collection->id,
         ]);
 
-        $response = $this->getJson(self::BASE_URL);
-
+        $response = $this->actingAsJwt($this->user, [])->getJson(self::BASE_URL);
         $response->assertStatus(200);
-        $content = $response->json();
 
+        $content = $response->json();
         $this->assertIsArray($content['data']);
         $this->assertNotEmpty($content['data'][0]);
         $this->assertNotEmpty($content['data'][0]['collections']);
+
+        $this->user->removeRole('admin');
+
+        $response = $this->actingAsJwt($this->user, [])->getJson(self::BASE_URL);
+        $response->assertStatus(403);
     }
 
     public function test_it_can_show_a_collection_host()
@@ -61,13 +69,22 @@ class CollectionHostTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonFragment(['id' => $host->id]);
+
+        $this->user->removeRole('admin');
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->getJson(self::BASE_URL.'/'.$host->id);
+        $response->assertStatus(403);
     }
 
     public function test_it_returns_invalid_for_missing_collection_host()
     {
         // LS - Changed to match the new failed validation rules on this class
         // 422 supersedes 404 as validation path is run first.
-        $response = $this->getJson(self::BASE_URL.'/9999');
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/9999');
         $response->assertStatus(422);
     }
 
@@ -84,19 +101,34 @@ class CollectionHostTest extends TestCase
         // Create related models if needed
         Collection::factory()->create(['id' => 1]);
 
-        $response = $this->postJson(self::BASE_URL, $data);
+        $response = $this->actingAsJwt($this->user, [])
+            ->postJson(self::BASE_URL, $data);
 
         $response->assertStatus(201)
             ->assertJsonFragment(['name' => 'Host Test']);
+
+        $altUser = User::factory()->create();
+        CustodianHasUser::create([
+            'user_id' => $altUser->id,
+            'custodian_id' => $data['custodian_id'],
+        ]);
+
+        $data['name'] = 'Host Test 2';
+
+        $response = $this->actingAsJwt($altUser, [])
+            ->postJson(self::BASE_URL, $data);
+        $response->assertStatus(201)
+            ->assertJsonFragment(['name' => 'Host Test 2']);
     }
 
     public function test_it_can_update_a_collection_host()
     {
         $host = CollectionHost::factory()->create();
 
-        $response = $this->putJson(self::BASE_URL.'/'.$host->id, [
-            'name' => 'Updated Host',
-        ]);
+        $response = $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$host->id, [
+                'name' => 'Updated Host',
+            ]);
 
         $response->assertStatus(200)
             ->assertJsonFragment(['name' => 'Updated Host']);
@@ -106,7 +138,8 @@ class CollectionHostTest extends TestCase
     {
         $host = CollectionHost::factory()->create();
 
-        $response = $this->deleteJson(self::BASE_URL.'/'.$host->id);
+        $response = $this->actingAsJwt($this->user, [])
+            ->deleteJson(self::BASE_URL.'/'.$host->id);
 
         $response->assertStatus(200);
 

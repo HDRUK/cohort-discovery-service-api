@@ -2,16 +2,16 @@
 
 namespace App\Jobs;
 
-use App\Models\Distribution;
 use App\Models\ResultFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
-use Illuminate\Support\Facades\Log;
 
 class ProcessDistributionFile implements ShouldQueue
 {
@@ -20,31 +20,33 @@ class ProcessDistributionFile implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    private string $tag = 'ProcessDistributionFile';
+
     public $timeout = 120;
-
     public $tries = 2;
-
     public $backoff = 10;
 
-    public $batchSize = 500;
+    private int $batchSize;
 
     public function __construct(public int $resultFileId)
     {
-        Log::info('ProcessDistributionFile constructed', [
-             'result_file_id' => $resultFileId,
-        ]);
+        $this->batchSize = (int) (config('system.distribution_batch_file_size') ?? 100);
 
+        Log::info("[{$this->tag}] constructed", [
+            'result_file_id' => $resultFileId,
+            'batch_size'     => $this->batchSize,
+        ]);
     }
 
     public function handle(): void
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
-        Log::info('ProcessDistributionFile starting', [
-                'result_file_id' => $this->resultFileId,
-                'path'           => $file->path,
+        Log::info('[' . $this->tag . '] starting', [
+            'result_file_id' => $this->resultFileId,
+            'path'           => $file->path,
+            'file_name'      => $file->file_name,
         ]);
-
 
         if ($file->status === ResultFile::STATUS_DONE) {
             return;
@@ -54,100 +56,174 @@ class ProcessDistributionFile implements ShouldQueue
 
         $stream = Storage::readStream($file->path);
         if (! $stream) {
-            Log::error('Failed to open file stream', [
-                'path'    => $file->path,
+            Log::error('[' . $this->tag . '] Failed to open file stream', [
+                'path' => $file->path,
             ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
         $header = null;
-        $batch = [];
-        $rowsProcessed = 0;
+        $batch  = [];
+
+        $rowsSeen = 0;
+        $skipped = [
+            'bad_header'     => 0,
+            'col_mismatch'   => 0,
+            'missing_count'  => 0,
+        ];
+
         $now = now();
 
         $codeField = $file->file_name === 'code.distribution' ? 'OMOP' : 'CODE';
         $descField = $file->file_name === 'code.distribution' ? 'OMOP_DESCR' : 'DESCRIPTION';
+
+        $rowTemplate = [
+            'collection_id'  => null,
+            'task_id'        => null,
+            'result_file_id' => null,
+
+            'category'       => null,
+            'name'           => null,
+            'description'    => null,
+            'concept_id'     => null,
+
+            'count'          => null,
+            'q1'             => null,
+            'q3'             => null,
+            'min'            => null,
+            'max'            => null,
+            'mean'           => null,
+            'median'         => null,
+
+            'created_at'     => null,
+            'updated_at'     => null,
+        ];
 
         try {
             while (($line = fgets($stream)) !== false) {
                 $line = rtrim($line, "\r\n");
 
                 if ($header === null) {
-                    $header = preg_split("/\t/", $line);
-                    if (! $header) {
+                    if (trim($line) === '') {
+                        $skipped['bad_header']++;
                         continue;
                     }
 
-                    $header[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $header[0]);
+                    $tmpHeader = array_map('trim', explode("\t", $line));
+                    $tmpHeader[0] = preg_replace('/^\xEF\xBB\xBF/u', '', $tmpHeader[0]);
 
+                    if (count(array_filter($tmpHeader, fn ($h) => $h !== '')) === 0) {
+                        $skipped['bad_header']++;
+                        continue;
+                    }
+
+                    $header = $tmpHeader;
                     continue;
                 }
 
-                $cols = preg_split("/\t/", $line, -1);
+                $cols = explode("\t", $line);
+                if (count($cols) < count($header)) {
+                    $cols = array_pad($cols, count($header), '');
+                }
+
                 if (count($cols) !== count($header)) {
+                    $skipped['col_mismatch']++;
                     continue;
                 }
 
                 $row = array_combine($header, $cols);
+
                 if (! isset($row['COUNT'])) {
+                    $skipped['missing_count']++;
                     continue;
                 }
 
-                $conceptId = $row[$codeField] ?? $row['CODE'] ?? null;
-                $conceptId = $conceptId !== null && $conceptId !== '' ? (int) $conceptId : null;
+                $rowsSeen++;
+
+                $category = isset($row['CATEGORY']) ? trim((string) $row['CATEGORY']) : null;
+
+                $name = $row[$codeField] ?? $row['CODE'] ?? null;
+                $name = $name !== null ? trim((string) $name) : null;
+
+                $conceptIdRaw = $row[$codeField] ?? $row['CODE'] ?? null;
+                $conceptId = ($conceptIdRaw !== null && $conceptIdRaw !== '')
+                    ? (int) $conceptIdRaw
+                    : null;
 
                 $base = [
-                    'collection_id' => $file->collection_id,
-                    'task_id' => $file->task_id,
-                    'category' => $row['CATEGORY'] ?? null,
-                    'name' => $row[$codeField] ?? $row['CODE'] ?? null,
-                    'description' => $row[$descField] ?? null,
-                    'concept_id' => $conceptId,
-                    'count' => (int) $row['COUNT'],
-                    'q1' => $row['Q1'] ?? null,
-                    'q3' => $row['Q3'] ?? null,
-                    'min' => $row['MIN'] ?? null,
-                    'max' => $row['MAX'] ?? null,
-                    'mean' => $row['MEAN'] ?? null,
-                    'median' => $row['MEDIAN'] ?? null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    'collection_id'  => $file->collection_id,
+                    'task_id'        => $file->task_id,
+                    'result_file_id' => $file->id,
+
+                    'category'       => $category,
+                    'name'           => $name,
+                    'description'    => $row[$descField] ?? null,
+                    'concept_id'     => $conceptId,
+
+                    'count'          => (int) $row['COUNT'],
+                    'q1'             => $row['Q1'] ?? null,
+                    'q3'             => $row['Q3'] ?? null,
+                    'min'            => $row['MIN'] ?? null,
+                    'max'            => $row['MAX'] ?? null,
+                    'mean'           => $row['MEAN'] ?? null,
+                    'median'         => $row['MEDIAN'] ?? null,
+
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
                 ];
 
-                $batch[] = $base;
+                $batch[] = array_merge($rowTemplate, $base);
 
                 if (! empty($row['ALTERNATIVES'])) {
-                    $segments = explode('^', trim($row['ALTERNATIVES'], '^'));
+                    $segments = explode('^', trim((string) $row['ALTERNATIVES'], '^'));
                     foreach ($segments as $seg) {
                         if (strpos($seg, '|') !== false) {
-                            [$name, $count] = explode('|', $seg, 2);
-                            $batch[] = [
-                                'collection_id' => $file->collection_id,
-                                'task_id' => $file->task_id,
-                                'category' => $row['CATEGORY'] ?? null,
-                                'name' => (string) $name,
-                                'description' => (string) $name,
-                                'count' => (int) $count,
-                                'created_at' => $now,
-                                'updated_at' => $now,
+                            [$altName, $altCount] = explode('|', $seg, 2);
+
+                            $altName = trim((string) $altName);
+
+                            $altRow = [
+                                'collection_id'  => $file->collection_id,
+                                'task_id'        => $file->task_id,
+                                'result_file_id' => $file->id,
+
+                                'category'       => $category,
+                                'name'           => $altName,
+                                'description'    => $altName,
+                                'concept_id'     => null,
+
+                                'count'          => (int) $altCount,
+
+                                'created_at'     => $now,
+                                'updated_at'     => $now,
                             ];
+
+                            $batch[] = array_merge($rowTemplate, $altRow);
                         }
                     }
                 }
 
                 if (count($batch) >= $this->batchSize) {
-                    $this->persistBatchWithCreate($batch);
-                    $rowsProcessed += count($batch);
+                    $this->persistBatchUpsert($batch);
                     $batch = [];
                 }
             }
 
             if (! empty($batch)) {
-                $this->persistBatchWithCreate($batch);
-                $rowsProcessed += count($batch);
+                $this->persistBatchUpsert($batch);
             }
 
-            $file->markDone($rowsProcessed);
+            Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
+            RefreshDistributionConceptsView::dispatch();
+
+            $file->markDone($rowsSeen);
+
+            Log::info('[' . $this->tag . '] finished', [
+                'result_file_id' => $file->id,
+                'task_id'        => $file->task_id,
+                'rows_seen'      => $rowsSeen,
+                'skipped'        => $skipped,
+            ]);
         } finally {
             fclose($stream);
         }
@@ -160,18 +236,19 @@ class ProcessDistributionFile implements ShouldQueue
         }
     }
 
-    private function persistBatchWithCreate(array $rows): void
+    private function persistBatchUpsert(array $rows): void
     {
-        foreach ($rows as $data) {
-            Distribution::create($data);
-        }
+        $uniqueBy = ['task_id', 'result_file_id', 'category', 'name'];
 
-        RefreshDistributionConceptsView::dispatch();
-        // note - to be revisited
-        //      - this can copy over ancestors locally
-        //        based on what distributions we have
-        //      - instead of having to use the full concept_ancestor table
-        // PopulateLocalConceptAncestors::dispatch();
+        $update = [
+            'collection_id',
+            'description',
+            'concept_id',
+            'count',
+            'q1', 'q3', 'min', 'max', 'mean', 'median',
+            'updated_at',
+        ];
 
+        DB::table('distributions')->upsert($rows, $uniqueBy, $update);
     }
 }

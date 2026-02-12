@@ -27,13 +27,15 @@ class NLPConceptExtractor
 
         // dd($response->json());
 
+        $payload = $response->json();
+
         NlpQueryLog::create([
             'query' => $query,
-            'nlp_extracted' => json_encode($response->json('entities', [])),
+            'nlp_extracted' => json_encode($payload['entities'] ?? []),
             'user_id' => 0, // TODO - Add Auth::id() - haven't because it's not
             // passed through as-is for some reason - to investigate
         ]);
 
-        return $response->json('entities', []);
+        return $payload;
     }
 }
