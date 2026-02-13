@@ -79,6 +79,8 @@ class StandaloneDemoSeeder extends Seeder
            'password' => Hash::make(config('system.demo_researcher_password')),
         ]);
         $this->addToWorkgroup($researcher, 'UK-RESEARCH');
+        $researcher->assignRole('user');
+
         // ----------------------
 
 
