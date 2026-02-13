@@ -18,6 +18,7 @@ use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Laravel\Pennant\Feature;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 
 class DecodeJwt
 {
@@ -126,24 +127,28 @@ class DecodeJwt
             return;
         }
 
-        $lockSeconds = config('claimsaccesscontrol.sync_lock_seconds', 30);
-        $waitSeconds = config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
+        $lockSeconds = (int) config('claimsaccesscontrol.sync_lock_seconds', 30);
+        $waitSeconds = (int) config('claimsaccesscontrol.sync_lock_wait_seconds', 5);
 
+        try {
+            Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
+                if (Cache::get($cacheKey)) {
+                    \Log::info("JWT sync already done for jti={$jti} - skipping");
+                    return;
+                }
 
-        Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser) {
-            if (Cache::get($cacheKey)) {
-                \Log::info('Sync Cache locked - aborting');
-                return;
-            }
+                $this->syncWorkgroups($user, $jwtUser);
+                $this->syncRoles($user, $jwtUser);
+                $this->syncCustodians($user, $jwtUser);
 
-            $this->syncWorkgroups($user, $jwtUser);
-            $this->syncRoles($user, $jwtUser);
-            $this->syncCustodians($user, $jwtUser);
+                Cache::put($cacheKey, true, $ttl);
 
-            Cache::put($cacheKey, true, $ttl);
-
-            \Log::info('Cached sync and locked');
-        });
+                \Log::info("JWT synced + cached done for jti={$jti}");
+            });
+        } catch (LockTimeoutException $e) {
+            \Log::warning("JWT sync lock timeout for jti={$jti} (waitSeconds={$waitSeconds}) - skipping sync this request");
+            return;
+        }
     }
 
     protected function claimsTtlSeconds(object $claims): int
@@ -181,7 +186,29 @@ class DecodeJwt
 
     protected function syncWorkgroups(User $user, object $jwtUser): void
     {
+        $defaultWgIds = [];
+
+        if (Feature::active('add-user-to-default-wg')) {
+            $defaultWgId = Workgroup::where('name', 'DEFAULT')->value('id');
+            if ($defaultWgId) {
+                $defaultWgIds[] = $defaultWgId;
+            }
+        }
+
+        $hasSdeApproval = $jwtUser->is_nhse_sde_approval ?? false;
+
+        if ($hasSdeApproval && Feature::active('add-user-to-nhs-sde-wgs')) {
+            $sdeWgIds = Workgroup::whereIn('name', [
+                'NHS-SDE',
+                'UK-INDUSTRY',
+                'UK-RESEARCH',
+            ])->pluck('id');
+
+            $defaultWgIds = array_merge($defaultWgIds, $sdeWgIds->toArray());
+        }
+
         if (Feature::active('manage-workgroups-internal')) {
+            $user->workgroups()->sync($defaultWgIds);
             return;
         }
 
@@ -214,7 +241,8 @@ class DecodeJwt
             ->pluck('id')
             ->toArray();
 
-        $user->workgroups()->sync($workgroupIds);
+        $finalIds = array_values(array_unique(array_merge($defaultWgIds, $workgroupIds)));
+        $user->workgroups()->sync($finalIds);
     }
 
     protected function syncRoles(User $user, object $jwtUser): void
