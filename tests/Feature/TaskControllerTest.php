@@ -436,4 +436,37 @@ class TaskControllerTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_ok_for_status_endpoint_with_valid_credentials(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'test-client',
+            'client_secret' => 'test-secret',
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+
+        $response = $this->get('/link_connector_api/task/status/xxxx-xxxx-xxxx-xxxx', [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}"),
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([]);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_unauthorized_for_status_endpoint_with_invalid_credentials(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $response = $this->get('/link_connector_api/task/status/some-pid', [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("invalid-client:invalid-secret"),
+        ]);
+
+        $response->assertStatus(401);
+    }
 }

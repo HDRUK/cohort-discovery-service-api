@@ -80,7 +80,7 @@ class StandaloneDemoSeeder extends Seeder
         ]);
         $this->addToWorkgroup($researcher, 'UK-RESEARCH');
         $researcher->assignRole('user');
-        
+
         // ----------------------
 
 
