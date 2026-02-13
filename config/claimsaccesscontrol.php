@@ -14,17 +14,18 @@ return [
      *
      * There is currently no scope to provide workgroups that are
      * unknown to ClaimsBasedAccessControl package.
+     *
+     * The default workgroup mappings are for HDRUK gateway
+     *
      */
     'workgroup_mappings' => [
-        'admin' => 'cohort-admin',
-        'default' => 'external-lowest',
-        //'custodian' => 'cohort-custodian',
-        'non-uk-industry' => 'external-non-uk-industry',
-        'non-uk-research' => 'external-non-uk-research',
-        'other' => 'external-other',
-        'uk-industry' => 'external-uk-industry',
-        'uk-research' => 'external-uk-research',
-        'nhs-sde' => 'external-nhs-sde',
+        'admin' => 'admin',
+        'default' => 'default',
+        'non-uk-industry' => 'non-uk-industry',
+        'non-uk-research' => 'non-uk-research',
+        'uk-industry' => 'uk-industry',
+        'uk-research' => 'uk-research',
+        'nhs-sde' => 'nhs-sde',
     ],
 
     'role_mappings' => [
