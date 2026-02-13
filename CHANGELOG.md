@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/HDRUK/project-daphne-api/compare/v1.1.0...v1.2.0) (2026-02-13)
+
+### ✨ Features
+
+* **DP-438:** Implements BC|INSIGHTS status endpoint ([2bd38e8](https://github.com/HDRUK/project-daphne-api/commit/2bd38e8860b36a7b9f0625f8e98b15d32983611c)), closes [DP-438](DP-438) [endpoint](dpoint)
+
 ## [1.1.0](https://github.com/HDRUK/project-daphne-api/compare/v1.0.0...v1.1.0) (2026-02-12)
 
 ### ✨ Features
