@@ -562,4 +562,8 @@ class TaskController extends Controller
         }
     }
 
+    public function status(Request $request, string $pid): JsonResponse
+    {
+        return $this->OKResponse([]);
+    }
 }
