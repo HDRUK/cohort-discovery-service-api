@@ -1,8 +1,5 @@
 <?php
 
-// Temporary workaround to suppress vendor deprecation noise
-error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
-
 use Illuminate\Http\Request;
 use App\Http\Middleware\ClaimBasedAccessControl;
 use App\Http\Middleware\CollectionHostBasicAuth;
