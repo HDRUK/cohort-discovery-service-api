@@ -29,7 +29,11 @@ class WorkgroupTest extends TestCase
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Workgroup::truncate();
+        UserHasWorkgroup::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
 
         foreach ($this->workgroups as $w) {
             Workgroup::create([
