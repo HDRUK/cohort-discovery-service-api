@@ -44,4 +44,5 @@ Feature::define('integrated-sync-sde-wgs-from-claim', fn () => true);
 */
 
 Feature::define('integrated-sync-roles-every-request', fn () => true);
-Feature::define('integrated-sync-teams-every-request', fn () => true);
+
+Feature::define('integrated-sync-custodians-every-request', fn () => true);
