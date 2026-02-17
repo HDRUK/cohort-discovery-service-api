@@ -127,7 +127,8 @@ class DecodeJwt
         $lockKey  = $this->cacheLockKey($jti);
 
         if (Cache::get($cacheKey)) {
-            //return;
+            \Log::info("JWT sync already done for jti={$jti} - skipping");
+            return;
         }
 
         $lockSeconds = (int) config('claimsaccesscontrol.sync_lock_seconds', 30);
@@ -135,10 +136,7 @@ class DecodeJwt
 
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
-                if (Cache::get($cacheKey)) {
-                    \Log::info("JWT sync already done for jti={$jti} - skipping");
-                    //return;
-                }
+
 
                 $this->workgroupSyncer->sync(
                     $user,
