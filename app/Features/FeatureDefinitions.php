@@ -8,6 +8,40 @@ Feature::define('query-builder', fn () => true);
 Feature::define('constrain-for-bunny-v1', fn () => true);
 Feature::define('query-nlp', fn () => true);
 Feature::define('in-app-messenger', fn () => false);
-Feature::define('manage-workgroups-internal', fn () => false);
-Feature::define('add-user-to-default-wg', fn () => true);
-Feature::define('add-user-to-nhs-sde-wgs', fn () => true);
+
+
+/*
+ --- Workgroup Behaviour Flags ----
+*/
+
+/**
+ * Always sync workgroups from the token
+ * To be used if you're managing workgroups externally
+ */
+Feature::define('integrated-sync-workgroups-every-request', fn () => false);
+
+/**
+ * Sync workgroups from the token ONLY the first time
+ * To be used if you're managing workgroups internally but
+ * want to sync them on first login so a user is added to some default WGs
+ */
+Feature::define('integrated-sync-workgroups-first-login', fn () => true);
+
+/**
+ * Ensure default workgroups are present
+ */
+Feature::define('integrated-ensure-default-wgs', fn () => true);
+
+/**
+ * If true and token claim is_nhse_sde_approval = true,
+ * also add NHS-SDE related workgroups as default if default workgroups are added
+ */
+Feature::define('integrated-sync-sde-wgs-from-claim', fn () => true);
+
+
+/*
+ --- Roles and Teams Behaviour Flags ----
+*/
+
+Feature::define('integrated-sync-roles-every-request', fn () => true);
+Feature::define('integrated-sync-teams-every-request', fn () => true);
