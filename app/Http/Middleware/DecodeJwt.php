@@ -137,7 +137,6 @@ class DecodeJwt
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
 
-
                 $this->workgroupSyncer->sync(
                     $user,
                     $jwtUser->workgroups ?? [],
@@ -153,7 +152,6 @@ class DecodeJwt
                     $user,
                     $jwtUser->cohort_admin_teams ?? []
                 );
-
 
                 Cache::put($cacheKey, true, $ttl);
 

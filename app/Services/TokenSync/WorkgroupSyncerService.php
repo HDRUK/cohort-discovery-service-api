@@ -25,13 +25,12 @@ class WorkgroupSyncerService
             $syncEveryRequest ||
             ($syncFirstLogin && is_null($user->integrated_wg_synced_at));
 
-        \Log::info('syncEveryRequest ? '. json_encode($syncEveryRequest));
-        \Log::info('syncFirstLogin ? '. json_encode($syncFirstLogin));
-        \Log::info('performing sync ? '. json_encode($performSync));
-
         if (!$performSync) {
+            \Log::info('Not performing workgroup sync');
             return;
         }
+
+        \Log::info('Performing workgroup sync');
 
         $defaultWgIds = $this->defaultWorkgroupIds($hasSdeApproval);
         $mappedIds = $this->mapTokenWorkgroupsToInternalIds($tokenWorkgroups);
