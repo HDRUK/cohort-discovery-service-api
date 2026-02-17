@@ -2,13 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use Spatie\Permission\Models\Role;
-use App\Models\Custodian;
 use App\Models\User;
-use App\Models\Workgroup;
 use App\Support\ApplicationMode;
 use Closure;
-use App\Traits\Workgroups;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Http\Request;
@@ -17,15 +13,22 @@ use Illuminate\Support\Facades\Cache;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
-use Laravel\Pennant\Feature;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use App\Services\TokenSync\RoleSyncerService;
+use App\Services\TokenSync\CustodianSyncerService;
+use App\Services\TokenSync\WorkgroupSyncerService;
 
 class DecodeJwt
 {
-    use Workgroups;
-
     private const CACHE_DONE_PREFIX = 'jwt_sync_done:v1:integrated:';
     private const CACHE_LOCK_PREFIX = 'jwt_sync_lock:v1:integrated:';
+
+    public function __construct(
+        private readonly WorkgroupSyncerService $workgroupSyncer,
+        private readonly RoleSyncerService $roleSyncer,
+        private readonly CustodianSyncerService $custodianSyncer,
+    ) {
+    }
 
     public function handle(Request $request, Closure $next)
     {
@@ -124,6 +127,7 @@ class DecodeJwt
         $lockKey  = $this->cacheLockKey($jti);
 
         if (Cache::get($cacheKey)) {
+            \Log::info("JWT sync already done for jti={$jti} - skipping");
             return;
         }
 
@@ -132,14 +136,22 @@ class DecodeJwt
 
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
-                if (Cache::get($cacheKey)) {
-                    \Log::info("JWT sync already done for jti={$jti} - skipping");
-                    return;
-                }
 
-                $this->syncWorkgroups($user, $jwtUser);
-                $this->syncRoles($user, $jwtUser);
-                $this->syncCustodians($user, $jwtUser);
+                $this->workgroupSyncer->sync(
+                    $user,
+                    $jwtUser->workgroups ?? [],
+                    $jwtUser->is_nhse_sde_approval ?? false,
+                );
+
+                $this->roleSyncer->sync(
+                    $user,
+                    $jwtUser->cohort_discovery_roles ?? []
+                );
+
+                $this->custodianSyncer->sync(
+                    $user,
+                    $jwtUser->cohort_admin_teams ?? []
+                );
 
                 Cache::put($cacheKey, true, $ttl);
 
@@ -182,132 +194,6 @@ class DecodeJwt
     protected function cacheLockKey(string $jti): string
     {
         return self::CACHE_LOCK_PREFIX.$jti;
-    }
-
-    protected function syncWorkgroups(User $user, object $jwtUser): void
-    {
-        $defaultWgIds = [];
-
-        if (Feature::active('add-user-to-default-wg')) {
-            $defaultWgId = Workgroup::where('name', 'DEFAULT')->value('id');
-            if ($defaultWgId) {
-                $defaultWgIds[] = $defaultWgId;
-            }
-        }
-
-        $hasSdeApproval = $jwtUser->is_nhse_sde_approval ?? false;
-
-        if ($hasSdeApproval && Feature::active('add-user-to-nhs-sde-wgs')) {
-            $sdeWgIds = Workgroup::whereIn('name', [
-                'NHS-SDE',
-                'UK-INDUSTRY',
-                'UK-RESEARCH',
-            ])->pluck('id');
-
-            $defaultWgIds = array_merge($defaultWgIds, $sdeWgIds->toArray());
-        }
-
-        if (Feature::active('manage-workgroups-internal')) {
-            $user->workgroups()->sync($defaultWgIds);
-            return;
-        }
-
-        $workgroupMap = config('claimsaccesscontrol.workgroup_mappings', []);
-        $externalWorkgroups = $jwtUser->workgroups ?? null;
-
-        if (! isset($externalWorkgroups)) {
-            throw new \Exception('Invalid token: no workgroups set');
-        }
-
-        $externalNames = collect($externalWorkgroups)
-            ->pluck('name')
-            ->values()
-            ->all();
-
-        // Check if externalNames match either the keys (internal names that are also external)
-        // or the values (configured external names) in the workgroupMap
-        $internalNames = collect($workgroupMap)
-            ->filter(
-                fn ($externalValue, $internalKey) =>
-                in_array($internalKey, $externalNames, true) ||
-                in_array($externalValue, $externalNames, true)
-            )
-            ->keys()
-            ->values()
-            ->all();
-
-        $workgroupIds = Workgroup::query()
-            ->whereIn(\DB::raw('LOWER(name)'), $internalNames)
-            ->pluck('id')
-            ->toArray();
-
-        $finalIds = array_values(array_unique(array_merge($defaultWgIds, $workgroupIds)));
-        $user->workgroups()->sync($finalIds);
-    }
-
-    protected function syncRoles(User $user, object $jwtUser): void
-    {
-        $roleMap = config('claimsaccesscontrol.role_mappings');
-        $externalRoles = $jwtUser->cohort_discovery_roles ?? null;
-
-        if (! isset($externalRoles)) {
-            $user->roles()->sync([]);
-            throw new \Exception('Invalid token: no roles set');
-        }
-
-        $externalNames = collect($externalRoles)
-            ->filter()
-            ->values()
-            ->all();
-
-        $internalNames = collect($roleMap)
-            ->filter(fn ($external) => in_array($external, $externalNames, true))
-            ->keys()
-            ->map(fn ($n) => mb_strtolower($n))
-            ->values()
-            ->all();
-
-        $roleIds = Role::query()
-            ->whereIn(\DB::raw('LOWER(name)'), $internalNames)
-            ->pluck('id')
-            ->toArray();
-
-        $user->roles()->sync($roleIds);
-
-        \Log::info('syncing roles against user (' . $user->id . '): ' . json_encode($roleIds));
-    }
-
-    protected function syncCustodians(User $user, object $jwtUser): void
-    {
-        $teams = $jwtUser->cohort_admin_teams ?? [];
-        $rows = collect($teams)->map(fn ($t) => [
-            'external_custodian_id' => $t->id,
-            'name' => $t->name,
-            'external_custodian_name' => $t->name,
-        ])->all();
-
-        if (count($rows) === 0) {
-            $user->custodians()->sync([]);
-            return;
-        }
-
-        Custodian::upsert(
-            $rows,
-            ['external_custodian_id'],
-            ['name', 'external_custodian_name']
-        );
-
-        $externalIds = collect($teams)
-            ->pluck('id')
-            ->values()
-            ->all();
-
-        $custodianIds = Custodian::query()
-            ->whereIn('external_custodian_id', $externalIds)
-            ->pluck('id')
-            ->all();
-
-        $user->custodians()->sync($custodianIds);
     }
 
     public static function forgetIntegratedTokenSyncCacheByJti(string $jti): void
