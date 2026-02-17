@@ -25,12 +25,19 @@ class WorkgroupSyncerService
             $syncEveryRequest ||
             ($syncFirstLogin && is_null($user->integrated_wg_synced_at));
 
+        \Log::info('syncEveryRequest ? '. json_encode($syncEveryRequest));
+        \Log::info('syncFirstLogin ? '. json_encode($syncFirstLogin));
+        \Log::info('performing sync ? '. json_encode($performSync));
+
         if (!$performSync) {
             return;
         }
 
         $defaultWgIds = $this->defaultWorkgroupIds($hasSdeApproval);
         $mappedIds = $this->mapTokenWorkgroupsToInternalIds($tokenWorkgroups);
+
+        \Log::info('default IDs found = '. json_encode($defaultWgIds));
+        \Log::info('mapped IDs found = '. json_encode($mappedIds));
 
         $finalIds = array_values(array_unique(array_merge($defaultWgIds, $mappedIds)));
 
@@ -72,22 +79,23 @@ class WorkgroupSyncerService
     {
         $workgroupMap = config('claimsaccesscontrol.workgroup_mappings', []);
 
-        $externalNames = collect($tokenWorkgroups)
-            ->pluck('name')
-            ->values()
-            ->all();
 
         // Check if externalNames match either the keys (internal names that are also external)
         // or the values (configured external names) in the workgroupMap
+        $tokenWorkgroupsNorm = array_map('mb_strtolower', $tokenWorkgroups);
+
+        \Log::info('Token names normalised = '. json_encode($tokenWorkgroupsNorm));
         $internalNames = collect($workgroupMap)
             ->filter(
                 fn ($externalValue, $internalKey) =>
-                in_array($internalKey, $externalNames, true) ||
-                in_array($externalValue, $externalNames, true)
+                in_array(mb_strtolower($internalKey), $tokenWorkgroupsNorm, true) ||
+                in_array(mb_strtolower($externalValue), $tokenWorkgroupsNorm, true)
             )
             ->keys()
             ->values()
             ->all();
+
+        \Log::info('internalNames found = '. json_encode($internalNames));
 
         if (count($internalNames) === 0) {
             return [];
