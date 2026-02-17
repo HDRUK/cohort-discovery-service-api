@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/HDRUK/project-daphne-api/compare/v1.2.0...v1.2.1) (2026-02-17)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** Remove deprecation noise from vendor libs - temporary ([2c40bd9](https://github.com/HDRUK/project-daphne-api/commit/2c40bd9cb0f3067bf539bb8dd2202f58751be847)), closes [DP-0000](DP-0000)
+* **DP-442:** Fix stale pivots in workgroup tests ([3d8fe07](https://github.com/HDRUK/project-daphne-api/commit/3d8fe07da29ffb46a0f94557bfca6b13f9576815))
+
 ## [1.2.0](https://github.com/HDRUK/project-daphne-api/compare/v1.1.0...v1.2.0) (2026-02-13)
 
 ### ✨ Features
