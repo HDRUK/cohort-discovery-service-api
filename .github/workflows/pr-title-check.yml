@@ -11,10 +11,12 @@ jobs:
       - name: Check PR Title Format
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_REPO: ${{ github.repository }}
         run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          REPO="${{ github.repository }}"
+          TITLE="$PR_TITLE"
+          REPO="$PR_REPO"
 
           echo "PR Title: $TITLE"
 

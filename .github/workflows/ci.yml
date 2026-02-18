@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
@@ -67,20 +67,22 @@ jobs:
 
           sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
 
-          echo "" >> .env
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_PORT=3306" >> .env
-          echo "DB_DATABASE=daphne_test" >> .env
-          echo "DB_USERNAME=root" >> .env
-          echo "DB_PASSWORD=root" >> .env
+          {
+            echo ""
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_PORT=3306"
+            echo "DB_DATABASE=daphne_test"
+            echo "DB_USERNAME=root"
+            echo "DB_PASSWORD=root"
 
-          echo "" >> .env
-          echo "DB_OMOP_CONNECTION=omop" >> .env
-          echo "DB_OMOP_HOST=127.0.0.1" >> .env
-          echo "DB_OMOP_PORT=3306" >> .env
-          echo "DB_OMOP_DATABASE=omop_test" >> .env
-          echo "DB_OMOP_USERNAME=root" >> .env
-          echo "DB_OMOP_PASSWORD=root" >> .env
+            echo ""
+            echo "DB_OMOP_CONNECTION=omop"
+            echo "DB_OMOP_HOST=127.0.0.1"
+            echo "DB_OMOP_PORT=3306"
+            echo "DB_OMOP_DATABASE=omop_test"
+            echo "DB_OMOP_USERNAME=root"
+            echo "DB_OMOP_PASSWORD=root"
+          } >> .env
 
           cat .env
 
