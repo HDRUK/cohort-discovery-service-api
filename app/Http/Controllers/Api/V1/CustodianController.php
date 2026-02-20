@@ -258,6 +258,12 @@ class CustodianController extends Controller
             $custodian = Custodian::findOrFail($custodianId);
             $network = CustodianNetwork::findOrFail($networkId);
 
+            //note - for now, only allow a custodian to be in one custodian network
+            //       by deleting it from other networks
+            CustodianNetworkHasCustodian::where('custodian_id', $custodian->id)
+                ->where('network_id', '!=', $network->id)
+                ->delete();
+
             $link = CustodianNetworkHasCustodian::firstOrCreate([
                 'custodian_id' => $custodian->id,
                 'network_id' => $network->id,

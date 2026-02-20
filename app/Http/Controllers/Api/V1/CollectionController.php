@@ -209,7 +209,7 @@ class CollectionController extends Controller
             $collections = Collection::query()
                 ->with([
                     'host',
-                    'custodian',
+                    'custodian.network',
                     'config',
                     'modelState.state',
                     'latestDemographic.task',
