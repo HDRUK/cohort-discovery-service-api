@@ -10,6 +10,7 @@ use App\Models\CollectionHost;
 use App\Models\CustodianHasUser;
 use App\Models\Custodian;
 use App\Models\User;
+use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
@@ -781,6 +782,39 @@ class CollectionTest extends TestCase
     public function test_it_only_returns_active_collections_for_user(): void
     {
         $this->user->removeRole('admin');
+        $user = $this->user;
+
+        $custodian = Custodian::factory()->create();
+        $active = $this->makeCollectionWithState(
+            ['custodian_id' => $custodian->id],
+            Collection::STATUS_ACTIVE
+        );
+        $wg = Workgroup::factory()->create();
+
+        UserHasWorkgroup::create(['user_id' => $user->id, 'workgroup_id' => $wg->id]);
+        WorkgroupHasCollection::create(['collection_id' => $active->id, 'workgroup_id' => $wg->id]);
+
+        $draft = $this->makeCollectionWithState(
+            ['custodian_id' => $custodian->id],
+            Collection::STATUS_DRAFT
+        );
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::USER_COLLECTIONS_URL);
+
+        $response->assertStatus(200);
+
+        $ids  = $this->idsFromOkResponse($response);
+
+        $this->assertContains($active->id, $ids);
+        $this->assertNotContains($draft->id, $ids);
+    }
+
+    public function test_it_returns_all_collections_for_custodian_user(): void
+    {
+        $this->user->removeRole('admin');
 
         $user = $this->user;
 
@@ -805,9 +839,9 @@ class CollectionTest extends TestCase
         $response->assertStatus(200);
 
         $ids  = $this->idsFromOkResponse($response);
-
+        $this->assertCount(2, $ids);
         $this->assertContains($active->id, $ids);
-        $this->assertNotContains($draft->id, $ids);
+        $this->assertContains($draft->id, $ids);
     }
 
     public function test_admin_gets_all_active_collections_regardless_of_workgroup_or_custodian(): void
