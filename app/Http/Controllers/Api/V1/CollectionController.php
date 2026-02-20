@@ -147,16 +147,24 @@ class CollectionController extends Controller
                 !$isAdmin,
                 fn ($query) => $query->where(
                     fn ($q) =>
-                        $q->whereHas(
-                            'workgroups',
-                            fn ($wq) => $wq->whereIn(
-                                'workgroups.id',
-                                $userWorkgroupsSubquery
-                            )
-                        )->orWhereIn('custodian_id', $userCustodianIdsSubquery)
+                        $q->where(
+                            fn ($qq) =>
+                                $qq->whereHas(
+                                    'workgroups',
+                                    fn ($wq) => $wq->whereIn(
+                                        'workgroups.id',
+                                        $userWorkgroupsSubquery
+                                    )
+                                )
+                                ->whereRelation(
+                                    'modelState.state',
+                                    'states.slug',
+                                    Collection::STATUS_ACTIVE
+                                )
+                        )
+                        ->orWhereIn('custodian_id', $userCustodianIdsSubquery)
                 )
             )
-            ->whereRelation('modelState.state', 'states.slug', Collection::STATUS_ACTIVE)
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
