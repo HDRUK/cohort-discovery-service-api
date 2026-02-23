@@ -1,0 +1,22 @@
+name: Lint GitHub Workflows
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**/*.yml"
+      - ".github/workflows/**/*.yaml"
+  push:
+    paths:
+      - ".github/workflows/**/*.yml"
+      - ".github/workflows/**/*.yaml"
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint workflow files
+        uses: reviewdog/action-actionlint@v1

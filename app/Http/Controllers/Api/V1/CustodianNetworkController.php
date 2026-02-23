@@ -109,14 +109,15 @@ class CustodianNetworkController extends Controller
 
         try {
             $network = CustodianNetwork::create([
-                'pid' => Str::uuid(),
+                'pid'  => Str::uuid(),
                 'name' => $validated['name'],
+                'url'  => $validated['url'] ?? null,
             ]);
 
             return $this->CreatedResponse($network);
         } catch (\Throwable $e) {
-            \Log::error('CustodianNetworkController@store - failed: '.
-                json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error('CustodianNetworkController@store - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->ErrorResponse($e->getMessage());
         }
@@ -163,8 +164,8 @@ class CustodianNetworkController extends Controller
 
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
-            \Log::error('CustodianNetworkController@update - failed: '.
-                json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error('CustodianNetworkController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
         }
@@ -198,8 +199,8 @@ class CustodianNetworkController extends Controller
 
             return $this->OKResponse([]);
         } catch (\Throwable $e) {
-            \Log::error('CustodianNetworkController@destroy - failed: '.
-                json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error('CustodianNetworkController@destroy - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
         }

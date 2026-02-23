@@ -38,11 +38,13 @@ class CustodianNetwork extends Model implements ValidatableModel
     protected $fillable = [
         'pid',
         'name',
+        'url'
     ];
 
     protected static array $searchableColumns = [
         'pid',
         'name',
+        'url'
     ];
 
     protected static array $sortableColumns = [
@@ -53,6 +55,7 @@ class CustodianNetwork extends Model implements ValidatableModel
         'created_at',
         'updated_at',
         'name',
+        'url'
     ];
 
     public function getValidationRules(string $context): array
@@ -64,10 +67,12 @@ class CustodianNetwork extends Model implements ValidatableModel
             ],
             'store' => [
                 'name' => 'required|string|max:255',
+                'url'  => 'sometimes|nullable|url|max:2048',
             ],
             'update' => [
-                'id' => 'required|integer|exists:custodian_networks,id',
+                'id'   => 'required|integer|exists:custodian_networks,id',
                 'name' => 'sometimes|string|max:255',
+                'url'  => 'sometimes|nullable|url|max:2048',
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:custodian_networks,id',
