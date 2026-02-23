@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.2.1...v1.3.0) (2026-02-23)
+
+### ✨ Features
+
+* **DP-459:** YML linting and contribution guides/pr template ([a61ee18](https://github.com/HDRUK/cohort-discovery-service-api/commit/a61ee1837e00ad501384a7388d5ba78fb1d665e3)), closes [DP-459](DP-459)
+
 ## [1.2.1](https://github.com/HDRUK/project-daphne-api/compare/v1.2.0...v1.2.1) (2026-02-17)
 
 ### 🐛 Bug Fixes
