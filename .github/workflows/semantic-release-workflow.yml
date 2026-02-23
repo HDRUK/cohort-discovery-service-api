@@ -1,10 +1,10 @@
-name: Release workflow
-run-name: ${{ github.actor }} triggered Release workflow
+name: Semantic Release workflow
+run-name: ${{ github.actor }} triggered Semantic Release workflow
 
 on:
   push:
     branches:
-      - "release/*"
+      - "main"
 
 env:
   PROJECT_ID: "${{ secrets.PROJECT_ID }}"
@@ -12,27 +12,75 @@ env:
   SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL}}"
   SLACK_CHANNEL: "${{ secrets.GITHUBACTIONS_SLACK_CHANNEL }}"
   NODE_VERSION: "${{ vars.NODE_VERSION }}"
-
 jobs:
+  semantic: 
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          token:  ${{ secrets.GH_TOKEN }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Semantic Release
+        run: npx semantic-release
+        env:
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Set Git config
+        run: |
+            git config --local user.email "actions@github.com"
+            git config --local user.name "Github Actions"
+
+      - name: Fetch latest changes from main
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Merge changes from main to dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git fetch origin dev
+          git checkout dev
+          git merge --no-ff main || true
+          git checkout --theirs .
+          git add .
+          git commit -m "Auto-resolve merge conflicts by keeping main's changes [skip ci]" || echo "No changes to commit"
+          
+          git push origin dev
+
   build:
-    name: Build and Push Release Image
+    needs: semantic
     permissions:
       contents: write
       id-token: write
-
     runs-on: ubuntu-latest
-
     environment: release
     steps:
-      - name: Checkout repository
+      - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Extract version from branch
+      - name: Read VERSION file
         id: getversion
         run: |
-          branch="${GITHUB_REF_NAME}"         # ex: release/1.23.4
-          version="${branch#release/}"        # strip prefix
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          sed -n 's/^appVersion:\(.*\)/\1/p' < chart/cohort-api/Chart.yaml > version
+          echo "version=$(sed '/.*\"\(.*\)\".*/ s//\1/g' version)" >> "$GITHUB_OUTPUT"
 
       - name: Google Auth
         id: auth
