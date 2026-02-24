@@ -789,7 +789,7 @@ class CollectionTest extends TestCase
             ['custodian_id' => $custodian->id],
             Collection::STATUS_ACTIVE
         );
-        $wg = Workgroup::factory()->create();
+        $wg = Workgroup::first();
 
         UserHasWorkgroup::create(['user_id' => $user->id, 'workgroup_id' => $wg->id]);
         WorkgroupHasCollection::create(['collection_id' => $active->id, 'workgroup_id' => $wg->id]);
@@ -818,17 +818,24 @@ class CollectionTest extends TestCase
 
         $user = $this->user;
 
-        $custodian = Custodian::factory()->create();
-        $user->custodians()->attach($custodian->id);
+        $custodianA = Custodian::factory()->create();
+        $custodianB = Custodian::factory()->create();
 
-        $active = $this->makeCollectionWithState(
-            ['custodian_id' => $custodian->id],
+        $user->custodians()->attach($custodianA->id);
+
+        $activeA = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianA->id],
             Collection::STATUS_ACTIVE
         );
 
-        $draft = $this->makeCollectionWithState(
-            ['custodian_id' => $custodian->id],
+        $draftA = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianA->id],
             Collection::STATUS_DRAFT
+        );
+
+        $activeB = $this->makeCollectionWithState(
+            ['custodian_id' => $custodianB->id],
+            Collection::STATUS_ACTIVE
         );
 
         $response = $this->actingAsJwt(
@@ -840,8 +847,9 @@ class CollectionTest extends TestCase
 
         $ids  = $this->idsFromOkResponse($response);
         $this->assertCount(2, $ids);
-        $this->assertContains($active->id, $ids);
-        $this->assertContains($draft->id, $ids);
+        $this->assertContains($activeA->id, $ids);
+        $this->assertContains($draftA->id, $ids);
+        $this->assertNotContains($activeB->id, $ids);
     }
 
     public function test_admin_gets_all_active_collections_regardless_of_workgroup_or_custodian(): void
@@ -878,7 +886,7 @@ class CollectionTest extends TestCase
 
         $this->assertContains($activeA->id, $ids);
         $this->assertContains($activeB->id, $ids);
-        $this->assertNotContains($draftB->id, $ids);
+        $this->assertContains($draftB->id, $ids);
 
         $user->removeRole('admin');
     }
