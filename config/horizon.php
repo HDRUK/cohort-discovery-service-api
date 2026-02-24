@@ -197,6 +197,7 @@ return [
 
     'environments' => [
         'production' => [
+            'secret' => env('HORIZON_SECRET'),
             'supervisor-1' => [
                 'maxProcesses' => 10,
                 'balanceMaxShift' => 1,
