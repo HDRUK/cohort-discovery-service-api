@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Gate;
-use App\Models\User;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
 
 class HorizonServiceProvider extends HorizonApplicationServiceProvider
@@ -28,12 +27,25 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewHorizon', function ($user = null) {
-            $admins = User::whereHas('roles', function ($q) {
-                $q->where('name', 'admin');
-            })->pluck('email')->toArray();
+            // Allow all in non-prod
+            if (config('app.env') !== 'production') {
+                return true;
+            }
 
-            $isProd = config('app.env') === 'production';
-            return $isProd ? in_array(optional($user)->email, $admins) : true;
+            // Allow in prod if ?key matches integrated.jwt_secret
+            $key = (string) request()->query('key', '');
+            $secret = (string) config('api.jwt_secret', '');
+
+            if ($secret !== '' && $key !== '' && hash_equals($secret, $key)) {
+                return true;
+            }
+
+            //fallback - wont work now, but can implement in the future (maybe?)
+            if (is_null($user)) {
+                return false;
+            }
+
+            return $user->roles()->where('name', 'admin')->exists();
         });
     }
 }
