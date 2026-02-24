@@ -34,8 +34,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
 
             // Allow in prod if ?key matches integrated.jwt_secret
             $key = (string) request()->query('key', '');
-            $secret = (string) config('api.jwt_secret', '');
-
+            $secret = (string) config('horizon.environments.'.config('app.env').'.secret', '');
             if ($secret !== '' && $key !== '' && hash_equals($secret, $key)) {
                 return true;
             }
