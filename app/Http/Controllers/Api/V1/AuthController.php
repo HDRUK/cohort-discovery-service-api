@@ -36,7 +36,7 @@ class AuthController extends Controller
         return view('auth.loading');
     }
 
-    public function callbackFinalize(Request $request): JsonResponse
+    public function callbackFinalise(Request $request): JsonResponse
     {
         $code = $request->session()->pull('oauth_callback_code');
 

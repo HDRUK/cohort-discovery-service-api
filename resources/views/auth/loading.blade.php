@@ -68,7 +68,7 @@
 <body>
 <div class="card">
     <div class="spinner" aria-hidden="true"></div>
-    <h1>Signing you in</h1>
+    <h1>Signing you in to the Cohort Discovery Service</h1>
     <p>Please wait while we complete authentication.</p>
     <p id="error" class="error" hidden></p>
 </div>
@@ -78,7 +78,7 @@
         const errorEl = document.getElementById('error');
 
         try {
-            const response = await fetch(@json(route('auth.callback.finalize')), {
+            const response = await fetch(@json(route('auth.callback.finalise')), {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',

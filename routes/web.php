@@ -10,9 +10,8 @@ Route::get('/', function () {
 });
 
 Route::get('auth/callback', [AuthController::class, 'callback']);
-Route::post('auth/callback/finalize', [AuthController::class, 'callbackFinalize'])
-    ->name('auth.callback.finalize');
-// Route::get('auth/callback2', [AuthController::class, 'callbackForUser']);
+Route::post('auth/callback/finalise', [AuthController::class, 'callbackFinalise'])
+    ->name('auth.callback.finalise');
 
 Route::get('/link_connector_api/task/status/{pid}', [TaskController::class, 'status'])
     ->name('task.status')
