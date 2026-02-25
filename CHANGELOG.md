@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.3.0...v1.3.1) (2026-02-25)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** Swagger fixes ([0a9dd80](https://github.com/HDRUK/cohort-discovery-service-api/commit/0a9dd8061f39000cbc96ba392a2e1858e0e8da4c)), closes [DP-0000](DP-0000)
+
 ## [1.3.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.2.1...v1.3.0) (2026-02-23)
 
 ### ✨ Features
