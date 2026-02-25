@@ -75,7 +75,7 @@ class QueryController extends Controller
                 ->filterViaRequest()
                 ->applySorting('created_at', 'desc')
                 ->with([
-                    'tasks.collection.custodian',
+                    'tasks.collection.custodian.network',
                     'tasks.collection.latestDemographic',
                     'tasks.result',
                 ])
@@ -147,7 +147,7 @@ class QueryController extends Controller
                         ->select('tasks.*')
                         ->with([
                             'collection.latestDemographic',
-                            'collection.custodian',
+                            'collection.custodian.network',
                             'result',
                             'latestRun'
                         ])
