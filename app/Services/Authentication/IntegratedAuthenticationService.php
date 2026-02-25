@@ -45,20 +45,24 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
 
         $userData = $response->json('data');
 
-        // Create / update local shadow user
-        $user = User::updateOrCreate(
-            [
+        $user = User::where('email', $userData['email'])->first();
+        if (!$user) {
+            $user = User::create([
                 'email' => $userData['email'],
-            ],
-            [
                 'name' => $userData['name'],
-                'password' => Hash::make(config('integrated.placeholder_password')),
-            ]
-        );
+                // LS: Removed as integrated mode, and Hash::make added a fair latency that is avoidable in
+                // this instance.
+                'password' => null,
+            ]);
+        } else {
+            $user->fill([
+                'name' => $userData['name'],
+            ]);
 
-        // Optionally, store federated IDs if needed
-        // $user->federated_id = $userData['id'];
-        // $user->save();
+            if ($user->isDirty()) {
+                $user->save();
+            }
+        }
 
         return $user;
     }
