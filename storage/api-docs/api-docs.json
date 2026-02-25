@@ -244,6 +244,50 @@
                 }
             }
         },
+        "/api/v1/user/collections": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get all collections for a user",
+                "operationId": "4a9cc01cd8deb72c851ea1034906e0a3",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of collections for a user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Collection"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/collections": {
             "get": {
                 "tags": [
@@ -2288,13 +2332,13 @@
                 }
             }
         },
-        "/api/v1/users/me": {
+        "/api/v1/user": {
             "get": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Get the authenticated user's details",
-                "operationId": "9368281998c939d43f37ec2a55477bad",
+                "operationId": "d894fc878909d59f28c46c8c09b794e6",
                 "responses": {
                     "200": {
                         "description": "Authenticated user object",
