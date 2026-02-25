@@ -140,7 +140,7 @@ class DecodeJwt
                 $this->workgroupSyncer->sync(
                     $user,
                     $jwtUser->workgroups ?? [],
-                    $jwtUser->is_nhse_sde_approval ?? false,
+                    $jwtUser->cohort_discovery_nhs_sde ?? false,
                 );
 
                 $this->roleSyncer->sync(
