@@ -33,7 +33,7 @@ Feature::define('integrated-sync-workgroups-first-login', fn () => true);
 Feature::define('integrated-ensure-default-wgs', fn () => true);
 
 /**
- * If true and token claim is_nhse_sde_approval = true,
+ * If true and token claim cohort_discovery_nhs_sde = true,
  * also add NHS-SDE related workgroups as default if default workgroups are added
  */
 Feature::define('integrated-sync-sde-wgs-from-claim', fn () => true);
