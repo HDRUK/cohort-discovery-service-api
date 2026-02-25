@@ -68,7 +68,7 @@
 <body>
 <div class="card">
     <div class="spinner" aria-hidden="true"></div>
-    <h1>Signing you in to the Cohort Discovery Service</h1>
+    <h1>Signing you in</h1>
     <p>Please wait while we complete authentication.</p>
     <p id="error" class="error" hidden></p>
 </div>
