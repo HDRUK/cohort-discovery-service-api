@@ -195,6 +195,8 @@ return [
         ],
     ],
 
+    'secret' => env('HORIZON_SECRET'),
+
     'environments' => [
         'production' => [
             'supervisor-1' => [

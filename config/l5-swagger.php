@@ -174,7 +174,10 @@ return [
         /*
          * API security definitions. Will be generated into documentation file.
         */
-        'securityDefinitions' => [],
+        'securityDefinitions' => [
+            'securitySchemes' => [],
+            'security' => [],
+        ],
 
         /*
          * Set this to `true` in development mode so that docs would be regenerated on each request
