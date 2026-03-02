@@ -22,7 +22,7 @@ class WorkgroupPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin');
+        return true;
     }
 
     public function view(User $user, Workgroup $workgroup): bool
