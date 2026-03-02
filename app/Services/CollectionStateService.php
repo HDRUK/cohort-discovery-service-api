@@ -51,6 +51,7 @@ class CollectionStateService
         if (! $this->canUserTransition($collection, $state, $user)) {
             throw new CollectionException($state);
         }
+
         return $collection->transitionTo($state);
     }
 }
