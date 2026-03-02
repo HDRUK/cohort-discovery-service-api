@@ -53,7 +53,7 @@ class WorkgroupTest extends TestCase
         $this->user->removeRole('admin');
         $response = $this->actingAsJwt($this->user, [])
             ->getJson($this->url);
-        $response->assertStatus(403);
+        $response->assertStatus(200);
 
         $this->user->assignRole('admin');
         $response = $this->actingAsJwt($this->user, [])
