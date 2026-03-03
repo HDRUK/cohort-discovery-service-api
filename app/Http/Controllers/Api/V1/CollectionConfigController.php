@@ -31,6 +31,8 @@ class CollectionConfigController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny');
+
         try {
             $configs = CollectionConfig::all();
 
@@ -76,10 +78,12 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('view', $config);
 
             return $this->OKResponse($config);
-
-        } catch (\Throwable $e) {
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Exception $e) {
             \Log::error('CollectionConfigController@show/'.$id.' - failed: '.$e->getMessage());
 
             return $this->NotFoundResponse();

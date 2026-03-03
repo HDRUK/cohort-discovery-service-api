@@ -26,6 +26,11 @@ class CollectionConfigPolicy
         return $this->isCustodianUser($user, $collection->custodian_id);
     }
 
+    public function viewAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     public function view(User $user, CollectionConfig $collectionConfig): bool
     {
         if ($user->hasRole('admin')) {
