@@ -68,16 +68,6 @@ class FeaturesTest extends TestCase
         $response->assertMethodNotAllowed();
     }
 
-    public function test_it_prevents_non_admin_access(): void
-    {
-        $nonAdmin = User::factory()->create();
-
-        $response = $this->actingAsJwt($nonAdmin, [])
-            ->getJson(self::BASE_URL);
-
-        $response->assertStatus(403);
-    }
-
     public function test_non_admin_cannot_update_feature_status(): void
     {
         Feature::define('test-feature-five', fn () => false);

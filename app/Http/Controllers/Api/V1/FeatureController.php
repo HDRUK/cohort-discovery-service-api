@@ -15,10 +15,6 @@ class FeatureController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        if (!Auth::user()?->hasRole('admin')) {
-            return $this->ForbiddenResponse();
-        }
-
         return $this->OKResponse(Feature::all());
     }
 
