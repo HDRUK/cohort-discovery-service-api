@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Traits\Responses;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CollectionConfigController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -112,6 +115,9 @@ class CollectionConfigController extends Controller
     {
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('store'));
 
+        $collection = Collection::findOrFail($validated['collection_id']);
+        $this->authorize('create', [CollectionConfig::class, $collection]);
+
         try {
             $config = CollectionConfig::create($validated);
 
@@ -166,8 +172,10 @@ class CollectionConfigController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('update'));
 
+        $config = CollectionConfig::findOrFail($validated['id']);
+        $this->authorize('update', $config);
+
         try {
-            $config = CollectionConfig::findOrFail($validated['id']);
             if ($config->update($validated)) {
                 return $this->OKResponse($config);
             }
@@ -214,9 +222,10 @@ class CollectionConfigController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 
-        try {
-            $config = CollectionConfig::findOrFail($validated['id']);
+        $config = CollectionConfig::findOrFail($validated['id']);
+        $this->authorize('delete', $config);
 
+        try {
             if ($config->delete()) {
                 return $this->OKResponse([]);
             }

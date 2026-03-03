@@ -211,6 +211,8 @@ class CollectionController extends Controller
      */
     public function indexForAdmin(Request $request): JsonResponse
     {
+        $this->authorize('viewAnyForAdmin', Collection::class);
+
         try {
             $perPage = $this->resolvePerPage();
 

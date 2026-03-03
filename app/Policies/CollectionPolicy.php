@@ -26,6 +26,11 @@ class CollectionPolicy
         return $this->access($user, $collection);
     }
 
+    public function viewAnyForAdmin(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     /**
      * Determine whether the user can view the model.
      */

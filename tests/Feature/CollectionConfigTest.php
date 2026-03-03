@@ -26,7 +26,9 @@ class CollectionConfigTest extends TestCase
         CollectionConfig::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
+        $this->enableMiddleware();
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
         $this->payload = CollectionConfig::factory()->definition();
     }
 
@@ -138,5 +140,39 @@ class CollectionConfigTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertNull(CollectionConfig::where('id', $config->id)->first());
+    }
+
+    public function test_non_admin_cannot_create_collection_config(): void
+    {
+        $nonAdmin = User::factory()->create();
+        $collection = Collection::factory()->create();
+
+        $this->payload['collection_id'] = $collection->id;
+
+        $response = $this->actingAsJwt($nonAdmin, [])
+            ->postJson(self::BASE_URL, $this->payload);
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_update_collection_config(): void
+    {
+        $nonAdmin = User::factory()->create();
+        $collection = Collection::factory()->create();
+        $config = CollectionConfig::factory()->create(['collection_id' => $collection->id]);
+
+        $response = $this->actingAsJwt($nonAdmin, [])
+            ->putJson(self::BASE_URL.'/'.$config->id, $this->payload);
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_delete_collection_config(): void
+    {
+        $nonAdmin = User::factory()->create();
+        $collection = Collection::factory()->create();
+        $config = CollectionConfig::factory()->create(['collection_id' => $collection->id]);
+
+        $response = $this->actingAsJwt($nonAdmin, [])
+            ->deleteJson(self::BASE_URL.'/'.$config->id);
+        $response->assertStatus(403);
     }
 }
