@@ -9,6 +9,7 @@ use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class CollectionConfigController extends Controller
 {
@@ -31,7 +32,7 @@ class CollectionConfigController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny');
+        $this->authorize('viewAny', CollectionConfig::class);
 
         try {
             $configs = CollectionConfig::all();
