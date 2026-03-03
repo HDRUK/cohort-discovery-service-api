@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\CollectionConfig;
 use App\Traits\Responses;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CollectionConfigController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -110,6 +112,8 @@ class CollectionConfigController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', CollectionConfig::class);
+
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('store'));
 
         try {
@@ -163,6 +167,8 @@ class CollectionConfigController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->authorize('update', CollectionConfig::class);
+
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('update'));
 
@@ -211,6 +217,8 @@ class CollectionConfigController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->authorize('delete', CollectionConfig::class);
+
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 

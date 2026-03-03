@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Traits\Responses;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 class UserController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -47,6 +50,8 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', User::class);
+
         $users = User::with(['workgroups','custodians'])
             ->searchViaRequest()
             ->withStatus()
@@ -77,6 +82,8 @@ class UserController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
+        $this->authorize('view', User::class);
+
         // Stub
         $user = User::where('id', $id)->first();
         if ($user) {
@@ -213,6 +220,8 @@ class UserController extends Controller
      */
     public function addToWorkgroup(Request $request, int $id): JsonResponse
     {
+        $this->authorize('addToWorkgroup', User::class);
+
         $input = $request->validate([
             'workgroup_id' => 'required|exists:workgroups,id',
         ]);
@@ -263,6 +272,8 @@ class UserController extends Controller
      */
     public function removeFromWorkgroup(Request $request, int $id, int $workgroupId): JsonResponse
     {
+        $this->authorize('removeFromWorkgroup', User::class);
+
         $input = $request->validate([]);
 
         try {

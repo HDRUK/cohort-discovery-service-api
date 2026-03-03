@@ -561,67 +561,29 @@ class CollectionTest extends TestCase
         $this->assertEquals($initialNumLinkedWorkgroups, count($response->json('data.workgroups')));
     }
 
-    /* turning off for DP-354 to re-enable */
-    /*
     public function test_it_can_list_all_collections_as_admin_only(): void
     {
-        $fakeGatewayTeamId = 1111;
-        $anotherFakeGatewayTeamId = 2222;
-        $custodian = Custodian::factory()->create([
-            'external_custodian_id' => $fakeGatewayTeamId,
-        ]);
+        $custodian = Custodian::factory()->create();
+        $anotherCustodian = Custodian::factory()->create();
 
-        $anotherCustodian = Custodian::factory()->create([
-            'external_custodian_id' => $anotherFakeGatewayTeamId,
-        ]);
+        Collection::factory(5)->create(['custodian_id' => $custodian->id]);
+        Collection::factory(5)->create(['custodian_id' => $anotherCustodian->id]);
 
-        Collection::factory(5)->create([
-            'custodian_id' => $custodian->id,
-        ]);
-        Collection::factory(5)->create([
-            'custodian_id' => $anotherCustodian->id,
-        ]);
-        // global admin can list all collections
-        $overrides = [
-            'user' => [
-                'workgroups' => [
-                    [
-                        'id' => 1,
-                        'name' => 'cohort-admin',
-                    ]
-                ],
-            ],
-        ];
-
-        $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
-        )
+        // Global admin can list all 10 collections
+        $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_ADMIN_URL);
 
         $response->assertStatus(200);
         $this->assertEquals(10, count($response->json('data.data')));
 
-        // custodian admin cannot use this endpoint
-        $overrides = [
-            'user' => [
-                'cohort_admin_teams' => [
-                    [
-                        'id' => $fakeGatewayTeamId,
-                        'name' => $custodian->name,
-                    ],
-                ],
-            ],
-        ];
+        // Non-admin cannot use this endpoint
+        $nonAdmin = User::factory()->create();
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            $overrides
-        )
+        $response = $this->actingAsJwt($nonAdmin, [])
             ->getJson(self::BASE_ADMIN_URL);
 
-        $response->assertStatus(401);
-    }*/
+        $response->assertStatus(403);
+    }
 
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
