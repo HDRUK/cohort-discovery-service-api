@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Traits\Responses;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
