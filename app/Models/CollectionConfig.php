@@ -96,6 +96,7 @@ class CollectionConfig extends Model implements ValidatableModel
         };
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
