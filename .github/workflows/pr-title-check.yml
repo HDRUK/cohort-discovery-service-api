@@ -8,9 +8,19 @@ jobs:
   check-title:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate GitHub App token
+        id: generate-deployment-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: HDRUK
+          repositories: |
+            ${{ github.event.repository.name }}
+      
       - name: Check PR Title Format
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-deployment-token.outputs.token }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_REPO: ${{ github.repository }}
