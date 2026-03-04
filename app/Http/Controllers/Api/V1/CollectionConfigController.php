@@ -227,15 +227,17 @@ class CollectionConfigController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 
-        $config = CollectionConfig::findOrFail($validated['id']);
-        $this->authorize('delete', $config);
-
         try {
+            $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('delete', $config);
+
             if ($config->delete()) {
                 return $this->OKResponse([]);
             }
 
             return $this->ErrorResponse();
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionConfigController@destroy/'.$id.' - failed: '.$e->getMessage());
 
