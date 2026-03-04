@@ -78,19 +78,25 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
 });
 
-Route::get('/v1/task/nextjob/{collectionId}', [TaskController::class, 'nextJob'])
-    ->name('task.nextjob')
-    ->middleware([
-        'throttle:polling',
-        CollectionHostBasicAuth::class,
-    ]);
 
-Route::post('/v1/task/result/{uuid}/{collectionId}', [TaskController::class, 'receiveResult'])
-    ->name('task.result')
+Route::prefix('v1/task')
     ->middleware([
         'throttle:polling',
         CollectionHostBasicAuth::class,
-    ]);
+    ])
+    ->controller(TaskController::class)
+    ->group(function () {
+
+        Route::get('/status/{pid}', 'status')
+            ->name('task.status');
+
+        Route::get('/nextjob/{collectionId}', 'nextJob')
+            ->name('task.nextjob');
+
+        Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
+            ->name('task.result');
+
+    });
 
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);

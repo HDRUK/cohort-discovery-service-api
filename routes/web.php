@@ -9,11 +9,13 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('auth/callback', [AuthController::class, 'callbackForAuthToken']);
-Route::get('auth/callback2', [AuthController::class, 'callbackForUser']);
+Route::get('auth/callback', [AuthController::class, 'callback']);
+Route::post('auth/callback/finalise', [AuthController::class, 'callbackFinalise'])
+    ->name('auth.callback.finalise');
 
+//note - not sure why this is here - may not be needed
 Route::get('/link_connector_api/task/status/{pid}', [TaskController::class, 'status'])
-    ->name('task.status')
+    ->name('link.task.status')
     ->middleware([
         'throttle:polling',
         CollectionHostBasicAuth::class,

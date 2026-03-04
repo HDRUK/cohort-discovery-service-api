@@ -15,8 +15,10 @@ class FeaturesTest extends TestCase
     {
         parent::setUp();
         $this->enableObservers();
+        $this->enableMiddleware();
 
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     public function test_it_can_list_features(): void
@@ -24,18 +26,7 @@ class FeaturesTest extends TestCase
         Feature::define('test-feature-one', fn () => true);
         Feature::define('test-feature-two', fn () => false);
 
-        $this->enableMiddleware();
-
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'admin',
-                ]],
-            ],
-        ];
-
-        $response = $this->actingAsJwt($this->user, $overrides)
+        $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_URL);
 
         $response->assertStatus(200);
@@ -49,19 +40,7 @@ class FeaturesTest extends TestCase
     {
         Feature::define('test-feature-three', fn () => false);
 
-        $this->enableMiddleware();
-
-
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'admin',
-                ]],
-            ],
-        ];
-
-        $response = $this->actingAsJwt($this->user, $overrides)
+        $response = $this->actingAsJwt($this->user, [])
             ->putJson(self::BASE_URL . '/test-feature-three', [
                 'enabled' => true,
             ]);
@@ -69,7 +48,7 @@ class FeaturesTest extends TestCase
         $response->assertOk();
         $this->assertTrue(Feature::active('test-feature-three'));
 
-        $response = $this->actingAsJwt($this->user, $overrides)
+        $response = $this->actingAsJwt($this->user, [])
             ->putJson(self::BASE_URL . '/test-feature-three', [
                 'enabled' => false,
             ]);
@@ -80,18 +59,7 @@ class FeaturesTest extends TestCase
 
     public function test_it_prevents_creating_new_feature(): void
     {
-        $this->enableMiddleware();
-
-        $overrides = [
-            'user' => [
-                'workgroups' => [[
-                    'id' => 1,
-                    'name' => 'admin',
-                ]],
-            ],
-        ];
-
-        $response = $this->actingAsJwt($this->user, $overrides)
+        $response = $this->actingAsJwt($this->user, [])
             ->postJson(self::BASE_URL, [
                 'name' => 'new-feature',
                 'enabled' => true,
@@ -100,14 +68,16 @@ class FeaturesTest extends TestCase
         $response->assertMethodNotAllowed();
     }
 
-    // turning off to be sorted out in DP-354
-    /*public function test_it_prevents_non_admin_access(): void
+    public function test_non_admin_cannot_update_feature_status(): void
     {
-        $this->enableMiddleware();
+        Feature::define('test-feature-five', fn () => false);
 
-        $response = $this->actingAsJwt($this->user)
-            ->getJson(self::BASE_URL);
+        $nonAdmin = User::factory()->create();
 
-        $response->assertStatus(401);
-    }*/
+        $response = $this->actingAsJwt($nonAdmin, [])
+            ->putJson(self::BASE_URL . '/test-feature-five', ['enabled' => true]);
+
+        $response->assertStatus(403);
+        $this->assertFalse(Feature::active('test-feature-five'));
+    }
 }

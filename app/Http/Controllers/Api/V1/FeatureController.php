@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use Laravel\Pennant\Feature;
 use App\Traits\Responses;
+use Illuminate\Support\Facades\Auth;
 
 class FeatureController extends Controller
 {
@@ -19,6 +20,10 @@ class FeatureController extends Controller
 
     public function update(Request $request, string $name): JsonResponse
     {
+        if (!Auth::user()?->hasRole('admin')) {
+            return $this->ForbiddenResponse();
+        }
+
         try {
             $input = $request->only(['enabled']);
             if ($input['enabled']) {

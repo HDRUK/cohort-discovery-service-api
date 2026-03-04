@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Traits\Responses;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class CollectionConfigController extends Controller
 {
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -28,6 +32,8 @@ class CollectionConfigController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', CollectionConfig::class);
+
         try {
             $configs = CollectionConfig::all();
 
@@ -73,10 +79,12 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('view', $config);
 
             return $this->OKResponse($config);
-
-        } catch (\Throwable $e) {
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Exception $e) {
             \Log::error('CollectionConfigController@show/'.$id.' - failed: '.$e->getMessage());
 
             return $this->NotFoundResponse();
@@ -111,6 +119,9 @@ class CollectionConfigController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('store'));
+
+        $collection = Collection::findOrFail($validated['collection_id']);
+        $this->authorize('create', [CollectionConfig::class, $collection]);
 
         try {
             $config = CollectionConfig::create($validated);
@@ -166,8 +177,10 @@ class CollectionConfigController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('update'));
 
+        $config = CollectionConfig::findOrFail($validated['id']);
+        $this->authorize('update', $config);
+
         try {
-            $config = CollectionConfig::findOrFail($validated['id']);
             if ($config->update($validated)) {
                 return $this->OKResponse($config);
             }
@@ -216,12 +229,15 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('delete', $config);
 
             if ($config->delete()) {
                 return $this->OKResponse([]);
             }
 
             return $this->ErrorResponse();
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionConfigController@destroy/'.$id.' - failed: '.$e->getMessage());
 
