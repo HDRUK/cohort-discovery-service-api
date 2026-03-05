@@ -469,4 +469,13 @@ class TaskControllerTest extends TestCase
 
         $response->assertStatus(401);
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_status_for_insights()
+    {
+
+        $response = $this->getJson(self::BASE_URL.'/status/xxxxxxxx');
+        $response->assertOk()
+        ->assertExactJson([]);
+    }
 }
