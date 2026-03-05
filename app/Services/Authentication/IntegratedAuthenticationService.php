@@ -52,7 +52,7 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
                 'name' => $userData['name'],
                 // LS: Removed as integrated mode, and Hash::make added a fair latency that is avoidable in
                 // this instance.
-                'password' => null,
+                'password' => '',
             ]);
         } else {
             $user->fill([
