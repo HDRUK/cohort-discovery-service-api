@@ -9,6 +9,7 @@ use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class CollectionConfigController extends Controller
 {
@@ -31,6 +32,8 @@ class CollectionConfigController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', CollectionConfig::class);
+
         try {
             $configs = CollectionConfig::all();
 
@@ -76,10 +79,12 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('view', $config);
 
             return $this->OKResponse($config);
-
-        } catch (\Throwable $e) {
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Exception $e) {
             \Log::error('CollectionConfigController@show/'.$id.' - failed: '.$e->getMessage());
 
             return $this->NotFoundResponse();
@@ -222,15 +227,17 @@ class CollectionConfigController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 
-        $config = CollectionConfig::findOrFail($validated['id']);
-        $this->authorize('delete', $config);
-
         try {
+            $config = CollectionConfig::findOrFail($validated['id']);
+            $this->authorize('delete', $config);
+
             if ($config->delete()) {
                 return $this->OKResponse([]);
             }
 
             return $this->ErrorResponse();
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionConfigController@destroy/'.$id.' - failed: '.$e->getMessage());
 

@@ -1,3 +1,17 @@
+## [1.4.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.4.0...v1.4.1) (2026-03-05)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** passwords aren't nullable, set to empty string in integrated ([b952fe8](https://github.com/HDRUK/cohort-discovery-service-api/commit/b952fe8bf08e7c1adfbe4e9d7705ed74f3271c03)), closes [DP-0000](DP-0000)
+
+## [1.4.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.3.1...v1.4.0) (2026-03-04)
+
+### ✨ Features
+
+* **DP-0000:** License file ([bf21958](https://github.com/HDRUK/cohort-discovery-service-api/commit/bf21958dc151d590390c57ac7854fedba0c03d60)), closes [DP-0000](DP-0000)
+* **DP-504:** Reduces latency in system passover, implements loader for user feedback during passover ([9114624](https://github.com/HDRUK/cohort-discovery-service-api/commit/91146245ae7d777c7f9c31260afd04da5a69c859)), closes [DP-504](DP-504)
+* **DP-523:** security review comments ([cc5027b](https://github.com/HDRUK/cohort-discovery-service-api/commit/cc5027b5c31b5420cb50a2225ee42db6a031ef90)), closes [DP-523](DP-523)
+
 ## [1.3.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.3.0...v1.3.1) (2026-02-25)
 
 ### 🐛 Bug Fixes

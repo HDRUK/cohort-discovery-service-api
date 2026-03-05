@@ -24,6 +24,16 @@ jobs:
 
     environment: release
     steps:
+      - name: Generate GitHub App token
+        id: generate-deployment-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: HDRUK
+          repositories: |
+            ${{ github.event.repository.name }}
+      
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -58,7 +68,7 @@ jobs:
           GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
           GAR_NAME: ${{ secrets.GAR_NAME }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-deployment-token.outputs.token }}
 
         run: |-
           image_base="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_NAME }}/${{ steps.getversion.outputs.version }}"
