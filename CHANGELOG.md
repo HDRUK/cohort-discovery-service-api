@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.4.0...v1.4.1) (2026-03-05)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** passwords aren't nullable, set to empty string in integrated ([b952fe8](https://github.com/HDRUK/cohort-discovery-service-api/commit/b952fe8bf08e7c1adfbe4e9d7705ed74f3271c03)), closes [DP-0000](DP-0000)
+
 ## [1.4.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.3.1...v1.4.0) (2026-03-04)
 
 ### ✨ Features
