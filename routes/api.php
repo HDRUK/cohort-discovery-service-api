@@ -155,7 +155,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
     Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
-    Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
+    // Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
     // Custodian Networks - "public" routes.
     Route::get('/v1/custodian_networks', [CustodianNetworkController::class, 'index']);
@@ -174,3 +174,5 @@ Route::get('/status', function (Request $request) {
 });
 
 Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch']);
+
+Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
