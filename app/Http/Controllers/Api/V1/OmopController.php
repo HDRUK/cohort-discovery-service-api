@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
-use App\Models\Distribution;
+use App\Models\DistributionConcept;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
 use App\Traits\HelperFunctions;
@@ -96,29 +96,37 @@ class OmopController extends Controller
     {
         try {
             $perPage = $this->resolvePerPage();
-            $collectionPids = $request->input('collections');
             $domain = $request->input('domain');
-            $includeAncestors = $request->boolean('include_ancestors', true);
 
-            $codes = Distribution::query()
-                ->when($collectionPids, function ($q, $pids) {
-                    $collectionIds = Collection::whereIn('pid', $pids)->pluck('id');
-                    $q->whereIn('collection_id', $collectionIds);
-                })
-                ->whereNotNull('concept_id')
-                ->where('concept_id', '>', 0)
+            // NOTE:
+            // - collection filtering is intentionally disabled for now because this
+            //   endpoint now reads from the aggregated distribution_concepts view
+            // - include_ancestors is also intentionally disabled for now because
+            //   the view is concept-level and no longer based on Distribution rows
+
+            $codes = DistributionConcept::query()
                 ->when($domain, function ($q, $domain) {
-                    $q->whereRaw('LOWER(category) = ?', [strtolower($domain)]);
+                    $q->whereRaw('LOWER(domain_id) = ?', [strtolower($domain)]);
                 })
-                ->when(
-                    $includeAncestors,
-                    function ($q) {
-                        $q->with('children:concept_id,description,category');
-                    }
-                )
-                ->select('name', 'concept_id', 'description', 'category')
-                ->distinct()
-                ->searchViaRequest($request->only(['concept_id', 'description']))
+                ->whereNotNull('concept_name')
+                ->searchViaRequest($request->only(['concept_id','concept_name']))
+                ->select([
+                    'concept_id',
+                    'concept_name as name',
+                    'concept_name as description',
+                    'domain_id as category',
+                    'vocabulary_id',
+                    'concept_class',
+                    'standard_concept',
+                    'concept_code',
+                    'count',
+                    'ncollections',
+                    'all_synthetic'
+                ])
+                ->orderBy('all_synthetic', 'asc')
+                ->orderBy('ncollections', 'desc')
+                ->orderBy('count', 'desc')
+                ->orderBy('concept_name')
                 ->paginate($perPage);
 
             return $this->OKResponse($codes);

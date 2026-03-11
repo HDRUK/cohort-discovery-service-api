@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Jobs\RefreshDistributionConceptsView;
 
 /**
  * @OA\Tag(
@@ -365,18 +366,26 @@ class CollectionController extends Controller
         $validated = $request->validated();
 
         try {
-            $collection = Collection::with(['host','config','custodian'])->findOrFail($validated['id']);
+            $collection = Collection::with(['host', 'config', 'custodian'])->findOrFail($validated['id']);
             $this->authorize('update', $collection);
 
             if ($collection->update($validated)) {
                 $collection->host()->sync([$validated['host_id']]);
+
+                if ($collection->wasChanged('is_synthetic')) {
+                    RefreshDistributionConceptsView::dispatch();
+                }
+
                 return $this->OKResponse($collection);
             }
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@update - failed: '.
-                json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error(
+                'CollectionController@update - failed: ' .
+                json_encode($validated) .
+                ' (exception: ' . $e->getMessage() . ')'
+            );
 
             return $this->NotFoundResponse();
         }
@@ -569,6 +578,7 @@ class CollectionController extends Controller
                     Rule::exists('collection_hosts', 'id')
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
+                'is_synthetic' => ['sometimes', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -582,6 +592,7 @@ class CollectionController extends Controller
                 'pid' => Str::uuid(),
                 'type' => $validated['type'],
                 'custodian_id' => $custodian->id,
+                'is_synthetic' => $validated['is_synthetic'] ?? false,
             ]);
 
             $collection->host()->sync([$validated['host_id']]);

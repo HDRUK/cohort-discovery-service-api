@@ -35,7 +35,9 @@ class RuleBuilderService
     private function getConceptsForSegment(
         string $segment,
         ConstraintAccumulator $constraints,
-        array &$warnings
+        array &$warnings,
+        bool $ignoreSynthetic = false,
+        bool $preferNonSynthetic = true
     ): array {
         $this->loadNlpEntities($segment);
         $this->mergeNlpWarnings($warnings);
@@ -56,11 +58,30 @@ class RuleBuilderService
                 continue;
             }
 
-            usort(
-                $candidates,
-                fn ($a, $b) =>
-                ($b['attributes']['match_score'] ?? 0) <=> ($a['attributes']['match_score'] ?? 0)
-            );
+            if ($ignoreSynthetic) {
+                $candidates = array_values(array_filter(
+                    $candidates,
+                    fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
+                ));
+            }
+
+            if (empty($candidates)) {
+                continue;
+            }
+
+           usort($candidates, function ($a, $b) use ($preferNonSynthetic) {
+                if ($preferNonSynthetic) {
+                    $aSynthetic = $a['attributes']['all_synthetic'] ?? 0;
+                    $bSynthetic = $b['attributes']['all_synthetic'] ?? 0;
+
+                    if ($aSynthetic !== $bSynthetic) {
+                        return $aSynthetic <=> $bSynthetic;
+                    }
+                }
+
+                return ($b['attributes']['match_score'] ?? 0)
+                    <=> ($a['attributes']['match_score'] ?? 0);
+            });
 
             $primary = $candidates[0];
             $children = [];
@@ -72,6 +93,8 @@ class RuleBuilderService
                 'description' => $primary['attributes']['description'] ?? ($primary['text'] ?? $textKey),
                 'category' => $primary['attributes']['domain_id'] ?? 'Condition',
                 'children' => $children,
+                'ncollections' => $primary['attributes']['ncollections'] ?? 0,
+                'all_synthetic' => $primary['attributes']['all_synthetic'] ?? 0,
                 'match_score' => $primary['attributes']['match_score'] ?? 0,
                 'tokens' => $primary['attributes']['tokens'] ?? [],
                 'phrase_tokens' => $primary['attributes']['phrase_tokens'] ?? [],
@@ -82,6 +105,8 @@ class RuleBuilderService
                         'description' => $ent['attributes']['description'] ?? '',
                         'category' => $ent['attributes']['domain_id'] ?? 'Condition',
                         'children' => [],
+                        'ncollections' => $ent['attributes']['ncollections'] ?? 0,
+                        'all_synthetic' => $ent['attributes']['all_synthetic'] ?? 0,
                     ];
                 }, $alts),
             ];
@@ -129,8 +154,11 @@ class RuleBuilderService
     /**
      * Parses a query string into a structured rules array.
      */
-    public function parseToRules(string $query): array
-    {
+    public function parseToRules(
+        string $query,
+        bool $ignoreSynthetic = false,
+        bool $preferNonSynthetic = true
+    ): array {
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
@@ -144,7 +172,13 @@ class RuleBuilderService
 
         foreach ($segments as $i => $segment) {
             \Log::info('Finding OMOP concepts for segment: '.$segment);
-            $concepts = $this->getConceptsForSegment($segment, $constraints, $warnings);
+            $concepts = $this->getConceptsForSegment(
+                $segment,
+                $constraints,
+                $warnings,
+                $ignoreSynthetic,
+                $preferNonSynthetic
+            );
             \Log::info('Found '.count($concepts));
 
             // If there are multiple concepts, wrap in AND group
