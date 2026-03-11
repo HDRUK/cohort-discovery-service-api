@@ -44,6 +44,13 @@ class RuleBuilderService
 
         $rules = [];
 
+        foreach (($this->nlpGroups ?? []) as $nlpGroup) {
+            $groupNode = $this->buildGroupNode($nlpGroup);
+            if ($groupNode !== null) {
+                $rules[] = $groupNode;
+            }
+        }
+
         foreach (($this->nlpEntities ?? []) as $textKey => $candidates) {
             if (empty($candidates)) {
                 continue;
@@ -317,6 +324,69 @@ class RuleBuilderService
 
         [$from, $to] = $range;
         $this->applyTimeRangeToAccumulator($constraints, $warnings, $from, $to, 'from NLP (query)');
+    }
+
+    private function buildGroupNode(array $nlpGroup): ?array
+    {
+        $entities = $nlpGroup['entities'] ?? [];
+        $operator = $nlpGroup['operator'] ?? 'and';
+
+        $groupedByText = collect($entities)
+            ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
+            ->map(fn ($group) => $group->values()->all())
+            ->toArray();
+
+        $groupRules = [];
+
+        foreach ($groupedByText as $textKey => $candidates) {
+            if (empty($candidates)) {
+                continue;
+            }
+
+            usort(
+                $candidates,
+                fn ($a, $b) =>
+                ($b['attributes']['match_score'] ?? 0) <=> ($a['attributes']['match_score'] ?? 0)
+            );
+
+            $primary = $candidates[0];
+            $alts = array_slice($candidates, 1);
+
+            $concept = [
+                'concept_id' => $primary['attributes']['concept_id'] ?? null,
+                'name' => $primary['attributes']['concept_name'] ?? ($primary['text'] ?? $textKey),
+                'description' => $primary['attributes']['description'] ?? ($primary['text'] ?? $textKey),
+                'category' => $primary['attributes']['domain_id'] ?? 'Condition',
+                'children' => [],
+                'match_score' => $primary['attributes']['match_score'] ?? 0,
+                'tokens' => $primary['attributes']['tokens'] ?? [],
+                'phrase_tokens' => $primary['attributes']['phrase_tokens'] ?? [],
+                'alternatives' => array_map(function ($ent) {
+                    return [
+                        'concept_id' => $ent['attributes']['concept_id'] ?? null,
+                        'name' => $ent['attributes']['concept_name'] ?? ($ent['text'] ?? ''),
+                        'description' => $ent['attributes']['description'] ?? '',
+                        'category' => $ent['attributes']['domain_id'] ?? 'Condition',
+                        'children' => [],
+                    ];
+                }, $alts),
+            ];
+
+            if (! empty($groupRules)) {
+                $groupRules[] = $this->makeOperator($operator);
+            }
+
+            $groupRules[] = $this->makeRule(
+                $concept,
+                exclude: (bool)($primary['attributes']['negates'] ?? false)
+            );
+        }
+
+        if (empty($groupRules)) {
+            return null;
+        }
+
+        return $this->makeGroup($groupRules);
     }
 
     private function makeAgeFilterNode(array $ageConstraint): array
