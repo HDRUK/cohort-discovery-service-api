@@ -364,6 +364,7 @@ class CollectionController extends Controller
         $request->merge(['id' => $id]);
         $validated = $request->validated();
 
+
         try {
             $collection = Collection::with(['host','config','custodian'])->findOrFail($validated['id']);
             $this->authorize('update', $collection);
@@ -569,6 +570,7 @@ class CollectionController extends Controller
                     Rule::exists('collection_hosts', 'id')
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
+                'is_synthetic' => ['sometimes', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -582,6 +584,7 @@ class CollectionController extends Controller
                 'pid' => Str::uuid(),
                 'type' => $validated['type'],
                 'custodian_id' => $custodian->id,
+                'is_synthetic' => $validated['is_synthetic'] ?? false,
             ]);
 
             $collection->host()->sync([$validated['host_id']]);

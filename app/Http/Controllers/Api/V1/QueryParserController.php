@@ -43,11 +43,21 @@ class QueryParserController extends Controller
     {
         $request->validate([
             'query' => 'required|string',
+            'ignore_synthetic' => 'sometimes|boolean',
+            'prefer_non_synthetic' => 'sometimes|boolean',
         ]);
 
         $query = $request->input('query');
         $query = $ruleBuilderService->normaliseCharacters($query);
-        $rules = $ruleBuilderService->parseToRules($query);
+
+        $ignoreSynthetic = $request->boolean('ignore_synthetic', false);
+        $preferNonSynthetic = $request->boolean('prefer_non_synthetic', true);
+
+        $rules = $ruleBuilderService->parseToRules(
+            $query,
+            $ignoreSynthetic,
+            $preferNonSynthetic
+        );
 
         return $this->OKResponse(json_encode($rules));
     }
