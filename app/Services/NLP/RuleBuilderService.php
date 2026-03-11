@@ -46,6 +46,13 @@ class RuleBuilderService
 
         $rules = [];
 
+        foreach (($this->nlpGroups ?? []) as $nlpGroup) {
+            $groupNode = $this->buildGroupNode($nlpGroup);
+            if ($groupNode !== null) {
+                $rules[] = $groupNode;
+            }
+        }
+
         foreach (($this->nlpEntities ?? []) as $textKey => $candidates) {
             if (empty($candidates)) {
                 continue;
@@ -246,13 +253,13 @@ class RuleBuilderService
         if (preg_match('/\badults?\b/i', $query)) {
             $constraints->addAgeMin(config('system.default_adult_age_min'), true);
 
-            $warnings[] = 'Ambiguous meaning of "adults"';
+            $warnings[] = '"Adults" interpreted as current age >= 18. Please modify from the query builder if needed.';
         }
 
         if (preg_match('/\bchildren?\b/i', $query)) {
             $constraints->addAgeMax(config('system.default_child_age_max'), true);
 
-            $warnings[] = 'Ambiguous meaning of "children"';
+            $warnings[] = '"Children" interpreted as current age <= 17. Please modify from the query builder if needed.';
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -261,13 +268,13 @@ class RuleBuilderService
         if (preg_match('/under (\d+)/i', $query, $m)) {
             $constraints->addAgeMax((int)$m[1], true);
 
-            $warnings[] = 'Age < ' . $m[1] . ' (ambiguous: at diagnosis vs current)';
+            $warnings[] = "Age under $m[1] interpreted as current age < $m[1]";
         }
 
         if (preg_match('/over (\d+)/i', $query, $m)) {
             $constraints->addAgeMin((int)$m[1], true);
 
-            $warnings[] = 'Age > ' . $m[1] . ' (ambiguous: at diagnosis vs current)';
+            $warnings[] = "Age over $m[1] intepreted as current age > $m[1]";
         }
 
         if (preg_match('/aged (\d+)[–-](\d+)/i', $query, $m)) {
@@ -353,6 +360,69 @@ class RuleBuilderService
         $this->applyTimeRangeToAccumulator($constraints, $warnings, $from, $to, 'from NLP (query)');
     }
 
+    private function buildGroupNode(array $nlpGroup): ?array
+    {
+        $entities = $nlpGroup['entities'] ?? [];
+        $operator = $nlpGroup['operator'] ?? 'and';
+
+        $groupedByText = collect($entities)
+            ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
+            ->map(fn ($group) => $group->values()->all())
+            ->toArray();
+
+        $groupRules = [];
+
+        foreach ($groupedByText as $textKey => $candidates) {
+            if (empty($candidates)) {
+                continue;
+            }
+
+            usort(
+                $candidates,
+                fn ($a, $b) =>
+                ($b['attributes']['match_score'] ?? 0) <=> ($a['attributes']['match_score'] ?? 0)
+            );
+
+            $primary = $candidates[0];
+            $alts = array_slice($candidates, 1);
+
+            $concept = [
+                'concept_id' => $primary['attributes']['concept_id'] ?? null,
+                'name' => $primary['attributes']['concept_name'] ?? ($primary['text'] ?? $textKey),
+                'description' => $primary['attributes']['description'] ?? ($primary['text'] ?? $textKey),
+                'category' => $primary['attributes']['domain_id'] ?? 'Condition',
+                'children' => [],
+                'match_score' => $primary['attributes']['match_score'] ?? 0,
+                'tokens' => $primary['attributes']['tokens'] ?? [],
+                'phrase_tokens' => $primary['attributes']['phrase_tokens'] ?? [],
+                'alternatives' => array_map(function ($ent) {
+                    return [
+                        'concept_id' => $ent['attributes']['concept_id'] ?? null,
+                        'name' => $ent['attributes']['concept_name'] ?? ($ent['text'] ?? ''),
+                        'description' => $ent['attributes']['description'] ?? '',
+                        'category' => $ent['attributes']['domain_id'] ?? 'Condition',
+                        'children' => [],
+                    ];
+                }, $alts),
+            ];
+
+            if (! empty($groupRules)) {
+                $groupRules[] = $this->makeOperator($operator);
+            }
+
+            $groupRules[] = $this->makeRule(
+                $concept,
+                exclude: (bool)($primary['attributes']['negates'] ?? false)
+            );
+        }
+
+        if (empty($groupRules)) {
+            return null;
+        }
+
+        return $this->makeGroup($groupRules);
+    }
+
     private function makeAgeFilterNode(array $ageConstraint): array
     {
         return [
@@ -435,18 +505,8 @@ class RuleBuilderService
             }
 
             if (array_key_exists('min', $constraint) || array_key_exists('max', $constraint)) {
-                $inclusive = $constraint['inclusive'] ?? true;
                 $cMin = is_numeric($constraint['min'] ?? null) ? (int) $constraint['min'] : null;
                 $cMax = is_numeric($constraint['max'] ?? null) ? (int) $constraint['max'] : null;
-
-                if ($inclusive === false) {
-                    if ($cMin !== null) {
-                        $cMin += 1;
-                    }
-                    if ($cMax !== null) {
-                        $cMax -= 1;
-                    }
-                }
 
                 if ($cMin !== null) {
                     $min = max($min ?? $cMin, $cMin);
@@ -549,18 +609,15 @@ class RuleBuilderService
         if ($min !== null && $max !== null) {
             $constraints->addAgeMin($min, true);
             $constraints->addAgeMax($max, true);
-            $warnings[] = 'Age between ' . $min . ' and ' . $max . ' (' . $sourceLabel . ')';
             return;
         }
 
         if ($min !== null) {
             $constraints->addAgeMin($min, true);
-            $warnings[] = 'Age >= ' . $min . ' (' . $sourceLabel . ')';
         }
 
         if ($max !== null) {
             $constraints->addAgeMax($max, true);
-            $warnings[] = 'Age <= ' . $max . ' (' . $sourceLabel . ')';
         }
     }
 
@@ -573,18 +630,15 @@ class RuleBuilderService
     ): void {
         if ($from !== null && $to !== null) {
             $constraints->setTimeRange($from, $to, true);
-            $warnings[] = 'Recorded between ' . $from . ' and ' . $to . ' (' . $sourceLabel . ')';
             return;
         }
 
         if ($from !== null) {
             $constraints->setTimeRange($from, null, true);
-            $warnings[] = 'Recorded after ' . $from . ' (' . $sourceLabel . ')';
         }
 
         if ($to !== null) {
             $constraints->setTimeRange(null, $to, true);
-            $warnings[] = 'Recorded before ' . $to . ' (' . $sourceLabel . ')';
         }
     }
 
