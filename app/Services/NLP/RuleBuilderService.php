@@ -471,18 +471,8 @@ class RuleBuilderService
             }
 
             if (array_key_exists('min', $constraint) || array_key_exists('max', $constraint)) {
-                $inclusive = $constraint['inclusive'] ?? true;
                 $cMin = is_numeric($constraint['min'] ?? null) ? (int) $constraint['min'] : null;
                 $cMax = is_numeric($constraint['max'] ?? null) ? (int) $constraint['max'] : null;
-
-                if ($inclusive === false) {
-                    if ($cMin !== null) {
-                        $cMin += 1;
-                    }
-                    if ($cMax !== null) {
-                        $cMax -= 1;
-                    }
-                }
 
                 if ($cMin !== null) {
                     $min = max($min ?? $cMin, $cMin);
