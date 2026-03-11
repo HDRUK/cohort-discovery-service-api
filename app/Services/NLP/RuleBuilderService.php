@@ -212,13 +212,13 @@ class RuleBuilderService
         if (preg_match('/\badults?\b/i', $query)) {
             $constraints->addAgeMin(config('system.default_adult_age_min'), true);
 
-            $warnings[] = 'Ambiguous meaning of "adults"';
+            $warnings[] = '"Adults" interpreted as current age >= 18. Please modify from the query builder if needed.';
         }
 
         if (preg_match('/\bchildren?\b/i', $query)) {
             $constraints->addAgeMax(config('system.default_child_age_max'), true);
 
-            $warnings[] = 'Ambiguous meaning of "children"';
+            $warnings[] = '"Children" interpreted as current age <= 17. Please modify from the query builder if needed.';
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -227,13 +227,13 @@ class RuleBuilderService
         if (preg_match('/under (\d+)/i', $query, $m)) {
             $constraints->addAgeMax((int)$m[1], true);
 
-            $warnings[] = 'Age < ' . $m[1] . ' (ambiguous: at diagnosis vs current)';
+            $warnings[] = "Age under $m[1] interpreted as current age < $m[1]";
         }
 
         if (preg_match('/over (\d+)/i', $query, $m)) {
             $constraints->addAgeMin((int)$m[1], true);
 
-            $warnings[] = 'Age > ' . $m[1] . ' (ambiguous: at diagnosis vs current)';
+            $warnings[] = "Age over $m[1] intepreted as current age > $m[1]";
         }
 
         if (preg_match('/aged (\d+)[–-](\d+)/i', $query, $m)) {
@@ -515,18 +515,15 @@ class RuleBuilderService
         if ($min !== null && $max !== null) {
             $constraints->addAgeMin($min, true);
             $constraints->addAgeMax($max, true);
-            $warnings[] = 'Age between ' . $min . ' and ' . $max . ' (' . $sourceLabel . ')';
             return;
         }
 
         if ($min !== null) {
             $constraints->addAgeMin($min, true);
-            $warnings[] = 'Age >= ' . $min . ' (' . $sourceLabel . ')';
         }
 
         if ($max !== null) {
             $constraints->addAgeMax($max, true);
-            $warnings[] = 'Age <= ' . $max . ' (' . $sourceLabel . ')';
         }
     }
 
@@ -539,18 +536,15 @@ class RuleBuilderService
     ): void {
         if ($from !== null && $to !== null) {
             $constraints->setTimeRange($from, $to, true);
-            $warnings[] = 'Recorded between ' . $from . ' and ' . $to . ' (' . $sourceLabel . ')';
             return;
         }
 
         if ($from !== null) {
             $constraints->setTimeRange($from, null, true);
-            $warnings[] = 'Recorded after ' . $from . ' (' . $sourceLabel . ')';
         }
 
         if ($to !== null) {
             $constraints->setTimeRange(null, $to, true);
-            $warnings[] = 'Recorded before ' . $to . ' (' . $sourceLabel . ')';
         }
     }
 
