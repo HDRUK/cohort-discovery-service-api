@@ -277,21 +277,23 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function latestDemographic(): HasOne
     {
-        return $this->hasOne(Distribution::class)
-            ->where([
-                'category' => 'DEMOGRAPHICS',
-                'name' => 'SEX',
-            ])
-            ->latest('created_at');
+        return $this->hasOne(Distribution::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('category', 'DEMOGRAPHICS')
+                ->where('name', 'SEX');
+            }
+        );
     }
 
     public function latestConcept(): HasOne
     {
-        return $this->hasOne(Distribution::class)
-            ->where('category', '!=', 'DEMOGRAPHICS')
-            ->whereNotNull('concept_id')
-            ->where('concept_id', '>', 0)
-            ->latest('created_at');
+        return $this->hasOne(Distribution::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('concept_id', '>', 0);
+            }
+        );
     }
 
     public function host(): BelongsToMany
