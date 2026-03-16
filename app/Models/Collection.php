@@ -291,9 +291,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->hasOne(Distribution::class)->ofMany(
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
-                $q->where('category', '!=', 'DEMOGRAPHICS')
-                ->whereNotNull('concept_id')
-                ->where('concept_id', '>', 0);
+                $q->where('concept_id', '>', 0);
             }
         );
     }
