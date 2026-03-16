@@ -11,6 +11,8 @@ use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -95,40 +97,98 @@ class OmopController extends Controller
     public function searchConcepts(Request $request): JsonResponse
     {
         try {
-            $perPage = $this->resolvePerPage();
-            $domain = $request->input('domain');
+            $perPage         = $this->resolvePerPage();
+            $page            = max(1, (int) $request->input('page', 1));
+            $offset          = ($page - 1) * $perPage;
+            $collectionPids  = $request->input('collections');
+            $domain          = $request->input('domain');
+            $includeAncestors = $request->boolean('include_ancestors', true);
+            $search          = $request->only(['concept_id', 'description']);
 
-            // NOTE:
-            // - collection filtering is intentionally disabled for now because this
-            //   endpoint now reads from the aggregated distribution_concepts view
-            // - include_ancestors is also intentionally disabled for now because
-            //   the view is concept-level and no longer based on Distribution rows
+            $bindings = [];
+            $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
 
-            $codes = DistributionConcept::query()
-               ->when($domain, function ($q, $domain) {
-                   $q->where('domain_id', ucfirst(strtolower($domain)));
-               })
-                ->searchViaRequest($request->only(['concept_id','concept_name']))
-                ->select([
-                    'concept_id',
-                    'concept_name as name',
-                    'concept_name as description',
-                    'domain_id as category',
-                    'vocabulary_id',
-                    'concept_class',
-                    'standard_concept',
-                    'concept_code',
-                    'count',
-                    'ncollections',
-                    'all_synthetic'
-                ])
-                ->orderBy('all_synthetic', 'asc')
-                ->orderBy('ncollections', 'desc')
-                ->orderBy('count', 'desc')
-                ->orderBy('concept_name')
-                ->paginate($perPage);
+            if ($collectionPids) {
+                $placeholders = implode(',', array_fill(0, count($collectionPids), '?'));
+                $where[]  = "d.collection_id IN (SELECT id FROM collections WHERE pid IN ({$placeholders}))";
+                $bindings = array_merge($bindings, $collectionPids);
+            }
 
-            return $this->OKResponse($codes);
+            if ($domain) {
+                $where[]    = 'd.category = ?';
+                $bindings[] = strtolower($domain);
+            }
+
+            foreach ((array) ($search['concept_id'] ?? []) as $term) {
+                $where[]    = 'd.concept_id LIKE ?';
+                $bindings[] = '%' . $term . '%';
+            }
+
+            foreach ((array) ($search['description'] ?? []) as $term) {
+                $where[]    = 'd.description LIKE ?';
+                $bindings[] = '%' . $term . '%';
+            }
+
+            $whereClause = implode(' AND ', $where);
+
+            $childrenJoin = $includeAncestors
+                ? 'LEFT JOIN concept_ancestors ca ON ca.parent_concept_id = base.concept_id
+                   LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
+                : '';
+
+            $childrenSelect = $includeAncestors
+                ? ", JSON_ARRAYAGG(
+                       CASE WHEN dc.concept_id IS NOT NULL THEN
+                           JSON_OBJECT(
+                               'concept_id', dc.concept_id,
+                               'description', dc.description,
+                               'category', dc.category
+                           )
+                       END
+                   ) AS children"
+                : '';
+
+            $sql = "
+                WITH base AS (
+                    SELECT DISTINCT d.name, d.concept_id, d.description, d.category
+                    FROM distributions d
+                    WHERE {$whereClause}
+                ),
+                total AS (SELECT COUNT(*) AS cnt FROM base)
+                SELECT base.*, total.cnt {$childrenSelect}
+                FROM base
+                CROSS JOIN total
+                {$childrenJoin}
+                GROUP BY base.concept_id, base.name, base.description, base.category, total.cnt
+                ORDER BY base.concept_id
+                LIMIT ? OFFSET ?
+            ";
+
+            $bindings[] = $perPage;
+            $bindings[] = $offset;
+
+            $rows  = DB::select($sql, $bindings);
+            $total = $rows[0]->cnt ?? 0;
+
+            foreach ($rows as $row) {
+                unset($row->cnt);
+                if ($includeAncestors) {
+                    $row->children = array_values(array_filter(
+                        json_decode($row->children ?? '[]', true) ?? [],
+                        fn ($c) => $c !== null
+                    ));
+                }
+            }
+
+            $paginator = new LengthAwarePaginator(
+                $rows,
+                $total,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            return $this->OKResponse($paginator);
         } catch (\Exception $e) {
             error_log($e->getMessage());
 
