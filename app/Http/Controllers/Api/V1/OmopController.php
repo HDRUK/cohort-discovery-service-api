@@ -105,24 +105,23 @@ class OmopController extends Controller
             //   the view is concept-level and no longer based on Distribution rows
 
             $codes = DistributionConcept::query()
-                ->when($domain, function ($q, $domain) {
-                    $q->whereRaw('LOWER(domain_id) = ?', [strtolower($domain)]);
-                })
-                ->whereNotNull('concept_name')
+               ->when($domain, function ($q, $domain) {
+                   $q->where('domain_id', ucfirst(strtolower($domain)));
+               })
                 ->searchViaRequest($request->only(['concept_id','concept_name']))
                 ->select([
-                    'concept_id',
-                    'concept_name as name',
-                    'concept_name as description',
-                    'domain_id as category',
-                    'vocabulary_id',
-                    'concept_class',
-                    'standard_concept',
-                    'concept_code',
-                    'count',
-                    'ncollections',
-                    'all_synthetic'
-                ])
+                                   'concept_id',
+                                   'concept_name as name',
+                                   'concept_name as description',
+                                   'domain_id as category',
+                                   'vocabulary_id',
+                                   'concept_class',
+                                   'standard_concept',
+                                   'concept_code',
+                                   'count',
+                                   'ncollections',
+                                   'all_synthetic'
+                               ])
                 ->orderBy('all_synthetic', 'asc')
                 ->orderBy('ncollections', 'desc')
                 ->orderBy('count', 'desc')
