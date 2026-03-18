@@ -110,18 +110,18 @@ class OmopController extends Controller
                })
                 ->searchViaRequest($request->only(['concept_id','concept_name']))
                 ->select([
-                                   'concept_id',
-                                   'concept_name as name',
-                                   'concept_name as description',
-                                   'domain_id as category',
-                                   'vocabulary_id',
-                                   'concept_class',
-                                   'standard_concept',
-                                   'concept_code',
-                                   'count',
-                                   'ncollections',
-                                   'all_synthetic'
-                               ])
+                    'concept_id',
+                    'concept_name as name',
+                    'concept_name as description',
+                    'domain_id as category',
+                    'vocabulary_id',
+                    'concept_class',
+                    'standard_concept',
+                    'concept_code',
+                    'count',
+                    'ncollections',
+                    'all_synthetic'
+                ])
                 ->orderBy('all_synthetic', 'asc')
                 ->orderBy('ncollections', 'desc')
                 ->orderBy('count', 'desc')
