@@ -479,19 +479,54 @@ class CollectionController extends Controller
                         $query->with('task')->orderByDesc('updated_at');
                     },
                 ])
-                ->withCount('concepts as nconcepts')
                 ->first();
             if (!$collection) {
                 return $this->NotFoundResponse();
             }
 
-            //$this->authorize('viewAnyForAdmin', $collection);
+            $nconcepts = $collection->concepts()
+               ->count();
 
-            return $this->OKResponse($collection);
+            return $this->OKResponse([...$collection->toArray(), 'nconcepts' => $nconcepts]);
+
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@show - failed: '.
+            \Log::error('CollectionController@getCollectionDetails - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+
+    public function getCollectionConcepts(Request $request, string $pid): JsonResponse
+    {
+        try {
+            $perPage = $this->resolvePerPage();
+            $collection = Collection::where('pid', $pid)
+                ->first();
+            if (!$collection) {
+                return $this->NotFoundResponse();
+            }
+
+            $data = $collection->concepts()
+                ->select([
+                    'distributions.id',
+                    'distributions.collection_id',
+                    'distributions.concept_id',
+                    'distributions.description',
+                    'distributions.category',
+                    'distributions.count',
+                ])
+                ->orderBy('concept_id')
+                ->paginate($perPage);
+
+            return $this->OKResponse($data);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@getCollectionConcepts - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getMessage().')');
 
             return $this->ErrorResponse($e->getMessage());
