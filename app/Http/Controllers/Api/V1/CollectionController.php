@@ -444,24 +444,28 @@ class CollectionController extends Controller
     }
 
     /**
-    * @OA\Get(
-    *     path="/api/v1/collections/{id}/details",
-    *     summary="Get additional details about a collection by PID",
-    *     tags={"Collections"},
-    *     @OA\Parameter(
-    *         name="pid",
-    *         in="path",
-    *         required=true,
-    *         @OA\Schema(type="string", example='abc-def')
-    *     ),
-    *     @OA\Response(
-    *         response=200,
-    *         description="Collection found",
-    *         @OA\JsonContent(ref="#/components/schemas/Collection")
-    *     ),
-    *     @OA\Response(response=404, description="Collection not found")
-    * )
-    */
+     * @OA\Get(
+     *     path="/api/v1/collections/{pid}/details",
+     *     summary="Get additional details about a collection by PID",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         required=true,
+     *         description="Collection PID",
+     *         @OA\Schema(type="string", example="abc-def")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Collection found",
+     *         @OA\JsonContent(ref="#/components/schemas/Collection")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Collection not found"
+     *     )
+     * )
+     */
     public function getCollectionDetails(Request $request, string $pid): JsonResponse
     {
         try {
