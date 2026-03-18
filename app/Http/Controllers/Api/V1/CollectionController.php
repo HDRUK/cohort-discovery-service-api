@@ -255,7 +255,6 @@ class CollectionController extends Controller
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
-        return $this->OKResponse('hi');
 
         try {
             $collection = Collection::with([
@@ -860,22 +859,10 @@ class CollectionController extends Controller
                 'custodian.network',
                 'config',
                 'modelState.state',
-                //'latestDemographicTask.result:id,task_id,count',
-                //'latestSuccessfulDemographicTask.result:id,task_id,count',
-                //'latestSuccessfulDemographicTask.distributions:id,task_id,name,category,count',
-                //'latestSuccessfulConceptTask.result:id,task_id,count',
-                //'latestSuccessfulConceptTask' => function ($q) {
-                //    $q->with('result:id,task_id,count');
-                //    $q->withCount('distributions as nconcepts');
-                //},
-                //'latestSuccessfulDemographicTask',
-                //'latestSuccessfulConceptTask',
                 'latestSuccessfulDemographicResultFile',
                 'latestSuccessfulConceptResultFile',
                 'workgroups',
             ])
-            //->withCount(['concepts as n_concepts'])
-            //->withTaskCounts()
             ->when($request->filled('state'), function ($q) use ($request) {
                 if ($request->state !== 'all') {
                     $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
