@@ -10,6 +10,7 @@ use App\Enums\QueryType;
 use App\Traits\JobCreation;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class DistributionController extends Controller
 {
@@ -27,7 +28,7 @@ class DistributionController extends Controller
             $queryType = $request->validated('query_type');
             $queryTypeEnum = QueryType::from($queryType);
 
-            $query = Query::createDistributionQuery($collection, $queryTypeEnum);
+            $query = Query::createDistributionQuery($collection, $queryTypeEnum, Auth::id());
 
             return $this->OKResponse($query);
 

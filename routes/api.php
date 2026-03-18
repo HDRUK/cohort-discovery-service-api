@@ -136,6 +136,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
+    Route::get('/v1/collections/{pid}/details', [CollectionController::class, 'getCollectionDetails']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
 
     Route::post('/v1/collection/{pid}/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun'])->whereUuid('pid');

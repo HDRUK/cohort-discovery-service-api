@@ -46,3 +46,9 @@ Feature::define('integrated-sync-sde-wgs-from-claim', fn () => true);
 Feature::define('integrated-sync-roles-every-request', fn () => true);
 
 Feature::define('integrated-sync-custodians-every-request', fn () => true);
+
+/**
+ * Show nconcepts/ncollections when viewing a concept
+ * This is useful for dev and maybe a feature we want to turn on for prod someday
+ */
+Feature::define('show-concept-stats', fn () => false);
