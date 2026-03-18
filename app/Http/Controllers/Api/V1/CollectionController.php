@@ -467,12 +467,20 @@ class CollectionController extends Controller
         try {
 
             $collection = Collection::where('pid', $pid)
-            ->with([
-                'demographics',
-                'custodian',
-                'modelState.state',
-                'workgroups',
-            ])->first();
+                ->with([
+                    'demographics',
+                    'custodian',
+                    'modelState.state',
+                    'workgroups',
+                    'resultFiles' => function ($query) {
+                        $query->with('task')->orderByDesc('updated_at');
+                    },
+                ])
+                ->withCount('concepts as nconcepts')
+                ->first();
+            if (!$collection) {
+                return $this->NotFoundResponse();
+            }
 
             //$this->authorize('viewAnyForAdmin', $collection);
 
@@ -483,7 +491,7 @@ class CollectionController extends Controller
             \Log::error('CollectionController@show - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getMessage().')');
 
-            return $this->NotFoundResponse();
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 

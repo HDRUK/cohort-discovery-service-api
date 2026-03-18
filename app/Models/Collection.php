@@ -301,26 +301,30 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function demographics(): HasMany
     {
-        // refactor candidate
-        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+        $latest = Distribution::query()
+            ->selectRaw('MAX(id) as id')
             ->where('category', 'DEMOGRAPHICS')
-            ->groupBy('name', 'collection_id');
+            ->groupBy('collection_id', 'concept_id');
 
-        return $this->hasMany(Distribution::class)
-            ->whereIn('id', $sub);
+        return $this->hasMany(Distribution::class, 'collection_id')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('distributions.id', '=', 'latest.id');
+            })
+            ->select('distributions.*');
     }
 
     public function concepts(): HasMany
     {
-        // refactor candidate
-        $sub = Distribution::select(DB::raw('MAX(id) as id'))
-            //->where('category', '!=', 'DEMOGRAPHICS')
-            //->whereNotNull('concept_id')
-            ->where('concept_id', '>', 0)
-            ->groupBy('name', 'collection_id');
+        $latest = DB::table('distributions')
+         ->selectRaw('collection_id, concept_id, MAX(id) as id')
+         ->where('concept_id', '>', 0)
+         ->groupBy('collection_id', 'concept_id');
 
-        return $this->hasMany(Distribution::class)
-            ->whereIn('id', $sub);
+        return $this->hasMany(Distribution::class, 'collection_id')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('distributions.id', '=', 'latest.id');
+            })
+            ->select('distributions.*');
     }
 
     public function latestDemographic(): HasOne
