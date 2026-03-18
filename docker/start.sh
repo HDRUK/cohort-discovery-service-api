@@ -29,7 +29,7 @@ if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "dev" ]; then
     fi
 else
     echo "running in prod mode"
-    php artisan migrate
+    php artisan migrate --force
 fi
 
 if [ -n "${OCTANE_WORKERS:-}" ]; then

@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Jobs\RefreshDistributionConceptsView;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * @OA\Tag(
@@ -217,37 +218,15 @@ class CollectionController extends Controller
         try {
             $perPage = $this->resolvePerPage();
 
-            $collections = Collection::query()
-                ->with([
-                    'host',
-                    'custodian.network',
-                    'config',
-                    'modelState.state',
-                    'latestDemographic.task',
-                    'latestConcept.task',
-                    'latestDemographicTask',
-                    'latestConceptTask',
-                    'workgroups',
-                ])
-                ->withCount(['concepts as n_concepts'])
-                ->withTaskCounts()
-                ->when($request->filled('state'), function ($q) use ($request) {
-                    if ($request->state !== 'all') {
-                        $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
-                    }
-                })
+            $collections = $this->collectionsIndexQuery($request)
                 ->when($request->filled('workgroup_id'), function ($q) use ($request) {
                     $q->whereRelation('workgroups', 'workgroups.id', $request->workgroup_id);
                 })
-                ->searchViaRequest()
-                ->filterViaRequest()
-                ->applySorting()
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@indexForAdmin - failed: '.
-                $e->getMessage());
+            \Log::error('CollectionController@indexForAdmin - failed: ' . $e->getMessage());
 
             throw $e;
         }
@@ -276,6 +255,7 @@ class CollectionController extends Controller
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
+        return $this->OKResponse('hi');
 
         try {
             $collection = Collection::with([
@@ -464,6 +444,50 @@ class CollectionController extends Controller
     }
 
     /**
+    * @OA\Get(
+    *     path="/api/v1/collections/{id}/details",
+    *     summary="Get additional details about a collection by PID",
+    *     tags={"Collections"},
+    *     @OA\Parameter(
+    *         name="pid",
+    *         in="path",
+    *         required=true,
+    *         @OA\Schema(type="string", example='abc-def')
+    *     ),
+    *     @OA\Response(
+    *         response=200,
+    *         description="Collection found",
+    *         @OA\JsonContent(ref="#/components/schemas/Collection")
+    *     ),
+    *     @OA\Response(response=404, description="Collection not found")
+    * )
+    */
+    public function getCollectionDetails(Request $request, string $pid): JsonResponse
+    {
+        try {
+
+            $collection = Collection::where('pid', $pid)
+            ->with([
+                'demographics',
+                'custodian',
+                'modelState.state',
+                'workgroups',
+            ])->first();
+
+            //$this->authorize('viewAnyForAdmin', $collection);
+
+            return $this->OKResponse($collection);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@show - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+
+            return $this->NotFoundResponse();
+        }
+    }
+
+    /**
      * @OA\Get(
      *     path="/api/v1/custodians/{custodianPid}/collections",
      *     summary="Get collections for a specific custodian",
@@ -499,35 +523,14 @@ class CollectionController extends Controller
 
         try {
             $perPage = $this->resolvePerPage();
-            $collections = Collection::query()
-                ->with([
-                    'host',
-                    'custodian.network',
-                    'config',
-                    'modelState.state',
-                    'latestDemographic.task',
-                    'latestConcept.task',
-                    'latestDemographicTask',
-                    'latestConceptTask',
-                    'workgroups',
-                ])
-                ->withCount(['concepts as n_concepts'])
-                ->withTaskCounts()
+
+            $collections = $this->collectionsIndexQuery($request)
                 ->where('custodian_id', $custodian->id)
-                ->when($request->filled('state'), function ($q) use ($request) {
-                    if ($request->state !== 'all') {
-                        $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
-                    }
-                })
-                ->searchViaRequest()
-                ->filterViaRequest()
-                ->applySorting()
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
-            \Log::error('CollectionController@indexByCustodian - failed: '.
-                $e->getMessage());
+            \Log::error('CollectionController@indexByCustodian - failed: ' . $e->getMessage());
 
             return $this->ErrorResponse($e->getMessage());
         }
@@ -836,5 +839,41 @@ class CollectionController extends Controller
 
         return $this->OKResponse($tasks->get());
     }
+
+    protected function collectionsIndexQuery(Request $request): Builder
+    {
+        return Collection::query()
+            ->with([
+                'host',
+                'custodian.network',
+                'config',
+                'modelState.state',
+                //'latestDemographicTask.result:id,task_id,count',
+                //'latestSuccessfulDemographicTask.result:id,task_id,count',
+                //'latestSuccessfulDemographicTask.distributions:id,task_id,name,category,count',
+                //'latestSuccessfulConceptTask.result:id,task_id,count',
+                //'latestSuccessfulConceptTask' => function ($q) {
+                //    $q->with('result:id,task_id,count');
+                //    $q->withCount('distributions as nconcepts');
+                //},
+                //'latestSuccessfulDemographicTask',
+                //'latestSuccessfulConceptTask',
+                'latestSuccessfulDemographicResultFile',
+                'latestSuccessfulConceptResultFile',
+                'workgroups',
+            ])
+            //->withCount(['concepts as n_concepts'])
+            //->withTaskCounts()
+            ->when($request->filled('state'), function ($q) use ($request) {
+                if ($request->state !== 'all') {
+                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                }
+            })
+            ->searchViaRequest()
+            ->filterViaRequest()
+            ->applySorting();
+    }
+
+
 
 }

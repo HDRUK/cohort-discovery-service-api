@@ -30,7 +30,7 @@ class ProcessDistributionFile implements ShouldQueue
 
     public function __construct(public int $resultFileId)
     {
-        $this->batchSize = (int) (config('system.distribution_batch_file_size') ?? 100);
+        $this->batchSize = (int) (config('system.distribution_batch_file_size') ?? 500);
 
         Log::info("[{$this->tag}] constructed", [
             'result_file_id' => $resultFileId,

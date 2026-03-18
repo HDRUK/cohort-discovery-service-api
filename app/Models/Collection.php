@@ -246,6 +246,54 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function latestSuccessfulDemographicTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
+                ->whereHas('result');
+            }
+        );
+    }
+
+    public function latestSuccessfulConceptTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
+                ->whereHas('result');
+            }
+        );
+    }
+
+    public function latestSuccessfulDemographicResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class)->ofMany(
+            ['updated_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('file_name', 'demographics.distribution')
+                ->where('status', 'done');
+            }
+        );
+    }
+
+
+    public function latestSuccessfulConceptResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class)->ofMany(
+            ['updated_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('file_name', 'code.distribution')
+                ->where('status', 'done');
+            }
+        );
+    }
+
+
     public function resultFiles()
     {
         return $this->hasMany(ResultFile::class);
@@ -266,8 +314,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         // refactor candidate
         $sub = Distribution::select(DB::raw('MAX(id) as id'))
-            ->where('category', '!=', 'DEMOGRAPHICS')
-            ->whereNotNull('concept_id')
+            //->where('category', '!=', 'DEMOGRAPHICS')
+            //->whereNotNull('concept_id')
             ->where('concept_id', '>', 0)
             ->groupBy('name', 'collection_id');
 
@@ -339,10 +387,10 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         return $query->withCount([
             'tasks as n_a_tasks' => fn ($q) =>
-                $q->whereNull('completed_at')->where('task_type', TaskType::A),
+                $q->whereNotNull('completed_at')->where('task_type', TaskType::A),
 
             'tasks as n_b_tasks' => fn ($q) =>
-                $q->whereNull('completed_at')->where('task_type', TaskType::B),
+                $q->whereNotNull('completed_at')->where('task_type', TaskType::B),
         ]);
     }
 }
