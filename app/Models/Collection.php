@@ -315,14 +315,18 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function concepts(): HasMany
     {
+        $collectionId = $this->id;
+
         $latest = DB::table('distributions')
-         ->selectRaw('collection_id, concept_id, MAX(id) as id')
-         ->where('concept_id', '>', 0)
-         ->groupBy('collection_id', 'concept_id');
+            ->selectRaw('collection_id, concept_id, MAX(id) as id')
+            ->where('collection_id', $collectionId)
+            ->where('concept_id', '>', 0)
+            ->groupBy('collection_id', 'concept_id');
 
         return $this->hasMany(Distribution::class, 'collection_id')
             ->joinSub($latest, 'latest', function ($join) {
-                $join->on('distributions.id', '=', 'latest.id');
+                $join->on('distributions.id', '=', 'latest.id')
+                    ->on('distributions.collection_id', '=', 'latest.collection_id');
             })
             ->select('distributions.*');
     }
