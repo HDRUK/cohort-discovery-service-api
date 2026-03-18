@@ -246,54 +246,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
-    public function latestSuccessfulDemographicTask(): HasOne
-    {
-        return $this->hasOne(Task::class)->ofMany(
-            ['created_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('task_type', TaskType::B)
-                ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
-                ->whereHas('result');
-            }
-        );
-    }
-
-    public function latestSuccessfulConceptTask(): HasOne
-    {
-        return $this->hasOne(Task::class)->ofMany(
-            ['created_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('task_type', TaskType::B)
-                ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
-                ->whereHas('result');
-            }
-        );
-    }
-
-    public function latestSuccessfulDemographicResultFile(): HasOne
-    {
-        return $this->hasOne(ResultFile::class)->ofMany(
-            ['updated_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('file_name', 'demographics.distribution')
-                ->where('status', 'done');
-            }
-        );
-    }
-
-
-    public function latestSuccessfulConceptResultFile(): HasOne
-    {
-        return $this->hasOne(ResultFile::class)->ofMany(
-            ['updated_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('file_name', 'code.distribution')
-                ->where('status', 'done');
-            }
-        );
-    }
-
-
     public function resultFiles()
     {
         return $this->hasMany(ResultFile::class);
@@ -301,55 +253,45 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function demographics(): HasMany
     {
-        $latest = Distribution::query()
-            ->selectRaw('MAX(id) as id')
+        // refactor candidate
+        $sub = Distribution::select(DB::raw('MAX(id) as id'))
             ->where('category', 'DEMOGRAPHICS')
-            ->groupBy('collection_id', 'concept_id');
+            ->groupBy('name', 'collection_id');
 
-        return $this->hasMany(Distribution::class, 'collection_id')
-            ->joinSub($latest, 'latest', function ($join) {
-                $join->on('distributions.id', '=', 'latest.id');
-            })
-            ->select('distributions.*');
+        return $this->hasMany(Distribution::class)
+            ->whereIn('id', $sub);
     }
 
     public function concepts(): HasMany
     {
-        $collectionId = $this->id;
-
-        $latest = DB::table('distributions')
-            ->selectRaw('collection_id, concept_id, MAX(id) as id')
-            ->where('collection_id', $collectionId)
+        // refactor candidate
+        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+            ->where('category', '!=', 'DEMOGRAPHICS')
+            ->whereNotNull('concept_id')
             ->where('concept_id', '>', 0)
-            ->groupBy('collection_id', 'concept_id');
+            ->groupBy('name', 'collection_id');
 
-        return $this->hasMany(Distribution::class, 'collection_id')
-            ->joinSub($latest, 'latest', function ($join) {
-                $join->on('distributions.id', '=', 'latest.id')
-                    ->on('distributions.collection_id', '=', 'latest.collection_id');
-            })
-            ->select('distributions.*');
+        return $this->hasMany(Distribution::class)
+            ->whereIn('id', $sub);
     }
 
     public function latestDemographic(): HasOne
     {
-        return $this->hasOne(Distribution::class)->ofMany(
-            ['created_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('category', 'DEMOGRAPHICS')
-                ->where('name', 'SEX');
-            }
-        );
+        return $this->hasOne(Distribution::class)
+            ->where([
+                'category' => 'DEMOGRAPHICS',
+                'name' => 'SEX',
+            ])
+            ->latest('created_at');
     }
 
     public function latestConcept(): HasOne
     {
-        return $this->hasOne(Distribution::class)->ofMany(
-            ['created_at' => 'max', 'id' => 'max'],
-            function (Builder $q) {
-                $q->where('concept_id', '>', 0);
-            }
-        );
+        return $this->hasOne(Distribution::class)
+            ->where('category', '!=', 'DEMOGRAPHICS')
+            ->whereNotNull('concept_id')
+            ->where('concept_id', '>', 0)
+            ->latest('created_at');
     }
 
     public function host(): BelongsToMany
@@ -395,10 +337,10 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         return $query->withCount([
             'tasks as n_a_tasks' => fn ($q) =>
-                $q->whereNotNull('completed_at')->where('task_type', TaskType::A),
+                $q->whereNull('completed_at')->where('task_type', TaskType::A),
 
             'tasks as n_b_tasks' => fn ($q) =>
-                $q->whereNotNull('completed_at')->where('task_type', TaskType::B),
+                $q->whereNull('completed_at')->where('task_type', TaskType::B),
         ]);
     }
 }
