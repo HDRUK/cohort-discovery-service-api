@@ -15,6 +15,8 @@ class RefreshDistributionConceptsView implements ShouldQueue
 
     private string $distributionTable = '';
 
+    private string $collectionTable = '';
+
     private string $conceptTable = '';
 
     /**
@@ -27,6 +29,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
 
         $this->viewName         = "`{$mysqlDb}`.`distribution_concepts`";
         $this->distributionTable = "`{$mysqlDb}`.`distributions`";
+        $this->collectionTable   = "`{$mysqlDb}`.`collections`";
         $this->conceptTable      = "`{$omopDb}`.`concept`";
     }
 
@@ -52,32 +55,49 @@ class RefreshDistributionConceptsView implements ShouldQueue
 
         DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
+            SELECT
+                latest_distribution.concept_id,
+                c.concept_name,
+                c.concept_name AS description,
+                c.domain_id,
+                c.vocabulary_id,
+                c.concept_class_id AS concept_class,
+                c.standard_concept,
+                c.concept_code,
+                SUM(latest_distribution.count) AS count,
+                COUNT(*) AS ncollections,
+                CASE
+                    WHEN MIN(CASE WHEN col.is_synthetic THEN 1 ELSE 0 END) = 1 THEN 1
+                    ELSE 0
+                END AS all_synthetic
+            FROM (
                 SELECT
-                    d.id AS distribution_id,
-                    d.collection_id,
-                    d.task_id,
-                    d.name AS distribution_name,
-                    d.category,
-                    d.description,
-                    d.concept_id,
-                    c.concept_name,
-                    c.domain_id,
-                    c.vocabulary_id,
-                    c.concept_class_id,
-                    c.standard_concept,
-                    c.concept_code,
-                    d.count,
-                    d.q1,
-                    d.q3,
-                    d.min,
-                    d.max,
-                    d.mean,
-                    d.median,
-                    d.created_at,
-                    d.updated_at
-                FROM {$this->distributionTable} d
-                INNER JOIN {$this->conceptTable} c
-                    ON d.concept_id = c.concept_id;
+                    ranked.collection_id,
+                    ranked.concept_id,
+                    ranked.count
+                FROM (
+                    SELECT
+                        x.*,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY x.collection_id, x.concept_id
+                            ORDER BY x.updated_at DESC, x.created_at DESC, x.id DESC
+                        ) AS rn
+                    FROM {$this->distributionTable} x
+                ) ranked
+                WHERE ranked.rn = 1
+            ) latest_distribution
+            INNER JOIN {$this->conceptTable} c
+                ON latest_distribution.concept_id = c.concept_id
+            INNER JOIN {$this->collectionTable} col
+                ON latest_distribution.collection_id = col.id
+            GROUP BY
+                latest_distribution.concept_id,
+                c.concept_name,
+                c.domain_id,
+                c.vocabulary_id,
+                c.concept_class_id,
+                c.standard_concept,
+                c.concept_code
         ");
 
         $afterCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->viewName}")->count ?? 0;

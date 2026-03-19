@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\App;
 trait NLPConceptLookup
 {
     protected ?array $nlpEntities = null;
+    protected ?array $nlpGroups = null;
     protected array $nlpRootAgeConstraints = [];
     protected array $nlpRootTimeConstraints = [];
     protected array $nlpWarnings = [];
@@ -21,6 +22,7 @@ trait NLPConceptLookup
         \Log::info(json_encode(collect($payload)));
 
         $entities = $payload['entities'] ?? $payload;
+        $this->nlpGroups = $payload['groups'] ?? [];
         $this->nlpRootAgeConstraints = $payload['age_constraints'] ?? [];
         $this->nlpRootTimeConstraints = $payload['time_constraints'] ?? [];
         $this->nlpWarnings = $payload['warnings'] ?? [];
