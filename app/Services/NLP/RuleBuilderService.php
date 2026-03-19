@@ -69,7 +69,7 @@ class RuleBuilderService
                 continue;
             }
 
-           usort($candidates, function ($a, $b) use ($preferNonSynthetic) {
+            usort($candidates, function ($a, $b) use ($preferNonSynthetic) {
                 if ($preferNonSynthetic) {
                     $aSynthetic = $a['attributes']['all_synthetic'] ?? 0;
                     $bSynthetic = $b['attributes']['all_synthetic'] ?? 0;

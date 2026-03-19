@@ -35,6 +35,8 @@ class CollectionTest extends TestCase
         CustodianHasUser::truncate();
         Collection::truncate();
         CollectionHost::truncate();
+        UserHasWorkgroup::truncate();
+        WorkgroupHasCollection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->enableMiddleware();

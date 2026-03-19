@@ -1,5 +1,5 @@
 name: Deploy Release
-run-name: ${{ github.actor }} triggered deploy to ${{ github.event.inputs.env }} pipeline
+run-name: ${{ github.actor }} triggered deploy to ${{ github.event.inputs.env }} pipeline for tag version ${{ github.event.inputs.tag_version }}
 
 on:
   workflow_dispatch:
