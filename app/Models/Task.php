@@ -111,4 +111,9 @@ class Task extends Model
     {
         return $this->hasOne(TaskRun::class)->latestOfMany();
     }
+
+    public function distributions(): HasMany
+    {
+        return $this->hasMany(Distribution::class);
+    }
 }

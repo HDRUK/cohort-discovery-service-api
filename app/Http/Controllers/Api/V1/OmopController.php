@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Collection;
-use App\Models\DistributionConcept;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
 use App\Traits\HelperFunctions;

@@ -134,13 +134,14 @@ class Query extends Model
         };
     }
 
-    public static function createDistributionQuery(Collection $collection, QueryType $type): self
+    public static function createDistributionQuery(Collection $collection, QueryType $type, int $userId): self
     {
         $code = $type->value;
         $name = sprintf('%s-%s-%s', $collection->name, $code, Carbon::now()->format('Ymd_His'));
         $collectionId = $collection->id;
 
         $query = self::create([
+            'user_id' => $userId,
             'pid' => (string) Str::uuid(),
             'name' => $name,
             'definition' => [
