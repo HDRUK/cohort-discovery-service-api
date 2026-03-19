@@ -59,18 +59,24 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+      - name: Read VERSION file
+        id: getversion
+        run: |
+          sed -n 's/^appVersion:\(.*\)/\1/p' < chart/cohort-api/Chart.yaml > version
+          echo "version=$(sed '/.*\"\(.*\)\".*/ s//\1/g' version)" >> "$GITHUB_OUTPUT"
+  
       - name: Merge changes from main to dev
         env:
           GITHUB_TOKEN: ${{ steps.generate-deployment-token.outputs.token }}
+          RELEASE_VERSION: ${{ steps.getversion.outputs.version }}
         run: |
           git fetch origin dev
           git checkout dev
-          git merge --no-ff main || true
-          git checkout --theirs .
+          git merge --squash origin/main || true
+          git checkout --theirs . || true
           git add .
-          git commit -m "Auto-resolve merge conflicts by keeping main's changes [skip ci]" || echo "No changes to commit"
-          
-          git push origin dev
+          git commit --allow-empty -m "sync: update dev with latest main changes from release ${RELEASE_VERSION} (squash sync) [skip ci]"
+          git push origin dev 
 
   build:
     needs: semantic
