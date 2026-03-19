@@ -206,6 +206,7 @@ class ProcessDistributionFile implements ShouldQueue
                 if (count($batch) >= $this->batchSize) {
                     $this->persistBatchUpsert($batch);
                     $batch = [];
+                    gc_collect_cycles();
                 }
             }
 
