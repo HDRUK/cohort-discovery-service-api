@@ -172,7 +172,7 @@ class DecodeJwt
             throw new \Exception('Invalid token: exp claim is required');
         }
 
-        return max(1, $exp - $now);
+        return min(max(1, $exp - $now), 3600);
     }
 
     protected function claimsJtiOrFail(object $claims): string
