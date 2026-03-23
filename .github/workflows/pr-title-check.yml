@@ -34,6 +34,7 @@ jobs:
 
           # Define regex patterns
           RELEASE_PATTERN="^RELEASE: .+$"
+          REVERT_PATTERN="^Revert .+$"
           STANDARD_PATTERN="^(feat|fix|chore|docs|style|refactor|test|perf)(!?)\(DP-[0-9]+\): .+$"
 
           if echo "$TITLE" | grep -E -q "$RELEASE_PATTERN"; then
@@ -44,6 +45,10 @@ jobs:
             echo "✅ PR title is valid!"
 
             COMMENT="🎉 **Great job!** Your PR title follows the correct format. 🚀"
+          elif echo "$TITLE" | grep -E -q "$REVERT_PATTERN"; then
+            echo "✅ PR title is a valid REVERT PR!"
+
+            COMMENT="🎉 **Great job!** Your PR title is a valid revert PR. 👍"
           else
             echo "❌ Invalid PR title format!"
 
