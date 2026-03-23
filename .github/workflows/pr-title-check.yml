@@ -10,6 +10,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: generate-deployment-token
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.DEPLOY_APP_ID }}
@@ -17,8 +18,9 @@ jobs:
           owner: HDRUK
           repositories: |
             ${{ github.event.repository.name }}
-      
+
       - name: Check PR Title Format
+        if: ${{ github.actor != 'dependabot[bot]' }}
         env:
           GITHUB_TOKEN: ${{ steps.generate-deployment-token.outputs.token }}
           PR_TITLE: ${{ github.event.pull_request.title }}
