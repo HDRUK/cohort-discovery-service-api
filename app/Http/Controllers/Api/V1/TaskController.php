@@ -394,7 +394,7 @@ class TaskController extends Controller
                     return;
                 }
 
-                $status = (string) $request->get('status', '');
+                $status = $request->get('status', '');
                 $message = $request->get('message');
                 $queryResult = $request->get('queryResult');
 
@@ -413,7 +413,8 @@ class TaskController extends Controller
                         : 0;
                 }
 
-                $workerId = $request->ip();
+                // a header from BUNNY would be better if multiple runners on the same IP
+                $workerId =  $request->ip();
 
                 $run = TaskRun::firstOrCreate(
                     [
@@ -432,7 +433,7 @@ class TaskController extends Controller
                 $storedFiles = [];
 
                 foreach ($metadata['files'] ?? [] as $file) {
-                    if (! is_array($file) || ! isset($file['file_data'])) {
+                    if (!isset($file['file_data'])) {
                         continue;
                     }
 
@@ -513,75 +514,57 @@ class TaskController extends Controller
                 'message' => 'Result received successfully.',
             ]);
         } catch (\InvalidArgumentException $e) {
-            $now = Carbon::now();
-
-            $task = Task::where('pid', $task_pid)->first();
-
-            if ($task) {
-                TaskRun::updateOrCreate(
-                    [
-                        'task_id' => $task->id,
-                        'attempt' => $task->attempts,
-                    ],
-                    [
-                        'worker_id' => $request->ip(),
-                        'claimed_at' => $task->attempted_at ?? $now,
-                        'started_at' => $task->attempted_at ?? $now,
-                        'finished_at' => $now,
-                        'result_status' => 'error',
-                        'error_class' => get_class($e),
-                        'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                    ]
-                );
-
-                $task->update([
-                    'completed_at' => $now,
-                    'failed_at' => $now,
-                    'leased_until' => null,
-                    'leased_by' => null,
-                ]);
-            }
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
 
             return $this->BadRequestResponseExtended($e->getMessage());
         } catch (\Throwable $e) {
-            $now = Carbon::now();
-
-            $task = Task::where('pid', $task_pid)->first();
-
-            if ($task) {
-                TaskRun::updateOrCreate(
-                    [
-                        'task_id' => $task->id,
-                        'attempt' => $task->attempts,
-                    ],
-                    [
-                        'worker_id' => $request->ip(),
-                        'claimed_at' => $task->attempted_at ?? $now,
-                        'started_at' => $task->attempted_at ?? $now,
-                        'finished_at' => $now,
-                        'result_status' => 'error',
-                        'error_class' => get_class($e),
-                        'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                    ]
-                );
-
-                $task->update([
-                    'completed_at' => $now,
-                    'failed_at' => $now,
-                    'leased_until' => null,
-                    'leased_by' => null,
-                ]);
-            }
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
 
             Log::error('Failed receiving task result', [
                 'task_pid' => $task_pid,
                 'collection_pid' => $collection_pid,
-                'exception' => $e,
+                'message' => $e->getMessage(),
             ]);
 
             return $this->ErrorResponse($e->getMessage());
         }
     }
+
+
+    private function markTaskReceiveResultFailure(string $taskPid, ?string $workerId, \Throwable $e): void
+    {
+        $now = Carbon::now();
+
+        $task = Task::where('pid', $taskPid)->first();
+
+        if (! $task) {
+            return;
+        }
+
+        TaskRun::updateOrCreate(
+            [
+                'task_id' => $task->id,
+                'attempt' => $task->attempts,
+            ],
+            [
+                'worker_id' => $workerId,
+                'claimed_at' => $task->attempted_at ?? $now,
+                'started_at' => $task->attempted_at ?? $now,
+                'finished_at' => $now,
+                'result_status' => 'error',
+                'error_class' => get_class($e),
+                'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+            ]
+        );
+
+        $task->update([
+            'completed_at' => $now,
+            'failed_at' => $now,
+            'leased_until' => null,
+            'leased_by' => null,
+        ]);
+    }
+
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
