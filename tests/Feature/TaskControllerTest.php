@@ -180,6 +180,308 @@ class TaskControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
+    public function it_marks_task_complete_but_not_failed_when_result_is_successful(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:00:00'));
+
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create(['definition' => ['some' => 'query']]);
+
+        $task = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'attempts' => 0,
+            'completed_at' => null,
+            'failed_at' => null,
+            'leased_until' => null,
+        ]);
+
+        $mock = $this->createMock(QueryContextManager::class);
+        $mock->expects($this->once())
+            ->method('handle')
+            ->willReturn(['translated' => 'query']);
+        $this->app->instance(QueryContextManager::class, $mock);
+
+        $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}")
+            ->assertOk();
+
+        $response = $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'success',
+                'message' => 'completed successfully',
+                'queryResult' => ['count' => 42],
+            ]
+        );
+
+        $response->assertCreated();
+
+        $task->refresh();
+        $run = TaskRun::where('task_id', $task->id)->where('attempt', 1)->first();
+
+        $this->assertNotNull($task->completed_at);
+        $this->assertNull($task->failed_at);
+        $this->assertNull($task->leased_until);
+        $this->assertNull($task->leased_by);
+
+        $this->assertNotNull($run);
+        $this->assertSame('success', $run->result_status);
+        $this->assertNotNull($run->finished_at);
+        $this->assertNull($run->error_class);
+        $this->assertNull($run->error_message);
+
+        $this->assertDatabaseHas(Result::class, [
+            'task_id' => $task->id,
+            'count' => 42,
+            'status' => 'success',
+            'message' => 'completed successfully',
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_marks_task_and_run_failed_when_worker_reports_error_result(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:00:00'));
+
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create(['definition' => ['some' => 'query']]);
+
+        $task = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'attempts' => 0,
+            'completed_at' => null,
+            'failed_at' => null,
+            'leased_until' => null,
+        ]);
+
+        $mock = $this->createMock(QueryContextManager::class);
+        $mock->expects($this->once())
+            ->method('handle')
+            ->willReturn(['translated' => 'query']);
+        $this->app->instance(QueryContextManager::class, $mock);
+
+        $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}")
+            ->assertOk();
+
+        $response = $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'error',
+                'message' => 'runner failed to execute query',
+                'queryResult' => [],
+            ]
+        );
+
+        $response->assertCreated();
+
+        $task->refresh();
+        $run = TaskRun::where('task_id', $task->id)->where('attempt', 1)->first();
+        $result = Result::where('task_id', $task->id)->first();
+
+        $this->assertNotNull($task->completed_at);
+        $this->assertNotNull($task->failed_at);
+        $this->assertNull($task->leased_until);
+        $this->assertNull($task->leased_by);
+
+        $this->assertNotNull($run);
+        $this->assertSame('error', $run->result_status);
+        $this->assertSame('WorkerResultError', $run->error_class);
+        $this->assertSame('runner failed to execute query', $run->error_message);
+        $this->assertNotNull($run->finished_at);
+
+        $this->assertNotNull($result);
+        $this->assertSame('error', $result->status);
+        $this->assertSame('runner failed to execute query', $result->message);
+        $this->assertSame(0, (int) $result->count);
+
+        Carbon::setTestNow();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_marks_task_failed_when_result_payload_is_invalid(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:00:00'));
+
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create(['definition' => ['some' => 'query']]);
+
+        $task = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'attempts' => 0,
+            'completed_at' => null,
+            'failed_at' => null,
+            'leased_until' => null,
+        ]);
+
+        $mock = $this->createMock(QueryContextManager::class);
+        $mock->expects($this->once())
+            ->method('handle')
+            ->willReturn(['translated' => 'query']);
+        $this->app->instance(QueryContextManager::class, $mock);
+
+        $this->getJson(self::BASE_URL . "/nextjob/{$collection->pid}")
+            ->assertOk();
+
+        $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'success',
+                'queryResult' => ['foo' => 'bar'],
+            ]
+        )->assertStatus(400);
+
+        $task->refresh();
+        $run = TaskRun::where('task_id', $task->id)->where('attempt', 1)->first();
+
+        $this->assertNotNull($task->completed_at);
+        $this->assertNotNull($task->failed_at);
+        $this->assertNull($task->leased_until);
+        $this->assertNull($task->leased_by);
+
+        $this->assertNotNull($run);
+        $this->assertSame('error', $run->result_status);
+        $this->assertNotNull($run->finished_at);
+        $this->assertSame(\InvalidArgumentException::class, $run->error_class);
+        $this->assertSame('Invalid or missing count in queryResult.', $run->error_message);
+
+        Carbon::setTestNow();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_ignores_duplicate_result_callbacks_for_successfully_completed_tasks(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:00:00'));
+
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create(['definition' => ['some' => 'query']]);
+
+        $task = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'attempts' => 1,
+            'attempted_at' => now(),
+            'completed_at' => null,
+            'failed_at' => null,
+            'leased_until' => now()->addMinutes(5),
+        ]);
+
+        TaskRun::create([
+            'task_id' => $task->id,
+            'attempt' => 1,
+            'started_at' => now(),
+            'claimed_at' => now(),
+        ]);
+
+        $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'success',
+                'message' => 'first callback',
+                'queryResult' => ['count' => 42],
+            ]
+        )->assertCreated();
+
+        $task->refresh();
+        $firstCompletedAt = $task->completed_at;
+        $run = TaskRun::where('task_id', $task->id)->where('attempt', 1)->first();
+        $firstFinishedAt = $run->finished_at;
+
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:05:00'));
+
+        $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'success',
+                'message' => 'duplicate callback',
+                'queryResult' => ['count' => 999],
+            ]
+        )->assertCreated();
+
+        $task->refresh();
+        $run->refresh();
+        $result = Result::where('task_id', $task->id)->first();
+
+        $this->assertTrue($task->completed_at->equalTo($firstCompletedAt));
+        $this->assertNull($task->failed_at);
+
+        $this->assertTrue($run->finished_at->equalTo($firstFinishedAt));
+        $this->assertSame(42, (int) $result->count);
+        $this->assertSame('first callback', $result->message);
+
+        Carbon::setTestNow();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_allows_a_failed_task_to_be_recovered_by_a_later_success_result(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:00:00'));
+
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create(['definition' => ['some' => 'query']]);
+
+        $task = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'attempts' => 1,
+            'attempted_at' => now(),
+            'completed_at' => null,
+            'failed_at' => null,
+            'leased_until' => now()->addMinutes(5),
+        ]);
+
+        TaskRun::create([
+            'task_id' => $task->id,
+            'attempt' => 1,
+            'started_at' => now(),
+            'claimed_at' => now(),
+        ]);
+
+        $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'error',
+                'message' => 'temporary failure',
+                'queryResult' => [],
+            ]
+        )->assertCreated();
+
+        $task->refresh();
+        $this->assertNotNull($task->failed_at);
+
+        Carbon::setTestNow(Carbon::parse('2026-01-05 10:10:00'));
+
+        $this->postJson(
+            self::BASE_URL . "/result/{$task->pid}/{$collection->pid}",
+            [
+                'status' => 'success',
+                'message' => 'recovered successfully',
+                'queryResult' => ['count' => 77],
+            ]
+        )->assertCreated();
+
+        $task->refresh();
+        $run = TaskRun::where('task_id', $task->id)->where('attempt', 1)->first();
+        $result = Result::where('task_id', $task->id)->first();
+
+        $this->assertNotNull($task->completed_at);
+        $this->assertNull($task->failed_at);
+
+        $this->assertSame('success', $run->result_status);
+        $this->assertNull($run->error_class);
+        $this->assertNull($run->error_message);
+
+        $this->assertSame(77, (int) $result->count);
+        $this->assertSame('success', $result->status);
+        $this->assertSame('recovered successfully', $result->message);
+
+        Carbon::setTestNow();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_rejects_calls_when_a_client_fails_to_provide_basic_auth(): void
     {
         Config::set('system.basic_auth_enabled', true);
