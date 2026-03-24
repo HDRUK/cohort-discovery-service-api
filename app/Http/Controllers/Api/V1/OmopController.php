@@ -101,7 +101,7 @@ class OmopController extends Controller
             $collectionPids  = $request->input('collections');
             $domain          = $request->input('domain');
             $includeAncestors = $request->boolean('include_ancestors', true);
-            $search          = $request->only(['concept_id', 'description']);
+            $search          = $request->only(['concept_id', 'concept_name']);
 
             $bindings = [];
             $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
@@ -117,14 +117,22 @@ class OmopController extends Controller
                 $bindings[] = strtolower($domain);
             }
 
+            $searchConditions = [];
+            $searchBindings   = [];
+
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
-                $where[]    = 'd.concept_id LIKE ?';
-                $bindings[] = '%' . $term . '%';
+                $searchConditions[] = 'd.concept_id LIKE ?';
+                $searchBindings[]   = '%' . $term . '%';
             }
 
-            foreach ((array) ($search['description'] ?? []) as $term) {
-                $where[]    = 'd.description LIKE ?';
-                $bindings[] = '%' . $term . '%';
+            foreach ((array) ($search['concept_name'] ?? []) as $term) {
+                $searchConditions[] = 'd.description LIKE ?';
+                $searchBindings[]   = '%' . $term . '%';
+            }
+
+            if ($searchConditions) {
+                $where[]  = '(' . implode(' OR ', $searchConditions) . ')';
+                $bindings = array_merge($bindings, $searchBindings);
             }
 
             $whereClause = implode(' AND ', $where);
@@ -139,7 +147,7 @@ class OmopController extends Controller
                        CASE WHEN dc.concept_id IS NOT NULL THEN
                            JSON_OBJECT(
                                'concept_id', dc.concept_id,
-                               'description', dc.description,
+                               'name', dc.description,
                                'category', dc.category
                            )
                        END
@@ -148,7 +156,7 @@ class OmopController extends Controller
 
             $sql = "
                 WITH base AS (
-                    SELECT DISTINCT d.name, d.concept_id, d.description, d.category
+                    SELECT DISTINCT d.concept_id, d.description AS name, d.category
                     FROM distributions d
                     WHERE {$whereClause}
                 ),
@@ -157,7 +165,7 @@ class OmopController extends Controller
                 FROM base
                 CROSS JOIN total
                 {$childrenJoin}
-                GROUP BY base.concept_id, base.name, base.description, base.category, total.cnt
+                GROUP BY base.concept_id, base.name, base.category, total.cnt
                 ORDER BY base.concept_id
                 LIMIT ? OFFSET ?
             ";

@@ -380,32 +380,40 @@ class TaskController extends Controller
      */
     public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
     {
-
         try {
             DB::transaction(function () use ($request, $task_pid) {
+                $task = Task::where('pid', $task_pid)
+                    ->lockForUpdate()
+                    ->first();
 
-                $task = Task::where('pid', $task_pid)->lockForUpdate()->first();
                 if (! $task) {
                     throw new \RuntimeException('Task not found');
                 }
 
-                if ($task->completed_at) {
+                if ($task->completed_at && $task->failed_at === null) {
                     return;
                 }
 
-
-                $status = $request->get('status');
+                $status = (string) $request->get('status', '');
                 $message = $request->get('message');
                 $queryResult = $request->get('queryResult');
 
-                if (!is_array($queryResult) || !isset($queryResult['count']) || !is_numeric($queryResult['count'])) {
-                    throw new \InvalidArgumentException('Invalid or missing count in queryResult.');
+                $isFailedResult = in_array($status, ['error', 'failed'], true);
+
+                if (! $isFailedResult) {
+                    if (! is_array($queryResult) || ! isset($queryResult['count']) || ! is_numeric($queryResult['count'])) {
+                        throw new \InvalidArgumentException('Invalid or missing count in queryResult.');
+                    }
+
+                    $count = (int) $queryResult['count'];
+                } else {
+                    $queryResult = is_array($queryResult) ? $queryResult : [];
+                    $count = isset($queryResult['count']) && is_numeric($queryResult['count'])
+                        ? (int) $queryResult['count']
+                        : 0;
                 }
 
-                $count = (int) $queryResult['count'];
-
-                // a header from BUNNY would be better if multiple runners on the same IP
-                $workerId =  $request->ip();
+                $workerId = $request->ip();
 
                 $run = TaskRun::firstOrCreate(
                     [
@@ -415,17 +423,16 @@ class TaskController extends Controller
                     [
                         'worker_id' => $workerId,
                         'status' => 'claimed',
-                        'claimed_at' => $task->started_at ?? Carbon::now(),
-                        'started_at' => $task->started_at ?? Carbon::now(),
+                        'claimed_at' => $task->attempted_at ?? Carbon::now(),
+                        'started_at' => $task->attempted_at ?? Carbon::now(),
                     ]
                 );
-
 
                 $metadata = collect($queryResult)->except('count')->toArray();
                 $storedFiles = [];
 
                 foreach ($metadata['files'] ?? [] as $file) {
-                    if (!isset($file['file_data'])) {
+                    if (! is_array($file) || ! isset($file['file_data'])) {
                         continue;
                     }
 
@@ -438,23 +445,21 @@ class TaskController extends Controller
                         continue;
                     }
 
-                    $pid  = (string) Str::uuid();
+                    $pid = (string) Str::uuid();
                     $path = "{$pid}-{$fileName}";
 
                     Storage::put($path, $decoded);
 
-                    $resultFile = ResultFile::updateOrCreate(
-                        ['pid' => $pid],
-                        [
-                            'task_id' => $task->id,
-                            'collection_id' => $task->collection->id,
-                            'path' => $path,
-                            'file_name' => $fileName,
-                            'file_type' => $fileType,
-                            'file_description' => $fileDescription,
-                            'status' => ResultFile::STATUS_QUEUED,
-                        ]
-                    );
+                    $resultFile = ResultFile::create([
+                        'pid' => $pid,
+                        'task_id' => $task->id,
+                        'collection_id' => $task->collection_id,
+                        'path' => $path,
+                        'file_name' => $fileName,
+                        'file_type' => $fileType,
+                        'file_description' => $fileDescription,
+                        'status' => ResultFile::STATUS_QUEUED,
+                    ]);
 
                     ProcessDistributionFile::dispatch($resultFile->id)->afterCommit();
 
@@ -466,32 +471,39 @@ class TaskController extends Controller
                     ];
                 }
 
-                $resultMetadata = !empty($storedFiles) ? ['parsed_files' => $storedFiles] : $metadata;
+                if (! empty($storedFiles)) {
+                    unset($metadata['files']);
+                    $metadata['parsed_files'] = $storedFiles;
+                }
 
                 Result::updateOrCreate(
                     ['task_id' => $task->id],
                     [
                         'count' => $count,
-                        'metadata' => $resultMetadata,
+                        'metadata' => $metadata,
                         'status' => $status,
                         'message' => $message,
                     ]
                 );
 
-                $finishedAt = now();
-                $durationMs = $run->started_at ? $run->started_at->diffInMilliseconds($finishedAt) : null;
+                $finishedAt = Carbon::now();
+                $durationMs = $run->started_at
+                    ? $run->started_at->diffInMilliseconds($finishedAt)
+                    : null;
 
                 $run->update([
                     'finished_at' => $finishedAt,
                     'duration_ms' => $durationMs,
-                    'result_status' => $status,
-                    'error_class' => null,
-                    'error_message' => null,
+                    'result_status' => $isFailedResult ? 'error' : $status,
+                    'error_class' => $isFailedResult ? 'WorkerResultError' : null,
+                    'error_message' => $isFailedResult && $message
+                        ? mb_strimwidth((string) $message, 0, 2000, '…')
+                        : null,
                 ]);
 
                 $task->update([
                     'completed_at' => $finishedAt,
-                    'failed_at' => null,
+                    'failed_at' => $isFailedResult ? $finishedAt : null,
                     'leased_until' => null,
                     'leased_by' => null,
                 ]);
@@ -500,41 +512,73 @@ class TaskController extends Controller
             return $this->CreatedResponse([
                 'message' => 'Result received successfully.',
             ]);
-
         } catch (\InvalidArgumentException $e) {
+            $now = Carbon::now();
+
             $task = Task::where('pid', $task_pid)->first();
+
             if ($task) {
-                TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)->update([
-                    'finished_at' => Carbon::now(),
-                    'error_class' => get_class($e),
-                    'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                ]);
+                TaskRun::updateOrCreate(
+                    [
+                        'task_id' => $task->id,
+                        'attempt' => $task->attempts,
+                    ],
+                    [
+                        'worker_id' => $request->ip(),
+                        'claimed_at' => $task->attempted_at ?? $now,
+                        'started_at' => $task->attempted_at ?? $now,
+                        'finished_at' => $now,
+                        'result_status' => 'error',
+                        'error_class' => get_class($e),
+                        'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                    ]
+                );
 
                 $task->update([
-                    'completed_at' => Carbon::now(),
-                    'failed_at' => Carbon::now(),
+                    'completed_at' => $now,
+                    'failed_at' => $now,
                     'leased_until' => null,
                     'leased_by' => null,
                 ]);
             }
 
             return $this->BadRequestResponseExtended($e->getMessage());
-
         } catch (\Throwable $e) {
+            $now = Carbon::now();
+
             $task = Task::where('pid', $task_pid)->first();
+
             if ($task) {
-                TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)->update([
-                    'finished_at' => Carbon::now(),
-                    'error_class' => get_class($e),
-                    'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                ]);
+                TaskRun::updateOrCreate(
+                    [
+                        'task_id' => $task->id,
+                        'attempt' => $task->attempts,
+                    ],
+                    [
+                        'worker_id' => $request->ip(),
+                        'claimed_at' => $task->attempted_at ?? $now,
+                        'started_at' => $task->attempted_at ?? $now,
+                        'finished_at' => $now,
+                        'result_status' => 'error',
+                        'error_class' => get_class($e),
+                        'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                    ]
+                );
 
                 $task->update([
-                    'failed_at' => Carbon::now(),
+                    'completed_at' => $now,
+                    'failed_at' => $now,
+                    'leased_until' => null,
+                    'leased_by' => null,
                 ]);
             }
 
-            Log::error($e->getMessage());
+            Log::error('Failed receiving task result', [
+                'task_pid' => $task_pid,
+                'collection_pid' => $collection_pid,
+                'exception' => $e,
+            ]);
+
             return $this->ErrorResponse($e->getMessage());
         }
     }
