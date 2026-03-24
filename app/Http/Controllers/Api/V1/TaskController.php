@@ -394,7 +394,7 @@ class TaskController extends Controller
                     return;
                 }
 
-                $status = $request->get('status', '');
+                $status = $request->get('status');
                 $message = $request->get('message');
                 $queryResult = $request->get('queryResult');
 
@@ -495,7 +495,7 @@ class TaskController extends Controller
                 $run->update([
                     'finished_at' => $finishedAt,
                     'duration_ms' => $durationMs,
-                    'result_status' => $isFailedResult ? 'error' : $status,
+                    'result_status' => $status,
                     'error_class' => $isFailedResult ? 'WorkerResultError' : null,
                     'error_message' => $isFailedResult && $message
                         ? mb_strimwidth((string) $message, 0, 2000, '…')
