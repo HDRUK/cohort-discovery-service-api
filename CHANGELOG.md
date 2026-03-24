@@ -1,3 +1,16 @@
+## [1.5.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.4.1...v1.5.0) (2026-03-19)
+
+### ✨ Features
+
+* **DP-0000:** Fixes a bug where old code was still treating ages as inclusive or not and adding/removing 1 which affected the age constraint in a negative way ([5aad920](https://github.com/HDRUK/cohort-discovery-service-api/commit/5aad92043a7dfb588cc09e38170abbac54b32c2e)), closes [negative](gative)
+* **DP-562:** Re-instates ( ) as grouping mechanism to query parsing ([f9b36b3](https://github.com/HDRUK/cohort-discovery-service-api/commit/f9b36b373c35d1562e38ca47d4dbdacaab72a677)), closes [DP-562](DP-562)
+* **DP-563:** Limit and reword warnings returned in payload ([326e6f2](https://github.com/HDRUK/cohort-discovery-service-api/commit/326e6f20bf982e37c8f3a50812a4e897dd26a188)), closes [DP-563](DP-563)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** retrofit main hotfix ([80b3d8a](https://github.com/HDRUK/cohort-discovery-service-api/commit/80b3d8a67a55a90433378d3f82a560d71a994217)), closes [DP-0000](DP-0000)
+* **DP-561:** properly exposes runnable jobs via dispatchers for calling via gcp cron scheduling ([d45757b](https://github.com/HDRUK/cohort-discovery-service-api/commit/d45757b355fbb2a500ef36e8d106f3e992825f86)), closes [DP-561](DP-561)
+
 ## [1.4.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.4.0...v1.4.1) (2026-03-05)
 
 ### 🐛 Bug Fixes
