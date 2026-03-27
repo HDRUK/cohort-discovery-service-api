@@ -474,6 +474,8 @@ class CollectionController extends Controller
                     'demographics',
                     'custodian',
                     'modelState.state',
+                    //'conceptCountsByCategory',
+                    //'concepts',
                     'workgroups',
                     'resultFiles' => function ($query) {
                         $query->with('task')->orderByDesc('updated_at');
@@ -487,7 +489,20 @@ class CollectionController extends Controller
             $nconcepts = $collection->concepts()
                ->count();
 
-            return $this->OKResponse([...$collection->toArray(), 'nconcepts' => $nconcepts]);
+            $concept_counts_by_category = $collection->conceptCountsByCategory
+                ->orderBy('category')
+                ->map(fn ($row) => [
+                    'category' => $row->category,
+                    'nconcepts' => (int) $row->nconcepts,
+                ])
+                ->values()
+                ->toArray();
+
+            return $this->OKResponse([
+                ...$collection->toArray(),
+                'nconcepts' => $nconcepts,
+                'concept_counts_by_category' => $concept_counts_by_category,
+            ]);
 
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();

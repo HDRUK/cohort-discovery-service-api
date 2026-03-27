@@ -56,6 +56,42 @@ class TaskController extends Controller
         return $this->OKResponse($tasks);
     }
 
+
+    public function getAdminTasks(): JsonResponse
+    {
+        //policy
+        //  $this->authorize('viewAnyForAdmin', Collection::class);
+
+        $perPage = $this->resolvePerPage();
+
+        $collectionFilter = request()->query('collection_filter');
+        $custodianFilter = request()->query('custodian_filter');
+
+        $tasks = Task::with(
+            [
+                'submittedQuery.user',
+                'result',
+                'resultFiles',
+                'runs',
+                'collection'
+            ]
+        )
+            ->when($collectionFilter, function ($query, $collectionFilter) {
+                $query->whereHas('collection', function ($q) use ($collectionFilter) {
+                    $q->where('pid', $collectionFilter);
+                });
+            })
+            ->when($custodianFilter, function ($query, $custodianFilter) {
+                $query->whereHas('collection.custodian', function ($q) use ($custodianFilter) {
+                    $q->where('pid', $custodianFilter);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return $this->OKResponse($tasks);
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/tasks/{taskPid}",
@@ -79,7 +115,7 @@ class TaskController extends Controller
      */
     public function getTask($task_pid): JsonResponse
     {
-        $task = Task::with(['submittedQuery', 'collection', 'result'])
+        $task = Task::with(['submittedQuery.user', 'collection', 'result'])
             ->where('pid', $task_pid)
             ->first();
 

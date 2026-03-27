@@ -327,6 +327,21 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ->select('distributions.*');
     }
 
+    public function conceptCountsByCategory(): HasMany
+    {
+        $latest = DB::table('distributions')
+            ->selectRaw('collection_id, category, concept_id, MAX(id) as id')
+            ->where('concept_id', '>', 0)
+            ->groupBy('collection_id', 'category', 'concept_id');
+
+        return $this->hasMany(Distribution::class, 'collection_id')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('distributions.id', '=', 'latest.id');
+            })
+            ->selectRaw('distributions.collection_id, distributions.category, COUNT(*) as nconcepts')
+            ->groupBy('distributions.collection_id', 'distributions.category');
+    }
+
     public function latestDemographic(): HasOne
     {
         return $this->hasOne(Distribution::class)->ofMany(
