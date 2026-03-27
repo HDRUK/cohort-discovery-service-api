@@ -373,6 +373,16 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function metadata(): HasMany
+    {
+        return $this->hasMany(CollectionMetadata::class);
+    }
+
+    public function latestMetadata(): HasOne
+    {
+        return $this->hasOne(CollectionMetadata::class)->latestOfMany();
+    }
+
     public static function logActivity(Collection $c, TaskType $type): void
     {
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {

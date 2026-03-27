@@ -77,6 +77,7 @@ class CollectionController extends Controller
                 'demographics',
                 'custodian.network',
                 'modelState.state',
+                'latestMetadata',
             ])
                 ->searchViaRequest()
                 ->filterViaRequest()
@@ -144,6 +145,7 @@ class CollectionController extends Controller
             'demographics',
             'custodian.network',
             'modelState.state',
+            'latestMetadata',
         ])
             ->when(
                 !$isAdmin,
@@ -262,6 +264,7 @@ class CollectionController extends Controller
                 'custodian',
                 'modelState.state',
                 'workgroups',
+                'latestMetadata',
             ])->findOrFail($validated['id']);
 
             $this->authorize('view', $collection);
@@ -432,7 +435,7 @@ class CollectionController extends Controller
     public function getCollection($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
-            ->with('latestDemographic')
+            ->with(['latestDemographic','latestMetadata'])
             ->first();
 
         if (! $collection) {
@@ -475,6 +478,7 @@ class CollectionController extends Controller
                     'custodian',
                     'modelState.state',
                     'workgroups',
+                    'latestMetadata',
                     'resultFiles' => function ($query) {
                         $query->with('task')->orderByDesc('updated_at');
                     },
@@ -897,6 +901,7 @@ class CollectionController extends Controller
                 'latestSuccessfulDemographicResultFile',
                 'latestSuccessfulConceptResultFile',
                 'workgroups',
+                'latestMetadata',
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
                 if ($request->state !== 'all') {
