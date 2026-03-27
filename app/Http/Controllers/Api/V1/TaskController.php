@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDistributionFile;
-use App\Jobs\App\Jobs\ProcessMetadataFile;
+use App\Jobs\ProcessMetadataFile;
 use App\Models\Collection;
 use App\Models\Result;
 use App\Models\ResultFile;
