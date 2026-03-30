@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Collections;
 
 use App\Exceptions\Errors_1xxx\CollectionPermissionsNotMetException as CollectionException;
 use App\Models\Collection;
