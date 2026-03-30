@@ -492,8 +492,9 @@ class CollectionController extends Controller
             $nconcepts = $collection->concepts()
                ->count();
 
-            $concept_counts_by_category = $collection->conceptCountsByCategory
-                ->orderBy('category')
+            $concept_counts_by_category = $collection->conceptCountsByCategory()
+                ->orderBy('nconcepts', 'desc')
+                ->get()
                 ->map(fn ($row) => [
                     'category' => $row->category,
                     'nconcepts' => (int) $row->nconcepts,
