@@ -809,7 +809,7 @@ class TaskControllerTest extends TestCase
         Task::factory()->create([
             'collection_id' => $otherCollection->id,
             'query_id' => $queryC->id,
-            'task_type' => 'c',
+            'task_type' => 'a',
         ]);
 
         $response = $this->getJson("/api/v1/admin/collections/{$collection->pid}/tasks");
