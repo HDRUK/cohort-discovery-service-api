@@ -4,19 +4,20 @@ namespace App\Services\Collections;
 
 use App\Jobs\ProcessMetadataFile;
 use App\Models\Collection;
-use App\Models\ResultFile;
 
 class ProcessLatestCollectionMetadataService
 {
     public function handle(array $collectionIds = [], bool $sync = false): array
     {
-        $query = Collection::query();
-
-        if (! empty($collectionIds)) {
-            $query->whereIn('id', $collectionIds);
-        }
-
-        $collections = $query->get();
+        $collections = Collection::query()
+            ->when(
+                ! empty($collectionIds),
+                fn ($query) => $query->whereIn('id', $collectionIds)
+            )
+            ->with([
+                'latestMetadataResultFile:id,collection_id,file_name',
+            ])
+            ->get(['id']);
 
         if ($collections->isEmpty()) {
             return [
@@ -25,6 +26,7 @@ class ProcessLatestCollectionMetadataService
                 'skipped' => 0,
                 'processed_items' => [],
                 'skipped_collection_ids' => [],
+                'mode' => $sync ? 'sync' : 'queued',
             ];
         }
 
@@ -34,12 +36,7 @@ class ProcessLatestCollectionMetadataService
         $skippedCollectionIds = [];
 
         foreach ($collections as $collection) {
-            $resultFile = ResultFile::query()
-                ->where('collection_id', $collection->id)
-                ->where('file_name', 'like', '%metadata.bcos')
-                ->latest('updated_at')
-                ->latest('id')
-                ->first();
+            $resultFile = $collection->latestMetadataResultFile;
 
             if (! $resultFile) {
                 $skipped++;
