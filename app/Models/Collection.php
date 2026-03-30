@@ -220,6 +220,9 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->belongsTo(Custodian::class);
     }
 
+    /**
+     * @return HasMany<Task, $this>
+     */
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
