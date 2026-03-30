@@ -35,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * )
  *
  * @property int $id
+ * @property string $pid
  * @property int $task_id
  * @property int|null $collection_id
  * @property string $path
@@ -49,6 +50,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Task $task
  * @property-read \App\Models\Collection|null $collection
+ *
+ * @method static Builder<static> query()
+ * @method static Builder<static> queued()
  */
 class ResultFile extends Model
 {

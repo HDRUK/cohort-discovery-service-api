@@ -73,6 +73,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read ModelState|null $modelState
  * @property-read State|null $state
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
+ * @property-read \App\Models\ResultFile|null $latestMetadataResultFile
  */
 class Collection extends Model implements HasStateTransitions, ValidatableModel
 {
@@ -381,6 +382,18 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     public function latestMetadata(): HasOne
     {
         return $this->hasOne(CollectionMetadata::class)->latestOfMany();
+    }
+
+    public function latestMetadataResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class, 'collection_id')
+            ->ofMany(
+                [
+                    'updated_at' => 'max',
+                    'id' => 'max',
+                ],
+                fn ($query) => $query->where('file_name', 'like', '%metadata.bcos')
+            );
     }
 
     public static function logActivity(Collection $c, TaskType $type): void
