@@ -17,6 +17,7 @@ use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +36,7 @@ class TaskController extends Controller
 {
     use HelperFunctions;
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -60,8 +62,7 @@ class TaskController extends Controller
 
     public function getAdminTasks(): JsonResponse
     {
-        //policy
-        //  $this->authorize('viewAnyForAdmin', Collection::class);
+        $this->authorize('view', Task::class);
 
         $perPage = $this->resolvePerPage();
 
@@ -126,6 +127,10 @@ class TaskController extends Controller
 
         if (Gate::denies('view', $task)) {
             return $this->ForbiddenResponse();
+        }
+
+        if ($task->submittedQuery?->user?->email) {
+            $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
 
         return $this->OKResponse($task);

@@ -478,8 +478,6 @@ class CollectionController extends Controller
                     'demographics',
                     'custodian',
                     'modelState.state',
-                    //'conceptCountsByCategory',
-                    //'concepts',
                     'workgroups',
                     'latestMetadata',
                     'resultFiles' => function ($query) {
