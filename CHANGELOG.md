@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.5.0...v1.6.0) (2026-03-30)
+
+### ✨ Features
+
+* **DP-584:** Replace heavy eloquent query with raw sql ([6d31387](https://github.com/HDRUK/cohort-discovery-service-api/commit/6d31387ea05a60d084abde3fb98fb169ae45609a)), closes [DP-584](DP-584)
+
 ## [1.5.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.4.1...v1.5.0) (2026-03-19)
 
 ### ✨ Features

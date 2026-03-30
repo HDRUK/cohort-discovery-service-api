@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDistributionFile;
+use App\Jobs\ProcessMetadataFile;
 use App\Models\Collection;
 use App\Models\Result;
 use App\Models\ResultFile;
@@ -498,7 +499,11 @@ class TaskController extends Controller
                         'status' => ResultFile::STATUS_QUEUED,
                     ]);
 
-                    ProcessDistributionFile::dispatch($resultFile->id)->afterCommit();
+                    if (Str::endsWith(Str::lower($fileName), 'metadata.bcos')) {
+                        ProcessMetadataFile::dispatch($resultFile->id)->afterCommit();
+                    } else {
+                        ProcessDistributionFile::dispatch($resultFile->id)->afterCommit();
+                    }
 
                     $storedFiles[] = [
                         'file_name' => $fileName,

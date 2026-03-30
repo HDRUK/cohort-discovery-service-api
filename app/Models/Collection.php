@@ -388,6 +388,28 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function metadata(): HasMany
+    {
+        return $this->hasMany(CollectionMetadata::class);
+    }
+
+    public function latestMetadata(): HasOne
+    {
+        return $this->hasOne(CollectionMetadata::class)->latestOfMany();
+    }
+
+    public function latestMetadataResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class, 'collection_id')
+            ->ofMany(
+                [
+                    'updated_at' => 'max',
+                    'id' => 'max',
+                ],
+                fn ($query) => $query->where('file_name', 'like', '%metadata.bcos')
+            );
+    }
+
     public static function logActivity(Collection $c, TaskType $type): void
     {
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {
