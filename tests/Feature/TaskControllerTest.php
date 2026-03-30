@@ -780,4 +780,67 @@ class TaskControllerTest extends TestCase
         $response->assertOk()
         ->assertExactJson([]);
     }
+
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_admin_tasks_for_a_collection(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+        $otherCollection = Collection::factory()->bunny()->create();
+
+        $queryA = Query::factory()->create();
+        $queryB = Query::factory()->create();
+        $queryC = Query::factory()->create();
+
+        $taskOne = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $queryA->id,
+            'task_type' => 'a',
+            'created_at' => now()->subMinute(),
+        ]);
+
+        $taskTwo = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $queryB->id,
+            'task_type' => 'b',
+            'created_at' => now(),
+        ]);
+
+        Task::factory()->create([
+            'collection_id' => $otherCollection->id,
+            'query_id' => $queryC->id,
+            'task_type' => 'c',
+        ]);
+
+        $response = $this->getJson("/api/v1/admin/collections/{$collection->pid}/tasks");
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'pid',
+                        'task_type',
+                        'query_id',
+                        'collection_id',
+                        'created_at',
+                        'updated_at',
+                    ],
+                ],
+            ])
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'pid' => $taskOne->pid,
+                'task_type' => $taskOne->task_type,
+            ])
+            ->assertJsonFragment([
+                'pid' => $taskTwo->pid,
+                'task_type' => $taskTwo->task_type,
+            ]);
+
+        $responseData = $response->json('data');
+
+        $this->assertSame($taskTwo->pid, $responseData[0]['pid']);
+        $this->assertSame($taskOne->pid, $responseData[1]['pid']);
+    }
+
 }

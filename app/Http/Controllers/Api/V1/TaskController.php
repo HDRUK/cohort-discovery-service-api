@@ -60,6 +60,29 @@ class TaskController extends Controller
     }
 
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/tasks",
+     *     summary="List all tasks for admin users",
+     *     tags={"Tasks"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of tasks",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Task")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden"
+     *     )
+     * )
+     */
     public function getAdminTasks(): JsonResponse
     {
         $this->authorize('viewAdmin', Task::class);
