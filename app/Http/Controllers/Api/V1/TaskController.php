@@ -17,6 +17,7 @@ use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +36,7 @@ class TaskController extends Controller
 {
     use HelperFunctions;
     use Responses;
+    use AuthorizesRequests;
 
     /**
      * @OA\Get(
@@ -53,6 +55,64 @@ class TaskController extends Controller
         $tasks = Task::whereHas('submittedQuery', function ($query) {
             $query->where('user_id', Auth::id());
         });
+
+        return $this->OKResponse($tasks);
+    }
+
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/tasks",
+     *     summary="List all tasks for admin users",
+     *     tags={"Tasks"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of tasks",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Task")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden"
+     *     )
+     * )
+     */
+    public function getAdminTasks(): JsonResponse
+    {
+        $this->authorize('viewAdmin', Task::class);
+
+        $perPage = $this->resolvePerPage();
+
+        $collectionFilter = request()->query('collection_filter');
+        $custodianFilter = request()->query('custodian_filter');
+
+        $tasks = Task::with(
+            [
+                'submittedQuery.user',
+                'result',
+                'resultFiles',
+                'runs',
+                'collection'
+            ]
+        )
+            ->when($collectionFilter, function ($query, $collectionFilter) {
+                $query->whereHas('collection', function ($q) use ($collectionFilter) {
+                    $q->where('pid', $collectionFilter);
+                });
+            })
+            ->when($custodianFilter, function ($query, $custodianFilter) {
+                $query->whereHas('collection.custodian', function ($q) use ($custodianFilter) {
+                    $q->where('pid', $custodianFilter);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
 
         return $this->OKResponse($tasks);
     }
@@ -80,7 +140,7 @@ class TaskController extends Controller
      */
     public function getTask($task_pid): JsonResponse
     {
-        $task = Task::with(['submittedQuery', 'collection', 'result'])
+        $task = Task::with(['submittedQuery.user', 'collection', 'result'])
             ->where('pid', $task_pid)
             ->first();
 
@@ -90,6 +150,10 @@ class TaskController extends Controller
 
         if (Gate::denies('view', $task)) {
             return $this->ForbiddenResponse();
+        }
+
+        if ($task->submittedQuery->user?->email) {
+            $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
 
         return $this->OKResponse($task);

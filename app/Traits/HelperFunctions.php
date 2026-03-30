@@ -146,4 +146,33 @@ trait HelperFunctions
         return implode('', $password);
     }
 
+    protected function maskEmail(?string $email): ?string
+    {
+        if (empty($email) || ! str_contains($email, '@')) {
+            return $email;
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+
+        $maskedLocal = match (strlen($local)) {
+            0 => '',
+            1 => '*',
+            2 => substr($local, 0, 1) . '*',
+            default => substr($local, 0, 2) . str_repeat('*', max(strlen($local) - 3, 1)) . substr($local, -1),
+        };
+
+        $domainParts = explode('.', $domain);
+        $domainName = array_shift($domainParts);
+        $domainTld = implode('.', $domainParts);
+
+        $maskedDomainName = match (strlen($domainName)) {
+            0 => '',
+            1 => '*',
+            2 => substr($domainName, 0, 1) . '*',
+            default => substr($domainName, 0, 1) . str_repeat('*', max(strlen($domainName) - 1, 1)),
+        };
+
+        return $maskedLocal . '@' . $maskedDomainName . ($domainTld ? '.' . $domainTld : '');
+    }
+
 }

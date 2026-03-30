@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
@@ -492,7 +493,21 @@ class CollectionController extends Controller
             $nconcepts = $collection->concepts()
                ->count();
 
-            return $this->OKResponse([...$collection->toArray(), 'nconcepts' => $nconcepts]);
+            $concept_counts_by_category = $collection->conceptCountsByCategory()
+                ->orderBy('nconcepts', 'desc')
+                ->get()
+                ->map(fn ($row) => [
+                        'category' => $row->getAttribute('category'),
+                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
+                    ])
+                ->values()
+                ->toArray();
+
+            return $this->OKResponse([
+                ...$collection->toArray(),
+                'nconcepts' => $nconcepts,
+                'concept_counts_by_category' => $concept_counts_by_category,
+            ]);
 
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -883,7 +898,8 @@ class CollectionController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $tasks = $collection->tasks()
+        $tasks = Task::query()
+            ->where('collection_id', $collection->id)
             ->with('submittedQuery')
             ->filterViaRequest()
             ->applySorting('created_at', 'desc');

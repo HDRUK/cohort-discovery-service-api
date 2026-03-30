@@ -101,6 +101,7 @@ Route::prefix('v1/task')
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
+    Route::get('/v1/admin/tasks', [TaskController::class, 'getAdminTasks']);
     Route::get('/v1/task/re-run/{pid}', [TaskController::class, 'cloneTask'])->whereUuid('pid');
 
 

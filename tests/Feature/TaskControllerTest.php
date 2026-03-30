@@ -9,6 +9,7 @@ use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Models\TaskRun;
+use App\Models\User;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
@@ -20,10 +21,15 @@ class TaskControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/task';
 
+    private User $adminUser;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->enableObservers();
+        $this->adminUser = User::factory()->create();
+        $this->adminUser->assignRole('admin');
+
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -780,4 +786,78 @@ class TaskControllerTest extends TestCase
         $response->assertOk()
         ->assertExactJson([]);
     }
+
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_paginated_tasks_for_admin(): void
+    {
+        $this->enableMiddleware();
+
+        $collection = Collection::factory()->bunny()->create();
+        $otherCollection = Collection::factory()->bunny()->create();
+
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Task::truncate();
+        \DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $queryA = Query::factory()->create();
+        $queryB = Query::factory()->create();
+        $queryC = Query::factory()->create();
+
+        $taskOne = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $queryA->id,
+            'task_type' => 'a',
+            'created_at' => now()->subMinute(),
+        ]);
+
+        $taskTwo = Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $queryB->id,
+            'task_type' => 'b',
+            'created_at' => now(),
+        ]);
+
+        $taskThree = Task::factory()->create([
+          'collection_id' => $otherCollection->id,
+          'query_id' => $queryC->id,
+          'task_type' => 'a',
+          'created_at' => now()->subMinutes(2),
+    ]);
+
+        $response = $this->actingAsJwt($this->adminUser, [])
+            ->getJson('/api/v1/admin/tasks');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'data' => [
+                        '*' => [
+                            'pid',
+                            'task_type',
+                            'result',
+                            'result_files',
+                            'runs',
+                            'collection'
+                        ],
+                    ],
+                ],
+            ])
+            ->assertJsonCount(3, 'data.data')
+            ->assertJsonFragment([
+                'pid' => $taskOne->pid,
+                'task_type' => $taskOne->task_type,
+            ])
+            ->assertJsonFragment([
+                'pid' => $taskTwo->pid,
+                'task_type' => $taskTwo->task_type,
+            ])
+            ->assertJsonFragment([
+                'pid' => $taskThree->pid,
+                'task_type' => $taskThree->task_type,
+            ]);
+
+        $this->disableMiddleware();
+    }
+
 }
