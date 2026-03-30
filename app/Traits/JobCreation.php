@@ -11,9 +11,10 @@ use Str;
 
 trait JobCreation
 {
-    public function createQuery(string $name, QueryType $type): Query
+    public function createQuery(string $name, QueryType $type, int $userId): Query
     {
         return Query::create([
+            'user_id' => $userId,
             'pid' => Str::uuid(),
             'name' => $name,
             'definition' => [

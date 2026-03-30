@@ -82,7 +82,7 @@ trait Responses
     {
         return response()->json([
             'message' => 'unexpected error',
-            'data' => $error,
+            'data' => app()->isProduction() ? null : $error,
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 

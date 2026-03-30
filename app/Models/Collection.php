@@ -246,6 +246,54 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function latestSuccessfulDemographicTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
+                ->whereHas('result');
+            }
+        );
+    }
+
+    public function latestSuccessfulConceptTask(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::B)
+                ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
+                ->whereHas('result');
+            }
+        );
+    }
+
+    public function latestSuccessfulDemographicResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class)->ofMany(
+            ['updated_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('file_name', 'demographics.distribution')
+                ->where('status', 'done');
+            }
+        );
+    }
+
+
+    public function latestSuccessfulConceptResultFile(): HasOne
+    {
+        return $this->hasOne(ResultFile::class)->ofMany(
+            ['updated_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('file_name', 'code.distribution')
+                ->where('status', 'done');
+            }
+        );
+    }
+
+
     public function resultFiles()
     {
         return $this->hasMany(ResultFile::class);
@@ -253,26 +301,30 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public function demographics(): HasMany
     {
-        // refactor candidate
-        $sub = Distribution::select(DB::raw('MAX(id) as id'))
+        $latest = Distribution::query()
+            ->selectRaw('MAX(id) as id')
             ->where('category', 'DEMOGRAPHICS')
-            ->groupBy('name', 'collection_id');
+            ->groupBy('collection_id', 'concept_id');
 
-        return $this->hasMany(Distribution::class)
-            ->whereIn('id', $sub);
+        return $this->hasMany(Distribution::class, 'collection_id')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('distributions.id', '=', 'latest.id');
+            })
+            ->select('distributions.*');
     }
 
     public function concepts(): HasMany
     {
-        // refactor candidate
-        $sub = Distribution::select(DB::raw('MAX(id) as id'))
-            ->where('category', '!=', 'DEMOGRAPHICS')
-            ->whereNotNull('concept_id')
-            ->where('concept_id', '>', 0)
-            ->groupBy('name', 'collection_id');
+        $latest = DB::table('distributions')
+         ->selectRaw('collection_id, concept_id, MAX(id) as id')
+         ->where('concept_id', '>', 0)
+         ->groupBy('collection_id', 'concept_id');
 
-        return $this->hasMany(Distribution::class)
-            ->whereIn('id', $sub);
+        return $this->hasMany(Distribution::class, 'collection_id')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('distributions.id', '=', 'latest.id');
+            })
+            ->select('distributions.*');
     }
 
     public function latestDemographic(): HasOne
@@ -339,10 +391,10 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         return $query->withCount([
             'tasks as n_a_tasks' => fn ($q) =>
-                $q->whereNull('completed_at')->where('task_type', TaskType::A),
+                $q->whereNotNull('completed_at')->where('task_type', TaskType::A),
 
             'tasks as n_b_tasks' => fn ($q) =>
-                $q->whereNull('completed_at')->where('task_type', TaskType::B),
+                $q->whereNotNull('completed_at')->where('task_type', TaskType::B),
         ]);
     }
 }
