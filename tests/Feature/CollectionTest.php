@@ -57,13 +57,17 @@ class CollectionTest extends TestCase
             'external_custodian_id' => $anotherFakeGatewayTeamId,
         ]);
 
-        Collection::factory(5)->create([
+        $collections = Collection::factory(5)->create([
             'custodian_id' => $custodian->id,
         ]);
         Collection::factory(5)->create([
             'custodian_id' => $anotherCustodian->id,
         ]);
 
+        $this->attachMetadata($collections->first(), [
+            'os' => 'Windows',
+            'datamodel' => 'OMOP',
+        ]);
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -73,6 +77,14 @@ class CollectionTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(5, count($response->json('data.data')));
+
+        $returned = collect($response->json('data.data'))
+            ->firstWhere('id', $collections->first()->id);
+
+        $this->assertNotNull($returned);
+        $this->assertArrayHasKey('latest_metadata', $returned);
+        $this->assertEquals('Windows', $returned['latest_metadata']['os']);
+        $this->assertEquals('OMOP', $returned['latest_metadata']['datamodel']);
 
         $this->user->removeRole('admin');
 
@@ -162,6 +174,11 @@ class CollectionTest extends TestCase
         Collection::factory(10)->create();
         $coll = Collection::inRandomOrder()->first();
 
+        $this->attachMetadata($coll, [
+            'os' => 'Ubuntu',
+            'datamodel' => 'OMOP 5.4',
+        ]);
+
         $response = $this->actingAsJwt(
             $this->user,
             []
@@ -174,6 +191,10 @@ class CollectionTest extends TestCase
         $this->assertNotNull($content);
         $this->assertTrue($content['id'] === $coll->id);
         $this->assertTrue($content['name'] === $coll->name);
+
+        $this->assertNotNull($content['latest_metadata']);
+        $this->assertEquals('Ubuntu', $content['latest_metadata']['os']);
+        $this->assertEquals('OMOP 5.4', $content['latest_metadata']['datamodel']);
 
         $this->user->removeRole('admin');
 
@@ -588,6 +609,31 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_it_returns_metadata_in_collection_details(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $this->attachMetadata($collection, [
+            'os' => 'Linux',
+            'biobank' => 'Demo Bank',
+            'protocol' => 'Protocol Z',
+        ]);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.latest_metadata.os', 'Linux');
+        $response->assertJsonPath('data.latest_metadata.biobank', 'Demo Bank');
+        $response->assertJsonPath('data.latest_metadata.protocol', 'Protocol Z');
+    }
+
     // public function test_it_can_list_collections_integrated_mode(): void
     // {
     //     Config::set('system.operation_mode', 'integrated');
@@ -864,6 +910,19 @@ class CollectionTest extends TestCase
         $collection->setState($state);
 
         return $collection->fresh();
+    }
+
+    private function attachMetadata(Collection $collection, array $overrides = []): void
+    {
+        $collection->latestMetadata()->create(array_merge([
+            'os' => 'Linux',
+            'bclink' => 'BC123',
+            'biobank' => 'Test Biobank',
+            'datamodel' => 'OMOP',
+            'protocol' => 'Protocol A',
+            'rounding' => '2dp',
+            'threshold' => '5',
+        ], $overrides));
     }
 
 }
