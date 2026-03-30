@@ -73,6 +73,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read ModelState|null $modelState
  * @property-read State|null $state
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
+ * @property-read \App\Models\ResultFile|null $latestMetadataResultFile
  */
 class Collection extends Model implements HasStateTransitions, ValidatableModel
 {
