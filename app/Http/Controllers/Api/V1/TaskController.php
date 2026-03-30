@@ -85,7 +85,6 @@ class TaskController extends Controller
      */
     public function getAdminTasks(): JsonResponse
     {
-        dump('here i amm now');
         $this->authorize('viewAdmin', Task::class);
 
         $perPage = $this->resolvePerPage();
