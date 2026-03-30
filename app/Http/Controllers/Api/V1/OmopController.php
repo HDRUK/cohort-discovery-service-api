@@ -95,20 +95,20 @@ class OmopController extends Controller
     public function searchConcepts(Request $request): JsonResponse
     {
         try {
-            $perPage         = $this->resolvePerPage();
-            $page            = max(1, (int) $request->input('page', 1));
-            $offset          = ($page - 1) * $perPage;
-            $collectionPids  = $request->input('collections');
-            $domain          = $request->input('domain');
+            $perPage          = $this->resolvePerPage();
+            $page             = max(1, (int) $request->input('page', 1));
+            $offset           = ($page - 1) * $perPage;
+            $collectionPids   = $request->input('collections');
+            $domain           = $request->input('domain');
             $includeAncestors = $request->boolean('include_ancestors', true);
-            $search          = $request->only(['concept_id', 'concept_name']);
+            $search           = $request->only(['concept_id', 'concept_name']);
 
             $bindings = [];
             $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
 
             if ($collectionPids) {
                 $placeholders = implode(',', array_fill(0, count($collectionPids), '?'));
-                $where[]  = "d.collection_id IN (SELECT id FROM collections WHERE pid IN ({$placeholders}))";
+                $where[] = "d.collection_id IN (SELECT id FROM collections WHERE pid IN ({$placeholders}))";
                 $bindings = array_merge($bindings, $collectionPids);
             }
 
@@ -121,7 +121,7 @@ class OmopController extends Controller
             $searchBindings   = [];
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
-                $searchConditions[] = 'd.concept_id LIKE ?';
+                $searchConditions[] = 'CAST(d.concept_id AS CHAR) LIKE ?';
                 $searchBindings[]   = '%' . $term . '%';
             }
 
@@ -137,47 +137,90 @@ class OmopController extends Controller
 
             $whereClause = implode(' AND ', $where);
 
+            $scoreClauses   = [];
+            $scoreBindings  = [];
+
+            foreach ((array) ($search['concept_name'] ?? []) as $term) {
+                $term = trim($term);
+
+                if ($term === '') {
+                    continue;
+                }
+
+                $scoreClauses[] = "
+                CASE
+                    WHEN LOWER(d.description) = LOWER(?) THEN 1000
+                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
+                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
+                    ELSE 0
+                END
+            ";
+
+                $scoreBindings[] = $term;   // exact match
+                $scoreBindings[] = $term . '%'; // starts with
+                $scoreBindings[] = '%' . $term . '%'; // contains
+            }
+
+            foreach ((array) ($search['concept_id'] ?? []) as $term) {
+                $term = trim((string) $term);
+                if ($term === '') {
+                    continue;
+                }
+                $searchConditions[] = 'd.concept_id = ?';
+                $searchBindings[]   = (int) $term;
+            }
+
+            $scoreSql = $scoreClauses
+                ? '(' . implode(' + ', $scoreClauses) . ')'
+                : '0';
+
             $childrenJoin = $includeAncestors
                 ? 'LEFT JOIN concept_ancestors ca ON ca.parent_concept_id = base.concept_id
-                   LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
+               LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
                 : '';
 
             $childrenSelect = $includeAncestors
                 ? ", JSON_ARRAYAGG(
-                       CASE WHEN dc.concept_id IS NOT NULL THEN
-                           JSON_OBJECT(
-                               'concept_id', dc.concept_id,
-                               'name', dc.description,
-                               'category', dc.category
-                           )
-                       END
-                   ) AS children"
+                   CASE WHEN dc.concept_id IS NOT NULL THEN
+                       JSON_OBJECT(
+                           'concept_id', dc.concept_id,
+                           'name', dc.description,
+                           'category', dc.category
+                       )
+                   END
+               ) AS children"
                 : '';
 
             $sql = "
-                WITH base AS (
-                    SELECT DISTINCT d.concept_id, d.description AS name, d.category
-                    FROM distributions d
-                    WHERE {$whereClause}
-                ),
-                total AS (SELECT COUNT(*) AS cnt FROM base)
-                SELECT base.*, total.cnt {$childrenSelect}
-                FROM base
-                CROSS JOIN total
-                {$childrenJoin}
-                GROUP BY base.concept_id, base.name, base.category, total.cnt
-                ORDER BY base.concept_id
-                LIMIT ? OFFSET ?
-            ";
+            WITH base AS (
+                SELECT DISTINCT
+                    d.concept_id,
+                    d.description AS name,
+                    d.category,
+                    {$scoreSql} AS match_score
+                FROM distributions d
+                WHERE {$whereClause}
+            ),
+            total AS (
+                SELECT COUNT(*) AS cnt FROM base
+            )
+            SELECT base.*, total.cnt {$childrenSelect}
+            FROM base
+            CROSS JOIN total
+            {$childrenJoin}
+            GROUP BY base.concept_id, base.name, base.category, base.match_score, total.cnt
+            ORDER BY base.match_score DESC, CHAR_LENGTH(base.name) ASC, base.concept_id
+            LIMIT ? OFFSET ?
+        ";
 
-            $bindings[] = $perPage;
-            $bindings[] = $offset;
+            $finalBindings = array_merge($scoreBindings, $bindings, [$perPage, $offset]);
 
-            $rows  = DB::select($sql, $bindings);
+            $rows  = DB::select($sql, $finalBindings);
             $total = $rows[0]->cnt ?? 0;
 
             foreach ($rows as $row) {
                 unset($row->cnt);
+
                 if ($includeAncestors) {
                     $row->children = array_values(array_filter(
                         json_decode($row->children ?? '[]', true) ?? [],
