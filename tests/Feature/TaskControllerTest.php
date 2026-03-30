@@ -9,6 +9,7 @@ use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Models\TaskRun;
+use App\Models\User;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
@@ -783,8 +784,12 @@ class TaskControllerTest extends TestCase
 
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_returns_admin_tasks_for_a_collection(): void
+    public function it_returns_paginated_tasks_for_admin(): void
     {
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole('admin');
+
+
         $collection = Collection::factory()->bunny()->create();
         $otherCollection = Collection::factory()->bunny()->create();
 
@@ -806,13 +811,15 @@ class TaskControllerTest extends TestCase
             'created_at' => now(),
         ]);
 
-        Task::factory()->create([
-            'collection_id' => $otherCollection->id,
-            'query_id' => $queryC->id,
-            'task_type' => 'a',
-        ]);
+        $taskThree = Task::factory()->create([
+          'collection_id' => $otherCollection->id,
+          'query_id' => $queryC->id,
+          'task_type' => 'a',
+          'created_at' => now()->subMinutes(2),
+    ]);
 
-        $response = $this->getJson("/api/v1/admin/collections/{$collection->pid}/tasks");
+        $response = $this->actingAsJwt($adminUser, [])
+            ->getJson('/api/v1/admin/tasks');
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -820,14 +827,12 @@ class TaskControllerTest extends TestCase
                     '*' => [
                         'pid',
                         'task_type',
-                        'query_id',
-                        'collection_id',
-                        'created_at',
-                        'updated_at',
                     ],
                 ],
+                'links',
+                'meta',
             ])
-            ->assertJsonCount(2, 'data')
+            ->assertJsonCount(3, 'data')
             ->assertJsonFragment([
                 'pid' => $taskOne->pid,
                 'task_type' => $taskOne->task_type,
@@ -835,12 +840,17 @@ class TaskControllerTest extends TestCase
             ->assertJsonFragment([
                 'pid' => $taskTwo->pid,
                 'task_type' => $taskTwo->task_type,
+            ])
+            ->assertJsonFragment([
+                'pid' => $taskThree->pid,
+                'task_type' => $taskThree->task_type,
             ]);
 
         $responseData = $response->json('data');
 
         $this->assertSame($taskTwo->pid, $responseData[0]['pid']);
         $this->assertSame($taskOne->pid, $responseData[1]['pid']);
+        $this->assertSame($taskThree->pid, $responseData[2]['pid']);
     }
 
 }
