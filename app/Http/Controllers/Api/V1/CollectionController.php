@@ -901,12 +901,10 @@ class CollectionController extends Controller
             $validated = $request->validate([
                 'collection_ids' => ['nullable', 'array'],
                 'collection_ids.*' => ['integer', Rule::exists('collections', 'id')],
-                'sync' => ['sometimes', 'boolean'],
             ]);
 
             $result = $service->handle(
                 collectionIds: $validated['collection_ids'] ?? [],
-                sync: (bool) ($validated['sync'] ?? false),
             );
 
             return $this->OKResponse($result);

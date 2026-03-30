@@ -7,7 +7,7 @@ use App\Models\Collection;
 
 class ProcessLatestCollectionMetadataService
 {
-    public function handle(array $collectionIds = [], bool $sync = false): array
+    public function handle(array $collectionIds = []): array
     {
         $collections = Collection::query()
             ->when(
@@ -15,7 +15,11 @@ class ProcessLatestCollectionMetadataService
                 fn ($query) => $query->whereIn('id', $collectionIds)
             )
             ->with([
-                'latestMetadataResultFile:id,collection_id,file_name',
+                'latestMetadataResultFile' => fn ($query) => $query->select(
+                    'result_files.id',
+                    'result_files.collection_id',
+                    'result_files.file_name',
+                ),
             ])
             ->get(['id']);
 
@@ -26,7 +30,7 @@ class ProcessLatestCollectionMetadataService
                 'skipped' => 0,
                 'processed_items' => [],
                 'skipped_collection_ids' => [],
-                'mode' => $sync ? 'sync' : 'queued',
+                'mode' => 'queued',
             ];
         }
 
@@ -44,11 +48,7 @@ class ProcessLatestCollectionMetadataService
                 continue;
             }
 
-            if ($sync) {
-                ProcessMetadataFile::dispatchSync($resultFile->id);
-            } else {
-                ProcessMetadataFile::dispatch($resultFile->id)->afterCommit();
-            }
+            ProcessMetadataFile::dispatch($resultFile->id)->afterCommit();
 
             $processed++;
 
@@ -65,7 +65,7 @@ class ProcessLatestCollectionMetadataService
             'skipped' => $skipped,
             'processed_items' => $processedItems,
             'skipped_collection_ids' => $skippedCollectionIds,
-            'mode' => $sync ? 'sync' : 'queued',
+            'mode' =>  'queued',
         ];
     }
 }
