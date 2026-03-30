@@ -834,10 +834,12 @@ class TaskControllerTest extends TestCase
                         '*' => [
                             'pid',
                             'task_type',
+                            'result',
+                            'resultFiles',
+                            'runs',
+                            'collection'
                         ],
                     ],
-                    'links',
-                    'meta',
                 ],
             ])
             ->assertJsonCount(3, 'data.data')
