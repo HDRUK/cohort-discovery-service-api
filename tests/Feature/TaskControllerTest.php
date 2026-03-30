@@ -835,7 +835,7 @@ class TaskControllerTest extends TestCase
                             'pid',
                             'task_type',
                             'result',
-                            'resultFiles',
+                            'result_files',
                             'runs',
                             'collection'
                         ],
