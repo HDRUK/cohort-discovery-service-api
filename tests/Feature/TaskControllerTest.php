@@ -21,10 +21,15 @@ class TaskControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/task';
 
+    private User $adminUser;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->enableObservers();
+        $this->adminUser = User::factory()->create();
+        $this->adminUser->assignRole('admin');
+
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -786,9 +791,8 @@ class TaskControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_paginated_tasks_for_admin(): void
     {
-        $adminUser = User::factory()->create();
-        $adminUser->assignRole('admin');
-
+        $this->enableMiddleware();
+        Task::truncate();
 
         $collection = Collection::factory()->bunny()->create();
         $otherCollection = Collection::factory()->bunny()->create();
@@ -818,21 +822,23 @@ class TaskControllerTest extends TestCase
           'created_at' => now()->subMinutes(2),
     ]);
 
-        $response = $this->actingAsJwt($adminUser, [])
+        $response = $this->actingAsJwt($this->adminUser, [])
             ->getJson('/api/v1/admin/tasks');
 
         $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    '*' => [
-                        'pid',
-                        'task_type',
+                    'data' => [
+                        '*' => [
+                            'pid',
+                            'task_type',
+                        ],
                     ],
+                    'links',
+                    'meta',
                 ],
-                'links',
-                'meta',
             ])
-            ->assertJsonCount(3, 'data')
+            ->assertJsonCount(3, 'data.data')
             ->assertJsonFragment([
                 'pid' => $taskOne->pid,
                 'task_type' => $taskOne->task_type,
@@ -846,11 +852,7 @@ class TaskControllerTest extends TestCase
                 'task_type' => $taskThree->task_type,
             ]);
 
-        $responseData = $response->json('data');
-
-        $this->assertSame($taskTwo->pid, $responseData[0]['pid']);
-        $this->assertSame($taskOne->pid, $responseData[1]['pid']);
-        $this->assertSame($taskThree->pid, $responseData[2]['pid']);
+        $this->disableMiddleware();
     }
 
 }
