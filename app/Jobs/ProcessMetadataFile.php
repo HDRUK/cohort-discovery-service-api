@@ -149,9 +149,7 @@ class ProcessMetadataFile implements ShouldQueue
         if ($value === null) {
             return null;
         }
-
         $value = trim($value);
-
         return $value === '' ? null : $value;
     }
 }
