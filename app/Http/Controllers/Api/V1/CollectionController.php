@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
@@ -496,9 +497,9 @@ class CollectionController extends Controller
                 ->orderBy('nconcepts', 'desc')
                 ->get()
                 ->map(fn ($row) => [
-                    'category' => $row->category,
-                    'nconcepts' => (int) $row->nconcepts,
-                ])
+                        'category' => $row->getAttribute('category'),
+                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
+                    ])
                 ->values()
                 ->toArray();
 
@@ -897,7 +898,8 @@ class CollectionController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $tasks = $collection->tasks()
+        $tasks = Task::query()
+            ->where('collection_id', $collection->id)
             ->with('submittedQuery')
             ->filterViaRequest()
             ->applySorting('created_at', 'desc');

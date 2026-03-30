@@ -62,7 +62,7 @@ class TaskController extends Controller
 
     public function getAdminTasks(): JsonResponse
     {
-        $this->authorize('view', Task::class);
+        $this->authorize('viewAdmin', Task::class);
 
         $perPage = $this->resolvePerPage();
 
@@ -129,7 +129,7 @@ class TaskController extends Controller
             return $this->ForbiddenResponse();
         }
 
-        if ($task->submittedQuery?->user?->email) {
+        if ($task->submittedQuery->user?->email) {
             $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
 

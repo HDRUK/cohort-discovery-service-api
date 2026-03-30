@@ -40,8 +40,19 @@ use Carbon\Carbon;
  * )
  *
  * @property int $id
- * @property string $name
- * @property array $definition
+ * @property string $pid
+ * @property string|null $name
+ * @property int|null $user_id
+ * @property array<string, mixed> $definition
+ * @property string|null $query_type
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ *
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static> query()
  */
 class Query extends Model
 {
@@ -67,6 +78,8 @@ class Query extends Model
     protected $casts = [
         'definition' => 'array',
         'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected static array $searchableColumns = [
@@ -148,20 +161,19 @@ class Query extends Model
             'definition' => [
                 'code' => $code,
             ],
-            'query_type' => $code
+            'query_type' => $code,
         ]);
 
         $query->tasks()->create([
-                'pid' => (string) Str::uuid(),
-                'collection_id' => $collectionId,
-                'task_type' => TaskType::B
+            'pid' => (string) Str::uuid(),
+            'collection_id' => $collectionId,
+            'task_type' => TaskType::B,
         ]);
 
         $query->refresh()->load('tasks');
-        return  $query;
 
+        return $query;
     }
-
 
     protected static function booted(): void
     {

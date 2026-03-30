@@ -162,7 +162,7 @@ trait HelperFunctions
         };
 
         $domainParts = explode('.', $domain);
-        $domainName = array_shift($domainParts) ?? '';
+        $domainName = array_shift($domainParts);
         $domainTld = implode('.', $domainParts);
 
         $maskedDomainName = match (strlen($domainName)) {

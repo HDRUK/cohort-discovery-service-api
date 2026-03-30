@@ -72,8 +72,11 @@ use Illuminate\Support\Facades\DB;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read ModelState|null $modelState
  * @property-read State|null $state
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Task[] $tasks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
  * @property-read \App\Models\ResultFile|null $latestMetadataResultFile
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $demographics
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $concepts
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $conceptCountsByCategory
  */
 class Collection extends Model implements HasStateTransitions, ValidatableModel
 {
@@ -217,9 +220,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->belongsTo(Custodian::class);
     }
 
-    /**
-     * @return HasMany<Task, $this>
-     */
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
@@ -231,7 +231,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                  ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value);
+                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value);
             }
         );
     }
@@ -242,7 +242,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                  ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value);
+                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value);
             }
         );
     }
@@ -253,8 +253,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
-                ->whereHas('result');
+                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
+                    ->whereHas('result');
             }
         );
     }
@@ -265,8 +265,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
-                ->whereHas('result');
+                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
+                    ->whereHas('result');
             }
         );
     }
@@ -277,11 +277,10 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['updated_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('file_name', 'demographics.distribution')
-                ->where('status', 'done');
+                    ->where('status', 'done');
             }
         );
     }
-
 
     public function latestSuccessfulConceptResultFile(): HasOne
     {
@@ -289,13 +288,12 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['updated_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('file_name', 'code.distribution')
-                ->where('status', 'done');
+                    ->where('status', 'done');
             }
         );
     }
 
-
-    public function resultFiles()
+    public function resultFiles(): HasMany
     {
         return $this->hasMany(ResultFile::class);
     }
@@ -317,9 +315,9 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     public function concepts(): HasMany
     {
         $latest = DB::table('distributions')
-         ->selectRaw('collection_id, concept_id, MAX(id) as id')
-         ->where('concept_id', '>', 0)
-         ->groupBy('collection_id', 'concept_id');
+            ->selectRaw('collection_id, concept_id, MAX(id) as id')
+            ->where('concept_id', '>', 0)
+            ->groupBy('collection_id', 'concept_id');
 
         return $this->hasMany(Distribution::class, 'collection_id')
             ->joinSub($latest, 'latest', function ($join) {
@@ -349,7 +347,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('category', 'DEMOGRAPHICS')
-                ->where('name', 'SEX');
+                    ->where('name', 'SEX');
             }
         );
     }
