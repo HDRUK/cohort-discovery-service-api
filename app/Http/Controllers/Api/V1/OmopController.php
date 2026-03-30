@@ -121,7 +121,7 @@ class OmopController extends Controller
             $searchBindings   = [];
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
-                $searchConditions[] = 'CAST(d.concept_id AS CHAR) LIKE ?';
+                $searchConditions[] = 'd.concept_id LIKE ?';
                 $searchBindings[]   = '%' . $term . '%';
             }
 
@@ -176,7 +176,7 @@ class OmopController extends Controller
 
             $childrenJoin = $includeAncestors
                 ? 'LEFT JOIN concept_ancestors ca ON ca.parent_concept_id = base.concept_id
-               LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
+                   LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
                 : '';
 
             $childrenSelect = $includeAncestors
@@ -192,26 +192,26 @@ class OmopController extends Controller
                 : '';
 
             $sql = "
-            WITH base AS (
-                SELECT DISTINCT
-                    d.concept_id,
-                    d.description AS name,
-                    d.category,
-                    {$scoreSql} AS match_score
-                FROM distributions d
-                WHERE {$whereClause}
-            ),
-            total AS (
-                SELECT COUNT(*) AS cnt FROM base
-            )
-            SELECT base.*, total.cnt {$childrenSelect}
-            FROM base
-            CROSS JOIN total
-            {$childrenJoin}
-            GROUP BY base.concept_id, base.name, base.category, base.match_score, total.cnt
-            ORDER BY base.match_score DESC, CHAR_LENGTH(base.name) ASC, base.concept_id
-            LIMIT ? OFFSET ?
-        ";
+                WITH base AS (
+                    SELECT DISTINCT
+                        d.concept_id,
+                        d.description AS name,
+                        d.category,
+                        {$scoreSql} AS match_score
+                    FROM distributions d
+                    WHERE {$whereClause}
+                ),
+                total AS (
+                    SELECT COUNT(*) AS cnt FROM base
+                )
+                SELECT base.*, total.cnt {$childrenSelect}
+                FROM base
+                CROSS JOIN total
+                {$childrenJoin}
+                GROUP BY base.concept_id, base.name, base.category, base.match_score, total.cnt
+                ORDER BY base.match_score DESC, CHAR_LENGTH(base.name) ASC, base.concept_id
+                LIMIT ? OFFSET ?
+            ";
 
             $finalBindings = array_merge($scoreBindings, $bindings, [$perPage, $offset]);
 
@@ -220,7 +220,6 @@ class OmopController extends Controller
 
             foreach ($rows as $row) {
                 unset($row->cnt);
-
                 if ($includeAncestors) {
                     $row->children = array_values(array_filter(
                         json_decode($row->children ?? '[]', true) ?? [],
