@@ -792,12 +792,13 @@ class TaskControllerTest extends TestCase
     public function it_returns_paginated_tasks_for_admin(): void
     {
         $this->enableMiddleware();
-        \DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        \DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $collection = Collection::factory()->bunny()->create();
         $otherCollection = Collection::factory()->bunny()->create();
+
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Task::truncate();
+        \DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $queryA = Query::factory()->create();
         $queryB = Query::factory()->create();
