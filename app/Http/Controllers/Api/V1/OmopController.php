@@ -159,13 +159,13 @@ class OmopController extends Controller
                 }
 
                 $scoreClauses[] = "
-                CASE
-                    WHEN LOWER(d.description) = LOWER(?) THEN 1000
-                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
-                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
-                    ELSE 0
-                END
-            ";
+                    CASE
+                        WHEN LOWER(d.description) = LOWER(?) THEN 1000
+                        WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
+                        WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
+                        ELSE 0
+                    END
+                ";
 
                 $scoreBindings[] = $term;             // exact match
                 $scoreBindings[] = '%' . $term . '%'; // contains
