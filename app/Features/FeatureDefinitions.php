@@ -11,6 +11,11 @@ Feature::define('query-builder-use-leave-confirmation', fn () => true);
  * This is useful for dev and maybe a feature we want to turn on for prod someday
  */
 Feature::define('query-builder-show-concept-stats', fn () => false);
+/**
+ * Show nconcepts/ncollections when viewing a concept
+ * This is useful for dev and maybe a feature we want to turn on for prod someday
+ */
+Feature::define('query-builder-use-stats-in-ordering', fn () => false);
 
 
 Feature::define('constrain-for-bunny-v1', fn () => true);
