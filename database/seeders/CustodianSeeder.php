@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Custodian;
 use Illuminate\Database\Seeder;
+use DB;
 
 class CustodianSeeder extends Seeder
 {
