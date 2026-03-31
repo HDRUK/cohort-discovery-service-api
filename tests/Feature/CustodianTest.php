@@ -23,10 +23,12 @@ class CustodianTest extends TestCase
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Custodian::truncate();
         CollectionHost::truncate();
         CustodianNetwork::truncate();
         CustodianNetworkHasCustodian::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->enableMiddleware();
         $this->user = User::factory()->create();
