@@ -6,6 +6,7 @@ use DB;
 use App\Models\User;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
+use App\Models\Collection;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Models\CustodianHasUser;
@@ -25,6 +26,7 @@ class CustodianTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Custodian::truncate();
+        Collection::truncate();
         CollectionHost::truncate();
         CustodianNetwork::truncate();
         CustodianNetworkHasCustodian::truncate();
@@ -259,6 +261,7 @@ class CustodianTest extends TestCase
             []
         )
             ->deleteJson($this->url.'/'.$custodian->id);
+
         $response->assertStatus(200);
     }
 
