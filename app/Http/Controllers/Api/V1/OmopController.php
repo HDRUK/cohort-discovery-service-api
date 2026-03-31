@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
 
 /**
  * @OA\Tag(
@@ -121,11 +122,19 @@ class OmopController extends Controller
             $searchBindings   = [];
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
+                $term = trim((string) $term);
+                if ($term === '') {
+                    continue;
+                }
                 $searchConditions[] = 'd.concept_id LIKE ?';
                 $searchBindings[]   = '%' . $term . '%';
             }
 
             foreach ((array) ($search['concept_name'] ?? []) as $term) {
+                $term = trim($term);
+                if ($term === '') {
+                    continue;
+                }
                 $searchConditions[] = 'd.description LIKE ?';
                 $searchBindings[]   = '%' . $term . '%';
             }
@@ -137,8 +146,10 @@ class OmopController extends Controller
 
             $whereClause = implode(' AND ', $where);
 
-            $scoreClauses   = [];
-            $scoreBindings  = [];
+            $scoreClauses  = [];
+            $scoreBindings = [];
+
+            $useStatsInOrdering = Feature::active('query-builder-use-stats-in-ordering');
 
             foreach ((array) ($search['concept_name'] ?? []) as $term) {
                 $term = trim($term);
@@ -156,9 +167,9 @@ class OmopController extends Controller
                 END
             ";
 
-                $scoreBindings[] = $term;   // exact match
+                $scoreBindings[] = $term;             // exact match
                 $scoreBindings[] = '%' . $term . '%'; // contains
-                $scoreBindings[] = $term . '%'; // starts with
+                $scoreBindings[] = $term . '%';       // starts with
             }
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
@@ -166,8 +177,15 @@ class OmopController extends Controller
                 if ($term === '') {
                     continue;
                 }
-                $searchConditions[] = 'd.concept_id = ?';
-                $searchBindings[]   = (int) $term;
+                $scoreClauses[] = "
+                    CASE
+                        WHEN d.concept_id = ? THEN 1000
+                        WHEN CAST(d.concept_id AS CHAR) LIKE ? THEN 500
+                        ELSE 0
+                    END
+                ";
+                $scoreBindings[] = (int) $term;
+                $scoreBindings[] = '%' . $term . '%';
             }
 
             $scoreSql = $scoreClauses
@@ -190,6 +208,22 @@ class OmopController extends Controller
                    END
                ) AS children"
                 : '';
+
+            $orderBy = $useStatsInOrdering
+                ? "
+                ORDER BY
+                    base.match_score DESC,
+                    base.ncollections DESC,
+                    base.count DESC,
+                    CHAR_LENGTH(base.name) ASC,
+                    base.concept_id
+            "
+                : "
+                ORDER BY
+                    base.match_score DESC,
+                    CHAR_LENGTH(base.name) ASC,
+                    base.concept_id
+            ";
 
             $sql = "
                 WITH base AS (
@@ -222,12 +256,7 @@ class OmopController extends Controller
                     base.ncollections,
                     base.count,
                     total.cnt
-                ORDER BY
-                    base.match_score DESC,
-                    #base.ncollections DESC,
-                    #base.count DESC,
-                    CHAR_LENGTH(base.name) ASC,
-                    base.concept_id
+                {$orderBy}
                 LIMIT ? OFFSET ?
             ";
 
@@ -238,6 +267,7 @@ class OmopController extends Controller
 
             foreach ($rows as $row) {
                 unset($row->cnt);
+
                 if ($includeAncestors) {
                     $row->children = array_values(array_filter(
                         json_decode($row->children ?? '[]', true) ?? [],
