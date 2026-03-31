@@ -107,7 +107,11 @@ class OmopController extends Controller
             $bindings = [];
             $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
 
-            if ($collectionPids) {
+            $useCollectionsInSearch = Feature::active('query-builder-use-collections-in-search');
+            if ($useCollectionsInSearch && $collectionPids) {
+                // this was working fine locally but gets really slow with >3 large collections
+                // - feature flag disabled for now (default disabled)
+                // - refactor candidate
                 $placeholders = implode(',', array_fill(0, count($collectionPids), '?'));
                 $where[] = "d.collection_id IN (SELECT id FROM collections WHERE pid IN ({$placeholders}))";
                 $bindings = array_merge($bindings, $collectionPids);
