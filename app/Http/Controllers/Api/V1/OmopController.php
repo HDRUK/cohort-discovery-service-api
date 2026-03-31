@@ -157,8 +157,8 @@ class OmopController extends Controller
             ";
 
                 $scoreBindings[] = $term;   // exact match
-                $scoreBindings[] = $term . '%'; // starts with
                 $scoreBindings[] = '%' . $term . '%'; // contains
+                $scoreBindings[] = $term . '%'; // starts with
             }
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
@@ -193,23 +193,41 @@ class OmopController extends Controller
 
             $sql = "
                 WITH base AS (
-                    SELECT DISTINCT
+                    SELECT
                         d.concept_id,
                         d.description AS name,
                         d.category,
-                        {$scoreSql} AS match_score
+                        {$scoreSql} AS match_score,
+                        COUNT(DISTINCT d.collection_id) AS ncollections,
+                        SUM(d.count) AS count
                     FROM distributions d
                     WHERE {$whereClause}
+                    GROUP BY d.concept_id, d.description, d.category
                 ),
                 total AS (
                     SELECT COUNT(*) AS cnt FROM base
                 )
-                SELECT base.*, total.cnt {$childrenSelect}
+                SELECT
+                    base.*,
+                    total.cnt
+                    {$childrenSelect}
                 FROM base
                 CROSS JOIN total
                 {$childrenJoin}
-                GROUP BY base.concept_id, base.name, base.category, base.match_score, total.cnt
-                ORDER BY base.match_score DESC, CHAR_LENGTH(base.name) ASC, base.concept_id
+                GROUP BY
+                    base.concept_id,
+                    base.name,
+                    base.category,
+                    base.match_score,
+                    base.ncollections,
+                    base.count,
+                    total.cnt
+                ORDER BY
+                    base.match_score DESC,
+                    #base.ncollections DESC,
+                    #base.count DESC,
+                    CHAR_LENGTH(base.name) ASC,
+                    base.concept_id
                 LIMIT ? OFFSET ?
             ";
 
