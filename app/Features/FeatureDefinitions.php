@@ -5,9 +5,18 @@ namespace App\Features;
 use Laravel\Pennant\Feature;
 
 Feature::define('query-builder', fn () => true);
+Feature::define('query-builder-use-leave-confirmation', fn () => true);
+/**
+ * Show nconcepts/ncollections when viewing a concept
+ * This is useful for dev and maybe a feature we want to turn on for prod someday
+ */
+Feature::define('query-builder-show-concept-stats', fn () => false);
+
+
 Feature::define('constrain-for-bunny-v1', fn () => true);
 Feature::define('query-nlp', fn () => true);
 Feature::define('in-app-messenger', fn () => false);
+
 
 
 /*
@@ -46,9 +55,3 @@ Feature::define('integrated-sync-sde-wgs-from-claim', fn () => true);
 Feature::define('integrated-sync-roles-every-request', fn () => true);
 
 Feature::define('integrated-sync-custodians-every-request', fn () => true);
-
-/**
- * Show nconcepts/ncollections when viewing a concept
- * This is useful for dev and maybe a feature we want to turn on for prod someday
- */
-Feature::define('show-concept-stats', fn () => false);
