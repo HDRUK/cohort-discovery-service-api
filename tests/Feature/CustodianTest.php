@@ -181,7 +181,9 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_create_a_custodian(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('custodians')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $response = $this->actingAsJwt(
             $this->user,
             []
@@ -198,7 +200,9 @@ class CustodianTest extends TestCase
 
     public function test_only_admin_can_create_a_custodian(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('custodians')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $nonAdmin = User::factory()->create();
 
