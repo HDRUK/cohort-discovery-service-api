@@ -16,6 +16,11 @@ Feature::define('query-builder-show-concept-stats', fn () => false);
  */
 Feature::define('query-builder-use-stats-in-ordering', fn () => false);
 
+/**
+ * Attempt to filter by selected datasets when searching for concepts
+ */
+Feature::define('query-builder-use-collections-in-search', fn () => false);
+
 
 Feature::define('constrain-for-bunny-v1', fn () => true);
 Feature::define('query-nlp', fn () => true);
