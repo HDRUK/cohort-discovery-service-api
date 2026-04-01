@@ -203,4 +203,24 @@ class OmopControllerTest extends TestCase
         $this->assertCount(1, $data);
         $this->assertEquals(3027018, $data[0]['concept_id']);
     }
+
+    public function test_pagination_uses_per_page_and_page_from_request_body(): void
+    {
+        $response = $this->postJson(self::SEARCH_URL, [
+            'per_page' => 2,
+            'page'     => 2,
+        ]);
+
+        $response->assertOk();
+
+        $data = $response->json('data.data');
+
+        $this->assertCount(2, $data);
+        $this->assertEquals(4, $response->json('data.total'));
+        $this->assertEquals(2, $response->json('data.current_page'));
+        $this->assertEquals(2, $response->json('data.per_page'));
+
+        $ids = array_column($data, 'concept_id');
+        $this->assertEquals([320128, 3027018], $ids);
+    }
 }
