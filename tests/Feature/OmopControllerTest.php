@@ -17,7 +17,6 @@ class OmopControllerTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('distributions')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         DB::table('distributions')->insert([
             [
@@ -61,6 +60,7 @@ class OmopControllerTest extends TestCase
                 'updated_at'    => now(),
             ],
         ]);
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 
     public function test_search_by_concept_name_returns_matching_rows(): void
