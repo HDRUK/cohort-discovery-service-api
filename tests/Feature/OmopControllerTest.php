@@ -17,6 +17,8 @@ class OmopControllerTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('distributions')->truncate();
+        Collection::truncate();
+        Collection::factory(2)->create();
 
         DB::table('distributions')->insert([
             [
