@@ -157,7 +157,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
-    Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
+    Route::post('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
