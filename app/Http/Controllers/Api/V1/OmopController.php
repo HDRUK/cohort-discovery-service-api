@@ -96,7 +96,7 @@ class OmopController extends Controller
     public function searchConcepts(Request $request): JsonResponse
     {
         try {
-            $perPage          = $this->resolvePerPage();
+            $perPage          = $this->resolvePerPage(100, true);
             $page             = max(1, (int) $request->input('page', 1));
             $offset           = ($page - 1) * $perPage;
             $collectionPids   = $request->input('collections');

@@ -38,9 +38,11 @@ trait HelperFunctions
         return $data;
     }
 
-    public function resolvePerPage(int $max = 100): int
+    public function resolvePerPage(int $max = 100, bool $allowBody = false): int
     {
-        $requested = request()->query('per_page');
+        $requested = $allowBody
+            ? request()->input('per_page')
+            : request()->query('per_page');
 
         if (is_numeric($requested) && (int) $requested > 0) {
             return min((int) $requested, $max);
