@@ -221,6 +221,6 @@ class OmopControllerTest extends TestCase
         $this->assertEquals(2, $response->json('data.per_page'));
 
         $ids = array_column($data, 'concept_id');
-        $this->assertEquals([320128, 3027018], $ids);
+        $this->assertEquals([24007, 24006], $ids);
     }
 }
