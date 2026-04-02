@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             StateSeeder::class,
             CustodianSeeder::class,
+            FeatureSeeder::class,
         ]);
 
     }
