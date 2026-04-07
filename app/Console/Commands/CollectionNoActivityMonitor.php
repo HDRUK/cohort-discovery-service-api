@@ -37,9 +37,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 );
 
                 if (!empty($lastRow)) {
-                    $stamp = $lastRow[0]->created_at
-                        ? Carbon::parse($lastRow[0]->created_at)
-                        : null;
+                    $stamp = Carbon::parse($lastRow[0]->created_at);
 
                     if ($this->isNonActive($stamp)) {
                         $this->logNoActivity($c->id);
@@ -65,9 +63,9 @@ class CollectionNoActivityMonitor implements ApiCommand
         return 1;
     }
 
-    private function setCollectionSuspended(\App\Models\Collection $collection): void
+    private function setCollectionSuspended(Collection $c): void
     {
-        $collection->modelState()->updateOrCreate(
+        $c->modelState()->updateOrCreate(
             [],
             [
                 'state_id' => State::query()
@@ -102,11 +100,15 @@ class CollectionNoActivityMonitor implements ApiCommand
 
     private function logNoActivity(int $collectionId): void
     {
+        // Flag as suspended, as the collection has seen no
+        // activity for at least X minutes.
         Log::info($this->tag . ' - found Collection (' . $collectionId . ') that has had NO ACTIVITY within threshold - flagging');
     }
 
     private function logActivity(int $collectionId): void
     {
+        // Log, but ignore as this collection is actively being
+        // polled for jobs - at least within the last X minutes.
         Log::info($this->tag . ' - Collection (' . $collectionId . ') has had RECENT ACTIVITY - skipping');
     }
 }
