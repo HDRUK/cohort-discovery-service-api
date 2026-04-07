@@ -967,6 +967,7 @@ class CollectionController extends Controller
                 'latestSuccessfulConceptResultFile',
                 'workgroups',
                 'latestMetadata',
+                'lastSuccessfulQuery'
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
                 if ($request->state !== 'all') {

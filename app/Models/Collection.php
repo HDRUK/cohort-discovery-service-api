@@ -296,6 +296,17 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function lastSuccessfulQuery(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::A)
+                  ->whereHas('result');
+            }
+        );
+    }
+
     public function resultFiles(): HasMany
     {
         return $this->hasMany(ResultFile::class);
