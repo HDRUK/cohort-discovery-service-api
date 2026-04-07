@@ -424,8 +424,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'last_active' => Carbon::now(),
             ]);
         }
-
-        if ($c->isInState(Collection::STATUS_SUSPENDED)) {
+        //change state if -type BUNNY has come online
+        if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
             $c->setState(Collection::STATUS_ACTIVE);
         }
     }
