@@ -30,7 +30,6 @@ class CollectionNoActivityMonitorTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 
-
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
     {
         config()->set('system.collection_activity_log_type', 'log');
@@ -72,8 +71,8 @@ class CollectionNoActivityMonitorTest extends TestCase
         ]);
 
         CollectionActivityLog::create([
-            'created_at' => $now->subDays(5),
-            'updated_at' => $now->subDays(5),
+            'created_at' => $now->subDay(5)->setTime(0, 0, 0),
+            'updated_at' => $now->subDay(5)->setTime(0, 0, 0),
             'collection_id' => $collection->id,
             'task_type' => TaskType::A->value,
         ]);

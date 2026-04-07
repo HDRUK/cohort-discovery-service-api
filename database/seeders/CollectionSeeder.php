@@ -143,7 +143,8 @@ class CollectionSeeder extends Seeder
             ]);
         }
 
-        $workgroupId = Workgroup::query()->inRandomOrder()->firstOrFail()->id;
+        $workgroupId = Workgroup::all()->random()->id;
+        // Assign to only one Workgroup for now, though it's technically a many-to-many
         WorkgroupHasCollection::create([
             'workgroup_id' => $workgroupId,
             'collection_id' => $collection->id,
