@@ -99,9 +99,10 @@ class CollectionNoActivityMonitorTest extends TestCase
         ]);
     }
 
-    public function test_it_doesnt_suspend_collections_with_activity_within_24_hours(): void
+    public function test_it_suspends_collections_with_activity_older_than_60_minutes(): void
     {
         config()->set('system.collection_activity_log_type', 'log');
+        config()->set('system.collection_inactivity_minutes', 60);
 
         $this->disableObservers();
 
@@ -109,7 +110,7 @@ class CollectionNoActivityMonitorTest extends TestCase
         Carbon::setTestNow($now);
 
         $activeState = $this->getStateBySlugOrFail(Collection::STATUS_ACTIVE);
-        $this->getStateBySlugOrFail(Collection::STATUS_SUSPENDED);
+        $suspendedState = $this->getStateBySlugOrFail(Collection::STATUS_SUSPENDED);
 
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
@@ -119,53 +120,20 @@ class CollectionNoActivityMonitorTest extends TestCase
             'state_id' => $activeState->id,
         ]);
 
-        CollectionConfig::create([
-            'enabled' => 1,
-            'run_time_hour' => $now->hour,
-            'run_time_minute' => $now->minute,
-            'frequency_mode' => FrequencyMode::MONTHLY->value,
-            'run_time_frequency' => $now->weekOfMonth,
-            'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
-        ]);
-
-        $this->assertDatabaseHas('collection_config', [
-            'enabled' => 1,
-            'run_time_hour' => $now->hour,
-            'run_time_minute' => $now->minute,
-            'frequency_mode' => FrequencyMode::MONTHLY->value,
-            'run_time_frequency' => $now->weekOfMonth,
-            'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
-        ]);
-
         CollectionActivityLog::create([
-            'created_at' => $now->subHours(2),
-            'updated_at' => $now->subHours(2),
-            'collection_id' => $collection->id,
-            'task_type' => TaskType::A->value,
-        ]);
-
-        $this->assertDatabaseHas('collection_activity_logs', [
+            'created_at' => $now->subMinutes(61),
+            'updated_at' => $now->subMinutes(61),
             'collection_id' => $collection->id,
             'task_type' => TaskType::A->value,
         ]);
 
         $command = new CollectionNoActivityMonitor();
-        $result = $command->handle([]);
-
-        $this->assertSame(1, $result);
+        $command->handle([]);
 
         $collection->refresh();
         $collection->load('modelState.state');
 
-        $this->assertNotNull($collection->modelState);
-        $this->assertSame($activeState->id, $collection->modelState->state_id);
-        $this->assertSame(Collection::STATUS_ACTIVE, $collection->modelState->state->slug);
-
-        $this->assertDatabaseHas('model_states', [
-            'state_id' => $activeState->id,
-        ]);
+        $this->assertSame($suspendedState->id, $collection->modelState->state_id);
     }
 
     private function getStateBySlugOrFail(string $slug): State
