@@ -243,12 +243,12 @@ class CustodianController extends Controller
 
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
-            throw $e;
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('CustodianController@update - failed: '.
                 json_encode($validated).' (exception: '.$e->getMessage().')');
 
-            return $this->NotFoundResponse();
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 

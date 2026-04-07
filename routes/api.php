@@ -101,6 +101,7 @@ Route::prefix('v1/task')
 Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/task/{pid}', [TaskController::class, 'getTask']);
     Route::get('/v1/tasks', [TaskController::class, 'getTasks']);
+    Route::get('/v1/admin/tasks', [TaskController::class, 'getAdminTasks']);
     Route::get('/v1/task/re-run/{pid}', [TaskController::class, 'cloneTask'])->whereUuid('pid');
 
 
@@ -127,6 +128,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/concept_sets/{conceptSet}/attach/{conceptId}', [ConceptSetController::class, 'attachConcept']);
     Route::delete('/v1/concept_sets/{conceptSet}/detach/{conceptId}', [ConceptSetController::class, 'detachConcept']);
 
+    Route::post('/v1/collections/process-latest-metadata', [CollectionController::class, 'processLatestMetadataFiles']);
     Route::get('/v1/collections', [CollectionController::class, 'index']);
     Route::get('/v1/collections/{id}', [CollectionController::class, 'show']);
     Route::post('/v1/collections', [CollectionController::class, 'store']);
@@ -155,7 +157,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
-    Route::get('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
+    Route::post('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 

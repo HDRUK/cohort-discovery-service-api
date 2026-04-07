@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * App\Models\ResultFile
@@ -33,20 +35,24 @@ use Illuminate\Database\Eloquent\Model;
  * )
  *
  * @property int $id
+ * @property string $pid
  * @property int $task_id
- * @property int $collection_id
+ * @property int|null $collection_id
  * @property string $path
  * @property string $file_name
  * @property string|null $file_type
  * @property string|null $file_description
- * @property string $status queued|processing|done|failed
- * @property int $rows_processed
+ * @property string $status
+ * @property int|null $rows_processed
  * @property string|null $error
  * @property string|null $hash
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Task $task
- * @property-read \App\Models\Collection $collection
+ * @property-read \App\Models\Collection|null $collection
+ *
+ * @method static Builder<static> query()
+ * @method static Builder<static> queued()
  */
 class ResultFile extends Model
 {
@@ -70,24 +76,21 @@ class ResultFile extends Model
     ];
 
     public const STATUS_QUEUED = 'queued';
-
     public const STATUS_PROCESSING = 'processing';
-
     public const STATUS_DONE = 'done';
-
     public const STATUS_FAILED = 'failed';
 
-    public function task()
+    public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
     }
 
-    public function collection()
+    public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
     }
 
-    public function scopeQueued($q)
+    public function scopeQueued(Builder $q): Builder
     {
         return $q->where('status', self::STATUS_QUEUED);
     }
@@ -108,6 +111,9 @@ class ResultFile extends Model
 
     public function markFailed(string $message): void
     {
-        $this->update(['status' => self::STATUS_FAILED, 'error' => $message]);
+        $this->update([
+            'status' => self::STATUS_FAILED,
+            'error' => $message,
+        ]);
     }
 }

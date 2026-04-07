@@ -8,6 +8,11 @@ use App\Models\CustodianHasUser;
 
 class TaskPolicy
 {
+    public function viewAdmin(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     public function view(User $user, Task $task): bool
     {
         if ($user->hasRole('admin')) {//admins can see all tasks

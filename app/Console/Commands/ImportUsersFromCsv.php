@@ -136,7 +136,7 @@ class ImportUsersFromCsv extends Command
         $this->newLine();
         if ($this->option('remove')) {
             $this->info('Removal complete.');
-            $this->line('Deleted users: ' . count($this->deletedUsers ?? []));
+            $this->line('Deleted users: ' . count($this->deletedUsers));
         } else {
             $this->info('Import complete.');
             $this->line('Processed users: ' . count($this->processedUsers));

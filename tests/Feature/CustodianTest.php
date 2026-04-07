@@ -6,6 +6,7 @@ use DB;
 use App\Models\User;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
+use App\Models\Collection;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
 use App\Models\CustodianHasUser;
@@ -23,10 +24,13 @@ class CustodianTest extends TestCase
     {
         parent::setUp();
 
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Custodian::truncate();
+        Collection::truncate();
         CollectionHost::truncate();
         CustodianNetwork::truncate();
         CustodianNetworkHasCustodian::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->enableMiddleware();
         $this->user = User::factory()->create();
@@ -179,7 +183,9 @@ class CustodianTest extends TestCase
 
     public function test_the_application_can_create_a_custodian(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('custodians')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $response = $this->actingAsJwt(
             $this->user,
             []
@@ -196,7 +202,9 @@ class CustodianTest extends TestCase
 
     public function test_only_admin_can_create_a_custodian(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('custodians')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $nonAdmin = User::factory()->create();
 
@@ -253,6 +261,7 @@ class CustodianTest extends TestCase
             []
         )
             ->deleteJson($this->url.'/'.$custodian->id);
+
         $response->assertStatus(200);
     }
 

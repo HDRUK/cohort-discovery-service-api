@@ -7,10 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
-use App\Services\CollectionStateService;
+use App\Services\Collections\CollectionStateService;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -26,6 +27,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Jobs\RefreshDistributionConceptsView;
 use Illuminate\Database\Eloquent\Builder;
+use App\Services\Collections\ProcessLatestCollectionMetadataService;
 
 /**
  * @OA\Tag(
@@ -77,6 +79,7 @@ class CollectionController extends Controller
                 'demographics',
                 'custodian.network',
                 'modelState.state',
+                'latestMetadata',
             ])
                 ->searchViaRequest()
                 ->filterViaRequest()
@@ -144,6 +147,7 @@ class CollectionController extends Controller
             'demographics',
             'custodian.network',
             'modelState.state',
+            'latestMetadata',
         ])
             ->when(
                 !$isAdmin,
@@ -262,6 +266,7 @@ class CollectionController extends Controller
                 'custodian',
                 'modelState.state',
                 'workgroups',
+                'latestMetadata',
             ])->findOrFail($validated['id']);
 
             $this->authorize('view', $collection);
@@ -432,7 +437,7 @@ class CollectionController extends Controller
     public function getCollection($pid): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
-            ->with('latestDemographic')
+            ->with(['latestDemographic','latestMetadata'])
             ->first();
 
         if (! $collection) {
@@ -475,6 +480,7 @@ class CollectionController extends Controller
                     'custodian',
                     'modelState.state',
                     'workgroups',
+                    'latestMetadata',
                     'resultFiles' => function ($query) {
                         $query->with('task')->orderByDesc('updated_at');
                     },
@@ -487,7 +493,21 @@ class CollectionController extends Controller
             $nconcepts = $collection->concepts()
                ->count();
 
-            return $this->OKResponse([...$collection->toArray(), 'nconcepts' => $nconcepts]);
+            $concept_counts_by_category = $collection->conceptCountsByCategory()
+                ->orderBy('nconcepts', 'desc')
+                ->get()
+                ->map(fn ($row) => [
+                        'category' => $row->getAttribute('category'),
+                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
+                    ])
+                ->values()
+                ->toArray();
+
+            return $this->OKResponse([
+                ...$collection->toArray(),
+                'nconcepts' => $nconcepts,
+                'concept_counts_by_category' => $concept_counts_by_category,
+            ]);
 
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -878,13 +898,47 @@ class CollectionController extends Controller
             return $this->NotFoundResponse();
         }
 
-        $tasks = $collection->tasks()
+        $tasks = Task::query()
+            ->where('collection_id', $collection->id)
             ->with('submittedQuery')
             ->filterViaRequest()
             ->applySorting('created_at', 'desc');
 
         return $this->OKResponse($tasks->get());
     }
+
+    public function processLatestMetadataFiles(
+        Request $request,
+        ProcessLatestCollectionMetadataService $service
+    ): JsonResponse {
+        $this->authorize('viewAnyForAdmin', Collection::class);
+
+        try {
+            $validated = $request->validate([
+                'collection_ids' => ['nullable', 'array'],
+                'collection_ids.*' => ['integer', Rule::exists('collections', 'id')],
+            ]);
+
+            $result = $service->handle(
+                collectionIds: $validated['collection_ids'] ?? [],
+            );
+
+            return $this->OKResponse($result);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ValidationException $e) {
+            return $this->ValidationErrorResponse($e->errors());
+        } catch (\Throwable $e) {
+            \Log::error(
+                'CollectionController@processLatestMetadataFiles - failed: ' .
+                json_encode($request->all()) .
+                ' (exception: ' . $e->getMessage() . ')'
+            );
+
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
 
     protected function collectionsIndexQuery(Request $request): Builder
     {
@@ -897,6 +951,7 @@ class CollectionController extends Controller
                 'latestSuccessfulDemographicResultFile',
                 'latestSuccessfulConceptResultFile',
                 'workgroups',
+                'latestMetadata',
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
                 if ($request->state !== 'all') {

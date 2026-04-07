@@ -321,7 +321,7 @@ class RuleBuilderService
             return;
         }
 
-        $queryConstraints = $this->selectAgeConstraints($this->nlpRootAgeConstraints ?? [], 'query');
+        $queryConstraints = $this->selectAgeConstraints($this->nlpRootAgeConstraints, 'query');
         if (empty($queryConstraints)) {
             return;
         }
@@ -346,7 +346,7 @@ class RuleBuilderService
             return;
         }
 
-        $queryConstraints = $this->selectTimeConstraints($this->nlpRootTimeConstraints ?? [], 'query');
+        $queryConstraints = $this->selectTimeConstraints($this->nlpRootTimeConstraints, 'query');
         if (empty($queryConstraints)) {
             return;
         }
@@ -434,7 +434,7 @@ class RuleBuilderService
 
     private function mergeNlpWarnings(array &$warnings): void
     {
-        foreach (($this->nlpWarnings ?? []) as $warning) {
+        foreach (($this->nlpWarnings) as $warning) {
             if (is_string($warning) && $warning !== '') {
                 $warnings[] = $warning;
             }
