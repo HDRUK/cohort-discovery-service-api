@@ -751,8 +751,8 @@ class CollectionController extends Controller
             $perPage = $this->resolvePerPage();
             $status = strtolower(trim($status));
 
-
             $collections = Collection::query()
+                ->with(['modelState.state'])
                 ->whereRelation('modelState.state', 'slug', $status)
                 ->paginate($perPage);
 

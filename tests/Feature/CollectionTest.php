@@ -124,46 +124,44 @@ class CollectionTest extends TestCase
 
     public function test_it_can_get_by_status(): void
     {
+        $this->disableObservers();
+
         Custodian::factory()->create();
 
-        for ($i = 0; $i < 5; $i++) {
-            Collection::factory()->create([
-                'status' => ($i % 2 ? 1 : 0),
-            ]);
+        $activeCollections = Collection::factory()->count(3)->create();
+        foreach ($activeCollections as $collection) {
+            $collection->setState(Collection::STATUS_ACTIVE);
         }
 
-        $this->assertDatabaseHas('collections', [
-            'status' => 1,
-        ]);
+        $draftCollections = Collection::factory()->count(2)->create();
+        foreach ($draftCollections as $collection) {
+            $collection->setState(Collection::STATUS_DRAFT);
+        }
 
-        $this->assertDatabaseHas('collections', [
-            'status' => 0,
-        ]);
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_ACTIVE);
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )
-            ->getJson(self::BASE_URL.'/status/'.Collection::STATUS_ACTIVE);
         $response->assertStatus(200);
 
         $content = $response->json('data');
 
+        $this->assertCount(3, $content['data']);
+
         foreach ($content['data'] as $c) {
-            $this->assertTrue($c['status'] === 1);
+            $this->assertSame(Collection::STATUS_ACTIVE, data_get($c, 'model_state.state.slug'));
         }
 
-        $response = $this->actingAsJwt(
-            $this->user,
-            []
-        )
-            ->getJson(self::BASE_URL.'/status/'.Collection::STATUS_DRAFT);
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL . '/status/' . Collection::STATUS_DRAFT);
+
         $response->assertStatus(200);
 
         $content = $response->json('data');
 
+        $this->assertCount(2, $content['data']);
+
         foreach ($content['data'] as $c) {
-            $this->assertTrue($c['status'] === 0);
+            $this->assertSame(Collection::STATUS_DRAFT, data_get($c, 'model_state.state.slug'));
         }
     }
 
@@ -210,48 +208,50 @@ class CollectionTest extends TestCase
 
     public function test_it_can_transition_collections(): void
     {
+        $this->disableObservers();
+
         $custodian = Custodian::factory()->create();
+
         $collection = Collection::factory()->create([
             'custodian_id' => $custodian->id,
         ]);
 
-        // from Draft -> Pending.
+        $collection->setState(Collection::STATUS_DRAFT);
+        $collection->refresh()->load('modelState.state');
+
         $response = $this->actingAsJwt(
             $this->user,
             []
-        )
-            ->putJson(
-                self::BASE_URL.'/'.$collection->id.'/transition_to',
-                [
-                    'state' => Collection::STATUS_PENDING,
-                ]
-            );
+        )->putJson(
+            self::BASE_URL.'/'.$collection->id.'/transition_to',
+            [
+                'id' => $collection->id,
+                'state' => Collection::STATUS_PENDING,
+            ]
+        );
 
         $response->assertStatus(200);
-        $content = $response->json('data');
+        $response->assertJsonPath('data.model_state.state.slug', Collection::STATUS_PENDING);
 
-        $this->assertNotNull($content);
-        $this->assertNotNull($content['model_state']);
-        $this->assertNotNull($content['model_state']['state']);
-        $this->assertEquals($content['model_state']['state']['slug'], Collection::STATUS_PENDING);
+        $collection->refresh()->load('modelState.state');
+        $this->assertSame(Collection::STATUS_PENDING, $collection->modelState->state->slug);
 
-        // Now swap to a user who can do nothing with collections
         $this->user->removeRole('admin');
 
-        // This fails because a researcher isn't allowed to edit collections
         $response = $this->actingAsJwt(
             $this->user,
             []
-        )
-            ->putJson(
-                self::BASE_URL.'/'.$collection->id.'/transition_to',
-                [
-                    'state' => Collection::STATUS_ACTIVE,
-                ]
-            );
+        )->putJson(
+            self::BASE_URL.'/'.$collection->id.'/transition_to',
+            [
+                'id' => $collection->id,
+                'state' => Collection::STATUS_ACTIVE,
+            ]
+        );
 
         $response->assertStatus(403);
     }
+
 
     public function test_it_can_search_by_name(): void
     {
@@ -466,7 +466,7 @@ class CollectionTest extends TestCase
 
     public function test_it_can_filter_by_model_state(): void
     {
-        $this->enableObservers();
+        $this->disableObservers();
 
         $fakeGatewayTeamId = 1111;
 
@@ -478,9 +478,8 @@ class CollectionTest extends TestCase
             'custodian_id' => $custodian->id,
         ]);
 
-        $this->disableObservers();
-
-        $collection->transitionTo(Collection::STATUS_SUSPENDED);
+        $collection->setState(Collection::STATUS_SUSPENDED);
+        $collection->refresh()->load('modelState.state');
 
         $overrides = [
             'user' => [
@@ -500,24 +499,24 @@ class CollectionTest extends TestCase
         $response = $this->actingAsJwt(
             $this->user,
             $overrides
-        )
-            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
+        )->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
 
         $response->assertStatus(200);
-        $content = $response->json('data')['data'];
-        $this->assertEquals(count($content), 0);
+        $content = $response->json('data.data');
+        $this->assertCount(0, $content);
 
-        $collection->transitionTo(Collection::STATUS_ACTIVE);
+        $collection->setState(Collection::STATUS_ACTIVE);
+        $collection->refresh()->load('modelState.state');
 
         $response = $this->actingAsJwt(
             $this->user,
             $overrides
-        )
-            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
+        )->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid) . '?state=active');
 
         $response->assertStatus(200);
-        $content = $response->json('data')['data'];
-        $this->assertEquals(count($content), 1);
+        $content = $response->json('data.data');
+        $this->assertCount(1, $content);
+        $this->assertSame($collection->id, $content[0]['id']);
     }
 
     public function test_it_can_add_and_remove_collections_from_workgroups(): void
