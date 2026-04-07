@@ -31,9 +31,9 @@ class FeatureSeeder extends Seeder
     {
         foreach ($this->features as $name => $active) {
             if ($active) {
-                Feature::activateForEveryone($name);
+                Feature::activate($name);
             } else {
-                Feature::deactivateForEveryone($name);
+                Feature::deactivate($name);
             }
         }
     }

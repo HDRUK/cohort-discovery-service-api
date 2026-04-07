@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Laravel\Pennant\Feature;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
+use Tests\TestCase;
 
 class FeaturesTest extends TestCase
 {
@@ -14,31 +15,51 @@ class FeaturesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config()->set('pennant.default', 'database');
+
         $this->enableObservers();
         $this->enableMiddleware();
 
         $this->user = User::factory()->create();
         $this->user->assignRole('admin');
+
+        DB::table('features')->truncate();
     }
 
     public function test_it_can_list_features(): void
     {
-        Feature::define('test-feature-one', fn () => true);
-        Feature::define('test-feature-two', fn () => false);
+        $this->assertSame('database', config('pennant.default'));
+
+        Feature::activate('test-feature-one');
+        Feature::deactivate('test-feature-two');
+
+        $this->assertDatabaseHas('features', [
+            'name' => 'test-feature-one',
+            'scope' => '__laravel_null',
+            'value' => 'true',
+        ]);
+
+        $this->assertDatabaseHas('features', [
+            'name' => 'test-feature-two',
+            'scope' => '__laravel_null',
+            'value' => 'false',
+        ]);
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_URL);
 
-        $response->assertStatus(200);
+        $response->assertOk();
+
         $content = $response->json('data');
 
-        $this->assertEquals(true, $content['test-feature-one']);
-        $this->assertEquals(false, $content['test-feature-two']);
+        $this->assertSame(true, $content['test-feature-one']);
+        $this->assertSame(false, $content['test-feature-two']);
     }
 
     public function test_it_can_update_feature_status(): void
     {
-        Feature::define('test-feature-three', fn () => false);
+        Feature::deactivate('test-feature-three');
 
         $response = $this->actingAsJwt($this->user, [])
             ->putJson(self::BASE_URL . '/test-feature-three', [
@@ -46,7 +67,12 @@ class FeaturesTest extends TestCase
             ]);
 
         $response->assertOk();
-        $this->assertTrue(Feature::active('test-feature-three'));
+
+        $this->assertDatabaseHas('features', [
+            'name' => 'test-feature-three',
+            'scope' => '__laravel_null',
+            'value' => 'true',
+        ]);
 
         $response = $this->actingAsJwt($this->user, [])
             ->putJson(self::BASE_URL . '/test-feature-three', [
@@ -54,7 +80,12 @@ class FeaturesTest extends TestCase
             ]);
 
         $response->assertOk();
-        $this->assertFalse(Feature::active('test-feature-three'));
+
+        $this->assertDatabaseHas('features', [
+            'name' => 'test-feature-three',
+            'scope' => '__laravel_null',
+            'value' => 'false',
+        ]);
     }
 
     public function test_it_prevents_creating_new_feature(): void
@@ -70,14 +101,21 @@ class FeaturesTest extends TestCase
 
     public function test_non_admin_cannot_update_feature_status(): void
     {
-        Feature::define('test-feature-five', fn () => false);
+        Feature::deactivate('test-feature-five');
 
         $nonAdmin = User::factory()->create();
 
         $response = $this->actingAsJwt($nonAdmin, [])
-            ->putJson(self::BASE_URL . '/test-feature-five', ['enabled' => true]);
+            ->putJson(self::BASE_URL . '/test-feature-five', [
+                'enabled' => true,
+            ]);
 
-        $response->assertStatus(403);
-        $this->assertFalse(Feature::active('test-feature-five'));
+        $response->assertForbidden();
+
+        $this->assertDatabaseMissing('features', [
+            'name' => 'test-feature-five',
+            'scope' => '__laravel_null',
+            'value' => 'true',
+        ]);
     }
 }
