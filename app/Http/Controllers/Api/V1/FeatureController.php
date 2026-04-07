@@ -15,7 +15,22 @@ class FeatureController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return $this->OKResponse(Feature::all());
+        $featureNames = \DB::table('features')
+            ->distinct('name')
+            ->orderBy('name')
+            ->pluck('name');
+
+        // Global scope for now, may enable user scoping in the future
+        // $scope = Auth::user();
+        $scope = null;
+
+        $data = collect($featureNames)
+            ->mapWithKeys(fn (string $name) => [
+                $name => (bool) Feature::for($scope)->value($name),
+            ])
+            ->all();
+
+        return $this->OKResponse($data);
     }
 
     public function update(Request $request, string $name): JsonResponse
