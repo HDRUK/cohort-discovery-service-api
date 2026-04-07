@@ -757,7 +757,7 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
         }
     }

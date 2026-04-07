@@ -92,10 +92,11 @@ class CollectionSeeder extends Seeder
                 'state_id' => $this->getStateIdBySlug($statusSlug),
             ],
         );
-
+        // Create two CollectionConfig records for the above Collection
+        // to mimic the distribution and generic query types
         $types = [TaskType::A, TaskType::B];
-        $frequencyMode = FrequencyMode::WEEKLY->value;
-        $frequencyRun = 6;
+        $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
+        $frequencyRun = 6; // ...on Sunday's
 
         foreach ($types as $t) {
             CollectionConfig::create([
@@ -108,8 +109,8 @@ class CollectionSeeder extends Seeder
                 'type' => $t->value,
             ]);
 
-            $frequencyMode++;
-            $frequencyRun = 1;
+            $frequencyMode++; // Add another in monthly mode
+            $frequencyRun = 1; // First week of the month
         }
 
         $collectionHost = CollectionHost::firstOrCreate([

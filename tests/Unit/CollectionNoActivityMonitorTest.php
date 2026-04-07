@@ -3,6 +3,8 @@
 use App\Console\Commands\CollectionNoActivityMonitor;
 use App\Enums\FrequencyMode;
 use App\Enums\TaskType;
+use App\Models\Task;
+use App\Models\Query;
 use App\Models\Collection;
 use App\Models\CollectionActivityLog;
 use App\Models\CollectionConfig;
@@ -21,10 +23,10 @@ class CollectionNoActivityMonitorTest extends TestCase
         parent::setUp();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::table('model_states')->truncate();
-        DB::table('collection_activity_logs')->truncate();
-        DB::table('collection_config')->truncate();
-        DB::table('collections')->truncate();
+        Task::truncate();
+        Query::truncate();
+        Collection::truncate();
+        CollectionActivityLog::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 
