@@ -42,11 +42,11 @@ class FeatureController extends Controller
         try {
             $input = $request->only(['enabled']);
             if ($input['enabled']) {
-                Feature::activate($name);
+                Feature::activateForEveryone($name);
                 return $this->OKResponse([]);
             }
 
-            Feature::deactivate($name);
+            Feature::deactivateForEveryone($name);
             return $this->OKResponse([]);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
