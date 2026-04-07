@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\CollectionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
@@ -718,31 +717,47 @@ class CollectionController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/v1/collections/status/{status}",
-     *     summary="Get collections by status",
-     *     tags={"Collections"},
-     *     @OA\Parameter(
-     *         name="status",
-     *         in="path",
-     *         required=true,
-     *         description="Status name (case-insensitive)",
-     *         @OA\Schema(type="string", example="active")
-     *     ),
-     *     @OA\Response(response=200, description="Paginated collections matching the status", @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection")))
-     * )
-     */
+    * @OA\Get(
+    *     path="/api/v1/collections/status/{status}",
+    *     summary="Get collections by status",
+    *     tags={"Collections"},
+    *     @OA\Parameter(
+    *         name="status",
+    *         in="path",
+    *         required=true,
+    *         description="Collection state slug (case-insensitive), for example active or suspended",
+    *         @OA\Schema(type="string", example="active")
+    *     ),
+    *     @OA\Parameter(
+    *         name="per_page",
+    *         in="query",
+    *         required=false,
+    *         description="Number of results per page",
+    *         @OA\Schema(type="integer", example=15)
+    *     ),
+    *     @OA\Response(
+    *         response=200,
+    *         description="Paginated collections matching the status"
+    *     ),
+    *     @OA\Response(
+    *         response=422,
+    *         description="Invalid status supplied"
+    *     )
+    * )
+    */
     public function getByStatus(Request $request, string $status): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
+            $status = strtolower(trim($status));
 
-            $input = CollectionStatus::tryFromName($status) ?? CollectionStatus::ACTIVE;
-            $collections = Collection::where('status', $input->value)
+
+            $collections = Collection::query()
+                ->whereRelation('modelState.state', 'slug', $status)
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->ErrorResponse($e->getMessage());
         }
     }

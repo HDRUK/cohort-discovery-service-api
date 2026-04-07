@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
-use App\Enums\CollectionStatus;
 use App\Models\Collection;
+use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
 use DB;
 use Log;
@@ -12,8 +12,6 @@ use Log;
 class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
-
-    private string $statusMessage = 'SUSPENDED_DUE_TO_INACTIVITY_24_HOURS';
 
     public function rules(): array
     {
@@ -23,6 +21,7 @@ class CollectionNoActivityMonitor implements ApiCommand
     public function handle(array $validated): mixed
     {
         Log::info($this->tag.' - Started');
+
 
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {
             $colls = $this->getCollections();
@@ -50,7 +49,6 @@ class CollectionNoActivityMonitor implements ApiCommand
             }
         } elseif (strtolower(config('system.collection_activity_log_type')) === 'record') {
             $colls = $this->getCollections();
-
             foreach ($colls as $c) {
                 if ($this->isNonActive($c->last_active)) {
                     $this->logNoActivity($c->id);
@@ -64,16 +62,23 @@ class CollectionNoActivityMonitor implements ApiCommand
         return 1;
     }
 
-    private function setCollectionSuspended(\App\Models\Collection $c): void
+    private function setCollectionSuspended(\App\Models\Collection $collection): void
     {
-        $c->update([
-            'status' => CollectionStatus::SUSPENDED->value,
-            'status_msg' => $this->statusMessage,
-        ]);
+        $collection->modelState()->updateOrCreate(
+            [],
+            [
+                'state_id' => State::query()
+                    ->where('slug', Collection::STATUS_SUSPENDED)
+                    ->valueOrFail('id'),
+            ],
+        );
     }
 
-    private function isNonActive(Carbon $stamp): bool
+    private function isNonActive(?Carbon $stamp): bool
     {
+        if ($stamp === null) {
+            return true;
+        }
         return $stamp->lt(Carbon::now()->subDay());
     }
 
@@ -82,9 +87,13 @@ class CollectionNoActivityMonitor implements ApiCommand
      */
     private function getCollections(): \Illuminate\Database\Eloquent\Collection
     {
-        return Collection::where([
-            'status' => CollectionStatus::ACTIVE->value,
-        ])->get();
+
+        return Collection::whereRelation(
+            'modelState.state',
+            'states.slug',
+            Collection::STATUS_ACTIVE
+        )->get();
+
     }
 
     private function logNoActivity(int $collectionId): void

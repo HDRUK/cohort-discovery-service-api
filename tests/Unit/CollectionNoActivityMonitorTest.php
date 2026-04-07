@@ -1,16 +1,14 @@
 <?php
 
 use App\Console\Commands\CollectionNoActivityMonitor;
-use App\Enums\CollectionStatus;
 use App\Enums\FrequencyMode;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\CollectionActivityLog;
 use App\Models\CollectionConfig;
-use App\Models\Query;
-use App\Models\Task;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Hdruk\LaravelModelStates\Models\State;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -23,12 +21,13 @@ class CollectionNoActivityMonitorTest extends TestCase
         parent::setUp();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Task::truncate();
-        Query::truncate();
-        Collection::truncate();
-        CollectionActivityLog::truncate();
+        DB::table('model_states')->truncate();
+        DB::table('collection_activity_logs')->truncate();
+        DB::table('collection_config')->truncate();
+        DB::table('collections')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
+
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
     {
@@ -39,12 +38,18 @@ class CollectionNoActivityMonitorTest extends TestCase
         $now = CarbonImmutable::now($this->timezone);
         Carbon::setTestNow($now);
 
+        $activeState = $this->getStateBySlugOrFail(Collection::STATUS_ACTIVE);
+        $suspendedState = $this->getStateBySlugOrFail(Collection::STATUS_SUSPENDED);
+
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::ACTIVE->value,
         ]);
 
-        $config = CollectionConfig::create([
+        $collection->modelState()->create([
+            'state_id' => $activeState->id,
+        ]);
+
+        CollectionConfig::create([
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
@@ -65,8 +70,8 @@ class CollectionNoActivityMonitorTest extends TestCase
         ]);
 
         CollectionActivityLog::create([
-            'created_at' => $now->subDay(5)->setTime(0, 0, 0),
-            'updated_at' => $now->subDay(5)->setTime(0, 0, 0),
+            'created_at' => $now->subDays(5),
+            'updated_at' => $now->subDays(5),
             'collection_id' => $collection->id,
             'task_type' => TaskType::A->value,
         ]);
@@ -79,10 +84,17 @@ class CollectionNoActivityMonitorTest extends TestCase
         $command = new CollectionNoActivityMonitor();
         $result = $command->handle([]);
 
-        $this->assertDatabaseHas('collections', [
-            'id' => $collection->id,
-            'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::SUSPENDED->value,
+        $this->assertSame(1, $result);
+
+        $collection->refresh();
+        $collection->load('modelState.state');
+
+        $this->assertNotNull($collection->modelState);
+        $this->assertSame($suspendedState->id, $collection->modelState->state_id);
+        $this->assertSame(Collection::STATUS_SUSPENDED, $collection->modelState->state->slug);
+
+        $this->assertDatabaseHas('model_states', [
+            'state_id' => $suspendedState->id,
         ]);
     }
 
@@ -95,12 +107,18 @@ class CollectionNoActivityMonitorTest extends TestCase
         $now = CarbonImmutable::now($this->timezone);
         Carbon::setTestNow($now);
 
+        $activeState = $this->getStateBySlugOrFail(Collection::STATUS_ACTIVE);
+        $this->getStateBySlugOrFail(Collection::STATUS_SUSPENDED);
+
         $collection = Collection::factory()->create([
             'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::ACTIVE->value,
         ]);
 
-        $config = CollectionConfig::create([
+        $collection->modelState()->create([
+            'state_id' => $activeState->id,
+        ]);
+
+        CollectionConfig::create([
             'enabled' => 1,
             'run_time_hour' => $now->hour,
             'run_time_minute' => $now->minute,
@@ -121,8 +139,8 @@ class CollectionNoActivityMonitorTest extends TestCase
         ]);
 
         CollectionActivityLog::create([
-            'created_at' => $now->subHour(2)->setTime(0, 0, 0),
-            'updated_at' => $now->subHour(2)->setTime(0, 0, 0),
+            'created_at' => $now->subHours(2),
+            'updated_at' => $now->subHours(2),
             'collection_id' => $collection->id,
             'task_type' => TaskType::A->value,
         ]);
@@ -135,10 +153,24 @@ class CollectionNoActivityMonitorTest extends TestCase
         $command = new CollectionNoActivityMonitor();
         $result = $command->handle([]);
 
-        $this->assertDatabaseHas('collections', [
-            'id' => $collection->id,
-            'name' => 'Activity_TestCollection',
-            'status' => CollectionStatus::ACTIVE->value,
+        $this->assertSame(1, $result);
+
+        $collection->refresh();
+        $collection->load('modelState.state');
+
+        $this->assertNotNull($collection->modelState);
+        $this->assertSame($activeState->id, $collection->modelState->state_id);
+        $this->assertSame(Collection::STATUS_ACTIVE, $collection->modelState->state->slug);
+
+        $this->assertDatabaseHas('model_states', [
+            'state_id' => $activeState->id,
         ]);
+    }
+
+    private function getStateBySlugOrFail(string $slug): State
+    {
+        return State::query()
+            ->where('slug', $slug)
+            ->firstOrFail();
     }
 }
