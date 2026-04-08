@@ -170,4 +170,3 @@ class OIDCTokenValidatorTest extends TestCase
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 }
-
