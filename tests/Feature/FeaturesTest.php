@@ -25,6 +25,7 @@ class FeaturesTest extends TestCase
         $this->user->assignRole('admin');
 
         DB::table('features')->truncate();
+        DB::table('activity_log')->truncate();
     }
 
     public function test_it_can_list_features(): void
@@ -74,6 +75,19 @@ class FeaturesTest extends TestCase
             'value' => 'true',
         ]);
 
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'feature_flags',
+            'description' => 'feature_flag_updated',
+            'causer_type' => User::class,
+            'causer_id' => $this->user->id,
+        ]);
+
+        $this->assertDatabaseHas('activity_log', [
+            'properties->feature' => 'test-feature-three',
+            'properties->before->enabled' => false,
+            'properties->after->enabled' => true,
+        ]);
+
         $response = $this->actingAsJwt($this->user, [])
             ->putJson(self::BASE_URL . '/test-feature-three', [
                 'enabled' => false,
@@ -86,6 +100,14 @@ class FeaturesTest extends TestCase
             'scope' => '__laravel_null',
             'value' => 'false',
         ]);
+
+        $this->assertDatabaseHas('activity_log', [
+            'properties->feature' => 'test-feature-three',
+            'properties->before->enabled' => true,
+            'properties->after->enabled' => false,
+        ]);
+
+        $this->assertDatabaseCount('activity_log', 2);
     }
 
     public function test_it_prevents_creating_new_feature(): void
@@ -117,5 +139,7 @@ class FeaturesTest extends TestCase
             'scope' => '__laravel_null',
             'value' => 'true',
         ]);
+
+        $this->assertDatabaseCount('activity_log', 0);
     }
 }
