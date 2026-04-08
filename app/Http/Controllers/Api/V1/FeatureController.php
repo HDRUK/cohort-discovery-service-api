@@ -39,14 +39,31 @@ class FeatureController extends Controller
             return $this->ForbiddenResponse();
         }
 
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
         try {
-            $input = $request->only(['enabled']);
-            if ($input['enabled']) {
+
+            $scope = null;
+            $before = (bool) Feature::for($scope)->value($name);
+            $after = (bool) $validated['enabled'];
+
+            if ($after) {
                 Feature::activateForEveryone($name);
-                return $this->OKResponse([]);
+            } else {
+                Feature::deactivateForEveryone($name);
             }
 
-            Feature::deactivateForEveryone($name);
+            activity('feature_flags')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'feature' => $name,
+                    'before' => ['enabled' => $before],
+                    'after' => ['enabled' => $after],
+                ])
+                ->log('feature_flag_updated');
+
             return $this->OKResponse([]);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
