@@ -38,6 +38,10 @@ class DecodeJwt
         $startMicrotime = microtime(true);
 
         try {
+            if (config('services.oidc.enabled', false)) {
+                return $this->validateOidcToken->handle($request, $next);
+            }
+
             if (! $token) {
                 return response()->json(['error' => 'No token'], 401);
             }
