@@ -401,4 +401,3 @@ class OIDCTokenValidator
         return null;
     }
 }
-
