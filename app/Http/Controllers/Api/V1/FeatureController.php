@@ -48,7 +48,8 @@ class FeatureController extends Controller
             return $this->ValidationErrorResponse($e->errors());
         }
 
-
+        // Global scope for now, may enable user scoping in the future
+        // $scope = Auth::user();
         $scope = null;
         $before = (bool) Feature::for($scope)->value($name);
         $after = (bool) $validated['enabled'];
