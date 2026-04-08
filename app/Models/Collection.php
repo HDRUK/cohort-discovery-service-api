@@ -296,6 +296,17 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    public function lastSuccessfulQuery(): HasOne
+    {
+        return $this->hasOne(Task::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            function (Builder $q) {
+                $q->where('task_type', TaskType::A)
+                  ->whereHas('result');
+            }
+        );
+    }
+
     public function resultFiles(): HasMany
     {
         return $this->hasMany(ResultFile::class);
@@ -423,6 +434,10 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             Collection::where('id', $c->id)->update([
                 'last_active' => Carbon::now(),
             ]);
+        }
+        //change state if -type BUNNY has come online
+        if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
+            $c->setState(Collection::STATUS_ACTIVE);
         }
     }
 
