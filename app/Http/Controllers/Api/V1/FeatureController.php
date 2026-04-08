@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Laravel\Pennant\Feature;
 use App\Traits\Responses;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class FeatureController extends Controller
 {
@@ -39,34 +40,35 @@ class FeatureController extends Controller
             return $this->ForbiddenResponse();
         }
 
-        $validated = $request->validate([
-            'enabled' => ['required', 'boolean'],
-        ]);
-
         try {
-
-            $scope = null;
-            $before = (bool) Feature::for($scope)->value($name);
-            $after = (bool) $validated['enabled'];
-
-            if ($after) {
-                Feature::activateForEveryone($name);
-            } else {
-                Feature::deactivateForEveryone($name);
-            }
-
-            activity('feature_flags')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'feature' => $name,
-                    'before' => ['enabled' => $before],
-                    'after' => ['enabled' => $after],
-                ])
-                ->log('feature_flag_updated');
-
-            return $this->OKResponse([]);
-        } catch (\Throwable $e) {
-            return $this->NotFoundResponse();
+            $validated = $request->validate([
+                'enabled' => ['required', 'boolean'],
+            ]);
+        } catch (ValidationException $e) {
+            return $this->ValidationErrorResponse($e->errors());
         }
+
+
+        $scope = null;
+        $before = (bool) Feature::for($scope)->value($name);
+        $after = (bool) $validated['enabled'];
+
+        if ($after) {
+            Feature::activateForEveryone($name);
+        } else {
+            Feature::deactivateForEveryone($name);
+        }
+
+        activity('feature_flags')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'feature' => $name,
+                'before' => ['enabled' => $before],
+                'after' => ['enabled' => $after],
+            ])
+            ->log('feature_flag_updated');
+
+        return $this->OKResponse([]);
+
     }
 }
