@@ -177,4 +177,33 @@ trait HelperFunctions
         return $maskedLocal . '@' . $maskedDomainName . ($domainTld ? '.' . $domainTld : '');
     }
 
+    protected function normaliseNullable(mixed $value): ?string
+    {
+        if (! isset($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function normaliseInt(mixed $value): ?int
+    {
+        $value = $this->normaliseNullable($value);
+
+        return ($value !== null && is_numeric($value))
+            ? (int) $value
+            : null;
+    }
+
+    protected function normaliseStrictInt(mixed $value): ?int
+    {
+        $value = $this->normaliseNullable($value);
+
+        return ($value !== null && ctype_digit($value))
+            ? (int) $value
+            : null;
+    }
+
 }

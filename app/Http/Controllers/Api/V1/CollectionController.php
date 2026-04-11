@@ -489,16 +489,45 @@ class CollectionController extends Controller
                 return $this->NotFoundResponse();
             }
 
-            $nconcepts = $collection->concepts()
-               ->count();
+            $nconcepts = \DB::selectOne(
+                "
+                SELECT COUNT(DISTINCT concept_id) AS nconcepts
+                FROM distributions
+                WHERE collection_id = ?
+                AND concept_id > 0
+                ",
+                [$collection->id]
+            )->nconcepts;
 
-            $concept_counts_by_category = $collection->conceptCountsByCategory()
-                ->orderBy('nconcepts', 'desc')
-                ->get()
+            $concept_counts_by_category = \DB::select(
+                "
+                SELECT
+                    d.category,
+                    COUNT(*) AS nconcepts
+                FROM distributions d
+                INNER JOIN (
+                    SELECT
+                        collection_id,
+                        concept_id,
+                        MAX(id) AS id
+                    FROM distributions
+                    WHERE collection_id = ?
+                    AND concept_id > 0
+                    GROUP BY collection_id, concept_id
+                ) latest
+                    ON d.id = latest.id
+                WHERE d.collection_id = ?
+                GROUP BY d.category
+                ORDER BY nconcepts DESC
+                ",
+                [$collection->id, $collection->id]
+            );
+
+            $concept_counts_by_category = collect($concept_counts_by_category)
                 ->map(fn ($row) => [
-                        'category' => $row->getAttribute('category'),
-                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
-                    ])
+                    'category' => $row->category,
+                    'nconcepts' => (int) $row->nconcepts,
+                ])
                 ->values()
                 ->toArray();
 

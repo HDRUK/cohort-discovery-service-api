@@ -22,6 +22,7 @@ class FeatureSeeder extends Seeder
         'integrated-sync-sde-wgs-from-claim' => true,
         'integrated-sync-roles-every-request' => true,
         'integrated-sync-custodians-every-request' => true,
+        'admin-more-collection-details' => true,
     ];
 
     /**
@@ -30,6 +31,16 @@ class FeatureSeeder extends Seeder
     public function run(): void
     {
         foreach ($this->features as $name => $active) {
+
+            $exists = \DB::table('features')
+             ->where('name', $name)
+             ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+
             if ($active) {
                 Feature::activate($name);
             } else {
