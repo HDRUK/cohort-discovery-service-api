@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Jobs\RefreshDistributionConceptsView;
+use App\Models\Distribution;
 use Illuminate\Database\Eloquent\Builder;
 use App\Services\Collections\ProcessLatestCollectionMetadataService;
 
@@ -489,18 +490,33 @@ class CollectionController extends Controller
                 return $this->NotFoundResponse();
             }
 
-            $nconcepts = $collection->concepts()
-               ->count();
+            $taskId = $collection->latestSuccessfulConceptResultFile?->task_id;
 
-            $concept_counts_by_category = $collection->conceptCountsByCategory()
-                ->orderBy('nconcepts', 'desc')
-                ->get()
-                ->map(fn ($row) => [
-                        'category' => $row->getAttribute('category'),
-                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
+            $nconcepts = 0;
+            $concept_counts_by_category = [];
+            if ($taskId !== null) {
+                $nconcepts = Distribution::query()
+                       ->where('collection_id', $collection->id)
+                       ->where('task_id', $taskId)
+                       ->where('concept_id', '>', 0)
+                       ->distinct('concept_id')
+                       ->count('concept_id');
+
+                $concept_counts_by_category = \DB::table('distributions')
+                    ->select('category', \DB::raw('COUNT(DISTINCT concept_id) AS nconcepts'))
+                    ->where('collection_id', $collection->id)
+                    ->where('task_id', $taskId)
+                    ->where('concept_id', '>', 0)
+                    ->groupBy('category')
+                    ->orderByDesc('nconcepts')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'category' => $row->category,
+                        'nconcepts' => (int) $row->nconcepts,
                     ])
-                ->values()
-                ->toArray();
+                    ->values()
+                    ->toArray();
+            }
 
             return $this->OKResponse([
                 ...$collection->toArray(),
