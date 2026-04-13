@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Jobs\RefreshDistributionConceptsView;
+use App\Models\Distribution;
 use Illuminate\Database\Eloquent\Builder;
 use App\Services\Collections\ProcessLatestCollectionMetadataService;
 
@@ -489,39 +490,23 @@ class CollectionController extends Controller
                 return $this->NotFoundResponse();
             }
 
-            $nconcepts = \DB::selectOne(
-                "
-                SELECT COUNT(DISTINCT concept_id) AS nconcepts
-                FROM distributions
-                WHERE collection_id = ?
-                AND concept_id > 0
-                ",
-                [$collection->id]
-            )->nconcepts;
+            $taskId = $collection->latestSuccessfulConceptResultFile?->task_id;
 
-            $concept_counts_by_category = \DB::select(
-                "
-                SELECT
-                    d.category,
-                    COUNT(*) AS nconcepts
-                FROM distributions d
-                INNER JOIN (
-                    SELECT
-                        collection_id,
-                        concept_id,
-                        MAX(id) AS id
-                    FROM distributions
-                    WHERE collection_id = ?
-                    AND concept_id > 0
-                    GROUP BY collection_id, concept_id
-                ) latest
-                    ON d.id = latest.id
-                WHERE d.collection_id = ?
-                GROUP BY d.category
-                ORDER BY nconcepts DESC
-                ",
-                [$collection->id, $collection->id]
-            );
+            $nconcepts = Distribution::query()
+                   ->where('collection_id', $collection->id)
+                   ->where('task_id', $taskId)
+                   ->where('concept_id', '>', 0)
+                   ->distinct('concept_id')
+                   ->count('concept_id');
+
+            $concept_counts_by_category = Distribution::query()
+                ->select('category', \DB::raw('COUNT(DISTINCT concept_id) AS nconcepts'))
+                ->where('collection_id', $collection->id)
+                ->where('task_id', $taskId)
+                ->where('concept_id', '>', 0)
+                ->groupBy('category')
+                ->orderByDesc('nconcepts')
+                ->get();
 
             $concept_counts_by_category = collect($concept_counts_by_category)
                 ->map(fn ($row) => [

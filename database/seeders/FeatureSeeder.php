@@ -31,7 +31,6 @@ class FeatureSeeder extends Seeder
     public function run(): void
     {
         foreach ($this->features as $name => $active) {
-
             $exists = \DB::table('features')
              ->where('name', $name)
              ->exists();
@@ -39,7 +38,6 @@ class FeatureSeeder extends Seeder
             if ($exists) {
                 continue;
             }
-
 
             if ($active) {
                 Feature::activate($name);
