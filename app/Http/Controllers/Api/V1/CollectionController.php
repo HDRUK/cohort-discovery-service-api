@@ -492,29 +492,31 @@ class CollectionController extends Controller
 
             $taskId = $collection->latestSuccessfulConceptResultFile?->task_id;
 
-            $nconcepts = Distribution::query()
-                   ->where('collection_id', $collection->id)
-                   ->where('task_id', $taskId)
-                   ->where('concept_id', '>', 0)
-                   ->distinct('concept_id')
-                   ->count('concept_id');
+            $nconcepts = 0;
+            $concept_counts_by_category = [];
+            if ($taskId !== null) {
+                $nconcepts = Distribution::query()
+                       ->where('collection_id', $collection->id)
+                       ->where('task_id', $taskId)
+                       ->where('concept_id', '>', 0)
+                       ->distinct('concept_id')
+                       ->count('concept_id');
 
-            $concept_counts_by_category = Distribution::query()
-                ->select('category', \DB::raw('COUNT(DISTINCT concept_id) AS nconcepts'))
-                ->where('collection_id', $collection->id)
-                ->where('task_id', $taskId)
-                ->where('concept_id', '>', 0)
-                ->groupBy('category')
-                ->orderByDesc('nconcepts')
-                ->get();
-
-            $concept_counts_by_category = collect($concept_counts_by_category)
-                ->map(fn ($row) => [
-                    'category' => $row->category,
-                    'nconcepts' => (int) $row->nconcepts,
-                ])
-                ->values()
-                ->toArray();
+                $concept_counts_by_category = \DB::table('distributions')
+                    ->select('category', \DB::raw('COUNT(DISTINCT concept_id) AS nconcepts'))
+                    ->where('collection_id', $collection->id)
+                    ->where('task_id', $taskId)
+                    ->where('concept_id', '>', 0)
+                    ->groupBy('category')
+                    ->orderByDesc('nconcepts')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'category' => $row->category,
+                        'nconcepts' => (int) $row->nconcepts,
+                    ])
+                    ->values()
+                    ->toArray();
+            }
 
             return $this->OKResponse([
                 ...$collection->toArray(),

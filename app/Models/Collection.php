@@ -285,6 +285,9 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
+    /**
+     * @return HasOne<ResultFile, $this>
+     */
     public function latestSuccessfulConceptResultFile(): HasOne
     {
         return $this->hasOne(ResultFile::class)->ofMany(

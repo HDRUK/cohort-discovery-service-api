@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\ResultFile;
 use App\Traits\HelperFunctions;
+use App\Models\ResultFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -36,7 +36,7 @@ class ProcessDistributionFile implements ShouldQueue
 
         Log::info("[{$this->tag}] constructed", [
             'result_file_id' => $resultFileId,
-            'batch_size' => $this->batchSize,
+            'batch_size'     => $this->batchSize,
         ]);
     }
 
@@ -44,10 +44,10 @@ class ProcessDistributionFile implements ShouldQueue
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
-        Log::info("[{$this->tag}] starting", [
+        Log::info('[' . $this->tag . '] starting', [
             'result_file_id' => $this->resultFileId,
-            'path' => $file->path,
-            'file_name' => $file->file_name,
+            'path'           => $file->path,
+            'file_name'      => $file->file_name,
         ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
@@ -58,24 +58,24 @@ class ProcessDistributionFile implements ShouldQueue
 
         $stream = Storage::readStream($file->path);
         if (! $stream) {
-            Log::error("[{$this->tag}] Failed to open file stream", [
+            Log::error('[' . $this->tag . '] Failed to open file stream', [
                 'path' => $file->path,
             ]);
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
         $header = null;
-        $batch = [];
+        $batch  = [];
 
         $rowsSeen = 0;
         $skipped = [
-            'bad_header' => 0,
-            'col_mismatch' => 0,
-            'missing_count' => 0,
-            'missing_category' => 0,
-            'missing_name' => 0,
-            'invalid_count' => 0,
-            'invalid_alt_name' => 0,
+            'bad_header'        => 0,
+            'col_mismatch'      => 0,
+            'missing_count'     => 0,
+            'missing_category'  => 0,
+            'missing_name'      => 0,
+            'invalid_count'     => 0,
+            'invalid_alt_name'  => 0,
             'invalid_alt_count' => 0,
         ];
 
@@ -85,25 +85,25 @@ class ProcessDistributionFile implements ShouldQueue
         $descField = $file->file_name === 'code.distribution' ? 'OMOP_DESCR' : 'DESCRIPTION';
 
         $rowTemplate = [
-            'collection_id' => null,
-            'task_id' => null,
+            'collection_id'  => null,
+            'task_id'        => null,
             'result_file_id' => null,
 
-            'category' => null,
-            'name' => null,
-            'description' => null,
-            'concept_id' => null,
+            'category'       => null,
+            'name'           => null,
+            'description'    => null,
+            'concept_id'     => null,
 
-            'count' => null,
-            'q1' => null,
-            'q3' => null,
-            'min' => null,
-            'max' => null,
-            'mean' => null,
-            'median' => null,
+            'count'          => null,
+            'q1'             => null,
+            'q3'             => null,
+            'min'            => null,
+            'max'            => null,
+            'mean'           => null,
+            'median'         => null,
 
-            'created_at' => null,
-            'updated_at' => null,
+            'created_at'     => null,
+            'updated_at'     => null,
         ];
 
         try {
@@ -129,7 +129,6 @@ class ProcessDistributionFile implements ShouldQueue
                 }
 
                 $cols = explode("\t", $line);
-
                 if (count($cols) < count($header)) {
                     $cols = array_pad($cols, count($header), '');
                 }
@@ -146,58 +145,57 @@ class ProcessDistributionFile implements ShouldQueue
                     continue;
                 }
 
-                $category = $this->normaliseNullable($row['CATEGORY'] ?? null);
-                $name = $this->normaliseNullable($row[$codeField] ?? $row['CODE'] ?? null);
-                $description = $this->normaliseNullable($row[$descField] ?? null);
 
+                $category = $this->normaliseNullable($row['CATEGORY']);
                 if ($category === null) {
                     $skipped['missing_category']++;
                     continue;
                 }
 
+                $name = $this->normaliseNullable($row[$codeField] ?? $row['CODE']);
                 if ($name === null) {
                     $skipped['missing_name']++;
                     continue;
                 }
 
+                $description = $this->normaliseNullable($row[$descField]);
                 $description = $description ?? $name;
 
-                $count = $this->normaliseInt($row['COUNT'] ?? null);
+                $count = $this->normaliseInt($row['COUNT']);
+
                 if ($count === null) {
                     $skipped['invalid_count']++;
                     continue;
                 }
-                $conceptId = $this->normaliseStrictInt($row[$codeField] ?? $row['CODE'] ?? null);
+                $conceptId = $this->normaliseStrictInt($row[$codeField] ?? $row['CODE']);
 
-                $rowsSeen++;
 
                 $base = [
-                    'collection_id' => $file->collection_id,
-                    'task_id' => $file->task_id,
+                    'collection_id'  => $file->collection_id,
+                    'task_id'        => $file->task_id,
                     'result_file_id' => $file->id,
 
-                    'category' => $category,
-                    'name' => $name,
-                    'description' => $description,
-                    'concept_id' => $conceptId,
+                    'category'       => $category,
+                    'name'           => $name,
+                    'description'    => $description,
+                    'concept_id'     => $conceptId,
 
-                    'count' => $count,
-                    'q1' => $this->normaliseNullable($row['Q1'] ?? null),
-                    'q3' => $this->normaliseNullable($row['Q3'] ?? null),
-                    'min' => $this->normaliseNullable($row['MIN'] ?? null),
-                    'max' => $this->normaliseNullable($row['MAX'] ?? null),
-                    'mean' => $this->normaliseNullable($row['MEAN'] ?? null),
-                    'median' => $this->normaliseNullable($row['MEDIAN'] ?? null),
+                    'count'          => $count,
+                    'q1'             => $this->normaliseNullable($row['Q1']),
+                    'q3'             => $this->normaliseNullable($row['Q3']),
+                    'min'            => $this->normaliseNullable($row['MIN']),
+                    'max'            => $this->normaliseNullable($row['MAX']),
+                    'mean'           => $this->normaliseNullable($row['MEAN']),
+                    'median'         => $this->normaliseNullable($row['MEDIAN']),
 
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
                 ];
 
                 $batch[] = array_merge($rowTemplate, $base);
 
                 if (! empty($row['ALTERNATIVES'])) {
                     $segments = explode('^', trim((string) $row['ALTERNATIVES'], '^'));
-
                     foreach ($segments as $seg) {
                         if (strpos($seg, '|') === false) {
                             continue;
@@ -219,28 +217,23 @@ class ProcessDistributionFile implements ShouldQueue
                         }
 
                         $altRow = [
-                            'collection_id' => $file->collection_id,
-                            'task_id' => $file->task_id,
+                            'collection_id'  => $file->collection_id,
+                            'task_id'        => $file->task_id,
                             'result_file_id' => $file->id,
 
-                            'category' => $category,
-                            'name' => $altName,
-                            'description' => $altName,
-                            'concept_id' => null,
+                            'category'       => $category,
+                            'name'           => $altName,
+                            'description'    => $altName,
+                            'concept_id'     => null,
 
-                            'count' => (int) $altCount,
-                            'q1' => null,
-                            'q3' => null,
-                            'min' => null,
-                            'max' => null,
-                            'mean' => null,
-                            'median' => null,
+                            'count'          => (int) $altCount,
 
-                            'created_at' => $now,
-                            'updated_at' => $now,
+                            'created_at'     => $now,
+                            'updated_at'     => $now,
                         ];
 
                         $batch[] = array_merge($rowTemplate, $altRow);
+
                     }
                 }
 
@@ -255,16 +248,16 @@ class ProcessDistributionFile implements ShouldQueue
                 $this->persistBatchUpsert($batch);
             }
 
-            Log::info("[{$this->tag}] Refreshing DistributionConcepts view");
+            Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
             RefreshDistributionConceptsView::dispatch();
 
             $file->markDone($rowsSeen);
 
-            Log::info("[{$this->tag}] finished", [
+            Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
-                'task_id' => $file->task_id,
-                'rows_seen' => $rowsSeen,
-                'skipped' => $skipped,
+                'task_id'        => $file->task_id,
+                'rows_seen'      => $rowsSeen,
+                'skipped'        => $skipped,
             ]);
         } finally {
             fclose($stream);
@@ -287,12 +280,7 @@ class ProcessDistributionFile implements ShouldQueue
             'description',
             'concept_id',
             'count',
-            'q1',
-            'q3',
-            'min',
-            'max',
-            'mean',
-            'median',
+            'q1', 'q3', 'min', 'max', 'mean', 'median',
             'updated_at',
         ];
 
