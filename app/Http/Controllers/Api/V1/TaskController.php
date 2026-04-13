@@ -500,6 +500,7 @@ class TaskController extends Controller
                 foreach ($metadata['files'] ?? [] as $file) {
 
                     if ($task->task_type === TaskType::A) {
+                        //only process files that come from B-type tasks
                         break;
                     }
 
