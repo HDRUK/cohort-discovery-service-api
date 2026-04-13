@@ -498,6 +498,11 @@ class TaskController extends Controller
                 $storedFiles = [];
 
                 foreach ($metadata['files'] ?? [] as $file) {
+
+                    if ($task->task_type === TaskType::A) {
+                        break;
+                    }
+
                     if (!isset($file['file_data'])) {
                         continue;
                     }
@@ -529,7 +534,7 @@ class TaskController extends Controller
 
                     if (Str::endsWith(Str::lower($fileName), 'metadata.bcos')) {
                         ProcessMetadataFile::dispatch($resultFile->id)->afterCommit();
-                    } else {
+                    } elseif (Str::endsWith(Str::lower($fileName), '.distribution')) {
                         ProcessDistributionFile::dispatch($resultFile->id)->afterCommit();
                     }
 
