@@ -6,6 +6,7 @@ use DB;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use App\Models\Collection;
 
 class RefreshDistributionConceptsView implements ShouldQueue
 {
@@ -19,10 +20,12 @@ class RefreshDistributionConceptsView implements ShouldQueue
 
     private string $conceptTable = '';
 
+    private bool $onlyActive = false;
+
     /**
      * Create a new job instance.
      */
-    public function __construct()
+    public function __construct(bool $onlyActive = false)
     {
         $mysqlDb = config('database.connections.mysql.database');
         $omopDb  = config('database.connections.omop.database');
@@ -31,6 +34,8 @@ class RefreshDistributionConceptsView implements ShouldQueue
         $this->distributionTable = "`{$mysqlDb}`.`distributions`";
         $this->collectionTable   = "`{$mysqlDb}`.`collections`";
         $this->conceptTable      = "`{$omopDb}`.`concept`";
+
+        $this->onlyActive = $onlyActive;
     }
 
     /**
@@ -53,10 +58,41 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'count' => $beforeCount,
         ]);
 
-        DB::statement("
+        // get the task_ids for the latest concept distribution runs for all collections
+        $taskIds = Collection::query()
+           ->when($this->onlyActive, function ($q) {
+               // reduce size by only including active datasets
+               $q->whereRelation(
+                   'modelState.state',
+                   'states.slug',
+                   Collection::STATUS_ACTIVE
+               );
+           })
+            ->whereHas('latestSuccessfulConceptResultFile')
+            ->withAggregate(
+                'latestSuccessfulConceptResultFile as latest_task_id',
+                'task_id'
+            )
+            ->pluck('latest_task_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($taskIds->isEmpty()) {
+            Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
+                'view' => $this->viewName,
+            ]);
+            return;
+        }
+
+        $taskIdList = $taskIds
+            ->map(fn ($id) => (int) $id)
+            ->implode(',');
+
+        \DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
             SELECT
-                latest_distribution.concept_id,
+                d.concept_id,
                 c.concept_name,
                 c.concept_name AS description,
                 c.domain_id,
@@ -64,34 +100,20 @@ class RefreshDistributionConceptsView implements ShouldQueue
                 c.concept_class_id AS concept_class,
                 c.standard_concept,
                 c.concept_code,
-                SUM(latest_distribution.count) AS count,
-                COUNT(*) AS ncollections,
+                SUM(d.count) AS count,
+                COUNT(DISTINCT d.collection_id) AS ncollections,
                 CASE
                     WHEN MIN(CASE WHEN col.is_synthetic THEN 1 ELSE 0 END) = 1 THEN 1
                     ELSE 0
                 END AS all_synthetic
-            FROM (
-                SELECT
-                    ranked.collection_id,
-                    ranked.concept_id,
-                    ranked.count
-                FROM (
-                    SELECT
-                        x.*,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY x.collection_id, x.concept_id
-                            ORDER BY x.updated_at DESC, x.created_at DESC, x.id DESC
-                        ) AS rn
-                    FROM {$this->distributionTable} x
-                ) ranked
-                WHERE ranked.rn = 1
-            ) latest_distribution
+            FROM {$this->distributionTable} d
             INNER JOIN {$this->conceptTable} c
-                ON latest_distribution.concept_id = c.concept_id
+                ON d.concept_id = c.concept_id
             INNER JOIN {$this->collectionTable} col
-                ON latest_distribution.collection_id = col.id
+                ON d.collection_id = col.id
+            WHERE d.task_id IN ({$taskIdList})
             GROUP BY
-                latest_distribution.concept_id,
+                d.concept_id,
                 c.concept_name,
                 c.domain_id,
                 c.vocabulary_id,
