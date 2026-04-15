@@ -430,13 +430,15 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public static function logActivity(Collection $c, TaskType $type): void
     {
-        CollectionActivityLog::updateOrCreate(
+        $log = CollectionActivityLog::firstOrCreate(
             [
-                'collection_id' => $c->id,
-                'task_type' => $type->value,
-            ],
-            []
+               'collection_id' => $c->id,
+               'task_type' => $type->value,
+        ]
         );
+
+        $log->touch();
+        \Log::info('recording activity for ' .$c->id. '   '. $type->value);
         //change state if -type BUNNY has come online
         if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
             $c->setState(Collection::STATUS_ACTIVE);
