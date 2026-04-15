@@ -35,7 +35,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                         WHERE task_type = ?
                         AND collection_id = ?
                     ',
-                [TaskType::A, $c->id]
+                [TaskType::A->value, $c->id]
             );
 
             if (!empty($lastRow)) {
