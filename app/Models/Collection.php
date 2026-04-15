@@ -6,7 +6,6 @@ use App\Contracts\ValidatableModel;
 use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Services\QueryContext\QueryContextType;
-use Carbon\Carbon;
 use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
 use Hdruk\LaravelModelStates\Models\ModelState;
 use Hdruk\LaravelModelStates\Models\State;
@@ -136,6 +135,9 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     protected static array $groupableColumns = [
         'custodian',
     ];
+
+    protected $appends = ['last_ping'];
+
 
     protected static array $transitions = [
         self::STATUS_DRAFT => [
@@ -428,16 +430,13 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
 
     public static function logActivity(Collection $c, TaskType $type): void
     {
-        if (strtolower(config('system.collection_activity_log_type')) === 'log') {
-            CollectionActivityLog::create([
+        CollectionActivityLog::updateOrCreate(
+            [
                 'collection_id' => $c->id,
                 'task_type' => $type->value,
-            ]);
-        } elseif (strtolower(config('system.collection_activity_log_type')) === 'record') {
-            Collection::where('id', $c->id)->update([
-                'last_active' => Carbon::now(),
-            ]);
-        }
+            ],
+            []
+        );
         //change state if -type BUNNY has come online
         if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
             $c->setState(Collection::STATUS_ACTIVE);
@@ -453,5 +452,40 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             'tasks as n_b_tasks' => fn ($q) =>
                 $q->whereNotNull('completed_at')->where('task_type', TaskType::B),
         ]);
+    }
+
+    public function lastAActivity(): HasOne
+    {
+        return $this->hasOne(CollectionActivityLog::class, 'collection_id')
+            ->ofMany(
+                ['created_at' => 'max', 'id' => 'max'],
+                fn ($q) => $q->where('task_type', TaskType::A->value)
+            );
+    }
+
+    public function lastBActivity(): HasOne
+    {
+        return $this->hasOne(CollectionActivityLog::class, 'collection_id')
+            ->ofMany(
+                ['created_at' => 'max', 'id' => 'max'],
+                fn ($q) => $q->where('task_type', TaskType::B->value)
+            );
+    }
+
+    public function getLastPingAttribute(): array
+    {
+
+        $a = $this->relationLoaded('lastAActivity')
+        ? $this->lastAActivity
+        : $this->lastAActivity()->first();
+
+        $b = $this->relationLoaded('lastBActivity')
+            ? $this->lastBActivity
+            : $this->lastBActivity()->first();
+
+        return [
+            'a' => $a,
+            'b' => $b,
+        ];
     }
 }

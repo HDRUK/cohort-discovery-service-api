@@ -32,7 +32,6 @@ class CollectionNoActivityMonitorTest extends TestCase
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
     {
-        config()->set('system.collection_activity_log_type', 'log');
 
         $this->disableObservers();
 
@@ -101,7 +100,6 @@ class CollectionNoActivityMonitorTest extends TestCase
 
     public function test_it_suspends_collections_with_activity_older_than_60_minutes(): void
     {
-        config()->set('system.collection_activity_log_type', 'log');
         config()->set('system.collection_inactivity_minutes', 60);
 
         $this->disableObservers();

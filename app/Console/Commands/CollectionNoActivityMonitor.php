@@ -6,6 +6,7 @@ use App\Contracts\ApiCommand;
 use App\Models\Collection;
 use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
+use App\Enums\TaskType;
 use DB;
 use Log;
 
@@ -22,36 +23,25 @@ class CollectionNoActivityMonitor implements ApiCommand
     {
         Log::info($this->tag . ' - Started');
 
-        if (strtolower(config('system.collection_activity_log_type')) === 'log') {
-            $colls = $this->getCollections();
 
-            foreach ($colls as $c) {
-                $lastRow = DB::select(
-                    '
+        $colls = $this->getCollections();
+
+        foreach ($colls as $c) {
+            $lastRow = DB::select(
+                '
                         SELECT
                             MAX(created_at) AS created_at
                         FROM collection_activity_logs
+                        WHERE task_type = ?
                         WHERE collection_id = ?
                     ',
-                    [$c->id]
-                );
+                [TaskType::A, $c->id]
+            );
 
-                if (!empty($lastRow)) {
-                    $stamp = Carbon::parse($lastRow[0]->created_at);
+            if (!empty($lastRow)) {
+                $stamp = Carbon::parse($lastRow[0]->created_at);
 
-                    if ($this->isNonActive($stamp)) {
-                        $this->logNoActivity($c->id);
-                        $this->setCollectionSuspended($c);
-                    } else {
-                        $this->logActivity($c->id);
-                    }
-                }
-            }
-        } elseif (strtolower(config('system.collection_activity_log_type')) === 'record') {
-            $colls = $this->getCollections();
-
-            foreach ($colls as $c) {
-                if ($this->isNonActive($c->last_active)) {
+                if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
                     $this->setCollectionSuspended($c);
                 } else {
@@ -59,6 +49,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 }
             }
         }
+
 
         return 1;
     }
