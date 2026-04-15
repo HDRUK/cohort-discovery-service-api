@@ -14,6 +14,9 @@ use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
+use App\Models\CollectionActivityLog;
+use App\Enums\TaskType;
+use Carbon\Carbon;
 use Tests\TestCase;
 
 class CollectionTest extends TestCase
@@ -37,6 +40,7 @@ class CollectionTest extends TestCase
         CollectionHost::truncate();
         UserHasWorkgroup::truncate();
         WorkgroupHasCollection::truncate();
+        CollectionActivityLog::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->enableMiddleware();
@@ -899,6 +903,70 @@ class CollectionTest extends TestCase
         $this->assertContains($draftB->id, $ids);
 
         $user->removeRole('admin');
+    }
+
+    public function test_it_returns_last_ping_and_updates_activity_timestamp(): void
+    {
+        Carbon::setTestNow(now()->startOfSecond());
+
+        $custodian = Custodian::factory()->create();
+
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $aLog = CollectionActivityLog::create([
+            'collection_id' => $collection->id,
+            'task_type' => TaskType::A->value,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $bLog = CollectionActivityLog::create([
+            'collection_id' => $collection->id,
+            'task_type' => TaskType::B->value,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::BASE_URL.'/'.$collection->id);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.last_ping.a.id', $aLog->id);
+        $response->assertJsonPath('data.last_ping.b.id', $bLog->id);
+
+        $originalUpdatedAt = $aLog->updated_at->copy();
+
+        Carbon::setTestNow($originalUpdatedAt->copy()->addMinute());
+
+        Collection::logActivity($collection, TaskType::A);
+
+        $updatedALog = CollectionActivityLog::where([
+            'collection_id' => $collection->id,
+            'task_type' => TaskType::A->value,
+        ])->first();
+
+        $this->assertNotNull($updatedALog);
+        $this->assertTrue($updatedALog->id === $aLog->id);
+        $this->assertTrue($updatedALog->updated_at->gt($originalUpdatedAt));
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )->getJson(self::BASE_URL.'/'.$collection->id);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.last_ping.a.id', $aLog->id);
+        $response->assertJsonPath(
+            'data.last_ping.a.updated_at',
+            $updatedALog->updated_at->toJSON()
+        );
+        $response->assertJsonPath('data.last_ping.b.id', $bLog->id);
+
+        Carbon::setTestNow();
     }
 
 
