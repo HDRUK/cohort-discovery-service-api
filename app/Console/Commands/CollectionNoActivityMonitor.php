@@ -30,7 +30,7 @@ class CollectionNoActivityMonitor implements ApiCommand
             $lastRow = DB::select(
                 '
                         SELECT
-                            MAX(created_at) AS created_at
+                            MAX(updated_at) AS updated_at
                         FROM collection_activity_logs
                         WHERE task_type = ?
                         AND collection_id = ?
@@ -39,7 +39,7 @@ class CollectionNoActivityMonitor implements ApiCommand
             );
 
             if (!empty($lastRow)) {
-                $stamp = Carbon::parse($lastRow[0]->created_at);
+                $stamp = Carbon::parse($lastRow[0]->updated_at);
 
                 if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
