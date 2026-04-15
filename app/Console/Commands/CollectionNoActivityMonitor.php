@@ -33,7 +33,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                             MAX(created_at) AS created_at
                         FROM collection_activity_logs
                         WHERE task_type = ?
-                        WHERE collection_id = ?
+                        AND collection_id = ?
                     ',
                 [TaskType::A, $c->id]
             );

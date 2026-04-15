@@ -458,7 +458,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         return $this->hasOne(CollectionActivityLog::class, 'collection_id')
             ->ofMany(
-                ['created_at' => 'max', 'id' => 'max'],
+                ['updated_at' => 'max', 'id' => 'max'],
                 fn ($q) => $q->where('task_type', TaskType::A->value)
             );
     }
@@ -467,7 +467,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     {
         return $this->hasOne(CollectionActivityLog::class, 'collection_id')
             ->ofMany(
-                ['created_at' => 'max', 'id' => 'max'],
+                ['updated_at' => 'max', 'id' => 'max'],
                 fn ($q) => $q->where('task_type', TaskType::B->value)
             );
     }
