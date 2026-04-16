@@ -16,36 +16,24 @@ use Spatie\Permission\Models\Role;
 class ImportAdminUsers extends Command
 {
     use HelperFunctions;
-    /**
-     * The name and signature of the console command.
-     *
-     * Examples:
-     *  php artisan user:import --name="John Doe" --email=john@example.com --password=secret
-     *  php artisan user:import --file=/path/to/users.csv
-     */
+
     protected $signature = 'admin-user:import
                             {--name= : Name of the user}
                             {--email= : Email of the user}
                             {--password= : Plain text password}
+                            {--admin= : Whether user should be admin (1/0, true/false)}
+                            {--workgroup= : Additional workgroup to add}
                             {--file= : Path to CSV file}';
 
-    /**
-     * The console command description.
-     */
     protected $description = 'Create users from command line options or from a CSV file.';
 
     /**
-     * Store generated passwords so we can print them at the end.
-     *
      * @var array<int, array{email:string,password:string}>
      */
     protected array $generatedPasswords = [];
 
     protected Custodian $custodian;
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $file = $this->option('file');
@@ -76,11 +64,20 @@ class ImportAdminUsers extends Command
 
     protected function createSingleUser(): int
     {
-        $name     = $this->option('name') ?: $this->ask('Name');
-        $email    = $this->option('email') ?: $this->ask('Email');
-        $password = $this->option('password'); // may be null
+        $name      = $this->option('name') ?: $this->ask('Name');
+        $email     = $this->option('email') ?: $this->ask('Email');
+        $password  = $this->option('password');
+        $isAdmin   = $this->toBool($this->option('admin'));
+        $workgroup = $this->option('workgroup');
 
-        $user   = $this->createUserWithDefaults($email, $name, $password);
+        $user = $this->createUserWithDefaults(
+            email: $email,
+            name: $name,
+            password: $password,
+            isAdmin: $isAdmin,
+            extraWorkgroup: $workgroup
+        );
+
         $action = $user->wasRecentlyCreated ? 'Created' : 'Existing';
 
         $this->info("{$action} user #{$user->id} ({$user->email})");
@@ -100,11 +97,10 @@ class ImportAdminUsers extends Command
             return self::FAILURE;
         }
 
-        // Expect header row: name,email,password
         $header = fgetcsv($handle);
 
-        if (! $header || ! in_array('email', $header)) {
-            $this->error('CSV must have at least an "email" column (ideally: name,email,password).');
+        if (! $header || ! in_array('email', $header, true)) {
+            $this->error('CSV must have at least an "email" column. Optional columns: name,password,admin,workgroup');
             fclose($handle);
             return self::FAILURE;
         }
@@ -115,25 +111,43 @@ class ImportAdminUsers extends Command
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
 
+            if (count($row) !== count($header)) {
+                $this->warn("Row {$rowNumber}: column count mismatch, skipping.");
+                continue;
+            }
+
             $data = array_combine($header, $row);
 
-            $name     = $data['name']     ?? null;
-            $email    = $data['email']    ?? null;
-            $password = $data['password'] ?? null;
+            $name      = $data['name'] ?? null;
+            $email     = $data['email'] ?? null;
+            $password  = $data['password'] ?? null;
+            $isAdmin   = $this->toBool($data['admin'] ?? null);
+            $workgroup = $data['workgroup'] ?? null;
 
             if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $this->warn("Row {$rowNumber}: invalid or missing email, skipping.");
                 continue;
             }
 
-            $user   = $this->createUserWithDefaults($email, $name, $password);
-            $action = $user->wasRecentlyCreated ? 'created' : 'existing';
+            try {
+                $user = $this->createUserWithDefaults(
+                    email: $email,
+                    name: $name,
+                    password: $password,
+                    isAdmin: $isAdmin,
+                    extraWorkgroup: $workgroup
+                );
 
-            if ($user->wasRecentlyCreated) {
-                $created++;
+                $action = $user->wasRecentlyCreated ? 'created' : 'existing';
+
+                if ($user->wasRecentlyCreated) {
+                    $created++;
+                }
+
+                $this->line("Row {$rowNumber}: {$action} user #{$user->id} ({$user->email})");
+            } catch (\Throwable $e) {
+                $this->warn("Row {$rowNumber}: failed for {$email}: {$e->getMessage()}");
             }
-
-            $this->line("Row {$rowNumber}: {$action} user #{$user->id} ({$user->email})");
         }
 
         fclose($handle);
@@ -144,27 +158,38 @@ class ImportAdminUsers extends Command
     }
 
     /**
-     * Create or get a user, attach custodian, role and workgroup.
+     * Create or get a user, attach custodian, default workgroup,
+     * optional extra workgroup, and optional admin role.
      */
-    private function createUserWithDefaults(string $email, ?string $name = null, ?string $password = null): User
-    {
+    private function createUserWithDefaults(
+        string $email,
+        ?string $name = null,
+        ?string $password = null,
+        bool $isAdmin = false,
+        ?string $extraWorkgroup = null
+    ): User {
         $user = $this->createUser($email, $name, $password);
 
-        // Ensure user <-> custodian
         CustodianHasUser::firstOrCreate([
             'user_id'      => $user->id,
             'custodian_id' => $this->custodian->id,
         ]);
 
-        // Ensure role & workgroup
-        $this->addRole($user, 'admin');
-        $this->addToWorkgroup($user, 'ADMIN');
+        $this->addToWorkgroup($user, 'DEFAULT');
+
+        if ($extraWorkgroup) {
+            $this->addToWorkgroup($user, trim($extraWorkgroup));
+        }
+
+        if ($isAdmin) {
+            $this->addRole($user, 'admin');
+        }
 
         return $user;
     }
 
     /**
-     * Create (or fetch) a user and handle password generation + tracking.
+     * Create or fetch a user.
      */
     private function createUser(string $email, ?string $name = null, ?string $password = null): User
     {
@@ -177,15 +202,20 @@ class ImportAdminUsers extends Command
 
         $user = User::firstOrCreate(
             [
-                'name'  => $name ?: 'Unnamed User',
                 'email' => $email,
             ],
             [
+                'name'     => $name ?: 'Unnamed User',
                 'password' => Hash::make($password),
             ]
         );
 
-        // Only store the generated password if we actually created a new user.
+        // Optional: update blank/default name on existing users
+        if ($name && $user->name !== $name) {
+            $user->name = $name;
+            $user->save();
+        }
+
         if ($generated && $user->wasRecentlyCreated) {
             $this->generatedPasswords[] = [
                 'email'    => $email,
@@ -196,9 +226,6 @@ class ImportAdminUsers extends Command
         return $user;
     }
 
-    /**
-     * Print all generated passwords at the end of the command.
-     */
     protected function printGeneratedPasswordsSummary(): void
     {
         if (empty($this->generatedPasswords)) {
@@ -225,7 +252,7 @@ class ImportAdminUsers extends Command
             'workgroup_id' => $workgroup->id,
         ]);
 
-        $this->info("... ensured user {$user->id} is in workgroup {$workgroup->id}");
+        $this->info("... ensured user {$user->id} is in workgroup {$workgroup->name}");
     }
 
     private function addRole(User $user, string $roleName): void
@@ -236,5 +263,22 @@ class ImportAdminUsers extends Command
             'user_id' => $user->id,
             'role_id' => $role->id,
         ]);
+    }
+
+    private function toBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if ($value === null) {
+            return false;
+        }
+
+        return in_array(
+            strtolower(trim((string) $value)),
+            ['1', 'true', 'yes', 'y'],
+            true
+        );
     }
 }
