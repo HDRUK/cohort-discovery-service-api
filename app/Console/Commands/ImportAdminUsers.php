@@ -180,6 +180,7 @@ class ImportAdminUsers extends Command
             $this->addToWorkgroup($user, trim($extraWorkgroup));
         }
 
+        $this->addRole($user, 'user');
         if ($isAdmin) {
             $this->addRole($user, 'admin');
         }
