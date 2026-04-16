@@ -23,6 +23,7 @@ class ImportAdminUsers extends Command
                             {--password= : Plain text password}
                             {--admin= : Whether user should be admin (1/0, true/false)}
                             {--workgroup= : Additional workgroup to add}
+                            {--custodian= : Whether user should belong to the default custodian (1/0, true/false)}
                             {--file= : Path to CSV file}';
 
     protected $description = 'Create users from command line options or from a CSV file.';
@@ -64,18 +65,20 @@ class ImportAdminUsers extends Command
 
     protected function createSingleUser(): int
     {
-        $name      = $this->option('name') ?: $this->ask('Name');
-        $email     = $this->option('email') ?: $this->ask('Email');
-        $password  = $this->option('password');
-        $isAdmin   = $this->toBool($this->option('admin'));
-        $workgroup = $this->option('workgroup');
+        $name          = $this->option('name') ?: $this->ask('Name');
+        $email         = $this->option('email') ?: $this->ask('Email');
+        $password      = $this->option('password');
+        $isAdmin       = $this->toBool($this->option('admin'));
+        $workgroup     = $this->option('workgroup');
+        $hasCustodian  = $this->toBool($this->option('custodian'));
 
         $user = $this->createUserWithDefaults(
             email: $email,
             name: $name,
             password: $password,
             isAdmin: $isAdmin,
-            extraWorkgroup: $workgroup
+            extraWorkgroup: $workgroup,
+            hasCustodian: $hasCustodian
         );
 
         $action = $user->wasRecentlyCreated ? 'Created' : 'Existing';
@@ -100,7 +103,7 @@ class ImportAdminUsers extends Command
         $header = fgetcsv($handle);
 
         if (! $header || ! in_array('email', $header, true)) {
-            $this->error('CSV must have at least an "email" column. Optional columns: name,password,admin,workgroup');
+            $this->error('CSV must have at least an "email" column. Optional columns: name,password,admin,workgroup,custodian');
             fclose($handle);
             return self::FAILURE;
         }
@@ -118,11 +121,12 @@ class ImportAdminUsers extends Command
 
             $data = array_combine($header, $row);
 
-            $name      = $data['name'] ?? null;
-            $email     = $data['email'] ?? null;
-            $password  = $data['password'] ?? null;
-            $isAdmin   = $this->toBool($data['admin'] ?? null);
-            $workgroup = $data['workgroup'] ?? null;
+            $name         = $data['name'] ?? null;
+            $email        = $data['email'] ?? null;
+            $password     = $data['password'] ?? null;
+            $isAdmin      = $this->toBool($data['admin'] ?? null);
+            $workgroup    = $data['workgroup'] ?? null;
+            $hasCustodian = $this->toBool($data['custodian'] ?? null);
 
             if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $this->warn("Row {$rowNumber}: invalid or missing email, skipping.");
@@ -135,7 +139,8 @@ class ImportAdminUsers extends Command
                     name: $name,
                     password: $password,
                     isAdmin: $isAdmin,
-                    extraWorkgroup: $workgroup
+                    extraWorkgroup: $workgroup,
+                    hasCustodian: $hasCustodian
                 );
 
                 $action = $user->wasRecentlyCreated ? 'created' : 'existing';
@@ -157,23 +162,17 @@ class ImportAdminUsers extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Create or get a user, attach custodian, default workgroup,
-     * optional extra workgroup, and optional admin role.
-     */
     private function createUserWithDefaults(
         string $email,
         ?string $name = null,
         ?string $password = null,
         bool $isAdmin = false,
-        ?string $extraWorkgroup = null
+        ?string $extraWorkgroup = null,
+        bool $hasCustodian = false
     ): User {
         $user = $this->createUser($email, $name, $password);
 
-        CustodianHasUser::firstOrCreate([
-            'user_id'      => $user->id,
-            'custodian_id' => $this->custodian->id,
-        ]);
+        $this->syncCustodianMembership($user, $hasCustodian);
 
         $this->addToWorkgroup($user, 'DEFAULT');
 
@@ -188,9 +187,6 @@ class ImportAdminUsers extends Command
         return $user;
     }
 
-    /**
-     * Create or fetch a user.
-     */
     private function createUser(string $email, ?string $name = null, ?string $password = null): User
     {
         $generated = false;
@@ -210,7 +206,6 @@ class ImportAdminUsers extends Command
             ]
         );
 
-        // Optional: update blank/default name on existing users
         if ($name && $user->name !== $name) {
             $user->name = $name;
             $user->save();
@@ -224,6 +219,28 @@ class ImportAdminUsers extends Command
         }
 
         return $user;
+    }
+
+    private function syncCustodianMembership(User $user, bool $hasCustodian): void
+    {
+        $query = CustodianHasUser::where([
+            'user_id'      => $user->id,
+            'custodian_id' => $this->custodian->id,
+        ]);
+
+        if ($hasCustodian) {
+            $query->firstOrCreate([]);
+            $this->info("... ensured user {$user->id} is linked to custodian {$this->custodian->id}");
+            return;
+        }
+
+        $deleted = $query->delete();
+
+        if ($deleted) {
+            $this->info("... removed user {$user->id} from custodian {$this->custodian->id}");
+        } else {
+            $this->info("... ensured user {$user->id} is not linked to custodian {$this->custodian->id}");
+        }
     }
 
     protected function printGeneratedPasswordsSummary(): void
