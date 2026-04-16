@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\CollectionStatus;
 use App\Enums\FrequencyMode;
 use App\Enums\TaskType;
 use App\Models\Collection;
@@ -14,6 +13,7 @@ use App\Models\Distribution;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
 use App\Services\QueryContext\QueryContextType;
+use Hdruk\LaravelModelStates\Models\State;
 use Illuminate\Database\Seeder;
 
 class CollectionSeeder extends Seeder
@@ -23,51 +23,60 @@ class CollectionSeeder extends Seeder
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody CKD Dataset',
             pid: '00000000-0000-0000-0000-000000000000',
-            url: "http://example.com",
+            url: 'http://example.com',
             description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: CollectionStatus::ACTIVE->value
+            statusSlug: Collection::STATUS_ACTIVE,
         );
 
         $this->seedCollectionWithDemographics(
             name: 'Various Conditions Dataset',
             pid: '00000000-0000-0000-0000-000000000001',
-            url: "http://example.com",
+            url: 'http://example.com',
             description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: CollectionStatus::ACTIVE->value
+            statusSlug: Collection::STATUS_ACTIVE,
         );
 
         $this->seedCollectionWithDemographics(
             name: 'SARs-CoV-2 Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000002',
-            url: "http://example.com",
+            url: 'http://example.com',
             description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: CollectionStatus::ACTIVE->value
+            statusSlug: Collection::STATUS_ACTIVE,
         );
 
         $this->seedCollectionWithDemographics(
             name: 'COVID-19 Antibody and Symptoms Dataset',
             pid: '00000000-0000-0000-0000-000000000003',
-            url: "http://example.com",
+            url: 'http://example.com',
             description: 'A demo dataset',
             type: QueryContextType::Bunny,
             maleCount: 0,
             femaleCount: 0,
-            status: CollectionStatus::ACTIVE->value
+            statusSlug: Collection::STATUS_ACTIVE,
         );
     }
 
-    private function seedCollectionWithDemographics(string $name, string $pid, ?string $url, ?string $description, QueryContextType $type, int $maleCount, int $femaleCount, int $status): void
-    {
-        $custodianId = Custodian::first()->id;
+    private function seedCollectionWithDemographics(
+        string $name,
+        string $pid,
+        ?string $url,
+        ?string $description,
+        QueryContextType $type,
+        int $maleCount,
+        int $femaleCount,
+        string $statusSlug,
+    ): void {
+        $custodianId = Custodian::query()->firstOrFail()->id;
+
         $collection = Collection::create([
             'name' => $name,
             'pid' => $pid,
@@ -75,14 +84,20 @@ class CollectionSeeder extends Seeder
             'description' => $description,
             'type' => $type,
             'custodian_id' => $custodianId,
-            'status' => $status,
         ]);
 
+        $collection->modelState()->updateOrCreate(
+            [],
+            [
+                'state_id' => $this->getStateIdBySlug($statusSlug),
+            ],
+        );
         // Create two CollectionConfig records for the above Collection
         // to mimic the distribution and generic query types
         $types = [TaskType::A, TaskType::B];
         $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
         $frequencyRun = 6; // ...on Sunday's
+
         foreach ($types as $t) {
             CollectionConfig::create([
                 'collection_id' => $collection->id,
@@ -91,7 +106,7 @@ class CollectionSeeder extends Seeder
                 'frequency_mode' => $frequencyMode,
                 'run_time_frequency' => $frequencyRun,
                 'enabled' => 1,
-                'type' => $t,
+                'type' => $t->value,
             ]);
 
             $frequencyMode++; // Add another in monthly mode
@@ -134,5 +149,12 @@ class CollectionSeeder extends Seeder
             'workgroup_id' => $workgroupId,
             'collection_id' => $collection->id,
         ]);
+    }
+
+    private function getStateIdBySlug(string $slug): int
+    {
+        return State::query()
+            ->where('slug', $slug)
+            ->valueOrFail('id');
     }
 }

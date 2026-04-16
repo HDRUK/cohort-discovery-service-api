@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
-use App\Enums\CollectionStatus;
 use App\Models\Collection;
+use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
 use DB;
 use Log;
@@ -13,8 +13,6 @@ class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
 
-    private string $statusMessage = 'SUSPENDED_DUE_TO_INACTIVITY_24_HOURS';
-
     public function rules(): array
     {
         return [];
@@ -22,7 +20,7 @@ class CollectionNoActivityMonitor implements ApiCommand
 
     public function handle(array $validated): mixed
     {
-        Log::info($this->tag.' - Started');
+        Log::info($this->tag . ' - Started');
 
         if (strtolower(config('system.collection_activity_log_type')) === 'log') {
             $colls = $this->getCollections();
@@ -38,8 +36,9 @@ class CollectionNoActivityMonitor implements ApiCommand
                     [$c->id]
                 );
 
-                if (! empty($lastRow)) {
+                if (!empty($lastRow)) {
                     $stamp = Carbon::parse($lastRow[0]->created_at);
+
                     if ($this->isNonActive($stamp)) {
                         $this->logNoActivity($c->id);
                         $this->setCollectionSuspended($c);
@@ -64,17 +63,27 @@ class CollectionNoActivityMonitor implements ApiCommand
         return 1;
     }
 
-    private function setCollectionSuspended(\App\Models\Collection $c): void
+    private function setCollectionSuspended(Collection $c): void
     {
-        $c->update([
-            'status' => CollectionStatus::SUSPENDED->value,
-            'status_msg' => $this->statusMessage,
-        ]);
+        $c->modelState()->updateOrCreate(
+            [],
+            [
+                'state_id' => State::query()
+                    ->where('slug', Collection::STATUS_SUSPENDED)
+                    ->valueOrFail('id'),
+            ],
+        );
     }
 
-    private function isNonActive(Carbon $stamp): bool
+    private function isNonActive(?Carbon $stamp): bool
     {
-        return $stamp->lt(Carbon::now()->subDay());
+        if ($stamp === null) {
+            return true;
+        }
+
+        $minutes = (int) config('system.collection_inactivity_minutes', 30);
+
+        return $stamp->lt(Carbon::now()->subMinutes($minutes));
     }
 
     /**
@@ -82,22 +91,24 @@ class CollectionNoActivityMonitor implements ApiCommand
      */
     private function getCollections(): \Illuminate\Database\Eloquent\Collection
     {
-        return Collection::where([
-            'status' => CollectionStatus::ACTIVE->value,
-        ])->get();
+        return Collection::whereRelation(
+            'modelState.state',
+            'slug',
+            Collection::STATUS_ACTIVE
+        )->get();
     }
 
     private function logNoActivity(int $collectionId): void
     {
         // Flag as suspended, as the collection has seen no
-        // activity for at least 24 hours.
-        Log::info($this->tag.' - found Collection ('.$collectionId.') that has had ZERO ACTIVITY for 24 hours - flagging');
+        // activity for at least X minutes.
+        Log::info($this->tag . ' - found Collection (' . $collectionId . ') that has had NO ACTIVITY within threshold - flagging');
     }
 
     private function logActivity(int $collectionId): void
     {
         // Log, but ignore as this collection is actively being
-        // polled for jobs - at least within the last 24 hours.
-        Log::info($this->tag.' - Collection ('.$collectionId.') has had ACTIVITY within 24 hours - skipping');
+        // polled for jobs - at least within the last X minutes.
+        Log::info($this->tag . ' - Collection (' . $collectionId . ') has had RECENT ACTIVITY - skipping');
     }
 }

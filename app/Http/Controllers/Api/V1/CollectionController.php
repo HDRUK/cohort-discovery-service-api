@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\CollectionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
@@ -26,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Jobs\RefreshDistributionConceptsView;
+use App\Models\Distribution;
 use Illuminate\Database\Eloquent\Builder;
 use App\Services\Collections\ProcessLatestCollectionMetadataService;
 
@@ -490,18 +490,33 @@ class CollectionController extends Controller
                 return $this->NotFoundResponse();
             }
 
-            $nconcepts = $collection->concepts()
-               ->count();
+            $taskId = $collection->latestSuccessfulConceptResultFile?->task_id;
 
-            $concept_counts_by_category = $collection->conceptCountsByCategory()
-                ->orderBy('nconcepts', 'desc')
-                ->get()
-                ->map(fn ($row) => [
-                        'category' => $row->getAttribute('category'),
-                        'nconcepts' => (int) $row->getAttribute('nconcepts'),
+            $nconcepts = 0;
+            $concept_counts_by_category = [];
+            if ($taskId !== null) {
+                $nconcepts = Distribution::query()
+                       ->where('collection_id', $collection->id)
+                       ->where('task_id', $taskId)
+                       ->where('concept_id', '>', 0)
+                       ->distinct('concept_id')
+                       ->count('concept_id');
+
+                $concept_counts_by_category = \DB::table('distributions')
+                    ->select('category', \DB::raw('COUNT(DISTINCT concept_id) AS nconcepts'))
+                    ->where('collection_id', $collection->id)
+                    ->where('task_id', $taskId)
+                    ->where('concept_id', '>', 0)
+                    ->groupBy('category')
+                    ->orderByDesc('nconcepts')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'category' => $row->category,
+                        'nconcepts' => (int) $row->nconcepts,
                     ])
-                ->values()
-                ->toArray();
+                    ->values()
+                    ->toArray();
+            }
 
             return $this->OKResponse([
                 ...$collection->toArray(),
@@ -718,27 +733,43 @@ class CollectionController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/v1/collections/status/{status}",
-     *     summary="Get collections by status",
-     *     tags={"Collections"},
-     *     @OA\Parameter(
-     *         name="status",
-     *         in="path",
-     *         required=true,
-     *         description="Status name (case-insensitive)",
-     *         @OA\Schema(type="string", example="active")
-     *     ),
-     *     @OA\Response(response=200, description="Paginated collections matching the status", @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Collection")))
-     * )
-     */
+    * @OA\Get(
+    *     path="/api/v1/collections/status/{status}",
+    *     summary="Get collections by status",
+    *     tags={"Collections"},
+    *     @OA\Parameter(
+    *         name="status",
+    *         in="path",
+    *         required=true,
+    *         description="Collection state slug (case-insensitive), for example active or suspended",
+    *         @OA\Schema(type="string", example="active")
+    *     ),
+    *     @OA\Parameter(
+    *         name="per_page",
+    *         in="query",
+    *         required=false,
+    *         description="Number of results per page",
+    *         @OA\Schema(type="integer", example=15)
+    *     ),
+    *     @OA\Response(
+    *         response=200,
+    *         description="Paginated collections matching the status"
+    *     ),
+    *     @OA\Response(
+    *         response=422,
+    *         description="Invalid status supplied"
+    *     )
+    * )
+    */
     public function getByStatus(Request $request, string $status): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
+            $status = strtolower(trim($status));
 
-            $input = CollectionStatus::tryFromName($status) ?? CollectionStatus::ACTIVE;
-            $collections = Collection::where('status', $input->value)
+            $collections = Collection::query()
+                ->with(['modelState.state'])
+                ->whereRelation('modelState.state', 'slug', $status)
                 ->paginate($perPage);
 
             return $this->OKResponse($collections);
@@ -952,6 +983,7 @@ class CollectionController extends Controller
                 'latestSuccessfulConceptResultFile',
                 'workgroups',
                 'latestMetadata',
+                'lastSuccessfulQuery'
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
                 if ($request->state !== 'all') {
