@@ -50,14 +50,14 @@ jobs:
         run: mkdir -p storage
 
       - name: Setup Passport OAuth keys
-        if: ${{ github.actor == 'dependabot[bot]' }}
+        if: ${{ github.actor != 'dependabot[bot]' }}
         run: |
           printf "%s" "${{ secrets.OAUTH_PRIVATE }}" > storage/oauth-private.key
           printf "%s" "${{ secrets.OAUTH_PUBLIC }}" > storage/oauth-public.key
           chmod 600 storage/oauth-private.key storage/oauth-public.key
 
       - name: Setup Passport OAuth keys for dependabot
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           php artisan passport:keys
           chmod 600 storage/oauth-private.key storage/oauth-public.key

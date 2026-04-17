@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Traits\HelperFunctions;
 use App\Models\ResultFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,6 +20,7 @@ class ProcessDistributionFile implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use HelperFunctions;
 
     private string $tag = 'ProcessDistributionFile';
 
@@ -67,9 +69,14 @@ class ProcessDistributionFile implements ShouldQueue
 
         $rowsSeen = 0;
         $skipped = [
-            'bad_header'     => 0,
-            'col_mismatch'   => 0,
-            'missing_count'  => 0,
+            'bad_header'        => 0,
+            'col_mismatch'      => 0,
+            'missing_count'     => 0,
+            'missing_category'  => 0,
+            'missing_name'      => 0,
+            'invalid_count'     => 0,
+            'invalid_alt_name'  => 0,
+            'invalid_alt_count' => 0,
         ];
 
         $now = now();
@@ -138,17 +145,31 @@ class ProcessDistributionFile implements ShouldQueue
                     continue;
                 }
 
+
+                $category = $this->normaliseNullable($row['CATEGORY']);
+                if ($category === null) {
+                    $skipped['missing_category']++;
+                    continue;
+                }
+
+                $name = $this->normaliseNullable($row[$codeField] ?? $row['CODE']);
+                if ($name === null) {
+                    $skipped['missing_name']++;
+                    continue;
+                }
+
+                $description = $this->normaliseNullable($row[$descField]);
+                $description = $description ?? $name;
+
+                $count = $this->normaliseInt($row['COUNT']);
+
+                if ($count === null) {
+                    $skipped['invalid_count']++;
+                    continue;
+                }
+                $conceptId = $this->normaliseStrictInt($row[$codeField] ?? $row['CODE']);
+
                 $rowsSeen++;
-
-                $category = isset($row['CATEGORY']) ? trim((string) $row['CATEGORY']) : null;
-
-                $name = $row[$codeField] ?? $row['CODE'] ?? null;
-                $name = $name !== null ? trim((string) $name) : null;
-
-                $conceptIdRaw = $row[$codeField] ?? $row['CODE'] ?? null;
-                $conceptId = ($conceptIdRaw !== null && $conceptIdRaw !== '')
-                    ? (int) $conceptIdRaw
-                    : null;
 
                 $base = [
                     'collection_id'  => $file->collection_id,
@@ -157,16 +178,16 @@ class ProcessDistributionFile implements ShouldQueue
 
                     'category'       => $category,
                     'name'           => $name,
-                    'description'    => $row[$descField] ?? null,
+                    'description'    => $description,
                     'concept_id'     => $conceptId,
 
-                    'count'          => (int) $row['COUNT'],
-                    'q1'             => $row['Q1'] ?? null,
-                    'q3'             => $row['Q3'] ?? null,
-                    'min'            => $row['MIN'] ?? null,
-                    'max'            => $row['MAX'] ?? null,
-                    'mean'           => $row['MEAN'] ?? null,
-                    'median'         => $row['MEDIAN'] ?? null,
+                    'count'          => $count,
+                    'q1'             => $this->normaliseNullable($row['Q1']),
+                    'q3'             => $this->normaliseNullable($row['Q3']),
+                    'min'            => $this->normaliseNullable($row['MIN']),
+                    'max'            => $this->normaliseNullable($row['MAX']),
+                    'mean'           => $this->normaliseNullable($row['MEAN']),
+                    'median'         => $this->normaliseNullable($row['MEDIAN']),
 
                     'created_at'     => $now,
                     'updated_at'     => $now,
@@ -177,29 +198,43 @@ class ProcessDistributionFile implements ShouldQueue
                 if (! empty($row['ALTERNATIVES'])) {
                     $segments = explode('^', trim((string) $row['ALTERNATIVES'], '^'));
                     foreach ($segments as $seg) {
-                        if (strpos($seg, '|') !== false) {
-                            [$altName, $altCount] = explode('|', $seg, 2);
-
-                            $altName = trim((string) $altName);
-
-                            $altRow = [
-                                'collection_id'  => $file->collection_id,
-                                'task_id'        => $file->task_id,
-                                'result_file_id' => $file->id,
-
-                                'category'       => $category,
-                                'name'           => $altName,
-                                'description'    => $altName,
-                                'concept_id'     => null,
-
-                                'count'          => (int) $altCount,
-
-                                'created_at'     => $now,
-                                'updated_at'     => $now,
-                            ];
-
-                            $batch[] = array_merge($rowTemplate, $altRow);
+                        if (strpos($seg, '|') === false) {
+                            continue;
                         }
+
+                        [$altName, $altCount] = explode('|', $seg, 2);
+
+                        $altName = trim((string) $altName);
+                        $altCount = trim((string) $altCount);
+
+                        if ($altName === '') {
+                            $skipped['invalid_alt_name']++;
+                            continue;
+                        }
+
+                        if ($altCount === '' || ! is_numeric($altCount)) {
+                            $skipped['invalid_alt_count']++;
+                            continue;
+                        }
+
+                        $altRow = [
+                            'collection_id'  => $file->collection_id,
+                            'task_id'        => $file->task_id,
+                            'result_file_id' => $file->id,
+
+                            'category'       => $category,
+                            'name'           => $altName,
+                            'description'    => $altName,
+                            'concept_id'     => null,
+
+                            'count'          => (int) $altCount,
+
+                            'created_at'     => $now,
+                            'updated_at'     => $now,
+                        ];
+
+                        $batch[] = array_merge($rowTemplate, $altRow);
+
                     }
                 }
 

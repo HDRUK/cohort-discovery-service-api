@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
+use Laravel\Pennant\Feature;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -54,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
 
         Collection::observe(CollectionObserver::class);
         Task::observe(TaskObserver::class);
+
+        //use null scope by default
+        Feature::resolveScopeUsing(fn ($driver) => null);
 
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
