@@ -1,3 +1,19 @@
+## [1.8.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.7.0...v1.8.0) (2026-04-27)
+
+### ✨ Features
+
+* **DP-000:** Bump picomatch from 2.3.1 to 2.3.2 (#212) ([10d372f](https://github.com/HDRUK/cohort-discovery-service-api/commit/10d372f5f6935d45b3e50eeeb7fc0eb39b5f5ed5)), closes [DP-000](DP-000)
+* **DP-659:** Move features to database ([46a445f](https://github.com/HDRUK/cohort-discovery-service-api/commit/46a445f115286e0728332bbde10c5de1b14206fc)), closes [DP-659](DP-659)
+* **DP-678:** Adding activity logger for admin changes (#214) ([8c948b9](https://github.com/HDRUK/cohort-discovery-service-api/commit/8c948b94063d4b0c3677cbb3c7b8068b8ad464da)), closes [DP-678](DP-678)
+
+### 🐛 Bug Fixes
+
+* **DP-692:** Default to use null scope! (#216) ([e5c04de](https://github.com/HDRUK/cohort-discovery-service-api/commit/e5c04deefb1146c7be42158a087cd4d2b8350f67)), closes [DP-692](DP-692)
+* **DP-708:** Optimise collection details (#219) ([4b4760c](https://github.com/HDRUK/cohort-discovery-service-api/commit/4b4760ca56b0957c654b9066c53f4d7fd3064685)), closes [DP-708](DP-708)
+* **DP-715:** Last Activity should be for the A-type BUNNY only (#225) ([7f52ca1](https://github.com/HDRUK/cohort-discovery-service-api/commit/7f52ca131f243d0ecc2bb8a5af8ec98cbf1cfcd0)), closes [DP-715](DP-715)
+* **DP-717:** Only process the right type of files (#220) ([b8dae4b](https://github.com/HDRUK/cohort-discovery-service-api/commit/b8dae4b18b7d30be605af8ba0b52dd3cbe4ed011)), closes [DP-717](DP-717)
+* **DP-719:** Increase speed by reworking table view (#222) ([2307690](https://github.com/HDRUK/cohort-discovery-service-api/commit/2307690aa0df794eb07dadf7e94d0c01e24e0048)), closes [DP-719](DP-719)
+
 ## [1.7.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.6.0...v1.7.0) (2026-04-07)
 
 ### ✨ Features
