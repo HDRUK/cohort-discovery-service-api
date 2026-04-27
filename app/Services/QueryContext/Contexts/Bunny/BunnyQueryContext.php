@@ -12,7 +12,12 @@ class BunnyQueryContext implements QueryContextInterface
     {
         $groups = [];
 
-        $this->processNode($definition, $groups);
+        // First pass: convert into ANDs of ORs of ANDs of ... - or into ORs of ANDs of ORS of ...
+        $compactDefinition = $this->convertToCompactForm($definition, 0);
+
+        print('compactDefinition: ' . json_encode($compactDefinition) . "\n");
+        // Second pass: now it's in compact form, we can flatten without difficulty
+        // $this->processNode($compactDefinition, $groups, 0);
 
         return [
             'groups' => $groups,
@@ -20,23 +25,111 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
+    function groupOperator(array $node): ?string
+    {
+        return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
+    }
+
+    /*
+      Convert into ANDs of ORs of ANDs of ... - or into ORs of ANDs of ORS of ...
+    */
+    protected function convertToCompactForm(array $node, int $depth): array
+    {
+        // print('convertToCompactForm, depth: ' . $depth . ', concept: ' . isset($node['concept']) ? $node['concept']['name'] : "" . "\n");
+        print('convertToCompactForm, depth: ' . $depth . ', node: ' . json_encode($node) . "\n");
+        $children = $node['rules'] ?? [];
+
+        if (empty($children)) {
+            return $node;
+        }
+
+        $newChildren = [];
+        $groupOperator = null;
+        // get group operator at this level - we can assume it's the same for all children at this level
+        if (count($children) > 1) {
+            $groupOperator = strtoupper($children[1]['combinator']);
+        }
+
+        
+        // if this group operator is the same as the child operator, we can flatten the child into this level
+        foreach ($children as $child) {
+            print('child: ' . json_encode($child) . "\n");
+            print('groupOperator: ' . $groupOperator . "\n");
+            print('child combinator: ' . $this->groupOperator($child) . "\n");
+            $collapseChild = ($groupOperator !== null) && ($this->groupOperator($child) === $groupOperator);
+
+            print('collapse this child? ' . ($collapseChild ? 'yes' : 'no') . "\n");
+            if ($collapseChild) {
+                $newChildren = array_merge($newChildren, $this->convertToCompactForm($child, $depth + 1)['rules']);
+            }
+            else {
+                if ($this->isGroupNode($child)) {
+                    $newChildren[] = $this->convertToCompactForm($child, $depth + 1);
+                }
+                else {
+                    $newChildren[] = $child;
+                }
+            }
+        }
+
+
+        // foreach ($children as $child) {
+        //     if ($this->isGroupNode($child)) {
+        //         $newChildren[] = $this->convertToCompactForm($child, $depth + 1);
+        //     }
+        //     elseif ($this->isOperatorNode($child)) {
+        //         $groupOperator = $child["combinator"];
+        //     }
+        //     else {
+        //         $newChildren[] = $child;
+        //     }
+        // }
+
+        $node['rules'] = $newChildren;
+        // $node['groupOperator'] = $groupOperator;
+
+        // $secondNewChildren = [];
+
+        // foreach ($newChildren as $child) {
+        //     if ($this->isGroupNode($child) && isset($child['groupOperator']) && $child['groupOperator'] === $groupOperator) {
+        //         array_push($secondNewChildren, $child['rules']);
+        //     }
+        //     else {
+        //         $newChildren[] = $child;
+        //     }
+        // }
+        // $node['rules'] = $secondNewChildren;
+        return $node;
+    }
+
     /*
     - Note: this entire piece will need to be revisited
     - - functions getting more complex - needs to be
     */
-    protected function processNode(array $node, array &$groups): void
+    protected function processNode(array $node, array &$groups, int $depth): void
     {
+        if (! isset($node['warnings'])) { 
+            print('node: ' . json_encode($node));
+        }
         $children = $node['rules'] ?? [];
         if (empty($children)) {
             return;
         }
-
+        print('children: ' . json_encode($children));
         // 1) recurse into nested groups first
         foreach ($children as $child) {
             if ($this->isGroupNode($child)) {
-                $this->processNode($child, $groups);
+                $this->processNode($child, $groups, $depth + 1);
             }
         }
+        // So now we have only leaf nodes and operators at this level
+        // in this potential child.
+        // WE CAN ASSUME that all operators at this level are the same - we may want to check that
+
+        // We now work out whether this is an AND or OR group
+        $groupOperator = strtoupper($children[1]['combinator'] ?? 'none');
+        print('groupOperator: ' . $groupOperator . ', depth: ' . $depth . "\n");
+
 
         // 2) flatten this level into leaf list + operator list
         //    $leafRules[i]   = rule for leaf i
