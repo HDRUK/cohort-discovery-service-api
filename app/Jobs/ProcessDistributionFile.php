@@ -169,6 +169,7 @@ class ProcessDistributionFile implements ShouldQueue
                 }
                 $conceptId = $this->normaliseStrictInt($row[$codeField] ?? $row['CODE']);
 
+                $rowsSeen++;
 
                 $base = [
                     'collection_id'  => $file->collection_id,

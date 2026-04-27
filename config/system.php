@@ -54,7 +54,6 @@ return [
     'demo_researcher_email' => env('DEMO_RESEARCHER_EMAIL', 'demo.researcher@domain.com', ),
     'demo_researcher_password' => env('DEMO_RESEARCHER_PASSWORD', 'd3m0User_!'),
 
-    'collection_activity_log_type' => env('COLLECTION_ACTIVITY_LOG_TYPE', 'log'),
     'collection_inactivity_minutes' => env('COLLECTION_INACTIVITY_MINUTES', 30),
 
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
