@@ -143,7 +143,7 @@ class BunnyQueryContext implements QueryContextInterface
 
         $category = $concept['category'] ?? 'UNKNOWN';
 
-        if ($category === 'Gender' || $category === 'Ethnicity') {
+        if (in_array($category, ['Gender', 'Ethnicity', 'Race'], true)) {
             $category = 'Person';
         }
 

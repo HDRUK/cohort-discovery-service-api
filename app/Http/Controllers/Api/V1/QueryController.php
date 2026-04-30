@@ -321,12 +321,18 @@ class QueryController extends Controller
         $input = $request->validate(app(Query::class)->getValidationRules('deletebulk'));
 
         try {
-            Query::whereIn('pid', $input['keys'])->delete();
-            return $this->OKResponse([]);
+            $queries = Query::whereIn('pid', $input['keys'])->get();
 
+            $deletedPids = $queries->pluck('pid')->values();
+
+            Query::whereIn('pid', $deletedPids)->delete();
+
+            return $this->OKResponse([
+                'deleted' => $deletedPids,
+            ]);
         } catch (\Throwable $e) {
-            \Log::error('QueryController@destroyBulk - failed: '.
-                json_encode($input).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@destroyBulk - failed: ' .
+                json_encode($input) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->ErrorResponse();
         }
