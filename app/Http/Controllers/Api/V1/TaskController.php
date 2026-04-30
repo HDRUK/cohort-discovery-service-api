@@ -119,13 +119,13 @@ class TaskController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/tasks/{taskPid}",
+     *     path="/api/v1/task/{pid}",
      *     summary="Get a single task by public pid",
      *     tags={"Tasks"},
      *     @OA\Parameter(
-     *         name="taskPid",
+     *         name="pid",
      *         in="path",
-     *         description="Public task pid (uuid)",
+     *         description="Public task pid",
      *         required=true,
      *         @OA\Schema(type="string", example="tsk_abc123")
      *     ),
@@ -138,10 +138,10 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function getTask($task_pid): JsonResponse
+    public function getTask(string $pid): JsonResponse
     {
         $task = Task::with(['submittedQuery.user', 'collection', 'result'])
-            ->where('pid', $task_pid)
+            ->where('pid', $pid)
             ->first();
 
         if (! $task) {
@@ -161,7 +161,7 @@ class TaskController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/tasks/next/{collectionPid}",
+     *     path="/api/v1/task/nextjob/{collectionPid}",
      *     summary="Retrieve the next job for a collection from the queue (Bunny worker)",
      *     tags={"Tasks"},
      *     @OA\Parameter(
@@ -387,13 +387,13 @@ class TaskController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/tasks/{taskPid}/collections/{collectionPid}/result",
+     *     path="/api/v1/task/result/{taskPid}/{collectionPid}",
      *     summary="Receive task result payload from worker",
      *     tags={"Tasks"},
      *     @OA\Parameter(
      *         name="taskPid",
      *         in="path",
-     *         description="Task public pid (uuid)",
+     *         description="Task public pid",
      *         required=true,
      *         @OA\Schema(type="string", example="tsk_abc123")
      *     ),
@@ -409,7 +409,13 @@ class TaskController extends Controller
      *         @OA\JsonContent(
      *             type="object",
      *             required={"status","queryResult"},
-     *             @OA\Property(property="status", type="string", example="COMPLETED"),
+     *             @OA\Property(
+     *                 property="status",
+     *                 type="string",
+     *                 example="ok",
+     *                 enum={"ok","error","failed"},
+     *                 description="Use 'ok' for successful results. Use 'error' or 'failed' for failed results."
+     *             ),
      *             @OA\Property(property="message", type="string", nullable=true, example="Completed successfully"),
      *             @OA\Property(
      *                 property="queryResult",
@@ -443,7 +449,7 @@ class TaskController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
+    public function receiveResult(Request $request, string $task_pid, string $collection_pid): JsonResponse
     {
         try {
             DB::transaction(function () use ($request, $task_pid) {
@@ -640,6 +646,26 @@ class TaskController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/task/re-run/{pid}",
+     *     summary="Clone and re-run a task",
+     *     tags={"Tasks"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         description="Task public pid",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Cloned task",
+     *         @OA\JsonContent(ref="#/components/schemas/Task")
+     *     ),
+     *     @OA\Response(response=500, description="Server error")
+     * )
+     */
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
@@ -664,6 +690,25 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/task/status/{pid}",
+     *     summary="Get worker task status",
+     *     tags={"Tasks"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         description="Task public pid",
+     *         required=true,
+     *         @OA\Schema(type="string", example="tsk_abc123")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Task status response",
+     *         @OA\JsonContent(type="object")
+     *     )
+     * )
+     */
     public function status(Request $request, string $pid): JsonResponse
     {
         return $this->OKResponseSimple([]);
