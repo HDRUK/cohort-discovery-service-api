@@ -138,10 +138,10 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function getTask($task_pid): JsonResponse
+    public function getTask(string $pid): JsonResponse
     {
         $task = Task::with(['submittedQuery.user', 'collection', 'result'])
-            ->where('pid', $task_pid)
+            ->where('pid', $pid)
             ->first();
 
         if (! $task) {
@@ -449,7 +449,7 @@ class TaskController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function receiveResult(Request $request, $task_pid, $collection_pid): JsonResponse
+    public function receiveResult(Request $request, string $task_pid, string $collection_pid): JsonResponse
     {
         try {
             DB::transaction(function () use ($request, $task_pid) {
