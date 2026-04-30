@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.8.0...v1.8.1) (2026-04-30)
+
+### 🐛 Bug Fixes
+
+* **DP-782:** Race needs to map to person table (#230) ([6e5a3ed](https://github.com/HDRUK/cohort-discovery-service-api/commit/6e5a3edd35d480e114eb34c7668b3e4e73ccaaac)), closes [DP-782](DP-782)
+
 ## [1.8.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.7.0...v1.8.0) (2026-04-27)
 
 ### ✨ Features
