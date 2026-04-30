@@ -218,6 +218,62 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955321', $firstRule['value'] ?? null);
     }
 
+    public function test_application_can_translate_bunny_gender_as_person(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 8507,
+                            'name' => 'MALE',
+                            'category' => 'Gender',
+                            'children' => [],
+                        ],
+                    ],
+                    'valid' => true,
+                    'exclude' => false,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('Person', $rule['varcat'] ?? null);
+        $this->assertEquals('8507', $rule['value'] ?? null);
+    }
+
+    public function test_application_can_translate_bunny_race_as_person(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 8527,
+                            'name' => 'White',
+                            'category' => 'Race',
+                            'children' => [],
+                        ],
+                    ],
+                    'valid' => true,
+                    'exclude' => false,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('Person', $rule['varcat'] ?? null);
+        $this->assertEquals('8527', $rule['value'] ?? null);
+    }
+
     /*
     note: disabling for now
           in the future we'll support beacon context translation of our JSON
