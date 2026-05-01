@@ -839,171 +839,6 @@ class BunnyQueryContext implements QueryContextInterface
             ]
         }', associative: true);
 
-        
-        $testGroupwiseForm3 = json_decode('{
-            "rules_oper": "AND",
-            "rules": [
-                {
-                    "rules_oper": "OR",
-                    "rules": [
-                        {
-                            "rules_oper": "AND",
-                            "rules": [
-                                {
-                                    "value": "A"
-                                },
-                                {
-                                    "value": "B"
-                                }
-                            ]
-                        },
-                        {
-                            "rules_oper": "AND",
-                            "rules": [
-                                {
-                                    "value": "C"
-                                },
-                                {
-                                    "value": "D"
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "rules_oper": "OR",
-                    "rules": [
-                        {
-                            "value": "E"
-                        },
-                        {
-                            "value": "F"
-                        }
-                    ]
-                }
-            ]
-        }', associative: true);
-
-
-        $testFinalForm3 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
-                {
-                    "rules_oper": "AND",
-                    "rules": [
-                        {
-                            "value": "A"
-                        },
-                        {
-                            "value": "B"
-                        },
-                        {
-                            "value": "E"
-                        }
-                    ]
-                },
-                {
-                    "rules_oper": "AND",
-                    "rules": [
-                        {
-                            "value": "A"
-                        },
-                        {
-                            "value": "B"
-                        },
-                        {
-                            "value": "F"
-                        }
-                    ]
-                },
-                {
-                    "rules_oper": "AND",
-                    "rules": [
-                        {
-                            "value": "C"
-                        },
-                        {
-                            "value": "D"
-                        },
-                        {
-                            "value": "E"
-                        }
-                    ]
-                },
-                {
-                    "rules_oper": "AND",
-                    "rules": [
-                        {
-                            "value": "C"
-                        },
-                        {
-                            "value": "D"
-                        },
-                        {
-                            "value": "F"
-                        }
-                    ]
-                }
-            ]
-        }', associative: true);
-
-        // $testGroupwiseForm2 = json_decode('{
-        //     "rules_oper": "AND",
-        //     "rules": [
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "A"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "B"
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //                 "varname": "OMOP",
-        //                 "varcat": "Condition",
-        //                 "type": "TEXT",
-        //                 "oper": "=",
-        //                 "value": "C"
-        //             },
-        //             {
-        //                 "varname": "OMOP",
-        //                 "varcat": "Condition",
-        //                 "type": "TEXT",
-        //                 "oper": "=",
-        //                 "value": "D"
-        //             },
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "E"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "F"
-        //                 }
-        //             ]
-        //         }
-        //     ]
-        // }', associative: true);
 
         $testGroupwiseForm2 = json_decode('{
             "rules_oper": "AND",
@@ -1200,6 +1035,171 @@ class BunnyQueryContext implements QueryContextInterface
                 }
             ]
         }', associative: true);
+        
+        $testGroupwiseForm3 = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "rules_oper": "AND",
+                            "rules": [
+                                {
+                                    "value": "A"
+                                },
+                                {
+                                    "value": "B"
+                                }
+                            ]
+                        },
+                        {
+                            "rules_oper": "AND",
+                            "rules": [
+                                {
+                                    "value": "C"
+                                },
+                                {
+                                    "value": "D"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "E"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        $testFinalForm3 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        // $testGroupwiseForm2 = json_decode('{
+        //     "rules_oper": "AND",
+        //     "rules": [
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "A"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "B"
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //                 "varname": "OMOP",
+        //                 "varcat": "Condition",
+        //                 "type": "TEXT",
+        //                 "oper": "=",
+        //                 "value": "C"
+        //             },
+        //             {
+        //                 "varname": "OMOP",
+        //                 "varcat": "Condition",
+        //                 "type": "TEXT",
+        //                 "oper": "=",
+        //                 "value": "D"
+        //             },
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "E"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "F"
+        //                 }
+        //             ]
+        //         }
+        //     ]
+        // }', associative: true);
+
 
         $testGroupwiseFormSmall = json_decode('{
             "rules_oper": "AND",
@@ -1348,19 +1348,6 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm2, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalForm2) . "\n");
-        var_dump($answer);
-        var_dump($testFinalForm2);
-        if (json_encode($testFinalForm2) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm2');
-        }
-        else {
-            print('flattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
-        }
-
-        print('testing flattenToMaxDepthTwo' . "\n");
         $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm1, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalForm1) . "\n");
@@ -1371,6 +1358,19 @@ class BunnyQueryContext implements QueryContextInterface
         }
         else {
             print('flattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
+        }
+
+        print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm2, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalForm2) . "\n");
+        var_dump($answer);
+        var_dump($testFinalForm2);
+        if (json_encode($testFinalForm2) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm2');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
         }
 
         print('testing flattenToMaxDepthTwo' . "\n");
