@@ -583,6 +583,730 @@ class BunnyQueryContext implements QueryContextInterface
             "valid": true
         }', associative: true);
 
+        // $testGroupwiseForm1 = json_decode('{
+        //     "rules_oper": "AND",
+        //     "rules": [
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "rules_oper": "AND",
+        //                     "rules": [
+        //                         {
+        //                             "varname": "OMOP",
+        //                             "varcat": "Condition",
+        //                             "type": "TEXT",
+        //                             "oper": "=",
+        //                             "value": "321588"
+        //                         },
+        //                         {
+        //                             "varname": "OMOP",
+        //                             "varcat": "Condition",
+        //                             "type": "TEXT",
+        //                             "oper": "=",
+        //                             "value": "319835"
+        //                         }
+        //                     ]
+        //                 },
+        //                 {
+        //                     "rules_oper": "AND",
+        //                     "rules": [
+        //                         {
+        //                             "varname": "OMOP",
+        //                             "varcat": "Condition",
+        //                             "type": "TEXT",
+        //                             "oper": "=",
+        //                             "value": "36684857"
+        //                         },
+        //                         {
+        //                             "varname": "OMOP",
+        //                             "varcat": "Condition",
+        //                             "type": "TEXT",
+        //                             "oper": "=",
+        //                             "value": "255573"
+        //                         }
+        //                     ]
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Person",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "8532"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "3959287"
+        //                 }
+        //             ]
+        //         }
+        //     ]
+        // }', associative: true);
+
+        // $testFinalForm1 = json_decode('{
+        //     "rules_oper": "OR",
+        //     "rules": [
+        //         {
+        //             "rules_oper": "AND",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "321588"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "36684857"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Person",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "8532"
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //             "rules_oper": "AND",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "321588"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "36684857"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "3959287"
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //             "rules_oper": "AND",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "321588"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "255573"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Person",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "8532"
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //             "rules_oper": "AND",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "321588"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "255573"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "3959287"
+        //                 }
+        //             ]
+        //         },
+        //     ]
+        // }', associative: true);
+
+        $testGroupwiseForm1 = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "E"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        $testFinalForm1 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        
+        $testGroupwiseForm3 = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "rules_oper": "AND",
+                            "rules": [
+                                {
+                                    "value": "A"
+                                },
+                                {
+                                    "value": "B"
+                                }
+                            ]
+                        },
+                        {
+                            "rules_oper": "AND",
+                            "rules": [
+                                {
+                                    "value": "C"
+                                },
+                                {
+                                    "value": "D"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "E"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+
+        $testFinalForm3 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        },
+                        {
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        },
+                        {
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        // $testGroupwiseForm2 = json_decode('{
+        //     "rules_oper": "AND",
+        //     "rules": [
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "A"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "B"
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //                 "varname": "OMOP",
+        //                 "varcat": "Condition",
+        //                 "type": "TEXT",
+        //                 "oper": "=",
+        //                 "value": "C"
+        //             },
+        //             {
+        //                 "varname": "OMOP",
+        //                 "varcat": "Condition",
+        //                 "type": "TEXT",
+        //                 "oper": "=",
+        //                 "value": "D"
+        //             },
+        //         {
+        //             "rules_oper": "OR",
+        //             "rules": [
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "E"
+        //                 },
+        //                 {
+        //                     "varname": "OMOP",
+        //                     "varcat": "Condition",
+        //                     "type": "TEXT",
+        //                     "oper": "=",
+        //                     "value": "F"
+        //                 }
+        //             ]
+        //         }
+        //     ]
+        // }', associative: true);
+
+        $testGroupwiseForm2 = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "A"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "varname": "OMOP",
+                    "varcat": "Condition",
+                    "type": "TEXT",
+                    "oper": "=",
+                    "value": "C"
+                },
+                {
+                    "varname": "OMOP",
+                    "varcat": "Condition",
+                    "type": "TEXT",
+                    "oper": "=",
+                    "value": "D"
+                },
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "E"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        $testFinalForm2 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "A"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "C"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "D"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "A"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "C"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "D"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "F"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "B"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "C"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "D"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "E"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "B"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "C"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "D"
+                        },
+                        {
+                            "varname": "OMOP",
+                            "varcat": "Condition",
+                            "type": "TEXT",
+                            "oper": "=",
+                            "value": "F"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        $testGroupwiseFormSmall = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "value": "C"
+                }
+            ]
+        }', associative: true);
+        
+        $testFinalFormSmall = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                           "value": "C"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "C"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+        $testGroupwiseFormSmall2 = json_decode('{
+            "rules_oper": "AND",
+            "rules": [
+                {
+                    "rules_oper": "OR",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "value": "C"
+                },
+                {
+                    "value": "D"
+                }
+            ]
+        }', associative: true);
+        
+        $testFinalFormSmall2 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        }
+                    ]
+                },
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "B"
+                        },
+                        {
+                            "value": "C"
+                        },
+                        {
+                            "value": "D"
+                        }
+                    ]
+                }
+            ]
+        }', associative: true);
+
+
         if ($testCompactForm1 != $this->convertToCompactForm($testDefinition1, 0)) {
             throw new \Error('convertToCompactForm did not produce expected output 1');
         }
@@ -595,6 +1319,71 @@ class BunnyQueryContext implements QueryContextInterface
         }
         else {
             print('convertToCompactForm produced expected output 2' . "\n");
+        }
+
+
+        // print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalFormSmall) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalFormSmall);
+        if (json_encode($testFinalFormSmall) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output Small');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output Small' . "\n");
+        }
+
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalFormSmall2) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalFormSmall2);
+        if (json_encode($testFinalFormSmall2) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output Small2');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output Small2' . "\n");
+        }
+
+        print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm2, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalForm2) . "\n");
+        var_dump($answer);
+        var_dump($testFinalForm2);
+        if (json_encode($testFinalForm2) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm2');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
+        }
+
+        print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm1, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalForm1) . "\n");
+        var_dump($answer);
+        var_dump($testFinalForm1);
+        if (json_encode($testFinalForm1) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm1');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
+        }
+
+        print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm3, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalForm3) . "\n");
+        var_dump($answer);
+        var_dump($testFinalForm3);
+        if (json_encode($testFinalForm3) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm3');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
         }
 
         $compactDefinition = $this->convertToCompactForm($definition, 0);
@@ -640,6 +1429,11 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
+
+    // ((A and B) or (C and D)) and (E or F)
+    // -> ((A and B) or (C and D)) and E) or ((A and B) or (C and D)) and F)
+    // -> (A and B and E) or (C and D and E) or (A and B and F) or (C and D and F)
+
     function processNewNode(array $node, int $depth): array
     {
         // print("processNewNode" . json_encode($node) . "\n");
@@ -667,6 +1461,13 @@ class BunnyQueryContext implements QueryContextInterface
         // -> [AB] + [CD] + [CE] so OR is just addition of groups
         // and AND is just multiplication of groups (taking the product of all combinations of groups)
 
+        // [AB] + [[C + F][D + E]]]
+        // -> [AB] + [[CD] + [CE] + [FD] + [FE]]
+        // -> [AB] + [CD] + [CE] + [FD] + [FE] so OR is just addition of groups
+
+        // [A + B][[CF] + [DE]]
+        // -> [AB] + [[CD] + [CE] + [FD] + [FE]]
+        // -> [AB] + [CD] + [CE] + [FD] + [FE] so OR is just addition of groups
         $groups = [];
         $groupOperator = $node['rules_oper'] ?? null;
         if ($groupOperator === 'OR') {
@@ -1114,39 +1915,129 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
     /**
-     * Converts a groupwise form into a structure with a maximum depth of 2 groups.
+     * Flattens a groupwise form into a maximum depth of 2 groups,
+     * applying the following rules:
+     * 1) ((A or B) and (C or D)) → ((A and C) or (B and C) or (A and D) or (B and D))
+     * 2) (A and (B and C)) → (A and B and C)
+     * 3) (A or (B or C)) → (A or B or C)
      *
      * @param array $groupwiseForm The groupwise form to process.
      * @return array The transformed structure with a maximum depth of 2 groups.
      */
-    public function flattenToMaxDepthTwo(array $groupwiseForm): array
+    public function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
     {
+        print("\n");
+        print(str_repeat(' ', 2 * $depth) . 'flattenToMaxDepthTwo ' . json_encode($groupwiseForm) . " depth " . $depth . "\n");
         $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
         $rules = $groupwiseForm['rules'] ?? [];
 
-        // Base case: if there are no nested groups, return as is
-        if (empty($rules) || !$this->hasNestedGroups($rules)) {
-            return $groupwiseForm;
-        }
-
-        $flattenedRules = [];
-
+        $flattenedRules = [[]];
         foreach ($rules as $rule) {
+            print(str_repeat(' ', 2 * $depth) . 'rule ' . json_encode($rule) . "\n");
             if ($this->isGroupNode($rule)) {
-                $nestedGroup = $this->flattenToMaxDepthTwo($rule);
-
-                if ($groupOperator === 'AND') {
-                    $flattenedRules = $this->combineAndGroups($flattenedRules, $nestedGroup['rules']);
-                } elseif ($groupOperator === 'OR') {
+                print (str_repeat(' ', 2 * $depth) . 'is group' . "\n");
+                print("\n");
+                $nestedGroup = $this->flattenToMaxDepthTwo($rule, $depth + 1);
+                print(str_repeat(' ', 2 * $depth + 2) . '$nestedGroup ' . json_encode($nestedGroup) . "\n");
+                // // Rule 2: Collapse AND groups
+                // if ($groupOperator === 'AND' && $nestedGroup['rules_oper'] === 'AND') {
+                //     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
+                // }
+                // Rule 3: Collapse OR groups
+                // if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
+                //     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
+                // }
+                if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'AND') {
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 1\n");
                     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
                 }
+                // Rule 1: Distribute AND over OR
+                elseif ($groupOperator === 'AND' && $nestedGroup['rules_oper'] === 'OR') {
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 2\n");
+                    $newCombinations = [];
+                    print(str_repeat(' ', 2 * $depth + 2) . json_encode($flattenedRules) . "\n");
+                    foreach ($flattenedRules as $existingRule) {
+                        print(str_repeat(' ', 2 * $depth + 4) . "existingRule " . json_encode($existingRule) . "\n");
+                        $existingRuleProcessed = ((is_array($existingRule) && array_key_exists('rules', $existingRule))) ? ($existingRule['rules'])[0] : $existingRule;
+                        print(str_repeat(' ', 2 * $depth + 4) . "existingRuleProcessed " . json_encode($existingRuleProcessed) . "\n");
+                        foreach ($nestedGroup['rules'] as $orRule) {
+                            print(str_repeat(' ', 2 * $depth + 6) . "orRule " . json_encode($orRule) . "\n");
+                            $newCombinations[] = [...($existingRuleProcessed), ...$orRule];
+                        }
+                    }
+                    print(str_repeat(' ', 2 * $depth + 2) .  " newCombinations " . json_encode($newCombinations) . "\n");
+                    $flattenedRules = $newCombinations;
+                } elseif ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 3\n");
+                    print(str_repeat(' ', 2 * $depth + 2) .  " flattenedRules " . json_encode($flattenedRules) . "\n");
+                    print(str_repeat(' ', 2 * $depth + 2) . '$nestedGroup ' . json_encode($nestedGroup) . "\n");
+                    print(str_repeat(' ', 2 * $depth + 2) . "spread " . json_encode([...$flattenedRules, $nestedGroup]) . "\n");
+                    if ($flattenedRules === [[]]) {
+                        $flattenedRules = [$nestedGroup];
+                    } else {
+                        $flattenedRules = [...$flattenedRules, $nestedGroup];
+                    }
+                } else {
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 4\n");
+                    $flattenedRules[] = $nestedGroup;
+                }
             } else {
-                $flattenedRules[] = $rule;
+                if ($groupOperator === 'AND') {
+                    // append rule to each subArray
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 5\n");
+                    print(str_repeat(' ', 2 * $depth + 2) . " details: rule " . json_encode($rule) . " , flattenedRules: " . json_encode($flattenedRules) . "\n");
+                    // foreach ($flattenedRules as &$subArray) {
+                    //     $subArray[] = $rule;
+                    // }
+                    $newCombinations = [];
+                    foreach ($flattenedRules as $flattenedRule) {
+                        print(str_repeat(' ', 2 * $depth + 2) . " flattenedRule: " . json_encode($flattenedRule) . "\n");
+                        $newCombinations[] = [...$flattenedRule, $rule];
+                    }
+                    $flattenedRules = $newCombinations;
+                }
+                else {
+                    // append rule to each subArray
+                    print(str_repeat(' ', 2 * $depth + 2) . "case 6\n");
+                    print(str_repeat(' ', 2 * $depth + 2) . " details: rule " . json_encode($rule) . " , flattenedRules: " . json_encode($flattenedRules) . "\n");
+                    // foreach ($flattenedRules as &$subArray) {
+                    //     $subArray[] = $rule;
+                    // }
+                    // $newCombinations = [];
+                    // foreach ($flattenedRules as $flattenedRule) {
+                    //     print(str_repeat(' ', 2 * $depth + 2) . " flattenedRule: " . json_encode($flattenedRule) . "\n");
+                    //     $newCombinations[] = [...$flattenedRule, $rule];
+                    // }
+
+                    if ($flattenedRules === [[]]) {
+                        $flattenedRules = [];
+                    }
+                    $flattenedRules[] = [$rule];
+                }
             }
+            print(str_repeat(' ', 2*$depth + 2) . 'working $flattenedRules ' . json_encode($flattenedRules) . "\n");
+
+        }
+        print(str_repeat(' ', 2*$depth) . 'returning ' . json_encode($flattenedRules) . "\n");
+        print("\n");
+        if ($depth === 0) {
+            // re-add ANDs to each child
+            $filledFlattenedRules = [];
+            
+            foreach ($flattenedRules as $flattenedRule) {
+                $filledFlattenedRules[] = [
+                    'rules_oper' => 'AND',
+                    'rules' => $flattenedRule
+                ];
+            }
+            return [
+                'rules_oper' => 'OR',
+                'rules' => $filledFlattenedRules,
+            ];
         }
 
         return [
-            'rules_oper' => $groupOperator,
+            'rules_oper' => 'OR',
             'rules' => $flattenedRules,
         ];
     }
