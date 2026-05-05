@@ -6,6 +6,11 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 
+
+    function printd($depth, $message) {
+        print(str_repeat(' ', 2 * $depth) . $message . "\n");
+    }
+
 class BunnyQueryContext implements QueryContextInterface
 {
     public function translate(array $definition): array
@@ -1368,16 +1373,16 @@ class BunnyQueryContext implements QueryContextInterface
 
 
         // print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
-        // print(json_encode($answer) . "\n");
-        // print(json_encode($testFinalFormSmall) . "\n");
-        // var_dump($answer);
-        // var_dump($testFinalFormSmall);
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalFormSmall) . "\n");
+        var_dump($answer);
+        var_dump($testFinalFormSmall);
         if (json_encode($testFinalFormSmall) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output Small');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output Small' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output Small' . "\n");
         }
 
         $answer = $this->flattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
@@ -2047,7 +2052,11 @@ class BunnyQueryContext implements QueryContextInterface
                     if ($flattenedRules === [[]]) {
                         $flattenedRules = [$nestedGroup];
                     } else {
-                        $flattenedRules = [...$flattenedRules, $nestedGroup];
+                        $newFlattenedRules = [];
+                        foreach ($flattenedRules as $flattenedRule) {
+                            $newFlattenedRules[] = [...$this->rulesOf($flattenedRule), $this->rulesOf($nestedGroup)];
+                        }
+                        $flattenedRules = $newFlattenedRules;
                     }
                 } else {
                     print(str_repeat(' ', 2 * $depth + 2) . "case 4\n");
@@ -2115,6 +2124,144 @@ class BunnyQueryContext implements QueryContextInterface
         return [
             'rules_oper' => 'OR',
             'rules' => $flattenedRules,
+        ];
+    }
+
+    public function hasOperator(array $rule): bool
+    {
+        return array_key_exists("rules_oper", $rule);
+    }
+
+    /**
+     * Flattens a groupwise form into a maximum depth of 2 groups,
+     * applying the following rules:
+     * 1) ((A or B) and (C or D)) → ((A and C) or (B and C) or (A and D) or (B and D))
+     * 2) (A and (B and C)) → (A and B and C)
+     * 3) (A or (B or C)) → (A or B or C)
+     *
+     * @param array $groupwiseForm The groupwise form to process.
+     * @return array The transformed structure with a maximum depth of 2 groups.
+     */
+    public function newFlattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
+    {
+        // This function always returns in the form of 
+        // [
+        //   "rules_oper": "OR",
+        //   "rules": [nesteds]]
+        //
+        // so that we are always confident in what we're parsing.
+        
+        // If the incoming rules are singular, we can convert them into OR of AND anyway
+        
+        $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
+        $rules = $groupwiseForm['rules'] ?? [];
+
+        $standardisedChildren = [];
+        // Loop over all children, converting each to standard form
+        foreach ($rules as $rule) {
+            if (!$this->hasOperator($rule)) {
+                // Child is a singleton. It won't have its own rules. Return OR([AND([$rule])])
+                $standardisedChildren[] = [
+                    "rules_oper" => "OR",
+                    "rules" => [
+                        [
+                            "rules_oper" => "AND",
+                            "rules" => [
+                                $rule
+                            ]
+                        ]
+                    ]
+                ];
+            }
+            else {
+                // Child has children. Check that _its_ children are all in standard form, 
+                // then convert this to standard form recursively
+                $standardisedChildren[] = $this->newFlattenToMaxDepthTwo($rule, $depth+1);
+            }
+        }
+
+        printd($depth, "standardisedChildren: " . json_encode($standardisedChildren));
+        // $standarisedChildren is of the form [ OR([AND([$rule])]), OR([AND([$rule])]), ... ];
+        // specifically 
+        // [ 
+        //    [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]] ], 
+        //    ...
+        // ]
+        // Then, loop back again over all the standardised children. These will all be of the form OR of AND
+        // Combine these using the current group operator:
+        // - If it's an OR, then we spread all children into one array
+        // - If it's an AND, then we distribute
+        
+        if ($groupOperator === "OR") {
+            $standardisedRules = [];
+            foreach ($standardisedChildren as $standardisedChild) {
+                $standardisedRules = array_merge($standardisedRules, $standardisedChild['rules']);
+            }
+        }
+        else {
+            // $groupOperator is AND, we need to distribute
+            $standardisedRules = [
+                "rules_oper" => "OR", 
+                "rules" => []
+            ];
+            printd($depth, "standardisedRules before loop: " . json_encode($standardisedRules));
+            // Loop over new elements to add
+            // $standardisedChildren is of the form [ OR([AND([$rule])]), OR([AND([$rule])]), ... ];
+            foreach ($standardisedChildren as $standardisedChild) { // (A, B, C)
+                // $standardisedChild is of the form OR([AND([$rule])])
+                printd($depth+1, "standardisedChild: " . json_encode($standardisedChild));
+                // $standardisedRules is of the form [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]]] ]
+                $newStandardisedRules = [];
+                // $standardisedRules is of the form [["rules_oper" => "AND", "rules" => [$rule]], ["rules_oper" => "AND", "rules" => [$rule]], ...] 
+                printd($depth+2, "standardisedRules before inner loop: " . json_encode($standardisedRules));
+                printd($depth+2, "newStandardisedRules before inner loop: " . json_encode($newStandardisedRules));
+                // Loop over existing combinations
+
+                if (empty($standardisedRules["rules"])) {
+                    $standardisedRules["rules"] = $standardisedChild['rules'];
+                    printd($depth+2, "standardisedRules before shortcircuit: " . json_encode($standardisedRules));
+                    continue;
+                }
+                foreach ($standardisedRules["rules"] as $standardisedRule) {
+                    printd($depth+3, "standardisedRule: " . json_encode($standardisedRule));
+                    // $standardisedRule is of the form ["rules_oper" => "AND", "rules" => [A, B, C]] 
+                    foreach ($standardisedRule["rules"] as $innerChild) {
+                        printd($depth+4, "innerChild: " . json_encode($innerChild));
+                        printd($depth+4, "standardisedChild['rules']: " . json_encode($standardisedChild['rules']));
+                        // new entries must be of the form ["rules_oper" => "AND", "rules" => [$rule]]
+                        // so that $newStandardisedRules is of the form [["rules_oper" => "AND", "rules" => [$rule]], ["rules_oper" => "AND", "rules" => [$rule]], ...] 
+                        foreach ($standardisedChild['rules'] as $childRule) {
+                            printd($depth+5, "childRule: " . json_encode($childRule));
+                            foreach ($childRule["rules"] as $innerChildRule) {
+                                printd($depth+6, "innerChildRule: " . json_encode($innerChildRule));
+                                $newStandardisedRules[] = [$innerChild, $innerChildRule];
+                            }
+                            // $newStandardisedRules[] = [[$innerChild, $childRule]];
+                        }
+                        // $newStandardisedRules[] = array_merge($newStandardisedRules, $standardisedChild['rules']);
+                        printd($depth+4, "newStandardisedRules at end of inner loop: " . json_encode($newStandardisedRules));
+                    }
+                    printd($depth+3, "standardisedRule midloop: " . json_encode($standardisedRule));
+
+                }
+                printd($depth+2, "standardisedRules at end of inner loop: " . json_encode($standardisedRules));
+                $standardisedRules = $newStandardisedRules;
+            }
+
+            $standardisedRules = [];
+            foreach ($newStandardisedRules as $newStandardisedRule) {
+                printd($depth+2, "newStandardisedRule: " . json_encode($newStandardisedRule));
+                $standardisedRules[] = [
+                    "rules_oper" => "AND",
+                    "rules" => $newStandardisedRule
+                ];
+            }
+        }
+
+        // We now have a single thing of form OR of AND - return this
+        return [
+            "rules_oper" => "OR",
+            "rules" => $standardisedRules
         ];
     }
 
