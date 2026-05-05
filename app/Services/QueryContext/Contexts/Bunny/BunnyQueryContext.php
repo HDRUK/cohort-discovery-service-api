@@ -1306,6 +1306,51 @@ class BunnyQueryContext implements QueryContextInterface
             ]
         }', associative: true);
 
+        $testGroupwiseForm4 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "value": "C"
+                },
+                {
+                    "value": "D"
+                }
+            ]
+        }', associative: true);
+
+        $testFinalForm4 = json_decode('{
+            "rules_oper": "OR",
+            "rules": [
+                {
+                    "rules_oper": "AND",
+                    "rules": [
+                        {
+                            "value": "A"
+                        },
+                        {
+                            "value": "B"
+                        }
+                    ]
+                },
+                {
+                    "value": "C"
+                },
+                {
+                    "value": "D"
+                }
+            ]
+        }', associative: true);
 
         if ($testCompactForm1 != $this->convertToCompactForm($testDefinition1, 0)) {
             throw new \Error('convertToCompactForm did not produce expected output 1');
@@ -1384,6 +1429,19 @@ class BunnyQueryContext implements QueryContextInterface
         }
         else {
             print('flattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
+        }
+
+        print('testing flattenToMaxDepthTwo' . "\n");
+        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm4, 0);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalForm4) . "\n");
+        var_dump($answer);
+        var_dump($testFinalForm4);
+        if (json_encode($testFinalForm4) !== json_encode($answer)) {
+            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm4');
+        }
+        else {
+            print('flattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
         }
 
         $compactDefinition = $this->convertToCompactForm($definition, 0);
@@ -1914,6 +1972,12 @@ class BunnyQueryContext implements QueryContextInterface
         return sprintf($pattern, $months);
     }
 
+
+    public function rulesOf($existingRule) : array
+    {
+        return ((is_array($existingRule) && array_key_exists('rules', $existingRule))) ? ($existingRule['rules'])[0] : $existingRule;
+    }
+
     /**
      * Flattens a groupwise form into a maximum depth of 2 groups,
      * applying the following rules:
@@ -1958,18 +2022,22 @@ class BunnyQueryContext implements QueryContextInterface
                     print(str_repeat(' ', 2 * $depth + 2) . json_encode($flattenedRules) . "\n");
                     foreach ($flattenedRules as $existingRule) {
                         print(str_repeat(' ', 2 * $depth + 4) . "existingRule " . json_encode($existingRule) . "\n");
-                        $existingRuleProcessed = ((is_array($existingRule) && array_key_exists('rules', $existingRule))) ? ($existingRule['rules'])[0] : $existingRule;
+                        $existingRuleProcessed = $this->rulesOf($existingRule);
+                        if (!array_is_list($existingRuleProcessed)) {
+                            $existingRuleProcessed = [$existingRuleProcessed];
+                        }
                         print(str_repeat(' ', 2 * $depth + 4) . "existingRuleProcessed " . json_encode($existingRuleProcessed) . "\n");
                         foreach ($nestedGroup['rules'] as $orRule) {
                             print(str_repeat(' ', 2 * $depth + 6) . "orRule " . json_encode($orRule) . "\n");
-                            $newCombinations[] = [...($existingRuleProcessed), ...$orRule];
+                            print(str_repeat(' ', 2 * $depth + 6) . "this->rulesOf(orRule) " . json_encode($this->rulesOf($orRule)) . "\n");
+                            $newCombinations[] = [...$existingRuleProcessed, $this->rulesOf($orRule)];
                         }
                     }
                     print(str_repeat(' ', 2 * $depth + 2) .  " newCombinations " . json_encode($newCombinations) . "\n");
                     $flattenedRules = $newCombinations;
                 } elseif ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
                     print(str_repeat(' ', 2 * $depth + 2) . "case 3\n");
-                    print(str_repeat(' ', 2 * $depth + 2) .  " flattenedRules " . json_encode($flattenedRules) . "\n");
+                    print(str_repeat(' ', 2 * $depth + 2) . "flattenedRules " . json_encode($flattenedRules) . "\n");
                     print(str_repeat(' ', 2 * $depth + 2) . '$nestedGroup ' . json_encode($nestedGroup) . "\n");
                     print(str_repeat(' ', 2 * $depth + 2) . "spread " . json_encode([...$flattenedRules, $nestedGroup]) . "\n");
                     if ($flattenedRules === [[]]) {
@@ -1992,7 +2060,11 @@ class BunnyQueryContext implements QueryContextInterface
                     $newCombinations = [];
                     foreach ($flattenedRules as $flattenedRule) {
                         print(str_repeat(' ', 2 * $depth + 2) . " flattenedRule: " . json_encode($flattenedRule) . "\n");
-                        $newCombinations[] = [...$flattenedRule, $rule];
+                        if (array_is_list($flattenedRule)) {
+                            $newCombinations[] = [...($flattenedRule), $rule];
+                        } else {
+                            $newCombinations[] = [$flattenedRule, $rule];
+                        }
                     }
                     $flattenedRules = $newCombinations;
                 }
@@ -2012,7 +2084,7 @@ class BunnyQueryContext implements QueryContextInterface
                     if ($flattenedRules === [[]]) {
                         $flattenedRules = [];
                     }
-                    $flattenedRules[] = [$rule];
+                    $flattenedRules[] = [...$this->rulesOf($rule)];
                 }
             }
             print(str_repeat(' ', 2*$depth + 2) . 'working $flattenedRules ' . json_encode($flattenedRules) . "\n");
