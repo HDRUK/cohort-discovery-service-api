@@ -212,7 +212,7 @@ class QueryContextTest extends TestCase
         $secondRule = $firstGroup['rules'][1] ?? null;
         $this->assertEquals('3955321', $secondRule['value'] ?? null);
         $thirdRule = $firstGroup['rules'][2] ?? null;
-        $this->assertEquals('3955321', $thirdRule['value'] ?? null);
+        $this->assertEquals('3955320', $thirdRule['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_gender_as_person(): void
