@@ -1379,9 +1379,9 @@ class BunnyQueryContext implements QueryContextInterface
             } elseif ($this->isAgeFilter($node)) {
                 // print('is leaf age filter');
                 $leafRule = $this->makeLeafAgeFilter($node);
-            } elseif ($this->isGroupNode($node)) {
-                // print('is group node');
-                $leafRule = $node;
+            // } elseif ($this->isGroupNode($node)) {
+            //     // print('is group node');
+            //     $leafRule = $node;
             } else {
                 throw new \Error('unknown leaf rule' . json_encode($node));
             }
