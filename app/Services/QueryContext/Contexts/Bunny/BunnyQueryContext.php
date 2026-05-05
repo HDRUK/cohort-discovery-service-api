@@ -1353,7 +1353,7 @@ class BunnyQueryContext implements QueryContextInterface
 
     function convertToGroupwiseForm(array $node): array
     {
-        // print('convertToGroupwiseForm node: ' . json_encode($node) . "\n");
+        print('convertToGroupwiseForm node: ' . json_encode($node) . "\n");
         $groupOperator = $this->groupOperator($node);
         if ($groupOperator === 'AND') {
             return $this->convertAndGroup($node);
