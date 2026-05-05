@@ -642,183 +642,6 @@ class BunnyQueryContext implements QueryContextInterface
             "valid": true
         }', associative: true);
 
-        // $testGroupwiseForm1 = json_decode('{
-        //     "rules_oper": "AND",
-        //     "rules": [
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "rules_oper": "AND",
-        //                     "rules": [
-        //                         {
-        //                             "varname": "OMOP",
-        //                             "varcat": "Condition",
-        //                             "type": "TEXT",
-        //                             "oper": "=",
-        //                             "value": "321588"
-        //                         },
-        //                         {
-        //                             "varname": "OMOP",
-        //                             "varcat": "Condition",
-        //                             "type": "TEXT",
-        //                             "oper": "=",
-        //                             "value": "319835"
-        //                         }
-        //                     ]
-        //                 },
-        //                 {
-        //                     "rules_oper": "AND",
-        //                     "rules": [
-        //                         {
-        //                             "varname": "OMOP",
-        //                             "varcat": "Condition",
-        //                             "type": "TEXT",
-        //                             "oper": "=",
-        //                             "value": "36684857"
-        //                         },
-        //                         {
-        //                             "varname": "OMOP",
-        //                             "varcat": "Condition",
-        //                             "type": "TEXT",
-        //                             "oper": "=",
-        //                             "value": "255573"
-        //                         }
-        //                     ]
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Person",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "8532"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "3959287"
-        //                 }
-        //             ]
-        //         }
-        //     ]
-        // }', associative: true);
-
-        // $testFinalForm1 = json_decode('{
-        //     "rules_oper": "OR",
-        //     "rules": [
-        //         {
-        //             "rules_oper": "AND",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "321588"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "36684857"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Person",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "8532"
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "rules_oper": "AND",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "321588"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "36684857"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "3959287"
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "rules_oper": "AND",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "321588"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "255573"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Person",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "8532"
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "rules_oper": "AND",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "321588"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "255573"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "3959287"
-        //                 }
-        //             ]
-        //         },
-        //     ]
-        // }', associative: true);
 
         $testGroupwiseForm1 = json_decode('{
             "rules_oper": "AND",
@@ -849,8 +672,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
 
         $testFinalForm1 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -958,8 +781,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
 
         $testFinalForm2 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -1140,8 +963,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
 
         $testFinalForm3 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -1200,65 +1023,6 @@ class BunnyQueryContext implements QueryContextInterface
                 }
             ]
         }', associative: true);
-
-        // $testGroupwiseForm2 = json_decode('{
-        //     "rules_oper": "AND",
-        //     "rules": [
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "A"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "B"
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //                 "varname": "OMOP",
-        //                 "varcat": "Condition",
-        //                 "type": "TEXT",
-        //                 "oper": "=",
-        //                 "value": "C"
-        //             },
-        //             {
-        //                 "varname": "OMOP",
-        //                 "varcat": "Condition",
-        //                 "type": "TEXT",
-        //                 "oper": "=",
-        //                 "value": "D"
-        //             },
-        //         {
-        //             "rules_oper": "OR",
-        //             "rules": [
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "E"
-        //                 },
-        //                 {
-        //                     "varname": "OMOP",
-        //                     "varcat": "Condition",
-        //                     "type": "TEXT",
-        //                     "oper": "=",
-        //                     "value": "F"
-        //                 }
-        //             ]
-        //         }
-        //     ]
-        // }', associative: true);
-
 
         $testGroupwiseFormSmall = json_decode('{
             "rules_oper": "AND",
@@ -1281,8 +1045,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
         
         $testFinalFormSmall = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -1332,8 +1096,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
         
         $testFinalFormSmall2 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -1389,8 +1153,8 @@ class BunnyQueryContext implements QueryContextInterface
         }', associative: true);
 
         $testFinalForm4 = json_decode('{
-            "rules_oper": "OR",
-            "rules": [
+            "groups_oper": "OR",
+            "groups": [
                 {
                     "rules_oper": "AND",
                     "rules": [
@@ -1545,93 +1309,6 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
-
-    // ((A and B) or (C and D)) and (E or F)
-    // -> ((A and B) or (C and D)) and E) or ((A and B) or (C and D)) and F)
-    // -> (A and B and E) or (C and D and E) or (A and B and F) or (C and D and F)
-
-    function processNewNode(array $node, int $depth): array
-    {
-        // print("processNewNode" . json_encode($node) . "\n");
-        if (!isset($node['rules']) || count($node['rules']) === 0) {
-            // this is a leaf node - we can just add it to the groups
-            return $node;
-        }
-
-        // if this is an OR group, then this lives inside an AND. 
-        // Each child will be an AND group or a rule.
-        // We want to convert each child AND group to an OR of ANDs, then hoist them all into this OR group.
-        // If the child AND group is nested, recurse.
-        // If the child AND group is only an AND of rules, then turn it into a single OR of ANDs?
-        // If the child is a rule, leave it as is
-
-        // Examples:
-        // 1.
-        // ((A and B) or (C and (D or E)))
-        // -> ((A and B) or processAnd(C and (D or E)))
-        // -> ((A and B) or ((C and D) or (C and E))
-        // -> ((A and B) or (C and D) or (C and E))
-
-        // [AB] + [[C[D + E]]]
-        // -> [AB] + [[CD] + [CE]]
-        // -> [AB] + [CD] + [CE] so OR is just addition of groups
-        // and AND is just multiplication of groups (taking the product of all combinations of groups)
-
-        // [AB] + [[C + F][D + E]]]
-        // -> [AB] + [[CD] + [CE] + [FD] + [FE]]
-        // -> [AB] + [CD] + [CE] + [FD] + [FE] so OR is just addition of groups
-
-        // [A + B][[CF] + [DE]]
-        // -> [AB] + [[CD] + [CE] + [FD] + [FE]]
-        // -> [AB] + [CD] + [CE] + [FD] + [FE] so OR is just addition of groups
-        $groups = [];
-        $groupOperator = $node['rules_oper'] ?? null;
-        if ($groupOperator === 'OR') {
-            // print('handling OR group' . "\n");
-            foreach ($node['rules'] as $child) {
-                if ($this->isGroupNode($child)) {
-                    // print("recursing in processNewNode " . json_encode($this->processNewNode($child, $depth + 1)) . "\n");
-                    $groups[] = $this->processNewNode($child, $depth + 1);
-                }
-                else {
-                    $groups[] = $child;
-                }
-            }
-            // print('finished handling OR group, groups: ' . json_encode($groups) . "\n");
-        }
-        else {
-            // eg (C and (D or E))
-            // print('handling AND group' . "\n");
-            $containsOrGroup = false;
-            foreach ($node['rules'] as $child) {
-                if ($this->isGroupNode($child) && ($child['rules_oper'] ?? null) === 'OR') {
-                    $containsOrGroup = true;
-                    break;
-                }
-            }
-
-            if (!$containsOrGroup) {
-                // this is just an AND of rules - we can leave it as is
-                // print('AND group does not contain OR group, returning as is' . "\n");
-                return $node;
-            }
-
-            // this is an AND group that contains OR groups - we need to take the product of all the children
-            foreach ($node['rules'] as $child) {
-                if ($this->isGroupNode($child)) {
-                    $groups[] = $this->processNewNode($child, $depth + 1);
-                }
-                else {
-                    $groups[] = $child;
-                }
-            }
-            // print('finished handling AND group, groups: ' . json_encode($groups) . "\n");
-
-        }
-        return $groups;
-
-    }
-
     function convertAndGroup(array $node): array
     {
         // print('convertAndGroup node: ' . json_encode($node) . "\n");
@@ -1717,128 +1394,6 @@ class BunnyQueryContext implements QueryContextInterface
         return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
     }
 
-    function productGroupsAndAppend(array &$groups, array $newElements): void
-    {
-        if (empty($groups)) {
-            $groups = $newElements;
-            return;
-        }
-
-        $result = $groups;
-        foreach ($groups as $group) {
-            foreach ($newElements as $newElement) {
-                if ($this->isOperatorNode($group) || $this->isOperatorNode($newElement)) {
-                    continue; // skip operator nodes - they will be handled in the convertToCompactForm step
-                }
-                if (count($result) === 0) {
-                    $result[] = $newElement;
-                }
-                else {
-                    if (is_array($group) && is_array($newElement)) {
-                        $result[] = array_merge($group, $newElement);
-                    } elseif (is_array($group)) {
-                        $result[] = array_merge($group, [$newElement]);
-                    } else if (is_array($newElement)) {
-                        $result[] = array_merge([$group], $newElement);
-                    }
-                    else {
-                        $result[] = [$group, $newElement];
-                    }
-                }
-            }
-        }
-        $groups = $result;
-    }
-
-    function handleOrGroup(array $node): array
-    {
-        $groups = [];
-        $children = $node['rules'] ?? [];
-        foreach ($children as $child) {
-            if ($this->isGroupNode($child)) {
-                // this is an OR group with AND children - we need to take the product of all the children
-                $groups = productGroupsAndAppend($groups, $child);
-            }
-            else {
-                // this is a leaf node - we can just return it
-                
-            }
-        }
-
-        return $groups;
-    }
-
-    function handleAndGroup(array $node): array
-    {
-        $groups = [];
-        $children = $node['rules'] ?? [];
-        foreach ($children as $child) {
-            if ($this->isGroupNode($child)) {
-                // this is an AND group with OR children - we need to hoist all child groups 
-                $groups = array_merge($groups, $this->handleOrGroup($child['rules']));
-            }
-            else {
-                // this is a leaf node - we can just return it
-                $groups[] = [$child];
-            }
-        }
-
-        return $this->andProductOfArray($groups);
-    }
-    
-    function andProductOfArray($array): array
-    {
-        $result = [];
-        foreach ($array as $property => $value) {
-            $temp = [];
-            foreach ($result as $combination) {
-                foreach ($values as $value) {
-                    $temp[] = array_merge($combination, [$property => $value]);
-                }
-            }
-            $result = $temp;
-        }
-        return $result;
-    }
-    function splitOnNestedOrs(array $node): array
-    {
-        $children = $node['rules'] ?? [];
-        $groups = [];
-        $currentGroup = null;
-        $groupOperator = $this->groupOperator($node);
-        if ($groupOperator === 'AND') {
-            // for each OR child group, we create an outer product with the other children at this level
-
-        }
-        foreach ($children as $child) {
-            if (!$this->isOperatorNode($child)) {
-                if ($currentGroup !== null) {
-                    $groups[] = $currentGroup;
-                }
-                $currentGroup = [
-                    'id' => uniqid(),
-                    'rules' => [],
-                    'valid' => true,
-                    'exclude' => false,
-                ];
-            }
-            else {
-                if ($currentGroup === null) {
-                    $currentGroup = [
-                        'id' => uniqid(),
-                        'rules' => [],
-                        'valid' => true,
-                        'exclude' => false,
-                    ];
-                }
-                $currentGroup['rules'][] = $child;
-            }
-        }
-        if ($currentGroup !== null) {
-            $groups[] = $currentGroup;
-        }
-        return $groups;
-    }
     /*
       Convert into ANDs of ORs of ANDs of ... - or into ORs of ANDs of ORS of ...
     */
@@ -2030,12 +1585,6 @@ class BunnyQueryContext implements QueryContextInterface
         return sprintf($pattern, $months);
     }
 
-
-    public function rulesOf($existingRule) : array
-    {
-        return ((is_array($existingRule) && array_key_exists('rules', $existingRule))) ? ($existingRule['rules'])[0] : $existingRule;
-    }
-
     public function hasOperator(array $rule): bool
     {
         return array_key_exists("rules_oper", $rule);
@@ -2150,49 +1699,6 @@ class BunnyQueryContext implements QueryContextInterface
             "groups_oper" => "OR",
             "groups" => $standardisedRules
         ];
-    }
-
-    /**
-     * Checks if the given rules contain nested groups.
-     *
-     * @param array $rules The rules to check.
-     * @return bool True if nested groups exist, false otherwise.
-     */
-    private function hasNestedGroups(array $rules): bool
-    {
-        foreach ($rules as $rule) {
-            if ($this->isGroupNode($rule)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Combines two AND groups by taking the Cartesian product of their rules.
-     *
-     * @param array $group1 The first group of rules.
-     * @param array $group2 The second group of rules.
-     * @return array The combined group of rules.
-     */
-    private function combineAndGroups(array $group1, array $group2): array
-    {
-        if (empty($group1)) {
-            return $group2;
-        }
-
-        $combined = [];
-
-        foreach ($group1 as $rule1) {
-            foreach ($group2 as $rule2) {
-                $combined[] = [
-                    'rules_oper' => 'AND',
-                    'rules' => [$rule1, $rule2],
-                ];
-            }
-        }
-
-        return $combined;
     }
 
     public function getType(): QueryContextType
