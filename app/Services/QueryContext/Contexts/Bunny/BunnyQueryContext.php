@@ -1426,7 +1426,6 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
 
-        // print('testing flattenToMaxDepthTwo' . "\n");
         $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalFormSmall) . "\n");
@@ -2037,150 +2036,6 @@ class BunnyQueryContext implements QueryContextInterface
         return ((is_array($existingRule) && array_key_exists('rules', $existingRule))) ? ($existingRule['rules'])[0] : $existingRule;
     }
 
-    /**
-     * Flattens a groupwise form into a maximum depth of 2 groups,
-     * applying the following rules:
-     * 1) ((A or B) and (C or D)) → ((A and C) or (B and C) or (A and D) or (B and D))
-     * 2) (A and (B and C)) → (A and B and C)
-     * 3) (A or (B or C)) → (A or B or C)
-     *
-     * @param array $groupwiseForm The groupwise form to process.
-     * @return array The transformed structure with a maximum depth of 2 groups.
-     */
-    public function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
-    {
-        print("\n");
-        print(str_repeat(' ', 2 * $depth) . 'flattenToMaxDepthTwo ' . json_encode($groupwiseForm) . " depth " . $depth . "\n");
-        $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
-        $rules = $groupwiseForm['rules'] ?? [];
-
-        $flattenedRules = [[]];
-        foreach ($rules as $rule) {
-            print(str_repeat(' ', 2 * $depth) . 'rule ' . json_encode($rule) . "\n");
-            if ($this->isGroupNode($rule)) {
-                print (str_repeat(' ', 2 * $depth) . 'is group' . "\n");
-                print("\n");
-                $nestedGroup = $this->flattenToMaxDepthTwo($rule, $depth + 1);
-                print(str_repeat(' ', 2 * $depth + 2) . '$nestedGroup ' . json_encode($nestedGroup) . "\n");
-                // // Rule 2: Collapse AND groups
-                // if ($groupOperator === 'AND' && $nestedGroup['rules_oper'] === 'AND') {
-                //     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
-                // }
-                // Rule 3: Collapse OR groups
-                // if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
-                //     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
-                // }
-
-
-                // "rules" begins in the form [ {value: A}, {value: B} ] but after processing we use a standardised format
-                // [[ { value: A }, { value: B } ], [...] ]
-                if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'AND') {
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 1\n");
-                    $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
-                }
-                // Rule 1: Distribute AND over OR
-                elseif ($groupOperator === 'AND' && $nestedGroup['rules_oper'] === 'OR') {
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 2\n");
-                    $newCombinations = [];
-                    print(str_repeat(' ', 2 * $depth + 2) . json_encode($flattenedRules) . "\n");
-                    foreach ($flattenedRules as $existingRule) {
-                        print(str_repeat(' ', 2 * $depth + 4) . "existingRule " . json_encode($existingRule) . "\n");
-                        $existingRuleProcessed = $this->rulesOf($existingRule);
-                        if (!array_is_list($existingRuleProcessed)) {
-                            $existingRuleProcessed = [$existingRuleProcessed];
-                        }
-                        print(str_repeat(' ', 2 * $depth + 4) . "existingRuleProcessed " . json_encode($existingRuleProcessed) . "\n");
-                        foreach ($nestedGroup['rules'] as $orRule) {
-                            print(str_repeat(' ', 2 * $depth + 6) . "orRule " . json_encode($orRule) . "\n");
-                            print(str_repeat(' ', 2 * $depth + 6) . "this->rulesOf(orRule) " . json_encode($this->rulesOf($orRule)) . "\n");
-                            $newCombinations[] = [...$existingRuleProcessed, $this->rulesOf($orRule)];
-                        }
-                    }
-                    print(str_repeat(' ', 2 * $depth + 2) .  " newCombinations " . json_encode($newCombinations) . "\n");
-                    $flattenedRules = $newCombinations;
-                } elseif ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 3\n");
-                    print(str_repeat(' ', 2 * $depth + 2) . "flattenedRules " . json_encode($flattenedRules) . "\n");
-                    print(str_repeat(' ', 2 * $depth + 2) . '$nestedGroup ' . json_encode($nestedGroup) . "\n");
-                    print(str_repeat(' ', 2 * $depth + 2) . "spread " . json_encode([...$flattenedRules, $nestedGroup]) . "\n");
-                    if ($flattenedRules === [[]]) {
-                        $flattenedRules = [$nestedGroup];
-                    } else {
-                        $newFlattenedRules = [];
-                        foreach ($flattenedRules as $flattenedRule) {
-                            $newFlattenedRules[] = [...$this->rulesOf($flattenedRule), $this->rulesOf($nestedGroup)];
-                        }
-                        $flattenedRules = $newFlattenedRules;
-                    }
-                } else {
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 4\n");
-                    $flattenedRules[] = $nestedGroup;
-                }
-            } else {
-                if ($groupOperator === 'AND') {
-                    // append rule to each subArray
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 5\n");
-                    print(str_repeat(' ', 2 * $depth + 2) . " details: rule " . json_encode($rule) . " , flattenedRules: " . json_encode($flattenedRules) . "\n");
-                    // foreach ($flattenedRules as &$subArray) {
-                    //     $subArray[] = $rule;
-                    // }
-                    $newCombinations = [];
-                    foreach ($flattenedRules as $flattenedRule) {
-                        print(str_repeat(' ', 2 * $depth + 2) . " flattenedRule: " . json_encode($flattenedRule) . "\n");
-                        if (array_is_list($flattenedRule)) {
-                            $newCombinations[] = [...($flattenedRule), $rule];
-                        } else {
-                            $newCombinations[] = [$flattenedRule, $rule];
-                        }
-                    }
-                    $flattenedRules = $newCombinations;
-                }
-                else {
-                    // append rule to each subArray
-                    print(str_repeat(' ', 2 * $depth + 2) . "case 6\n");
-                    print(str_repeat(' ', 2 * $depth + 2) . " details: rule " . json_encode($rule) . " , flattenedRules: " . json_encode($flattenedRules) . "\n");
-                    // foreach ($flattenedRules as &$subArray) {
-                    //     $subArray[] = $rule;
-                    // }
-                    // $newCombinations = [];
-                    // foreach ($flattenedRules as $flattenedRule) {
-                    //     print(str_repeat(' ', 2 * $depth + 2) . " flattenedRule: " . json_encode($flattenedRule) . "\n");
-                    //     $newCombinations[] = [...$flattenedRule, $rule];
-                    // }
-
-                    if ($flattenedRules === [[]]) {
-                        $flattenedRules = [];
-                    }
-                    $flattenedRules[] = [...$this->rulesOf($rule)];
-                }
-            }
-            print(str_repeat(' ', 2*$depth + 2) . 'working $flattenedRules ' . json_encode($flattenedRules) . "\n");
-
-        }
-        print(str_repeat(' ', 2*$depth) . 'returning ' . json_encode($flattenedRules) . "\n");
-        print("\n");
-        if ($depth === 0) {
-            // re-add ANDs to each child
-            $filledFlattenedRules = [];
-            
-            foreach ($flattenedRules as $flattenedRule) {
-                $filledFlattenedRules[] = [
-                    'rules_oper' => 'AND',
-                    'rules' => $flattenedRule
-                ];
-            }
-            return [
-                'rules_oper' => 'OR',
-                'rules' => $filledFlattenedRules,
-            ];
-        }
-
-        return [
-            'rules_oper' => 'OR',
-            'rules' => $flattenedRules,
-        ];
-    }
-
     public function hasOperator(array $rule): bool
     {
         return array_key_exists("rules_oper", $rule);
@@ -2276,7 +2131,8 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         // We now have a single thing of form OR of AND
-        // Finally, if we're at the top level, slim down any AND children that only have one rule in them, so we don't have unnecessary nesting of ANDs within ORs
+        // Finally, if we're at the top level, slim down any AND children that only have one rule in them, 
+        // so we don't have unnecessary nesting of ANDs within ORs, and rename to "groups" for the final form
         if ($depth > 0) {
             return $standardisedForm;
         }
@@ -2291,8 +2147,8 @@ class BunnyQueryContext implements QueryContextInterface
             }
         }
         return [
-            "rules_oper" => "OR",
-            "rules" => $standardisedRules
+            "groups_oper" => "OR",
+            "groups" => $standardisedRules
         ];
     }
 
