@@ -11,6 +11,60 @@ use Carbon\Carbon;
         print(str_repeat(' ', 2 * $depth) . $message . "\n");
     }
 
+function combineStandardsWithAnd(array $first, array $second): array {
+    // Given two arrays of standardised rules of the form 
+    // $first = ["rules_oper" => "OR", 
+    //           "rules" => [ 
+    //              ["rules_oper" => "AND", "rules" => [A, B]], 
+    //              ["rules_oper" => "AND", "rules" => [C]], 
+    //                       ]
+    //           ], 
+    // $second = ["rules_oper" => "OR", 
+    //           "rules" => [ 
+    //              ["rules_oper" => "AND", "rules" => [G, H]], 
+    //              ["rules_oper" => "AND", "rules" => [I, J]], 
+    //              ["rules_oper" => "AND", "rules" => [K]]
+    //                       ]
+    //           ],
+    // combine them via the AND operator into a single standardised rule of the form 
+    // ["rules_oper" => "OR", 
+    //           "rules" => [ 
+    //              ["rules_oper" => "AND", "rules" => [A, B, G, H]], 
+    //              ["rules_oper" => "AND", "rules" => [A, B, I, J]], 
+    //              ["rules_oper" => "AND", "rules" => [A, B, K]], 
+    //              ["rules_oper" => "AND", "rules" => [C, G, H]], 
+    //              ["rules_oper" => "AND", "rules" => [C, I, J]], 
+    //              ["rules_oper" => "AND", "rules" => [C, K]], 
+    //                       ]
+    //           ]
+
+    printd(1, "first: " . json_encode($first));
+    printd(1, "second: " . json_encode($second));
+
+    $combinedRules = [];
+    foreach ($first['rules'] as $firstRule) {
+        printd(2, "firstRule: " . json_encode($firstRule));
+        // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]] 
+        $innerNewStandardisedRules = [];
+        foreach ($second["rules"] as $secondRule) {
+            printd(2, "secondRule: " . json_encode($secondRule));
+            // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]] 
+            $combinedRules[] = [
+                "rules_oper" => "AND", 
+                "rules" => array_merge(
+                    $firstRule["rules"], 
+                    $secondRule["rules"]
+                )
+            ];
+        }
+    }
+    printd(1, "returning combinedRules: " . json_encode($combinedRules));
+    return [
+        "rules_oper" => "OR", 
+        "rules" => $combinedRules
+    ];
+}
+
 class BunnyQueryContext implements QueryContextInterface
 {
     public function translate(array $definition): array
@@ -1386,10 +1440,10 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
-        // print(json_encode($answer) . "\n");
-        // print(json_encode($testFinalFormSmall2) . "\n");
-        // var_dump($answer);
-        // var_dump($testFinalFormSmall2);
+        print(json_encode($answer) . "\n");
+        print(json_encode($testFinalFormSmall2) . "\n");
+        var_dump($answer);
+        var_dump($testFinalFormSmall2);
         if (json_encode($testFinalFormSmall2) !== json_encode($answer)) {
             throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small2');
         }
@@ -2197,88 +2251,50 @@ class BunnyQueryContext implements QueryContextInterface
             foreach ($standardisedChildren as $standardisedChild) {
                 $standardisedRules = array_merge($standardisedRules, $standardisedChild['rules']);
             }
+
+            $standardisedForm = [
+                "rules_oper" => "OR",
+                "rules" => $standardisedRules
+            ];
         }
         else {
             // $groupOperator is AND, we need to distribute
-            $standardisedRules = [
-                "rules_oper" => "OR", 
-                "rules" => []
-            ];
-            printd($depth, "standardisedRules before loop: " . json_encode($standardisedRules));
-            // Loop over new elements to add
-            // $standardisedChildren is of the form [ OR([AND([$rule])]), OR([AND([$rule])]), ... ];
-            foreach ($standardisedChildren as $standardisedChild) { // (A, B, C)
-                // $standardisedChild is of the form OR([AND([$rule])])
-                printd($depth+1, "standardisedChild: " . json_encode($standardisedChild));
-                // $standardisedRules is of the form [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]]] ]
-                $newStandardisedRules = [];
-                // $standardisedRules is of the form [["rules_oper" => "AND", "rules" => [$rule]], ["rules_oper" => "AND", "rules" => [$rule]], ...] 
-                printd($depth+2, "standardisedRules before inner loop: " . json_encode($standardisedRules));
-                printd($depth+2, "newStandardisedRules before inner loop: " . json_encode($newStandardisedRules));
-                // Loop over existing combinations
-
-                if (empty($standardisedRules["rules"])) {
-                    $standardisedRules["rules"] = $standardisedChild['rules'];
-                    printd($depth+2, "standardisedRules before shortcircuit: " . json_encode($standardisedRules));
-                    continue;
-                }
-                foreach ($standardisedRules["rules"] as $standardisedRule) {
-                    printd($depth+3, "standardisedRule: " . json_encode($standardisedRule));
-                    // $standardisedRule is of the form ["rules_oper" => "AND", "rules" => [A, B, C]] 
-                    // $thisInner = [];
-                    $innerNewStandardisedRules = [];
-                    foreach ($standardisedRule["rules"] as $innerChild) {
-                        printd($depth+4, "innerChild: " . json_encode($innerChild));
-                        printd($depth+4, "standardisedChild['rules']: " . json_encode($standardisedChild['rules']));
-                        // new entries must be of the form ["rules_oper" => "AND", "rules" => [$rule]]
-                        // so that $newStandardisedRules is of the form [["rules_oper" => "AND", "rules" => [$rule]], ["rules_oper" => "AND", "rules" => [$rule]], ...] 
-                        $innerNewStandardisedRules[] = $innerChild;
-                    }
-                    printd($depth+3, "innerNewStandardisedRules after adding all standardisedRules: " . json_encode($innerNewStandardisedRules));
-
-                    foreach ($standardisedChild['rules'] as $childRule) {
-                        printd($depth+5, "childRule: " . json_encode($childRule));
-                        foreach ($childRule["rules"] as $innerChildRule) {
-                            printd($depth+6, "innerChildRule: " . json_encode($innerChildRule));
-                            $innerNewStandardisedRules[] = $innerChildRule;
-                        }
-                        // $newStandardisedRules[] = [[$innerChild, $childRule]];
-                    }
-                    // $newStandardisedRules[] = array_merge($newStandardisedRules, $standardisedChild['rules']);
-                    printd($depth+3, "innerNewStandardisedRules after adding all standardisedChild: " . json_encode($innerNewStandardisedRules));
-                    
-                    // // printd($depth+3, "standardisedRule midloop: " . json_encode($standardisedRule));
-                    // printd($depth+3, "newStandardisedRules at end of second-inner loop: " . json_encode($newStandardisedRules));
-                    $newStandardisedRules[] = $innerNewStandardisedRules;
-                }
-                $standardisedRules = [];
-                foreach ($newStandardisedRules as $newStandardisedRule) {
-                    printd($depth+2, "newStandardisedRule: " . json_encode($newStandardisedRule));
-                    $standardisedRules[] = [
-                        "rules_oper" => "AND",
-                        "rules" => $newStandardisedRule
-                    ];
-                }
-                $standardisedRules = ["rules_oper" => "OR", "rules" => $standardisedRules];
-                printd($depth+2, "standardisedRules at end of inner loop: " . json_encode($standardisedRules));
-            }
-
-            $standardisedRules = [];
-            foreach ($newStandardisedRules as $newStandardisedRule) {
-                printd($depth+2, "newStandardisedRule: " . json_encode($newStandardisedRule));
-                $standardisedRules[] = [
-                    "rules_oper" => "AND",
-                    "rules" => $newStandardisedRule
+            if (count($standardisedChildren) < 2) {
+                return $standardisedChildren[0] ?? [
+                    "rules_oper" => "OR",
+                    "rules" => []
                 ];
             }
-
+            $standardisedRules = combineStandardsWithAnd($standardisedChildren[0], $standardisedChildren[1], $depth);
+            foreach($standardisedChildren as $index => $standardisedChild) {
+                if ($index === 0 || $index === 1) {
+                    continue; // already combined the first two children
+                }
+                $standardisedRules = combineStandardsWithAnd($standardisedRules, $standardisedChild, $depth);
+            }
+            // TODO loop over all children, not just the first two - we need to iteratively combine each child with the next one using AND
+            $standardisedForm = $standardisedRules;
         }
 
-        // We now have a single thing of form OR of AND - return this
-        return [
-            "rules_oper" => "OR",
-            "rules" => $standardisedRules
-        ];
+        // We now have a single thing of form OR of AND
+        // Finally, if we're at the top level, slim down any AND children that only have one rule in them, so we don't have unnecessary nesting of ANDs within ORs
+        if ($depth === 0) {
+            $standardisedRules = [];
+            foreach ($standardisedForm['rules'] as $orChild) {
+                if ($orChild['rules_oper'] === 'AND' && count($orChild['rules']) === 1) {
+                    $standardisedRules[] = $orChild['rules'][0];
+                }
+                else {
+                    $standardisedRules[] = $orChild;
+                }
+            }
+            return [
+                "rules_oper" => "OR",
+                "rules" => $standardisedRules
+            ];
+        }
+
+        return $standardisedForm;
     }
 
     /**
