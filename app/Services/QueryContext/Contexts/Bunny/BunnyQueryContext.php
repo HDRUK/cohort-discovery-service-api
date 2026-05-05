@@ -1297,7 +1297,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         // Now we know it's not that special form, it is guaranteed to collapse to a massive OR of ANDs.
-        return $this->newFlattenToMaxDepthTwo($groupwiseForm);
+        return $this->newFlattenToMaxDepthTwo($groupwiseForm, 0);
     }
 
     function convertAndGroup(array $node): array
