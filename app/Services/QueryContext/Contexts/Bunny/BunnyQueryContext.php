@@ -1385,68 +1385,68 @@ class BunnyQueryContext implements QueryContextInterface
             print('newFlattenToMaxDepthTwo produced expected output Small' . "\n");
         }
 
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
         // print(json_encode($answer) . "\n");
         // print(json_encode($testFinalFormSmall2) . "\n");
         // var_dump($answer);
         // var_dump($testFinalFormSmall2);
         if (json_encode($testFinalFormSmall2) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output Small2');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small2');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output Small2' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output Small2' . "\n");
         }
 
-        print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm1, 0);
+        print('testing newFlattenToMaxDepthTwo' . "\n");
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm1, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalForm1) . "\n");
         var_dump($answer);
         var_dump($testFinalForm1);
         if (json_encode($testFinalForm1) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm1');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm1');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
         }
 
-        print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm2, 0);
+        print('testing newFlattenToMaxDepthTwo' . "\n");
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm2, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalForm2) . "\n");
         var_dump($answer);
         var_dump($testFinalForm2);
         if (json_encode($testFinalForm2) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm2');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm2');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
         }
 
-        print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm3, 0);
+        print('testing newFlattenToMaxDepthTwo' . "\n");
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm3, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalForm3) . "\n");
         var_dump($answer);
         var_dump($testFinalForm3);
         if (json_encode($testFinalForm3) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm3');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm3');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
         }
 
-        print('testing flattenToMaxDepthTwo' . "\n");
-        $answer = $this->flattenToMaxDepthTwo($testGroupwiseForm4, 0);
+        print('testing newFlattenToMaxDepthTwo' . "\n");
+        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm4, 0);
         print(json_encode($answer) . "\n");
         print(json_encode($testFinalForm4) . "\n");
         var_dump($answer);
         var_dump($testFinalForm4);
         if (json_encode($testFinalForm4) !== json_encode($answer)) {
-            throw new \Error('flattenToMaxDepthTwo did not produce expected output testFinalForm4');
+            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm4');
         }
         else {
-            print('flattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
+            print('newFlattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
         }
 
         $compactDefinition = $this->convertToCompactForm($definition, 0);
@@ -2225,27 +2225,42 @@ class BunnyQueryContext implements QueryContextInterface
                 foreach ($standardisedRules["rules"] as $standardisedRule) {
                     printd($depth+3, "standardisedRule: " . json_encode($standardisedRule));
                     // $standardisedRule is of the form ["rules_oper" => "AND", "rules" => [A, B, C]] 
+                    // $thisInner = [];
+                    $innerNewStandardisedRules = [];
                     foreach ($standardisedRule["rules"] as $innerChild) {
                         printd($depth+4, "innerChild: " . json_encode($innerChild));
                         printd($depth+4, "standardisedChild['rules']: " . json_encode($standardisedChild['rules']));
                         // new entries must be of the form ["rules_oper" => "AND", "rules" => [$rule]]
                         // so that $newStandardisedRules is of the form [["rules_oper" => "AND", "rules" => [$rule]], ["rules_oper" => "AND", "rules" => [$rule]], ...] 
-                        foreach ($standardisedChild['rules'] as $childRule) {
-                            printd($depth+5, "childRule: " . json_encode($childRule));
-                            foreach ($childRule["rules"] as $innerChildRule) {
-                                printd($depth+6, "innerChildRule: " . json_encode($innerChildRule));
-                                $newStandardisedRules[] = [$innerChild, $innerChildRule];
-                            }
-                            // $newStandardisedRules[] = [[$innerChild, $childRule]];
-                        }
-                        // $newStandardisedRules[] = array_merge($newStandardisedRules, $standardisedChild['rules']);
-                        printd($depth+4, "newStandardisedRules at end of inner loop: " . json_encode($newStandardisedRules));
+                        $innerNewStandardisedRules[] = $innerChild;
                     }
-                    printd($depth+3, "standardisedRule midloop: " . json_encode($standardisedRule));
+                    printd($depth+3, "innerNewStandardisedRules after adding all standardisedRules: " . json_encode($innerNewStandardisedRules));
 
+                    foreach ($standardisedChild['rules'] as $childRule) {
+                        printd($depth+5, "childRule: " . json_encode($childRule));
+                        foreach ($childRule["rules"] as $innerChildRule) {
+                            printd($depth+6, "innerChildRule: " . json_encode($innerChildRule));
+                            $innerNewStandardisedRules[] = $innerChildRule;
+                        }
+                        // $newStandardisedRules[] = [[$innerChild, $childRule]];
+                    }
+                    // $newStandardisedRules[] = array_merge($newStandardisedRules, $standardisedChild['rules']);
+                    printd($depth+3, "innerNewStandardisedRules after adding all standardisedChild: " . json_encode($innerNewStandardisedRules));
+                    
+                    // // printd($depth+3, "standardisedRule midloop: " . json_encode($standardisedRule));
+                    // printd($depth+3, "newStandardisedRules at end of second-inner loop: " . json_encode($newStandardisedRules));
+                    $newStandardisedRules[] = $innerNewStandardisedRules;
                 }
+                $standardisedRules = [];
+                foreach ($newStandardisedRules as $newStandardisedRule) {
+                    printd($depth+2, "newStandardisedRule: " . json_encode($newStandardisedRule));
+                    $standardisedRules[] = [
+                        "rules_oper" => "AND",
+                        "rules" => $newStandardisedRule
+                    ];
+                }
+                $standardisedRules = ["rules_oper" => "OR", "rules" => $standardisedRules];
                 printd($depth+2, "standardisedRules at end of inner loop: " . json_encode($standardisedRules));
-                $standardisedRules = $newStandardisedRules;
             }
 
             $standardisedRules = [];
@@ -2256,6 +2271,7 @@ class BunnyQueryContext implements QueryContextInterface
                     "rules" => $newStandardisedRule
                 ];
             }
+
         }
 
         // We now have a single thing of form OR of AND - return this
