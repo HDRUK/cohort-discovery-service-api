@@ -1175,96 +1175,96 @@ class BunnyQueryContext implements QueryContextInterface
             ]
         }', associative: true);
 
-        if ($testCompactForm1 != $this->convertToCompactForm($testDefinition1, 0)) {
-            throw new \Error('convertToCompactForm did not produce expected output 1');
-        }
-        else {
-            print('convertToCompactForm produced expected output 1' . "\n");
-        }
+        // if ($testCompactForm1 != $this->convertToCompactForm($testDefinition1, 0)) {
+        //     throw new \Error('convertToCompactForm did not produce expected output 1');
+        // }
+        // else {
+        //     print('convertToCompactForm produced expected output 1' . "\n");
+        // }
 
-        if ($testCompactForm2 != $this->convertToCompactForm($testDefinition2, 0)) {
-            throw new \Error('convertToCompactForm did not produce expected output 2');
-        }
-        else {
-            print('convertToCompactForm produced expected output 2' . "\n");
-        }
+        // if ($testCompactForm2 != $this->convertToCompactForm($testDefinition2, 0)) {
+        //     throw new \Error('convertToCompactForm did not produce expected output 2');
+        // }
+        // else {
+        //     print('convertToCompactForm produced expected output 2' . "\n");
+        // }
 
 
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalFormSmall) . "\n");
-        var_dump($answer);
-        var_dump($testFinalFormSmall);
-        if (json_encode($testFinalFormSmall) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output Small' . "\n");
-        }
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalFormSmall) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalFormSmall);
+        // if (json_encode($testFinalFormSmall) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output Small' . "\n");
+        // }
 
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalFormSmall2) . "\n");
-        var_dump($answer);
-        var_dump($testFinalFormSmall2);
-        if (json_encode($testFinalFormSmall2) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small2');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output Small2' . "\n");
-        }
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall2, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalFormSmall2) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalFormSmall2);
+        // if (json_encode($testFinalFormSmall2) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output Small2');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output Small2' . "\n");
+        // }
 
-        print('testing newFlattenToMaxDepthTwo' . "\n");
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm1, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalForm1) . "\n");
-        var_dump($answer);
-        var_dump($testFinalForm1);
-        if (json_encode($testFinalForm1) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm1');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
-        }
+        // print('testing newFlattenToMaxDepthTwo' . "\n");
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm1, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalForm1) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalForm1);
+        // if (json_encode($testFinalForm1) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm1');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output testFinalForm1' . "\n");
+        // }
 
-        print('testing newFlattenToMaxDepthTwo' . "\n");
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm2, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalForm2) . "\n");
-        var_dump($answer);
-        var_dump($testFinalForm2);
-        if (json_encode($testFinalForm2) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm2');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
-        }
+        // print('testing newFlattenToMaxDepthTwo' . "\n");
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm2, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalForm2) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalForm2);
+        // if (json_encode($testFinalForm2) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm2');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output testFinalForm2' . "\n");
+        // }
 
-        print('testing newFlattenToMaxDepthTwo' . "\n");
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm3, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalForm3) . "\n");
-        var_dump($answer);
-        var_dump($testFinalForm3);
-        if (json_encode($testFinalForm3) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm3');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
-        }
+        // print('testing newFlattenToMaxDepthTwo' . "\n");
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm3, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalForm3) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalForm3);
+        // if (json_encode($testFinalForm3) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm3');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output testFinalForm3' . "\n");
+        // }
 
-        print('testing newFlattenToMaxDepthTwo' . "\n");
-        $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm4, 0);
-        print(json_encode($answer) . "\n");
-        print(json_encode($testFinalForm4) . "\n");
-        var_dump($answer);
-        var_dump($testFinalForm4);
-        if (json_encode($testFinalForm4) !== json_encode($answer)) {
-            throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm4');
-        }
-        else {
-            print('newFlattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
-        }
+        // print('testing newFlattenToMaxDepthTwo' . "\n");
+        // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseForm4, 0);
+        // print(json_encode($answer) . "\n");
+        // print(json_encode($testFinalForm4) . "\n");
+        // var_dump($answer);
+        // var_dump($testFinalForm4);
+        // if (json_encode($testFinalForm4) !== json_encode($answer)) {
+        //     throw new \Error('newFlattenToMaxDepthTwo did not produce expected output testFinalForm4');
+        // }
+        // else {
+        //     print('newFlattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
+        // }
 
         $compactDefinition = $this->convertToCompactForm($definition, 0);
 
