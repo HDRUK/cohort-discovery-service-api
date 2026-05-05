@@ -1293,7 +1293,16 @@ class BunnyQueryContext implements QueryContextInterface
         }
         
         if ($specialForm)   {
-            return $groupwiseForm;
+            $rules = $groupwiseForm["rules"];
+            return [
+                "groups_oper" => 'OR',
+                "groups" => [
+                        [
+                            "rules_oper" => 'AND',
+                            "rules" => $rules
+                        ]
+                    ]
+                ];
         }
 
         // Now we know it's not that special form, it is guaranteed to collapse to a massive OR of ANDs.

@@ -128,7 +128,7 @@ class QueryContextTest extends TestCase
             ],
             [
                 'id' => '00ff5058-3d91-40b5-901c-09822334ebcb',
-                'combinator' => 'or',
+                'combinator' => 'and',
                 'valid' => true,
             ],
             [
@@ -182,14 +182,14 @@ class QueryContextTest extends TestCase
 
         $firstGroup = $result['groups'][0];
         $this->assertIsArray($firstGroup['rules']);
-        $this->assertCount(2, $firstGroup['rules']);
-        $this->assertEquals('OR', $firstGroup['rules_oper'] ?? null);
+        $this->assertCount(3, $firstGroup['rules']);
+        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
 
         $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('3955320', $firstRule['value'] ?? null);
         $secondRule = $firstGroup['rules'][1] ?? null;
-        $this->assertEquals('3955321', $secondRule['value'] ?? null);
+        $this->assertEquals('3955322', $secondRule['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_query_alt(): void
@@ -198,24 +198,21 @@ class QueryContextTest extends TestCase
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
 
         $firstGroup = $result['groups'][0];
         $this->assertIsArray($firstGroup['rules']);
-        $this->assertCount(1, $firstGroup['rules']);
+        $this->assertCount(3, $firstGroup['rules']);
         $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
 
         $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('3955322', $firstRule['value'] ?? null);
-
-        $secondGroup = $result['groups'][1];
-        $this->assertIsArray($secondGroup['rules']);
-        $this->assertCount(2, $secondGroup['rules']);
-        $this->assertEquals('OR', $secondGroup['rules_oper'] ?? null);
-
-        $firstRule = $secondGroup['rules'][0] ?? null;
-        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
-        $this->assertEquals('3955321', $firstRule['value'] ?? null);
+        $secondRule = $firstGroup['rules'][1] ?? null;
+        $this->assertEquals('3955321', $secondRule['value'] ?? null);
+        $thirdRule = $firstGroup['rules'][2] ?? null;
+        $this->assertEquals('3955321', $thirdRule['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_gender_as_person(): void
