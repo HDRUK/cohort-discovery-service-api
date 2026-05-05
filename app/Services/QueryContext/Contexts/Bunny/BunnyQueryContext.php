@@ -2011,6 +2011,10 @@ class BunnyQueryContext implements QueryContextInterface
                 // if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'OR') {
                 //     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
                 // }
+
+
+                // "rules" begins in the form [ {value: A}, {value: B} ] but after processing we use a standardised format
+                // [[ { value: A }, { value: B } ], [...] ]
                 if ($groupOperator === 'OR' && $nestedGroup['rules_oper'] === 'AND') {
                     print(str_repeat(' ', 2 * $depth + 2) . "case 1\n");
                     $flattenedRules = array_merge($flattenedRules, $nestedGroup['rules']);
