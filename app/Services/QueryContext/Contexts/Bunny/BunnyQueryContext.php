@@ -1297,16 +1297,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         // Now we know it's not that special form, it is guaranteed to collapse to a massive OR of ANDs.
-        $groups = $this->flattenToMaxDepthTwo($groupwiseForm);
-
-
-        // Then finally convert to the final form we need for execution
-        // $this->processNode($definition, $groups, 0);
-
-        return [
-            'groups' => $groups,
-            'groups_oper' => strtoupper($definition['combinator'] ?? 'AND'),
-        ];
+        return $this->newFlattenToMaxDepthTwo($groupwiseForm);
     }
 
     function convertAndGroup(array $node): array
