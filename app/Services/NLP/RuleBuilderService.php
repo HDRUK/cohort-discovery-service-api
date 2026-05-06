@@ -138,11 +138,41 @@ class RuleBuilderService
                 continue;
             }
 
+            $originalCandidates = $candidates;
+
             if ($ignoreSynthetic) {
                 $candidates = array_values(array_filter(
                     $candidates,
                     fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
                 ));
+
+                if (empty($candidates) && ! empty($originalCandidates)) {
+                    $primary = $originalCandidates[0];
+                    $text = $primary['text'] ?? $textKey;
+
+                    $candidates = [[
+                        'text' => $text,
+                        'label' => null,
+                        'start' => $primary['start'] ?? 0,
+                        'end' => $primary['end'] ?? strlen($text),
+                        'negated' => $primary['negated'] ?? false,
+                        'age_constraints' => $primary['age_constraints'] ?? [],
+                        'time_constraints' => $primary['time_constraints'] ?? [],
+                        'attributes' => [
+                            'concept_id' => null,
+                            'concept_name' => $text,
+                            'description' => $text,
+                            'domain_id' => $primary['attributes']['domain_id'] ?? null,
+                            'ncollections' => 0,
+                            'all_synthetic' => 0,
+                            'match_score' => 0,
+                            'tokens' => [],
+                            'phrase_tokens' => [],
+                            'unmatched' => true,
+                            'synthetic_filtered' => true,
+                        ],
+                    ]];
+                }
             }
 
             if (empty($candidates)) {
