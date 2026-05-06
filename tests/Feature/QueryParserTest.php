@@ -2,77 +2,299 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Arr;
-use Tests\TestCase;
+use App\Services\NLP\NLPConceptExtractor;
+use Mockery;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
-class QueryParserTest extends TestCase
+class QueryParserTest extends BaseTestCase
 {
-    // LS - Removed for now, as it relies upon python service. Needs mocking instead
-    //
-    //
     private const BASE_URL = '/api/v1/parse-query';
 
-    private array $queries = [
-        [
-            'query' => 'People who (received Moderna COVID-19 vaccine or Pfizer COVID-19 vaccine) and not (received Oxford, AstraZeneca COVID-19 vaccine) and observed with Close contact with confirmed COVID-19 case person and measured with SARS-CoV-2 antibody to nucleocapsid (N) protein present and diagnosed with Chronic kidney disease stage 3',
-            'file' => 'test_query_1.json',
-        ],
-        [
-            'query' => 'People who tested Positive for Influenza A virus and not (tested Positive for SARS-CoV-2) and measured with Leukocyte count decreased and diagnosed with Pneumonia',
-            'file' => 'test_query_2.json',
-        ],
-        [
-            'query' => 'Individuals who (received either Moderna or Pfizer COVID-19 vaccines), excluding Oxford-AstraZeneca recipients, observed to have close exposure to a confirmed COVID-19 case, measured positive for SARS-CoV-2 nucleocapsid antibodies, and diagnosed with chronic kidney disease stage 3',
-            'file' => 'test_query_3.json',
-        ],
-        [
-            'query' => 'Individuals who (received Moderna or Pfizer COVID-19 shots), without having received Oxford-AstraZeneca, had close contact with a confirmed COVID-19 patient, were found positive for SARS-CoV-2 N protein antibodies, and carry a diagnosis of chronic kidney disease stage 3',
-            'file' => 'test_query_4.json',
-        ],
-    ];
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware();
+
+        $mock = Mockery::mock(NLPConceptExtractor::class);
+
+        $mock->shouldReceive('extract')
+            ->andReturnUsing(fn (string $phrase) => $this->fakeNlpResponse($phrase));
+
+        $this->app->instance(NLPConceptExtractor::class, $mock);
     }
 
-    public function test_true(): void
+    private function fakeNlpResponse(string $phrase): array
     {
-        $this->assertTrue(true);
+
+
+        $map = [
+            'men' => ['MALE', 8507, 'Gender'],
+            'male' => ['MALE', 8507, 'Gender'],
+            'females' => ['FEMALE', 8532, 'Gender'],
+            'female' => ['FEMALE', 8532, 'Gender'],
+            'cancer' => ['Cancer', 1, 'Condition'],
+            'covid' => ['COVID-19', 2, 'Condition'],
+            'and tested positive for covid-19' => ['COVID-19', 22, 'Observation'],
+            'diabetes' => ['Diabetes mellitus', 3, 'Condition'],
+            'smokers' => ['Smoker', 4, 'Observation'],
+            'pfizer' => ['Pfizer vaccine', 200, 'Drug'],
+            'moderna' => ['Moderna vaccine', 201, 'Drug'],
+        ];
+
+        $key = strtolower(trim($phrase));
+
+        $tokens = preg_split(
+            '/\s+(?:with|and|having|who have|that have)\s+/i',
+            $key
+        );
+
+        $entities = [];
+
+        foreach ($tokens as $token) {
+            $token = trim($token);
+
+            if ($token === '' || ! isset($map[$token])) {
+                continue;
+            }
+
+            [$name, $conceptId, $category] = $map[$token];
+
+            $entities[] = [
+                'text' => $token,
+                'label' => $category,
+                'start' => 0,
+                'end' => strlen($token),
+                'negated' => false,
+                'attributes' => [
+                    'concept_id' => $conceptId,
+                    'concept_name' => $name,
+                    'description' => $name,
+                    'domain_id' => $category,
+                    'ncollections' => 1,
+                    'all_synthetic' => 0,
+                    'match_score' => 100,
+                    'tokens' => [$token],
+                    'phrase_tokens' => [$token],
+                    'negates' => false,
+                ],
+                'age_constraints' => [],
+                'time_constraints' => [],
+            ];
+        }
+
+        return [
+            'entities' => $entities,
+            'groups' => [],
+            'warnings' => [],
+            'age_constraints' => [],
+            'time_constraints' => [],
+        ];
     }
 
-    // public function test_it_can_parse_queries()
-    // {
-    //     foreach ($this->queries as $q) {
-    //         $response = $this->postJson(self::BASE_URL, [
-    //             'query' => $q['query'],
-    //         ]);
-    //         $response->assertStatus(200);
-    //         $content = $this->stripDynamicIds(json_decode($response->json('data'), true));
+    private function fakeEntity(string $text, string $name, int $conceptId, string $category): array
+    {
+        return [
+            'text' => $text,
+            'attributes' => [
+                'concept_id' => $conceptId,
+                'concept_name' => $name,
+                'description' => $name,
+                'domain_id' => $category,
+                'ncollections' => 1,
+                'all_synthetic' => 0,
+                'match_score' => 100,
+                'tokens' => [$text],
+                'phrase_tokens' => [$text],
+            ],
+            'age_constraints' => [],
+            'time_constraints' => [],
+        ];
+    }
 
-    //         $this->assertNotNull($content);
 
-    //         $expectedQuery = json_decode(file_get_contents(__DIR__ . '/files/' . $q['file']), true);
-    //         $this->assertEquals(
-    //             $expectedQuery,
-    //             $content
-    //         );
-    //     }
-    // }
+    public function test_men_with_cancer_or_covid_creates_shared_context_group(): void
+    {
+        $rules = $this->parseRules('men with cancer or covid');
 
-    // protected function stripDynamicIds(array $data): array
-    // {
-    //     $data = Arr::except($data, ['id']);
+        $this->assertCount(3, $rules);
 
-    //     if (isset($data['rules'])) {
-    //         $data['rules'] = array_map(fn ($r) => $this->stripDynamicIds($r), $data['rules']);
-    //     }
+        $this->assertConceptNameContains($rules[0], 'male');
+        $this->assertCombinator($rules[1], 'and');
 
-    //     if (isset($data['rule']['concept']['children'])) {
-    //         $data['rule']['concept']['children'] = array_map(fn ($r) => $this->stripDynamicIds($r), $data['rule']['concept']['children']);
-    //     }
+        $this->assertArrayHasKey('rules', $rules[2]);
 
-    //     return $data;
-    // }
+        $group = $rules[2];
+        $this->assertIsGroup($group);
+        $innerRules = $rules[2]['rules'];
 
+        $this->assertCount(3, $innerRules);
+
+        $this->assertConceptNameContains($innerRules[0], 'cancer');
+        $this->assertCombinator($innerRules[1], 'or');
+        $this->assertConceptNameContains($innerRules[2], 'covid');
+    }
+
+
+    public function test_men_with_bracketed_cancer_or_covid_creates_same_shape(): void
+    {
+        $rules = $this->parseRules('men with (cancer or covid)');
+
+        $this->assertCount(3, $rules);
+
+        $this->assertConceptNameContains($rules[0], 'male');
+        $this->assertCombinator($rules[1], 'and');
+
+        $this->assertArrayHasKey('rules', $rules[2]);
+
+        $innerRules = $rules[2]['rules'];
+
+        $this->assertCount(3, $innerRules);
+
+        $this->assertConceptNameContains($innerRules[0], 'cancer');
+        $this->assertCombinator($innerRules[1], 'or');
+        $this->assertConceptNameContains($innerRules[2], 'covid');
+    }
+
+    public function test_bracketed_men_with_cancer_or_covid_creates_top_level_or(): void
+    {
+        $rules = $this->parseRules('(men with cancer) or covid');
+
+        $this->assertCount(3, $rules);
+        $this->assertIsGroup($rules[0]);
+        $this->assertCombinator($rules[1], 'or');
+        $this->assertConceptNameContains($rules[2], 'covid');
+
+        $leftGroupRules = $rules[0]['rules'];
+
+        $this->assertCount(3, $leftGroupRules);
+
+        $this->assertConceptNameContains($leftGroupRules[0], 'male');
+        $this->assertCombinator($leftGroupRules[1], 'and');
+        $this->assertConceptNameContains($leftGroupRules[2], 'cancer');
+    }
+
+
+    public function test_mixed_shared_context_query_creates_expected_top_level_or_shape(): void
+    {
+        $rules = $this->parseRules(
+            'men with cancer or females with diabetes or cancer'
+        );
+
+        $this->assertCount(3, $rules);
+
+        $this->assertIsGroup($rules[0]);
+        $this->assertCombinator($rules[1], 'or');
+        $this->assertIsGroup($rules[2]);
+
+        $maleGroup = $rules[0]['rules'];
+
+        $this->assertCount(3, $maleGroup);
+        $this->assertConceptNameContains($maleGroup[0], 'male');
+        $this->assertCombinator($maleGroup[1], 'and');
+        $this->assertConceptNameContains($maleGroup[2], 'cancer');
+
+        $femaleGroup = $rules[2]['rules'];
+
+        $this->assertCount(3, $femaleGroup);
+        $this->assertConceptNameContains($femaleGroup[0], 'female');
+        $this->assertCombinator($femaleGroup[1], 'and');
+        $this->assertIsGroup($femaleGroup[2]);
+
+        $innerRules = $femaleGroup[2]['rules'];
+
+        $this->assertCount(3, $innerRules);
+        $this->assertConceptNameContains($innerRules[0], 'diabetes');
+        $this->assertCombinator($innerRules[1], 'or');
+        $this->assertConceptNameContains($innerRules[2], 'cancer');
+    }
+
+    public function test_smokers_with_cancer_creates_and_group(): void
+    {
+        $rules = $this->parseRules('smokers with cancer');
+
+        $this->assertCount(1, $rules);
+        $this->assertIsGroup($rules[0]);
+
+        $groupRules = $rules[0]['rules'];
+
+        $this->assertCount(3, $groupRules);
+
+        $this->assertConceptNameContains($groupRules[0], 'smoker');
+        $this->assertCombinator($groupRules[1], 'and');
+        $this->assertConceptNameContains($groupRules[2], 'cancer');
+    }
+
+    private function parseRules(string $query): array
+    {
+        $response = $this->postJson(self::BASE_URL, [
+            'query' => $query,
+        ]);
+
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+
+        if (is_string($data)) {
+            $data = json_decode($data, true);
+        }
+
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('rules', $data);
+
+        return $data['rules'];
+    }
+
+    public function test_adults_with_vaccine_or_vaccine_and_covid_creates_expected_structure(): void
+    {
+        $rules = $this->parseRules(
+            'adults who either had pfizer or moderna and tested positive for covid-19'
+        );
+
+        dump($rules);
+        $this->assertCount(5, $rules);
+
+        // age >= 18
+        $this->assertArrayHasKey('value', $rules[0]);
+        $this->assertSame([18, null], $rules[0]['value']);
+
+        // AND
+        $this->assertCombinator($rules[1], 'and');
+
+        // pfizer OR moderna
+        $this->assertIsGroup($rules[2]);
+
+        $vaccineGroup = $rules[2]['rules'];
+
+        $this->assertCount(3, $vaccineGroup);
+        $this->assertConceptNameContains($vaccineGroup[0], 'pfizer');
+        $this->assertCombinator($vaccineGroup[1], 'or');
+        $this->assertConceptNameContains($vaccineGroup[2], 'moderna');
+
+        // AND
+        $this->assertCombinator($rules[3], 'and');
+
+        // covid-19
+        $this->assertConceptNameContains($rules[4], 'covid');
+    }
+
+
+    private function assertCombinator(array $node, string $expected): void
+    {
+        $this->assertSame($expected, $node['combinator'] ?? null);
+    }
+
+    private function assertIsGroup(array $node): void
+    {
+        $this->assertArrayHasKey('rules', $node);
+        $this->assertIsArray($node['rules']);
+    }
+
+    private function assertConceptNameContains(array $node, string $expected): void
+    {
+        $name = $node['rule']['concept']['name'] ?? null;
+
+        $this->assertIsString($name);
+        $this->assertStringContainsStringIgnoringCase($expected, $name);
+    }
 }
