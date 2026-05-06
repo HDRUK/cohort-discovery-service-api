@@ -69,6 +69,10 @@ class RuleBuilderService
         $depth = 0;
         $length = strlen($query);
 
+        /*
+         * Splits on outer or rather than any inner ORs e.g. (moderna or covid)
+         * which the NLP service will handle..
+         */
         for ($i = 0; $i < $length; $i++) {
             $char = $query[$i];
 
