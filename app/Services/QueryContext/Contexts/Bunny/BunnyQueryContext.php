@@ -14,7 +14,8 @@ class BunnyQueryContext implements QueryContextInterface
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
-        // Check for the special case where it's only a single group of ANDs - in this case we can skip the flattening step and just convert to final form directly
+        // Check for the special case where it's only a single group of ANDs - 
+        // in this case we can skip the flattening step and just convert to "standard form" (OR-of-ANDs) directly
         $specialForm = true;
         if ($groupwiseForm['rules_oper'] === 'OR') {
             $specialForm = false;
@@ -40,8 +41,8 @@ class BunnyQueryContext implements QueryContextInterface
                 ];
         }
 
-        // Now we know it's not that special form, it is guaranteed to collapse to an OR of ANDs.
-        return $this->flattenToMaxDepthTwo($groupwiseForm, 0);
+        // Now we know it's not in that form, collapse to "standard form".
+        return $this->flattenToStandardForm($groupwiseForm, 0);
     }
 
     private function convertGroup(array $node, string $groupOperator): array
@@ -305,7 +306,7 @@ class BunnyQueryContext implements QueryContextInterface
      * ]
      * as the outer layer
      */
-    private function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
+    private function flattenToStandardForm(array $groupwiseForm, int $depth): array
     {           
         $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
         $rules = $groupwiseForm['rules'] ?? [];
@@ -330,7 +331,7 @@ class BunnyQueryContext implements QueryContextInterface
             else {
                 // Child has children. Check that _its_ children are all in standard form, 
                 // then convert this to standard form recursively
-                $standardisedChildren[] = $this->flattenToMaxDepthTwo($rule, $depth+1);
+                $standardisedChildren[] = $this->flattenToStandardForm($rule, $depth+1);
             }
         }
 
