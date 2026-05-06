@@ -6,11 +6,6 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 
-
-    function printd($depth, $message) {
-        print(str_repeat(' ', 2 * $depth) . $message . "\n");
-    }
-
 function combineStandardsWithAnd(array $first, array $second): array {
     // Given two arrays of standardised rules of the form 
     // $first = ["rules_oper" => "OR", 
@@ -38,16 +33,11 @@ function combineStandardsWithAnd(array $first, array $second): array {
     //                       ]
     //           ]
 
-    printd(1, "first: " . json_encode($first));
-    printd(1, "second: " . json_encode($second));
-
     $combinedRules = [];
     foreach ($first['rules'] as $firstRule) {
-        printd(2, "firstRule: " . json_encode($firstRule));
         // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]] 
         $innerNewStandardisedRules = [];
         foreach ($second["rules"] as $secondRule) {
-            printd(2, "secondRule: " . json_encode($secondRule));
             // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]] 
             $combinedRules[] = [
                 "rules_oper" => "AND", 
@@ -58,7 +48,7 @@ function combineStandardsWithAnd(array $first, array $second): array {
             ];
         }
     }
-    printd(1, "returning combinedRules: " . json_encode($combinedRules));
+
     return [
         "rules_oper" => "OR", 
         "rules" => $combinedRules
@@ -71,7 +61,6 @@ class BunnyQueryContext implements QueryContextInterface
     {
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
-        print('groupwiseForm: ' . json_encode($groupwiseForm) . "\n");
 
         // Check for the special case where it's only a single group of ANDs - in this case we can skip the flattening step and just convert to final form directly
         $specialForm = true;
@@ -105,11 +94,9 @@ class BunnyQueryContext implements QueryContextInterface
 
     function convertGroup(array $node, string $groupOperator): array
     {
-        // print('convertGroup node: ' . json_encode($node) . "\n");
         $groups = [];
         $children = $node['rules'] ?? [];
         foreach ($children as $child) {
-            // print('convertGroup child: ' . json_encode($child) . "\n");
             if ($this->isGroupNode($child)) {
                 $groups[] = $this->convertToGroupwiseForm($child);
             }
@@ -129,19 +116,15 @@ class BunnyQueryContext implements QueryContextInterface
 
     function convertToGroupwiseForm(array $node): array
     {
-        print('convertToGroupwiseForm node: ' . json_encode($node) . "\n");
         $groupOperator = $this->groupOperator($node);
         if ($groupOperator || $this->isGroupNode($node)) {
             return $this->convertGroup($node, $groupOperator ?? 'OR');
         }
         else {
-            // this is a leaf node - we can just return it
             $leafRule = null;
             if ($this->isLeafNode($node)) {
-                // print('is leaf node');
                 $leafRule = $this->makeLeafRule($node);
             } elseif ($this->isAgeFilter($node)) {
-                // print('is leaf age filter');
                 $leafRule = $this->makeLeafAgeFilter($node);
             } else {
                 throw new \Error('unknown leaf rule' . json_encode($node));
@@ -327,7 +310,6 @@ class BunnyQueryContext implements QueryContextInterface
             }
         }
 
-        printd($depth, "standardisedChildren: " . json_encode($standardisedChildren));
         // $standarisedChildren is of the form [ OR([AND([$rule])]), OR([AND([$rule])]), ... ];
         // specifically 
         // [ 
