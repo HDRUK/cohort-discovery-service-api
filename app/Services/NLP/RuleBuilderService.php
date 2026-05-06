@@ -24,12 +24,59 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
+    private function normaliseImplicitOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        if (preg_match('/^(.+?\bwith\s+)(.+\s+or\s+.+)$/i', $query, $matches)) {
+            return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
+        }
+
+        return $query;
+    }
+
     private function splitTopLevelOr(string $query): array
     {
-        // $q = strtolower($query); // LS: Ruins work done with Acronyms. Removing.
-        $segments = preg_split('/\s+or\s+/i', $query);
+        $segments = [];
+        $buffer = '';
+        $depth = 0;
+        $length = strlen($query);
 
-        return array_map('trim', $segments);
+        for ($i = 0; $i < $length; $i++) {
+            $char = $query[$i];
+
+            if ($char === '(') {
+                $depth++;
+                $buffer .= $char;
+                continue;
+            }
+
+            if ($char === ')') {
+                $depth = max(0, $depth - 1);
+                $buffer .= $char;
+                continue;
+            }
+
+            if (
+                $depth === 0
+                && preg_match('/\G\s+or\s+/i', $query, $match, 0, $i)
+            ) {
+                $segments[] = trim($buffer);
+                $buffer = '';
+                $i += strlen($match[0]) - 1;
+                continue;
+            }
+
+            $buffer .= $char;
+        }
+
+        if (trim($buffer) !== '') {
+            $segments[] = trim($buffer);
+        }
+
+        return $segments;
     }
 
     private function getConceptsForSegment(
@@ -162,6 +209,8 @@ class RuleBuilderService
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
+
+        $query = $this->normaliseImplicitOrScope($query);
         $segments = $this->splitTopLevelOr($query);
 
         $segmentCount = count($segments);
