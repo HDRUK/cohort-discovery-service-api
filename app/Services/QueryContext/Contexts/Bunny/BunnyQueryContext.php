@@ -1253,7 +1253,7 @@ class BunnyQueryContext implements QueryContextInterface
         // }
 
         // Convert to groupwise form for easier parsing of nodes per group.
-        $groupwiseForm = $this->convertToGroupwiseForm($compactDefinition);
+        $groupwiseForm = $this->convertToGroupwiseForm($definition);
         print('groupwiseForm: ' . json_encode($groupwiseForm) . "\n");
 
         // Check for the special case where it's only a single group of ANDs - in this case we can skip the flattening step and just convert to final form directly
