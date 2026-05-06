@@ -6,54 +6,6 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 
-function combineStandardsWithAnd(array $first, array $second): array {
-    // Given two arrays of standardised rules of the form 
-    // $first = ["rules_oper" => "OR", 
-    //           "rules" => [ 
-    //              ["rules_oper" => "AND", "rules" => [A, B]], 
-    //              ["rules_oper" => "AND", "rules" => [C]], 
-    //                       ]
-    //           ], 
-    // $second = ["rules_oper" => "OR", 
-    //           "rules" => [ 
-    //              ["rules_oper" => "AND", "rules" => [G, H]], 
-    //              ["rules_oper" => "AND", "rules" => [I, J]], 
-    //              ["rules_oper" => "AND", "rules" => [K]]
-    //                       ]
-    //           ],
-    // combine them via the AND operator into a single standardised rule of the form 
-    // ["rules_oper" => "OR", 
-    //           "rules" => [ 
-    //              ["rules_oper" => "AND", "rules" => [A, B, G, H]], 
-    //              ["rules_oper" => "AND", "rules" => [A, B, I, J]], 
-    //              ["rules_oper" => "AND", "rules" => [A, B, K]], 
-    //              ["rules_oper" => "AND", "rules" => [C, G, H]], 
-    //              ["rules_oper" => "AND", "rules" => [C, I, J]], 
-    //              ["rules_oper" => "AND", "rules" => [C, K]], 
-    //                       ]
-    //           ]
-
-    $combinedRules = [];
-    foreach ($first['rules'] as $firstRule) {
-        // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]] 
-        $innerNewStandardisedRules = [];
-        foreach ($second["rules"] as $secondRule) {
-            // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]] 
-            $combinedRules[] = [
-                "rules_oper" => "AND", 
-                "rules" => array_merge(
-                    $firstRule["rules"], 
-                    $secondRule["rules"]
-                )
-            ];
-        }
-    }
-
-    return [
-        "rules_oper" => "OR", 
-        "rules" => $combinedRules
-    ];
-}
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -92,7 +44,7 @@ class BunnyQueryContext implements QueryContextInterface
         return $this->flattenToMaxDepthTwo($groupwiseForm, 0);
     }
 
-    function convertGroup(array $node, string $groupOperator): array
+    private function convertGroup(array $node, string $groupOperator): array
     {
         $groups = [];
         $children = $node['rules'] ?? [];
@@ -114,7 +66,7 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
-    function convertToGroupwiseForm(array $node): array
+    private function convertToGroupwiseForm(array $node): array
     {
         $groupOperator = $this->groupOperator($node);
         if ($groupOperator || $this->isGroupNode($node)) {
@@ -133,7 +85,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
     }
 
-    function groupOperator(array $node): ?string
+    private function groupOperator(array $node): ?string
     {
         return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
     }
@@ -257,9 +209,58 @@ class BunnyQueryContext implements QueryContextInterface
         return sprintf($pattern, $months);
     }
 
-    public function hasOperator(array $rule): bool
+    private function hasOperator(array $rule): bool
     {
         return array_key_exists("rules_oper", $rule);
+    }
+
+    private function combineStandardsWithAnd(array $first, array $second): array {
+        // Given two arrays of standardised rules of the form 
+        // $first = ["rules_oper" => "OR", 
+        //           "rules" => [ 
+        //              ["rules_oper" => "AND", "rules" => [A, B]], 
+        //              ["rules_oper" => "AND", "rules" => [C]], 
+        //                       ]
+        //           ], 
+        // $second = ["rules_oper" => "OR", 
+        //           "rules" => [ 
+        //              ["rules_oper" => "AND", "rules" => [G, H]], 
+        //              ["rules_oper" => "AND", "rules" => [I, J]], 
+        //              ["rules_oper" => "AND", "rules" => [K]]
+        //                       ]
+        //           ],
+        // combine them via the AND operator into a single standardised rule of the form 
+        // ["rules_oper" => "OR", 
+        //           "rules" => [ 
+        //              ["rules_oper" => "AND", "rules" => [A, B, G, H]], 
+        //              ["rules_oper" => "AND", "rules" => [A, B, I, J]], 
+        //              ["rules_oper" => "AND", "rules" => [A, B, K]], 
+        //              ["rules_oper" => "AND", "rules" => [C, G, H]], 
+        //              ["rules_oper" => "AND", "rules" => [C, I, J]], 
+        //              ["rules_oper" => "AND", "rules" => [C, K]], 
+        //                       ]
+        //           ]
+
+        $combinedRules = [];
+        foreach ($first['rules'] as $firstRule) {
+            // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]] 
+            $innerNewStandardisedRules = [];
+            foreach ($second["rules"] as $secondRule) {
+                // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]] 
+                $combinedRules[] = [
+                    "rules_oper" => "AND", 
+                    "rules" => array_merge(
+                        $firstRule["rules"], 
+                        $secondRule["rules"]
+                    )
+                ];
+            }
+        }
+
+        return [
+            "rules_oper" => "OR", 
+            "rules" => $combinedRules
+        ];
     }
 
     /**
@@ -272,7 +273,7 @@ class BunnyQueryContext implements QueryContextInterface
      * @param array $groupwiseForm The groupwise form to process.
      * @return array The transformed structure with a maximum depth of 2 groups.
      */
-    public function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
+    private function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
     {
         // This function always returns in the form of 
         // [
