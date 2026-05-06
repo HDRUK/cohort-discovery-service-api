@@ -146,6 +146,8 @@ class RuleBuilderService
                     fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
                 ));
 
+                //temporary fix to at least have one blank candidate if we are removing
+                // due to being synthetic data only
                 if (empty($candidates) && ! empty($originalCandidates)) {
                     $primary = $originalCandidates[0];
                     $text = $primary['text'] ?? $textKey;
