@@ -1552,24 +1552,14 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         // We now have a single thing of form OR of AND
-        // Finally, if we're at the top level, slim down any AND children that only have one rule in them, 
-        // so we don't have unnecessary nesting of ANDs within ORs, and rename to "groups" for the final form
+        // Finally, if we're at the top level, rename to "groups" for the final form
         if ($depth > 0) {
             return $standardisedForm;
         }
 
-        $standardisedRules = [];
-        foreach ($standardisedForm['rules'] as $orChild) {
-            if ($orChild['rules_oper'] === 'AND' && count($orChild['rules']) === 1) {
-                $standardisedRules[] = $orChild['rules'][0];
-            }
-            else {
-                $standardisedRules[] = $orChild;
-            }
-        }
         return [
             "groups_oper" => "OR",
-            "groups" => $standardisedRules
+            "groups" => $standardisedForm['rules']
         ];
     }
 
