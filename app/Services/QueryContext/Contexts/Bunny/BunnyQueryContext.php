@@ -90,125 +90,6 @@ class BunnyQueryContext implements QueryContextInterface
         return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
     }
 
-    protected function makeLeafRule(array $child): array
-    {
-        $concept = $child['rule']['concept'];
-        $isExcluded = (bool) ($child['exclude'] ?? false);
-        $timeConstraint = $child['timeConstraint'] ?? [null, null];
-        $ageConstraint = $child['ageConstraint'] ?? [null, null];
-
-        $category = $concept['category'] ?? 'UNKNOWN';
-
-        if (in_array($category, ['Gender', 'Ethnicity', 'Race'], true)) {
-            $category = 'Person';
-        }
-
-        $rule = [
-            'varname' => 'OMOP',
-            'varcat' => $category,
-            'type' => 'TEXT',
-            'oper' => $isExcluded ? '!=' : '=',
-            'value' => (string) ($concept['concept_id'] ?? ''),
-        ];
-
-        // note: bunny cannot handle both time and age constraints
-        // - try time constraint then fallback to age constraint
-        $bunnyTime = null;
-        if (count($timeConstraint) === 2) {
-            [$lower, $upper] = $timeConstraint;
-            $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
-        }
-
-        if ($bunnyTime === null && count($ageConstraint) === 2) {
-            [$lower, $upper] = $ageConstraint;
-            $bunnyTime = $this->encodeBunnyAgeConstraint($lower, $upper);
-        }
-
-        if ($bunnyTime !== null) {
-            $rule['time'] = $bunnyTime;
-        }
-
-        return $rule;
-    }
-
-    protected function makeLeafAgeFilter(array $child): array
-    {
-        $values = $child['value'];
-        $rule = [
-            'varname' => 'AGE',
-            'varcat' => 'Person',
-            'type' => 'NUM',
-            'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
-        ];
-        return $rule;
-    }
-
-    protected function isOperatorNode(array $node): bool
-    {
-        return isset($node['combinator']) && ! isset($node['rule']) && ! isset($node['rules']);
-    }
-
-    protected function isLeafNode(array $node): bool
-    {
-        return isset($node['rule']['concept']) && ! isset($node['rules']);
-    }
-
-    protected function isGroupNode(array $node): bool
-    {
-        return isset($node['rules']);
-    }
-
-    protected function isAgeFilter(array $node): bool
-    {
-        return isset($node['value']) && ! isset($node['rules'])  && ! isset($node['rule']);
-    }
-
-    public function getRelativeMonths(string $date): int
-    {
-        $now = Carbon::today();
-        $other = Carbon::parse($date);
-
-        return (int) round(abs($now->diffInMonths($other, false)));
-    }
-
-    public function encodeBunnyAgeConstraint(?int $lower, ?int $upper): ?string
-    {
-        if (is_null($lower) && is_null($upper)) {
-            return null;
-        }
-        return $lower !== null ? $lower.'|:AGE:Y' : '|'.$upper.':AGE:Y';
-    }
-
-    public function encodeBunnyTimeConstraint(
-        ?string $lower,
-        ?string $upper,
-    ): ?string {
-
-        if (is_null($lower) && is_null($upper)) {
-            return null;
-        }
-
-        // !! BUNNY warning
-        // - we are only able to encode left or right operator
-        // - not an 'inbetween' and you'd think would be logical
-        // - we have to default to use lower for now
-
-        [$date, $pattern] = $lower !== null
-            ? [
-                $lower,
-                '%d|:TIME:M'
-            ]
-            : [
-                $upper,
-                '|%d:TIME:M'
-            ];
-
-        $months = $this->getRelativeMonths($date);
-
-        return sprintf($pattern, $months);
-    }
-
     private function hasOperator(array $rule): bool
     {
         return array_key_exists("rules_oper", $rule);
@@ -361,6 +242,125 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         return $standardisedForm;
+    }
+
+    protected function makeLeafRule(array $child): array
+    {
+        $concept = $child['rule']['concept'];
+        $isExcluded = (bool) ($child['exclude'] ?? false);
+        $timeConstraint = $child['timeConstraint'] ?? [null, null];
+        $ageConstraint = $child['ageConstraint'] ?? [null, null];
+
+        $category = $concept['category'] ?? 'UNKNOWN';
+
+        if (in_array($category, ['Gender', 'Ethnicity', 'Race'], true)) {
+            $category = 'Person';
+        }
+
+        $rule = [
+            'varname' => 'OMOP',
+            'varcat' => $category,
+            'type' => 'TEXT',
+            'oper' => $isExcluded ? '!=' : '=',
+            'value' => (string) ($concept['concept_id'] ?? ''),
+        ];
+
+        // note: bunny cannot handle both time and age constraints
+        // - try time constraint then fallback to age constraint
+        $bunnyTime = null;
+        if (count($timeConstraint) === 2) {
+            [$lower, $upper] = $timeConstraint;
+            $bunnyTime = $this->encodeBunnyTimeConstraint($lower, $upper);
+        }
+
+        if ($bunnyTime === null && count($ageConstraint) === 2) {
+            [$lower, $upper] = $ageConstraint;
+            $bunnyTime = $this->encodeBunnyAgeConstraint($lower, $upper);
+        }
+
+        if ($bunnyTime !== null) {
+            $rule['time'] = $bunnyTime;
+        }
+
+        return $rule;
+    }
+
+    protected function makeLeafAgeFilter(array $child): array
+    {
+        $values = $child['value'];
+        $rule = [
+            'varname' => 'AGE',
+            'varcat' => 'Person',
+            'type' => 'NUM',
+            'oper' => '=',
+            'value' => $values[0].'|'.$values[1],
+        ];
+        return $rule;
+    }
+
+    protected function isOperatorNode(array $node): bool
+    {
+        return isset($node['combinator']) && ! isset($node['rule']) && ! isset($node['rules']);
+    }
+
+    protected function isLeafNode(array $node): bool
+    {
+        return isset($node['rule']['concept']) && ! isset($node['rules']);
+    }
+
+    protected function isGroupNode(array $node): bool
+    {
+        return isset($node['rules']);
+    }
+
+    protected function isAgeFilter(array $node): bool
+    {
+        return isset($node['value']) && ! isset($node['rules'])  && ! isset($node['rule']);
+    }
+
+    public function getRelativeMonths(string $date): int
+    {
+        $now = Carbon::today();
+        $other = Carbon::parse($date);
+
+        return (int) round(abs($now->diffInMonths($other, false)));
+    }
+
+    public function encodeBunnyAgeConstraint(?int $lower, ?int $upper): ?string
+    {
+        if (is_null($lower) && is_null($upper)) {
+            return null;
+        }
+        return $lower !== null ? $lower.'|:AGE:Y' : '|'.$upper.':AGE:Y';
+    }
+
+    public function encodeBunnyTimeConstraint(
+        ?string $lower,
+        ?string $upper,
+    ): ?string {
+
+        if (is_null($lower) && is_null($upper)) {
+            return null;
+        }
+
+        // !! BUNNY warning
+        // - we are only able to encode left or right operator
+        // - not an 'inbetween' and you'd think would be logical
+        // - we have to default to use lower for now
+
+        [$date, $pattern] = $lower !== null
+            ? [
+                $lower,
+                '%d|:TIME:M'
+            ]
+            : [
+                $upper,
+                '|%d:TIME:M'
+            ];
+
+        $months = $this->getRelativeMonths($date);
+
+        return sprintf($pattern, $months);
     }
 
     public function getType(): QueryContextType
