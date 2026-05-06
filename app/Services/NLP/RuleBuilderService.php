@@ -37,6 +37,31 @@ class RuleBuilderService
         return $query;
     }
 
+    private function normaliseEitherOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        /*
+         * Turns:
+         *   adults who either had pfizer or moderna and tested positive for covid-19
+         *
+         * Into:
+         *   adults with (pfizer or moderna) and tested positive for covid-19
+         */
+        return preg_replace_callback(
+            '/\bwho\s+either\s+(?:had|has|have|received|got|were given|was given|been given|given)?\s*(.+?)\s+or\s+(.+?)(?=\s+and\s+|\s*,|$)/i',
+            function (array $matches): string {
+                $left = trim($matches[1]);
+                $right = trim($matches[2]);
+
+                return 'with (' . $left . ' or ' . $right . ')';
+            },
+            $query
+        );
+    }
+
     private function splitTopLevelOr(string $query): array
     {
         $segments = [];
@@ -210,7 +235,9 @@ class RuleBuilderService
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
 
+        $query = $this->normaliseEitherOrScope($query);
         $query = $this->normaliseImplicitOrScope($query);
+
         $segments = $this->splitTopLevelOr($query);
 
         $segmentCount = count($segments);
