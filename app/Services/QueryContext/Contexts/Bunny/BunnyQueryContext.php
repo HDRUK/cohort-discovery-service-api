@@ -222,12 +222,12 @@ class BunnyQueryContext implements QueryContextInterface
                     "rules" => []
                 ];
             }
-            $standardisedRules = combineStandardsWithAnd($standardisedChildren[0], $standardisedChildren[1]);
+            $standardisedRules = $this->combineStandardsWithAnd($standardisedChildren[0], $standardisedChildren[1]);
             foreach($standardisedChildren as $index => $standardisedChild) {
                 if ($index === 0 || $index === 1) {
                     continue; // already combined the first two children
                 }
-                $standardisedRules = combineStandardsWithAnd($standardisedRules, $standardisedChild);
+                $standardisedRules = $this->combineStandardsWithAnd($standardisedRules, $standardisedChild);
             }
             $standardisedForm = $standardisedRules;
         }
