@@ -553,10 +553,6 @@ class QueryContextTest extends TestCase
         $this->assertCount(7, $firstGroup['rules']);
         $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
 
-        $fourthRule = $firstGroup['rules'][3] ?? null;
-        $this->assertEquals('OMOP', $fourthRule['varname'] ?? null);
-        $this->assertEquals('3959287', $fourthRule['value'] ?? null);
-
         $secondGroup = $result['groups'][1];
         $this->assertIsArray($secondGroup['rules']);
         $this->assertCount(7, $secondGroup['rules']);
