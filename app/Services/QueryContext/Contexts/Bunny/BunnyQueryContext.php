@@ -66,6 +66,137 @@ class BunnyQueryContext implements QueryContextInterface
         ];
     }
 
+    /**
+     * Converts a rule definition into a "groupwise form", where each node is either:
+     * - a leaf node (a single rule)
+     * - a group node (a group of rules with a combinator)
+     * The groupwise form is easier to parse for the next step of flattening into "standard form".
+     * 
+     * Example input: 
+     * [
+     *   'id' => '9f71c79e-8e3c-467c-9970-d8b9ee4badca',
+     *   'rules' => [
+     *       [
+     *           'id' => '91b16f34-c7c8-4a64-b4d9-1c82eb64e353',
+     *           'exclude' => false,
+     *           'rules' => [
+     *               [
+     *                   'id' => '3f696208-11a8-4daf-86be-ce158b53606c',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955320,
+     *                           'description' => 'Moderna - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => 'ca15e2ad-0cca-421e-8012-58cacf0987cd',
+     *                   'combinator' => 'or',
+     *                   'exclude' => false,
+     *                   'valid' => true,
+     *               ],
+     *               [
+     *                   'id' => '08e3d082-f05b-4ab1-9c61-c65a02aac43a',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955321,
+     *                           'description' => 'Pfizer - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *       [
+     *           'id' => '3ceaec2e-3764-4514-ae83-32d0445c37e3',
+     *           'combinator' => 'and',
+     *           'exclude' => false,
+     *       ],
+     *       [
+     *           'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *           'exclude' => true,
+     *           'rule' => [
+     *               'concept' => [
+     *                   'concept_id' => 3955322,
+     *                   'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                   'category' => 'Drug',
+     *                   'children' => [],
+     *               ],
+     *           ],
+     *       ],
+     *   ],
+     * ]
+     * 
+     * Example output:
+     * [ 
+     *   "rules_oper" => "OR",
+     *   "rules" => [
+     *       [
+     *           "rules_oper" => "AND",
+     *           "rules" => [
+     *               [
+     *                   'id' => '3f696208-11a8-4daf-86be-ce158b53606c',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955320,
+     *                           'description' => 'Moderna - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *                   'exclude' => true,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955322,
+     *                           'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *       [
+     *           "rules_oper" => "AND",
+     *           "rules" => [
+     *               [
+     *                   'id' => '08e3d082-f05b-4ab1-9c61-c65a02aac43a',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955321,
+     *                           'description' => 'Pfizer - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *                   'exclude' => true,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955322,
+     *                           'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *    ],
+     * ]
+    **/
     private function convertToGroupwiseForm(array $node): array
     {
         $groupOperator = $this->groupOperator($node);
@@ -145,26 +276,37 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
     /**
-     * Flattens a groupwise form into a maximum depth of 2 groups,
-     * applying the following rules:
+     * Flattens a groupwise form into "standard form" with a maximum depth of 2 groups
+     * (i.e. OR of ANDs), by recursively applying the following rules:,
      * 1) ((A or B) and (C or D)) → ((A and C) or (B and C) or (A and D) or (B and D))
      * 2) (A and (B and C)) → (A and B and C)
      * 3) (A or (B or C)) → (A or B or C)
      *
      * @param array $groupwiseForm The groupwise form to process.
-     * @return array The transformed structure with a maximum depth of 2 groups.
+     * @return array The transformed structure in "standard form".
+     * 
+     * This function always returns in the form of 
+     * [
+     *   "rules_oper": "OR",
+     *   "rules": [
+     *     [
+     *      "rules_oper": "AND",
+     *     "rules": [ ... ] // leaf rules
+     *     ],
+     *     ... // more AND groups
+     *   ]
+     * ]
+     * except when it's at the top level, where it returns
+     * [
+     *   "groups_oper": "OR",
+     *   "groups": [
+     *     ...
+     *   ]
+     * ]
+     * as the outer layer
      */
     private function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
-    {
-        // This function always returns in the form of 
-        // [
-        //   "rules_oper": "OR",
-        //   "rules": [nesteds]]
-        //
-        // so that we are always confident in what we're parsing.
-        
-        // If the incoming rules are singular, we can convert them into OR of AND anyway
-        
+    {           
         $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
         $rules = $groupwiseForm['rules'] ?? [];
 
@@ -192,13 +334,14 @@ class BunnyQueryContext implements QueryContextInterface
             }
         }
 
-        // $standarisedChildren is of the form [ OR([AND([$rule])]), OR([AND([$rule])]), ... ];
+        // All $standarisedChildren are of the form "standard form"
         // specifically 
         // [ 
-        //    [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]] ], 
+        //    [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]], [ ...] ], ]
         //    ...
         // ]
-        // Then, loop back again over all the standardised children. These will all be of the form OR of AND
+        // 
+        // Loop back again over all the standardised children.
         // Combine these using the current group operator:
         // - If it's an OR, then we spread all children into one array
         // - If it's an AND, then we distribute
@@ -232,8 +375,8 @@ class BunnyQueryContext implements QueryContextInterface
             $standardisedForm = $standardisedRules;
         }
 
-        // We now have a single thing of form OR-of-ANDs
-        // Finally, if we're at the top level, rename to "groups" for the final form
+        // We now have a single object of "standard form" (OR-of-ANDs)
+        // If we're at the top level, rename to "groups" for the final form
         if ($depth === 0) {
             return [
                 "groups_oper" => "OR",
