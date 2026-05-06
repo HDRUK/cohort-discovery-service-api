@@ -24,12 +24,88 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
+    private function normaliseImplicitOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        if (preg_match('/^(.+?\bwith\s+)(.+\s+or\s+.+)$/i', $query, $matches)) {
+            return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
+        }
+
+        return $query;
+    }
+
+    private function normaliseEitherOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        /*
+         * Turns:
+         *   adults who either had pfizer or moderna and tested positive for covid-19
+         *
+         * Into:
+         *   adults with (pfizer or moderna) and tested positive for covid-19
+         */
+        return preg_replace_callback(
+            '/\bwho\s+either\s+(?:had|has|have|received|got|were given|was given|been given|given)?\s*(.+?)\s+or\s+(.+?)(?=\s+and\s+|\s*,|$)/i',
+            function (array $matches): string {
+                $left = trim($matches[1]);
+                $right = trim($matches[2]);
+
+                return 'with (' . $left . ' or ' . $right . ')';
+            },
+            $query
+        );
+    }
+
     private function splitTopLevelOr(string $query): array
     {
-        // $q = strtolower($query); // LS: Ruins work done with Acronyms. Removing.
-        $segments = preg_split('/\s+or\s+/i', $query);
+        $segments = [];
+        $buffer = '';
+        $depth = 0;
+        $length = strlen($query);
 
-        return array_map('trim', $segments);
+        /*
+         * Splits on outer or rather than any inner ORs e.g. (moderna or covid)
+         * which the NLP service will handle..
+         */
+        for ($i = 0; $i < $length; $i++) {
+            $char = $query[$i];
+
+            if ($char === '(') {
+                $depth++;
+                $buffer .= $char;
+                continue;
+            }
+
+            if ($char === ')') {
+                $depth = max(0, $depth - 1);
+                $buffer .= $char;
+                continue;
+            }
+
+            if (
+                $depth === 0
+                && preg_match('/\G\s+or\s+/i', $query, $match, 0, $i)
+            ) {
+                $segments[] = trim($buffer);
+                $buffer = '';
+                $i += strlen($match[0]) - 1;
+                continue;
+            }
+
+            $buffer .= $char;
+        }
+
+        if (trim($buffer) !== '') {
+            $segments[] = trim($buffer);
+        }
+
+        return $segments;
     }
 
     private function getConceptsForSegment(
@@ -162,6 +238,10 @@ class RuleBuilderService
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
+
+        $query = $this->normaliseEitherOrScope($query);
+        $query = $this->normaliseImplicitOrScope($query);
+
         $segments = $this->splitTopLevelOr($query);
 
         $segmentCount = count($segments);
