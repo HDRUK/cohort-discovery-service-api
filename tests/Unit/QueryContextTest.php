@@ -149,6 +149,311 @@ class QueryContextTest extends TestCase
         'valid' => true,
     ];
 
+    private const ALT_INPUT_QUERY_2 = [
+        "id" => "78f29361-03f8-45b6-ba2c-1ab4e950e6cf",
+        "rules" => [
+            [
+                "id" => "e80e5a6b-71c6-46a0-8c5e-0545efd0d7fc",
+                "rules" => [
+                    [
+                        "id" => "6247a863-e423-4046-941c-c13c808ddd34",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Asthma",
+                                "count" => "102710",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 317009,
+                                "match_score" => 500,
+                                "ncollections" => 2
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ],
+                    [
+                        "id" => "75f1ea35-87b0-44e6-958e-081e70c7c3a5",
+                        "valid" => true,
+                        "combinator" => "and"
+                    ],
+                    [
+                        "id" => "10981e93-1005-4985-bf5c-474aef1702ce",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Chronic renal failure",
+                                "count" => "93150",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 198185,
+                                "match_score" => 500,
+                                "ncollections" => 3
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ]
+                ],
+                "valid" => true,
+                "exclude" => false
+            ],
+            [
+                "id" => "4268ee9c-6b8f-49b9-8661-2f5a884b1c3d",
+                "valid" => true,
+                "combinator" => "and"
+            ],
+            [
+                "id" => "5c998880-129d-4914-9d51-138beebc0fbe",
+                "rules" => [
+                    [
+                        "id" => "c007a95a-fa3f-4440-8e4c-6cdcf8ea4412",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "FEMALE",
+                                "count" => "2059520",
+                                "category" => "Gender",
+                                "children" => [],
+                                "concept_id" => 8532,
+                                "match_score" => 1000,
+                                "ncollections" => 4
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ],
+                    [
+                        "id" => "b31dddd8-ea97-4be8-a39d-531899dd444b",
+                        "valid" => true,
+                        "combinator" => "and"
+                    ],
+                    [
+                        "id" => "3101fa62-41b5-4af2-a467-d4777391c318",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Long Covid-19",
+                                "count" => "140610",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 3959287,
+                                "match_score" => 500,
+                                "ncollections" => 1
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ]
+                ],
+                "valid" => true,
+                "exclude" => false
+            ]
+        ],
+        "valid" => true
+    ];
+
+    private const ALT_INPUT_QUERY_3 = [
+        "id" => "78f29361-03f8-45b6-ba2c-1ab4e950e6cf",
+        "rules" => [
+            [
+                "id" => "26489189-5dc3-46ef-bb78-de64d8f67e47",
+                "rules" => [
+                    [
+                        "id" => "d84155f2-3955-463c-aa12-02a434691360",
+                        "rules" => [
+                            [
+                                "id" => "925d07bc-3635-44ac-8599-d6cc450207f4",
+                                "rule" => [
+                                    "concept" => [
+                                        "name" => "Heart disease",
+                                        "count" => "51570",
+                                        "category" => "Condition",
+                                        "children" => [],
+                                        "concept_id" => 321588,
+                                        "match_score" => 500,
+                                        "ncollections" => 2
+                                    ],
+                                ],
+                                "valid" => true,
+                                "exclude" => false
+                            ],
+                            [
+                                "id" => "3b37f627-5bd0-49cb-bb94-782dcaac4b52",
+                                "valid" => true,
+                                "combinator" => "and"
+                            ],
+                            [
+                                "id" => "61b6e0af-b31e-45de-967e-f476cdd6e116",
+                                "rule" => [
+                                    "concept" => [
+                                        "name" => "Congestive heart failure",
+                                        "count" => "80070",
+                                        "category" => "Condition",
+                                        "children" => [],
+                                        "concept_id" => 319835,
+                                        "match_score" => 500,
+                                        "ncollections" => 2
+                                    ]
+                                ],
+                                "valid" => true,
+                                "exclude" => false
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ],
+                    [
+                        "id" => "5a3e0b77-46a6-450a-b624-c9cd85cb2716",
+                        "valid" => true,
+                        "combinator" => "and"
+                    ],
+                    [
+                        "id" => "f5a0a20c-fb7d-48e7-8c04-d4bb168727ed",
+                        "rules" => [
+                            [
+                                "id" => "5eaee5ee-8120-4f6f-a693-babdccb30bcb",
+                                "rule" => [
+                                    "concept" => [
+                                        "name" => "Metastatic non-small cell lung cancer",
+                                        "count" => "3380",
+                                        "category" => "Condition",
+                                        "children" => [],
+                                        "concept_id" => 36684857,
+                                        "match_score" => 500,
+                                        "ncollections" => 2
+                                    ]
+                                ],
+                                "valid" => true,
+                                "exclude" => false
+                            ],
+                            [
+                                "id" => "320b0599-80b2-4cfd-91a0-5a37d7576c31",
+                                "valid" => true,
+                                "combinator" => "and"
+                            ],
+                            [
+                                "id" => "135b51ff-561d-47f4-9968-097a1a4c02c3",
+                                "rule" => [
+                                    "concept" => [
+                                        "name" => "Chronic obstructive pulmonary disease",
+                                        "count" => "231310",
+                                        "category" => "Condition",
+                                        "children" => [],
+                                        "concept_id" => 255573,
+                                        "match_score" => 500,
+                                        "ncollections" => 2
+                                    ]
+                                ],
+                                "valid" => true,
+                                "exclude" => false
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ]
+                ],
+                "valid" => true,
+                "exclude" => false
+            ],
+            [
+                "id" => "8ddb891d-f8fc-4b2e-8cc1-62966df86829",
+                "valid" => true,
+                "combinator" => "and"
+            ],
+            [
+                "id" => "93a79ee4-e21f-476e-ab9a-f0dd7de7e566",
+                "rules" => [
+                    [
+                        "id" => "a34871a9-5bda-4f7c-b746-4d6841a43969",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Chronic kidney disease stage 3",
+                                "count" => "45570",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 443597,
+                                "match_score" => 500,
+                                "ncollections" => 3
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ],
+                    [
+                        "id" => "d9c22922-b95c-4ea5-a4ab-099bb31fafef",
+                        "valid" => true,
+                        "combinator" => "and"
+                    ],
+                    [
+                        "id" => "7ec4e7b3-c754-47ec-8dfe-0a7991f5fbe4",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Gastrointestinal hemorrhage",
+                                "count" => "58830",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 192671,
+                                "match_score" => 500,
+                                "ncollections" => 2
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ]
+                ],
+                "valid" => true,
+                "exclude" => false
+            ],
+            [
+                "id" => "d32efffd-7c7f-41ac-9395-06ca9ef91a8c",
+                "valid" => true,
+                "combinator" => "and"
+            ],
+            [
+                "id" => "2acaa3aa-5395-4836-a956-d17395296a8f",
+                "rules" => [
+                    [
+                        "id" => "30b5c86f-5385-4b65-abe7-2bb6583f9828",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "FEMALE",
+                                "count" => "2059520",
+                                "category" => "Gender",
+                                "children" => [],
+                                "concept_id" => 8532,
+                                "match_score" => 1000,
+                                "ncollections" => 4
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ],
+                    [
+                        "id" => "1204bbc6-9990-4526-a324-a1c0c998aa22",
+                        "valid" => true,
+                        "combinator" => "or"
+                    ],
+                    [
+                        "id" => "c3cbab6d-105d-47d2-b29a-c6f7a48ccd19",
+                        "rule" => [
+                            "concept" => [
+                                "name" => "Long Covid-19",
+                                "count" => "140610",
+                                "category" => "Condition",
+                                "children" => [],
+                                "concept_id" => 3959287,
+                                "match_score" => 500,
+                                "ncollections" => 1
+                            ]
+                        ],
+                        "valid" => true,
+                        "exclude" => false
+                    ]
+                ],
+                "valid" => true,
+                "exclude" => false
+            ]
+        ],
+        "valid" => true
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -213,6 +518,73 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955321', $secondRule['value'] ?? null);
         $thirdRule = $firstGroup['rules'][2] ?? null;
         $this->assertEquals('3955320', $thirdRule['value'] ?? null);
+    }
+
+    public function test_application_can_translate_bunny_query_alt_2(): void
+    {
+        $result = $this->bunnyContext->translate(self::ALT_INPUT_QUERY_2);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('groups', $result);
+        $this->assertArrayHasKey('groups_oper', $result);
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $firstGroup = $result['groups'][0];
+        $this->assertIsArray($firstGroup['rules']);
+        $this->assertCount(4, $firstGroup['rules']);
+        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+
+        $fourthRule = $firstGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $fourthRule['varname'] ?? null);
+        $this->assertEquals('3959287', $fourthRule['value'] ?? null);
+    }
+
+    public function test_application_can_translate_bunny_query_alt_3(): void
+    {
+        $result = $this->bunnyContext->translate(self::ALT_INPUT_QUERY_3);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('groups', $result);
+        $this->assertArrayHasKey('groups_oper', $result);
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $firstGroup = $result['groups'][0];
+        $this->assertIsArray($firstGroup['rules']);
+        $this->assertCount(7, $firstGroup['rules']);
+        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+
+        $fourthRule = $firstGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $fourthRule['varname'] ?? null);
+        $this->assertEquals('3959287', $fourthRule['value'] ?? null);
+
+        $secondGroup = $result['groups'][1];
+        $this->assertIsArray($secondGroup['rules']);
+        $this->assertCount(7, $secondGroup['rules']);
+        $this->assertEquals('AND', $secondGroup['rules_oper'] ?? null);
+
+        $firstRule = $firstGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('321588', $firstRule['value'] ?? null);
+
+        $fourthRule = $firstGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $fourthRule['varname'] ?? null);
+        $this->assertEquals('255573', $fourthRule['value'] ?? null);
+
+        $seventhRule = $firstGroup['rules'][6] ?? null;
+        $this->assertEquals('OMOP', $seventhRule['varname'] ?? null);
+        $this->assertEquals('8532', $seventhRule['value'] ?? null);
+
+        $firstRule = $secondGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
+        $this->assertEquals('321588', $firstRule['value'] ?? null);
+
+        $fourthRule = $secondGroup['rules'][3] ?? null;
+        $this->assertEquals('OMOP', $fourthRule['varname'] ?? null);
+        $this->assertEquals('255573', $fourthRule['value'] ?? null);
+
+        $seventhRule = $secondGroup['rules'][6] ?? null;
+        $this->assertEquals('OMOP', $seventhRule['varname'] ?? null);
+        $this->assertEquals('3959287', $seventhRule['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_gender_as_person(): void
