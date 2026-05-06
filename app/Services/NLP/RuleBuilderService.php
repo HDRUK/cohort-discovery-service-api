@@ -30,8 +30,24 @@ class RuleBuilderService
             return $query;
         }
 
-        if (preg_match('/^(.+?\bwith\s+)(.+\s+or\s+.+)$/i', $query, $matches)) {
-            return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
+        /*
+         * adults with covid or diabetes
+         *   -> adults with (covid or diabetes)
+         *
+         * adults with covid or diabetes and cancer
+         *   -> adults with (covid or diabetes) and cancer
+         */
+        if (preg_match(
+            '/^(.+?\bwith\s+)(.+?)\s+or\s+(.+?)(\s+and\s+.+)?$/i',
+            $query,
+            $matches
+        )) {
+            $prefix = rtrim($matches[1]);
+            $left = trim($matches[2]);
+            $right = trim($matches[3]);
+            $tail = $matches[4] ?? '';
+
+            return $prefix . ' (' . $left . ' or ' . $right . ')' . $tail;
         }
 
         return $query;
@@ -296,18 +312,21 @@ class RuleBuilderService
 
             if (empty($rules)) {
                 $rules = [$ageFilter];
+            } elseif (
+                count($rules) === 1
+                && isset($rules[0]['rules'])
+                && is_array($rules[0]['rules'])
+            ) {
+                $rules[0]['rules'][] = $this->makeOperator('and');
+                $rules[0]['rules'][] = $ageFilter;
             } else {
-                if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
-                    $targetRules = &$rules[0]['rules'];
-                } else {
-                    $rules = [$this->makeGroup($rules)];
-                    $targetRules = &$rules[0]['rules'];
-                }
-
-                if (! empty($targetRules)) {
-                    $targetRules[] = $this->makeOperator('and');
-                }
-                $targetRules[] = $ageFilter;
+                $rules = [
+                    $this->makeGroup([
+                        ...$rules,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
             }
         }
 
