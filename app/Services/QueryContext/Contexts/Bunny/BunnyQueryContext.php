@@ -89,7 +89,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         // Now we know it's not that special form, it is guaranteed to collapse to an OR of ANDs.
-        return $this->newFlattenToMaxDepthTwo($groupwiseForm, 0);
+        return $this->flattenToMaxDepthTwo($groupwiseForm, 0);
     }
 
     function convertGroup(array $node, string $groupOperator): array
@@ -272,7 +272,7 @@ class BunnyQueryContext implements QueryContextInterface
      * @param array $groupwiseForm The groupwise form to process.
      * @return array The transformed structure with a maximum depth of 2 groups.
      */
-    public function newFlattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
+    public function flattenToMaxDepthTwo(array $groupwiseForm, int $depth): array
     {
         // This function always returns in the form of 
         // [
@@ -306,7 +306,7 @@ class BunnyQueryContext implements QueryContextInterface
             else {
                 // Child has children. Check that _its_ children are all in standard form, 
                 // then convert this to standard form recursively
-                $standardisedChildren[] = $this->newFlattenToMaxDepthTwo($rule, $depth+1);
+                $standardisedChildren[] = $this->flattenToMaxDepthTwo($rule, $depth+1);
             }
         }
 
@@ -350,16 +350,16 @@ class BunnyQueryContext implements QueryContextInterface
             $standardisedForm = $standardisedRules;
         }
 
-        // We now have a single thing of form OR of AND
+        // We now have a single thing of form OR-of-ANDs
         // Finally, if we're at the top level, rename to "groups" for the final form
-        if ($depth > 0) {
-            return $standardisedForm;
+        if ($depth === 0) {
+            return [
+                "groups_oper" => "OR",
+                "groups" => $standardisedForm['rules']
+            ];
         }
 
-        return [
-            "groups_oper" => "OR",
-            "groups" => $standardisedForm['rules']
-        ];
+        return $standardisedForm;
     }
 
     public function getType(): QueryContextType
