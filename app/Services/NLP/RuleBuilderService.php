@@ -30,24 +30,12 @@ class RuleBuilderService
             return $query;
         }
 
-        /*
-         * adults with covid or diabetes
-         *   -> adults with (covid or diabetes)
-         *
-         * adults with covid or diabetes and cancer
-         *   -> adults with (covid or diabetes) and cancer
-         */
         if (preg_match(
-            '/^(.+?\bwith\s+)(.+?)\s+or\s+(.+?)(\s+and\s+.+)?$/i',
+            '/^(.+?\b(?:with|who have|who has|having)\s+)(.+\s+or\s+.+)$/i',
             $query,
             $matches
         )) {
-            $prefix = rtrim($matches[1]);
-            $left = trim($matches[2]);
-            $right = trim($matches[3]);
-            $tail = $matches[4] ?? '';
-
-            return $prefix . ' (' . $left . ' or ' . $right . ')' . $tail;
+            return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
         }
 
         return $query;
@@ -312,6 +300,22 @@ class RuleBuilderService
 
             if (empty($rules)) {
                 $rules = [$ageFilter];
+            } elseif ($this->rulesContainCombinator($rules, 'or')) {
+                $orGroup = (
+                    count($rules) === 1
+                    && isset($rules[0]['rules'])
+                    && is_array($rules[0]['rules'])
+                )
+                    ? $rules[0]
+                    : $this->makeGroup($rules);
+
+                $rules = [
+                    $this->makeGroup([
+                        $orGroup,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
             } elseif (
                 count($rules) === 1
                 && isset($rules[0]['rules'])
@@ -785,5 +789,24 @@ class RuleBuilderService
         }
 
         return $constraints;
+    }
+
+    private function rulesContainCombinator(array $rules, string $combinator): bool
+    {
+        foreach ($rules as $rule) {
+            if (($rule['combinator'] ?? null) === $combinator) {
+                return true;
+            }
+
+            if (
+                isset($rule['rules'])
+                && is_array($rule['rules'])
+                && $this->rulesContainCombinator($rule['rules'], $combinator)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
