@@ -546,7 +546,7 @@ class QueryContextTest extends TestCase
         $this->assertArrayHasKey('groups', $result);
         $this->assertArrayHasKey('groups_oper', $result);
         $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(1, $result['groups']);
+        $this->assertCount(2, $result['groups']);
 
         $firstGroup = $result['groups'][0];
         $this->assertIsArray($firstGroup['rules']);
