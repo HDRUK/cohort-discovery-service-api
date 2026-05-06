@@ -30,7 +30,11 @@ class RuleBuilderService
             return $query;
         }
 
-        if (preg_match('/^(.+?\bwith\s+)(.+\s+or\s+.+)$/i', $query, $matches)) {
+        if (preg_match(
+            '/^(.+?\b(?:with|who have|who has|having)\s+)(.+\s+or\s+.+)$/i',
+            $query,
+            $matches
+        )) {
             return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
         }
 
@@ -134,11 +138,43 @@ class RuleBuilderService
                 continue;
             }
 
+            $originalCandidates = $candidates;
+
             if ($ignoreSynthetic) {
                 $candidates = array_values(array_filter(
                     $candidates,
                     fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
                 ));
+
+                //temporary fix to at least have one blank candidate if we are removing
+                // due to being synthetic data only
+                if (empty($candidates)) {
+                    $primary = $originalCandidates[0];
+                    $text = $primary['text'] ?? $textKey;
+
+                    $candidates = [[
+                        'text' => $text,
+                        'label' => null,
+                        'start' => $primary['start'] ?? 0,
+                        'end' => $primary['end'] ?? strlen($text),
+                        'negated' => $primary['negated'] ?? false,
+                        'age_constraints' => $primary['age_constraints'] ?? [],
+                        'time_constraints' => $primary['time_constraints'] ?? [],
+                        'attributes' => [
+                            'concept_id' => null,
+                            'concept_name' => $text,
+                            'description' => $text,
+                            'domain_id' => $primary['attributes']['domain_id'] ?? null,
+                            'ncollections' => 0,
+                            'all_synthetic' => 0,
+                            'match_score' => 0,
+                            'tokens' => [],
+                            'phrase_tokens' => [],
+                            'unmatched' => true,
+                            'synthetic_filtered' => true,
+                        ],
+                    ]];
+                }
             }
 
             if (empty($candidates)) {
@@ -296,18 +332,37 @@ class RuleBuilderService
 
             if (empty($rules)) {
                 $rules = [$ageFilter];
-            } else {
-                if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
-                    $targetRules = &$rules[0]['rules'];
-                } else {
-                    $rules = [$this->makeGroup($rules)];
-                    $targetRules = &$rules[0]['rules'];
-                }
+            } elseif ($this->rulesContainCombinator($rules, 'or')) {
+                $orGroup = (
+                    count($rules) === 1
+                    && isset($rules[0]['rules'])
+                    && is_array($rules[0]['rules'])
+                )
+                    ? $rules[0]
+                    : $this->makeGroup($rules);
 
-                if (! empty($targetRules)) {
-                    $targetRules[] = $this->makeOperator('and');
-                }
-                $targetRules[] = $ageFilter;
+                $rules = [
+                    $this->makeGroup([
+                        $orGroup,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
+            } elseif (
+                count($rules) === 1
+                && isset($rules[0]['rules'])
+                && is_array($rules[0]['rules'])
+            ) {
+                $rules[0]['rules'][] = $this->makeOperator('and');
+                $rules[0]['rules'][] = $ageFilter;
+            } else {
+                $rules = [
+                    $this->makeGroup([
+                        ...$rules,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
             }
         }
 
@@ -766,5 +821,24 @@ class RuleBuilderService
         }
 
         return $constraints;
+    }
+
+    private function rulesContainCombinator(array $rules, string $combinator): bool
+    {
+        foreach ($rules as $rule) {
+            if (($rule['combinator'] ?? null) === $combinator) {
+                return true;
+            }
+
+            if (
+                isset($rule['rules'])
+                && is_array($rule['rules'])
+                && $this->rulesContainCombinator($rule['rules'], $combinator)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
