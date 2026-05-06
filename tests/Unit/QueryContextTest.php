@@ -558,7 +558,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(7, $secondGroup['rules']);
         $this->assertEquals('AND', $secondGroup['rules_oper'] ?? null);
 
-        $firstRule = $firstGroup['rules'][3] ?? null;
+        $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('321588', $firstRule['value'] ?? null);
 
@@ -570,7 +570,7 @@ class QueryContextTest extends TestCase
         $this->assertEquals('OMOP', $seventhRule['varname'] ?? null);
         $this->assertEquals('8532', $seventhRule['value'] ?? null);
 
-        $firstRule = $secondGroup['rules'][3] ?? null;
+        $firstRule = $secondGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('321588', $firstRule['value'] ?? null);
 
