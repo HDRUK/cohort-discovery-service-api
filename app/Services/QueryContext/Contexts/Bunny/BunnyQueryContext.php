@@ -1175,20 +1175,6 @@ class BunnyQueryContext implements QueryContextInterface
             ]
         }', associative: true);
 
-        // if ($testCompactForm1 != $this->convertToCompactForm($testDefinition1, 0)) {
-        //     throw new \Error('convertToCompactForm did not produce expected output 1');
-        // }
-        // else {
-        //     print('convertToCompactForm produced expected output 1' . "\n");
-        // }
-
-        // if ($testCompactForm2 != $this->convertToCompactForm($testDefinition2, 0)) {
-        //     throw new \Error('convertToCompactForm did not produce expected output 2');
-        // }
-        // else {
-        //     print('convertToCompactForm produced expected output 2' . "\n");
-        // }
-
 
         // $answer = $this->newFlattenToMaxDepthTwo($testGroupwiseFormSmall, 0);
         // print(json_encode($answer) . "\n");
@@ -1266,18 +1252,9 @@ class BunnyQueryContext implements QueryContextInterface
         //     print('newFlattenToMaxDepthTwo produced expected output testFinalForm4' . "\n");
         // }
 
-        $compactDefinition = $this->convertToCompactForm($definition, 0);
-
-        print('compactDefinition: ' . json_encode($compactDefinition) . "\n");
-
-        // Second pass: switch to groupwise form for easier parsing of nodes per group.
+        // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($compactDefinition);
         print('groupwiseForm: ' . json_encode($groupwiseForm) . "\n");
-
-        // Third pass: now it's in groupwise form, we can flatten without difficulty
-        // If we have ANDS of ORs (or ORs of ANDs) (but not nested more than that), we don't need to flatten 
-        // If we are more nested than that, then our final form will always be ORs of ANDs.
-        // Simply take all combinations from each group of ANDs within ORs.
 
         // Check for the special case where it's only a single group of ANDs - in this case we can skip the flattening step and just convert to final form directly
         $specialForm = true;
@@ -1288,8 +1265,8 @@ class BunnyQueryContext implements QueryContextInterface
         foreach ($groupwiseForm['rules'] as $child) {
             if ($this->isGroupNode($child)) {
                 $specialForm = false;
+                break;
             }
-    
         }
         
         if ($specialForm)   {
@@ -1305,45 +1282,18 @@ class BunnyQueryContext implements QueryContextInterface
                 ];
         }
 
-        // Now we know it's not that special form, it is guaranteed to collapse to a massive OR of ANDs.
+        // Now we know it's not that special form, it is guaranteed to collapse to an OR of ANDs.
         return $this->newFlattenToMaxDepthTwo($groupwiseForm, 0);
     }
 
-    function convertAndGroup(array $node): array
+    function convertGroup(array $node, string $groupOperator): array
     {
-        // print('convertAndGroup node: ' . json_encode($node) . "\n");
+        // print('convertGroup node: ' . json_encode($node) . "\n");
         $groups = [];
         $children = $node['rules'] ?? [];
-        $groupOperator = 'AND';
         foreach ($children as $child) {
-            // print('convertAndGroup child: ' . json_encode($child) . "\n");
+            // print('convertGroup child: ' . json_encode($child) . "\n");
             if ($this->isGroupNode($child)) {
-                // TODO: optimisation that we know this must be an OR group?
-                $groups[] = $this->convertToGroupwiseForm($child);
-            }
-            elseif ($this->isLeafNode($child)) {
-                $groups[] = $this->makeLeafRule($child);
-            }
-            elseif ($this->isAgeFilter($child)) {
-                $groups[] = $this->makeLeafAgeFilter($child);
-            }
-        }
-
-        return [
-            'rules_oper' => $groupOperator,
-            'rules' => $groups,
-        ];
-    }
-
-    function convertOrGroup(array $node): array
-    {
-        // print('convertOrGroup node: ' . json_encode($node) . "\n");
-        $groups = [];
-        $children = $node['rules'] ?? [];
-        $groupOperator = 'OR';
-        foreach ($children as $child) {
-            if ($this->isGroupNode($child)) {
-                // TODO: optimisation that we know this must be an AND group?
                 $groups[] = $this->convertToGroupwiseForm($child);
             }
             elseif ($this->isLeafNode($child)) {
@@ -1364,11 +1314,8 @@ class BunnyQueryContext implements QueryContextInterface
     {
         print('convertToGroupwiseForm node: ' . json_encode($node) . "\n");
         $groupOperator = $this->groupOperator($node);
-        if ($groupOperator === 'AND') {
-            return $this->convertAndGroup($node);
-        }
-        else if ($groupOperator === 'OR') {
-            return $this->convertOrGroup($node);
+        if ($groupOperator) {
+            return $this->convertGroup($node, $groupOperator);
         }
         else {
             // this is a leaf node - we can just return it
@@ -1392,78 +1339,6 @@ class BunnyQueryContext implements QueryContextInterface
     function groupOperator(array $node): ?string
     {
         return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
-    }
-
-    /*
-      Convert into ANDs of ORs of ANDs of ... - or into ORs of ANDs of ORS of ...
-    */
-    protected function convertToCompactForm(array $node, int $depth): array
-    {
-        // print('convertToCompactForm, depth: ' . $depth . ', concept: ' . isset($node['concept']) ? $node['concept']['name'] : "" . "\n");
-        // print('convertToCompactForm, depth: ' . $depth . ', node: ' . json_encode($node) . "\n");
-        $children = $node['rules'] ?? [];
-
-        if (empty($children)) {
-            return $node;
-        }
-
-        $newChildren = [];
-        $groupOperator = null;
-        // get group operator at this level - we can assume it's the same for all children at this level
-        if (count($children) > 1) {
-            $groupOperator = strtoupper($children[1]['combinator']);
-        }
-
-        
-        // if this group operator is the same as the child operator, we can flatten the child into this level
-        foreach ($children as $child) {
-            // print('child: ' . json_encode($child) . "\n");
-            // print('groupOperator: ' . $groupOperator . "\n");
-            // print('child combinator: ' . $this->groupOperator($child) . "\n");
-            $collapseChild = ($groupOperator !== null) && ($this->groupOperator($child) === $groupOperator);
-
-            // print('collapse this child? ' . ($collapseChild ? 'yes' : 'no') . "\n");
-            if ($collapseChild) {
-                $newChildren = array_merge($newChildren, $this->convertToCompactForm($child, $depth + 1)['rules']);
-            }
-            else {
-                if ($this->isGroupNode($child)) {
-                    $newChildren[] = $this->convertToCompactForm($child, $depth + 1);
-                }
-                else {
-                    $newChildren[] = $child;
-                }
-            }
-        }
-
-
-        // foreach ($children as $child) {
-        //     if ($this->isGroupNode($child)) {
-        //         $newChildren[] = $this->convertToCompactForm($child, $depth + 1);
-        //     }
-        //     elseif ($this->isOperatorNode($child)) {
-        //         $groupOperator = $child["combinator"];
-        //     }
-        //     else {
-        //         $newChildren[] = $child;
-        //     }
-        // }
-
-        $node['rules'] = $newChildren;
-        // $node['groupOperator'] = $groupOperator;
-
-        // $secondNewChildren = [];
-
-        // foreach ($newChildren as $child) {
-        //     if ($this->isGroupNode($child) && isset($child['groupOperator']) && $child['groupOperator'] === $groupOperator) {
-        //         array_push($secondNewChildren, $child['rules']);
-        //     }
-        //     else {
-        //         $newChildren[] = $child;
-        //     }
-        // }
-        // $node['rules'] = $secondNewChildren;
-        return $node;
     }
 
     protected function makeLeafRule(array $child): array
