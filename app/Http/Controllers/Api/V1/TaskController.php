@@ -25,6 +25,7 @@ use Str;
 use Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
 
 /**
  * @OA\Tag(
@@ -348,7 +349,7 @@ class TaskController extends Controller
         $translatedQuery = null;
         try {
             $contextType = $collection->type;
-            $translatedQuery = $contextManager->handle($rawQuery, $contextType);
+            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'));
         } catch (\ValueError $e) {
             $message = 'Unsupported collection type';
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)

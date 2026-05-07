@@ -9,7 +9,7 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
-    public function translate(array $definition): array
+    public function translate(array $definition, bool $flattenNestedGroups = true): array
     {
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
@@ -39,6 +39,14 @@ class BunnyQueryContext implements QueryContextInterface
                         ]
                     ]
                 ];
+        }
+
+        if (!$flattenNestedGroups) {
+            // Equally, if we want to skip the flattening step, then we can just return as-is with modified outer layer.
+            return [
+                "groups_oper" => $groupwiseForm['rules_oper'] ?? 'AND',
+                "groups" => $groupwiseForm['rules'] ?? [],
+            ];
         }
 
         // Now we know it's not in that form, collapse to "standard form".
