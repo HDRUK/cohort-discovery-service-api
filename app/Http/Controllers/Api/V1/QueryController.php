@@ -102,7 +102,7 @@ class QueryController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/queries/{key}",
+     *     path="/api/v1/query/{key}",
      *     summary="Get a single query by id or pid",
      *     tags={"Queries"},
      *
@@ -214,7 +214,7 @@ class QueryController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/api/v1/queries/{key}",
+     *     path="/api/v1/query/{key}",
      *     summary="Update an existing query (by id or pid)",
      *     tags={"Queries"},
      *
@@ -270,7 +270,7 @@ class QueryController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/queries/{key}",
+     *     path="/api/v1/query/{key}",
      *     summary="Delete a query by id or pid",
      *     tags={"Queries"},
      *
@@ -334,7 +334,7 @@ class QueryController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/queries/{pid}/download",
+     *     path="/api/v1/queries/{pid}/download/{format}",
      *     summary="Download query results for a saved query",
      *     tags={"Queries"},
      *
@@ -349,7 +349,7 @@ class QueryController extends Controller
      *
      *     @OA\Parameter(
      *         name="format",
-     *         in="query",
+     *         in="path",
      *         description="Output format (csv|json)",
      *         required=false,
      *
