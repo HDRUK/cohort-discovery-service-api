@@ -82,7 +82,6 @@ class ActivityLogger
             ->event($event)
             ->causedBy(Auth::user());
 
-
         if ($subject) {
             $activity->performedOn($subject);
         }
@@ -96,9 +95,7 @@ class ActivityLogger
 
     private function defaultDescription(string $logName, string $event): string
     {
-        return Str::of($logName)
-            ->singular()
-            ->append('_', $event)
-            ->toString();
+        //sigular to make tasks -> task
+        return Str::singular($logName).'_'.$event;
     }
 }
