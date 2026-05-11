@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\CollectionMetadata;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -33,7 +34,7 @@ class ProcessMetadataFile implements ShouldQueue
         ]);
     }
 
-    public function handle(): void
+    public function handle(ActivityLogger $activityLogger): void
     {
         $file = ResultFile::with('collection')->findOrFail($this->resultFileId);
 
@@ -44,10 +45,13 @@ class ProcessMetadataFile implements ShouldQueue
             'file_name'      => $file->file_name,
         ]);
 
-        activity('result_files')
-            ->event('started')
-            ->performedOn($file)
-            ->log('metadata_file_processing_started');
+        $activityLogger->custom(
+            'result_files',
+            'started',
+            $file,
+            [],
+            'metadata_file_processing_started'
+        );
 
         $file->markProcessing();
 
@@ -58,15 +62,17 @@ class ProcessMetadataFile implements ShouldQueue
                 'path' => $file->path,
             ]);
 
-            activity('result_files')
-                ->event('failed')
-                ->performedOn($file)
-                ->withProperties([
+            $activityLogger->custom(
+                'result_files',
+                'failed',
+                $file,
+                [
                     'error' => [
                         'message' => "Cannot open {$file->path}",
                     ],
-                ])
-                ->log('metadata_file_processing_failed');
+                ],
+                'metadata_file_processing_failed'
+            );
 
             throw new RuntimeException("Cannot open {$file->path}");
         }
@@ -123,13 +129,14 @@ class ProcessMetadataFile implements ShouldQueue
 
             $file->markDone(1);
 
-            activity('result_files')
-                ->event('processed')
-                ->performedOn($file)
-                ->withProperties([
+            $activityLogger->processed(
+                'result_files',
+                $file,
+                [
                     'collection_metadata_id' => $metadata->id,
-                ])
-                ->log('metadata_file_processed');
+                ],
+                'metadata_file_processed'
+            );
 
             Log::info("[{$this->tag}] finished", [
                 'result_file_id' => $file->id,
@@ -145,16 +152,13 @@ class ProcessMetadataFile implements ShouldQueue
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
 
-            activity('result_files')
-                ->event('failed')
-                ->performedOn($file)
-                ->withProperties([
-                    'error' => [
-                        'class' => get_class($e),
-                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                    ],
-                ])
-                ->log('metadata_file_processing_failed');
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'metadata_file_processing_failed'
+            );
         }
     }
 

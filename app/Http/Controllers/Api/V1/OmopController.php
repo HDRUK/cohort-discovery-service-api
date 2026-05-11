@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
@@ -12,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * @OA\Tag(
@@ -94,7 +94,7 @@ class OmopController extends Controller
         return response()->json($desc);
     }
 
-    public function searchConcepts(Request $request): JsonResponse
+    public function searchConcepts(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $perPage          = $this->resolvePerPage(100, true);
@@ -289,30 +289,25 @@ class OmopController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
 
-
-            activity('omop')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => [
-                        'page' => $page,
-                        'per_page' => $perPage,
-                        'collections' => $collectionPids,
-                        'domain' => $domain,
-                        'include_ancestors' => $includeAncestors,
-                        'concept_id' => $search['concept_id'] ?? [],
-                        'concept_name' => $search['concept_name'] ?? [],
-                    ],
-                    'feature_flags' => [
-                        'query-builder-use-collections-in-search' => $useCollectionsInSearch,
-                        'query-builder-use-stats-in-ordering' => $useStatsInOrdering,
-                    ],
-                    'result' => [
-                        'total' => $total,
-                        'returned' => count($rows),
-                    ],
-                ])
-                ->log('omop_concepts_searched');
+            $activityLogger->viewed('omop', null, [
+                'filters' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'collections' => $collectionPids,
+                    'domain' => $domain,
+                    'include_ancestors' => $includeAncestors,
+                    'concept_id' => $search['concept_id'] ?? [],
+                    'concept_name' => $search['concept_name'] ?? [],
+                ],
+                'feature_flags' => [
+                    'query-builder-use-collections-in-search' => $useCollectionsInSearch,
+                    'query-builder-use-stats-in-ordering' => $useStatsInOrdering,
+                ],
+                'result' => [
+                    'total' => $total,
+                    'returned' => count($rows),
+                ],
+            ]);
 
             return $this->OKResponse($paginator);
         } catch (\Exception $e) {

@@ -2,8 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Traits\HelperFunctions;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
+use App\Traits\HelperFunctions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -40,7 +41,7 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
     }
 
-    public function handle(): void
+    public function handle(ActivityLogger $activityLogger): void
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
@@ -51,23 +52,16 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
-            activity('result_files')
-                ->event('skipped')
-                ->performedOn($file)
-                ->log('distribution_file_processing_skipped');
+            $activityLogger->custom('result_files', 'skipped', $file, [], 'distribution_file_processing_skipped');
 
             return;
         }
 
-        activity('result_files')
-            ->event('started')
-            ->performedOn($file)
-            ->withProperties([
-                'processing' => [
-                    'batch_size' => $this->batchSize,
-                ],
-            ])
-            ->log('distribution_file_processing_started');
+        $activityLogger->custom('result_files', 'started', $file, [
+            'processing' => [
+                'batch_size' => $this->batchSize,
+            ],
+        ], 'distribution_file_processing_started');
 
         $file->markProcessing();
 
@@ -77,15 +71,11 @@ class ProcessDistributionFile implements ShouldQueue
                 'path' => $file->path,
             ]);
 
-            activity('result_files')
-                ->event('failed')
-                ->performedOn($file)
-                ->withProperties([
-                    'error' => [
-                        'message' => "Cannot open {$file->path}",
-                    ],
-                ])
-                ->log('distribution_file_processing_failed');
+            $activityLogger->custom('result_files', 'failed', $file, [
+                'error' => [
+                    'message' => "Cannot open {$file->path}",
+                ],
+            ], 'distribution_file_processing_failed');
 
             throw new RuntimeException("Cannot open {$file->path}");
         }
@@ -280,16 +270,12 @@ class ProcessDistributionFile implements ShouldQueue
 
             $file->markDone($rowsSeen);
 
-            activity('result_files')
-                ->event('processed')
-                ->performedOn($file)
-                ->withProperties([
-                    'result' => [
-                        'rows_seen' => $rowsSeen,
-                        'skipped' => $skipped,
-                    ],
-                ])
-                ->log('distribution_file_processed');
+            $activityLogger->processed('result_files', $file, [
+                'result' => [
+                    'rows_seen' => $rowsSeen,
+                    'skipped' => $skipped,
+                ],
+            ], 'distribution_file_processed');
 
             Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
@@ -307,16 +293,13 @@ class ProcessDistributionFile implements ShouldQueue
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
 
-            activity('result_files')
-                ->event('failed')
-                ->performedOn($file)
-                ->withProperties([
-                    'error' => [
-                        'class' => get_class($e),
-                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                    ],
-                ])
-                ->log('distribution_file_processing_failed');
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'distribution_file_processing_failed'
+            );
         }
     }
 

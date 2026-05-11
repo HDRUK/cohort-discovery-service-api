@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Auth;
 
 class CollectionConfigController extends Controller
 {
@@ -31,25 +31,21 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAny', CollectionConfig::class);
 
         try {
             $configs = CollectionConfig::all();
 
-            activity('collection_configs')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => $request->query(),
-                    'result' => [
-                        'total' => $configs->count(),
-                        'config_ids' => $configs->pluck('id')->values()->all(),
-                        'collection_ids' => $configs->pluck('collection_id')->values()->all(),
-                    ],
-                ])
-                ->log('collection_configs_viewed');
+            $activityLogger->viewed('collection_configs', null, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $configs->count(),
+                    'config_ids' => $configs->pluck('id')->values()->all(),
+                    'collection_ids' => $configs->pluck('collection_id')->values()->all(),
+                ],
+            ]);
 
             return $this->OKResponse($configs);
         } catch (\Throwable $e) {
@@ -86,8 +82,11 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
-    {
+    public function show(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('show'));
 
@@ -95,11 +94,7 @@ class CollectionConfigController extends Controller
             $config = CollectionConfig::findOrFail($validated['id']);
             $this->authorize('view', $config);
 
-            activity('collection_configs')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->performedOn($config)
-                ->log('collection_config_viewed');
+            $activityLogger->viewed('collection_configs', $config);
 
             return $this->OKResponse($config);
         } catch (AuthorizationException $e) {
@@ -136,7 +131,7 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('store'));
 
@@ -146,11 +141,7 @@ class CollectionConfigController extends Controller
         try {
             $config = CollectionConfig::create($validated);
 
-            activity('collection_configs')
-                ->event('created')
-                ->causedBy(Auth::user())
-                ->performedOn($config)
-                ->log('collection_config_created');
+            $activityLogger->created('collection_configs', $config);
 
             return $this->CreatedResponse($config);
 
@@ -198,8 +189,11 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
-    {
+    public function update(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('update'));
 
@@ -214,15 +208,12 @@ class CollectionConfigController extends Controller
 
                 $after = $config->only(array_keys($validated));
 
-                activity('collection_configs')
-                    ->event('updated')
-                    ->causedBy(Auth::user())
-                    ->performedOn($config)
-                    ->withProperties([
-                        'before' => $before,
-                        'after' => $after,
-                    ])
-                    ->log('collection_config_updated');
+                $activityLogger->updated(
+                    'collection_configs',
+                    $config,
+                    $before,
+                    $after
+                );
 
                 return $this->OKResponse($config);
             }
@@ -264,8 +255,11 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function destroy(Request $request, int $id): JsonResponse
-    {
+    public function destroy(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 
@@ -274,11 +268,7 @@ class CollectionConfigController extends Controller
             $this->authorize('delete', $config);
 
             if ($config->delete()) {
-                activity('collection_configs')
-                    ->event('deleted')
-                    ->causedBy(Auth::user())
-                    ->performedOn($config)
-                    ->log('collection_config_deleted');
+                $activityLogger->deleted('collection_configs', $config);
 
                 return $this->OKResponse([]);
             }

@@ -11,20 +11,21 @@ use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
 use App\Models\TaskRun;
+use App\Services\Activity\ActivityLogger;
 use App\Services\QueryContext\QueryContextManager;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Str;
 use Log;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use Str;
 
 /**
  * @OA\Tag(
@@ -50,21 +51,17 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function getTasks(): JsonResponse
+    public function getTasks(ActivityLogger $activityLogger): JsonResponse
     {
         $tasks = Task::whereHas('submittedQuery', function ($query) {
             $query->where('user_id', Auth::id());
         });
 
-        activity('tasks')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'result' => [
-                    'total' => $tasks->count(),
-                ],
-            ])
-            ->log('user_tasks_viewed');
+        $activityLogger->viewed('tasks', null, [
+            'result' => [
+                'total' => $tasks->count(),
+            ],
+        ]);
 
         return $this->OKResponse($tasks);
     }
@@ -93,7 +90,7 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function getAdminTasks(): JsonResponse
+    public function getAdminTasks(ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAdmin', Task::class);
 
@@ -124,22 +121,18 @@ class TaskController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        activity('tasks')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'filters' => [
-                    'collection_filter' => $collectionFilter,
-                    'custodian_filter' => $custodianFilter,
-                ],
-                'result' => [
-                    'total' => $tasks->total(),
-                    'returned' => $tasks->count(),
-                    'page' => $tasks->currentPage(),
-                    'per_page' => $tasks->perPage(),
-                ],
-            ])
-            ->log('admin_tasks_viewed');
+        $activityLogger->viewed('tasks', null, [
+            'filters' => [
+                'collection_filter' => $collectionFilter,
+                'custodian_filter' => $custodianFilter,
+            ],
+            'result' => [
+                'total' => $tasks->total(),
+                'returned' => $tasks->count(),
+                'page' => $tasks->currentPage(),
+                'per_page' => $tasks->perPage(),
+            ],
+        ]);
 
         return $this->OKResponse($tasks);
     }
@@ -165,7 +158,7 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function getTask(string $pid): JsonResponse
+    public function getTask(string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         $task = Task::with(['submittedQuery.user', 'collection', 'result'])
             ->where('pid', $pid)
@@ -183,11 +176,7 @@ class TaskController extends Controller
             $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
 
-        activity('tasks')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->performedOn($task)
-            ->log('task_viewed');
+        $activityLogger->viewed('tasks', $task);
 
         return $this->OKResponse($task);
     }
@@ -222,8 +211,12 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function nextJob(Request $request, string $collectionId, QueryContextManager $contextManager): JsonResponse|Response
-    {
+    public function nextJob(
+        Request $request,
+        string $collectionId,
+        QueryContextManager $contextManager,
+        ActivityLogger $activityLogger
+    ): JsonResponse|Response {
         // note - it'd be better if BUNNY could give us a worker ID in the headers
         // - also could give us some information like the BUNNY version it is using (git sha?)
         $workerId =  $request->ip();
@@ -337,16 +330,12 @@ class TaskController extends Controller
 
 
         if (! $task) {
-            activity('tasks')
-                ->event('checked')
-                ->performedOn($collection)
-                ->withProperties([
-                    'worker' => [
-                        'id' => $workerId,
-                    ],
-                    'task_type' => $taskType->value,
-                ])
-                ->log('worker_no_next_job');
+            $activityLogger->custom('tasks', 'checked', $collection, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'task_type' => $taskType->value,
+            ]);
 
             return $this->NoContentResponse();
         }
@@ -363,25 +352,21 @@ class TaskController extends Controller
         $task->save();
         $task->refresh()->load('submittedQuery');
 
-        activity('tasks')
-            ->event('claimed')
-            ->performedOn($collection)
-            ->withProperties([
-                'worker' => [
-                    'id' => $workerId,
-                ],
-                'task' => [
-                    'id' => $task->id,
-                    'pid' => $task->pid,
-                    'task_type' => $taskType->value,
-                    'attempts' => $task->attempts,
-                    'max_attempts' => $nMaxAttempts,
-                    'leased_until' => $task->leased_until,
-                    'failed_at' => $task->failed_at,
-                    'completed_at' => $task->completed_at,
-                ],
-            ])
-            ->log('worker_task_claimed');
+        $activityLogger->custom('tasks', 'claimed', $collection, [
+            'worker' => [
+                'id' => $workerId,
+            ],
+            'task' => [
+                'id' => $task->id,
+                'pid' => $task->pid,
+                'task_type' => $taskType->value,
+                'attempts' => $task->attempts,
+                'max_attempts' => $nMaxAttempts,
+                'leased_until' => $task->leased_until,
+                'failed_at' => $task->failed_at,
+                'completed_at' => $task->completed_at,
+            ],
+        ]);
 
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
@@ -395,24 +380,20 @@ class TaskController extends Controller
                 $task->completed_at = now();
                 $task->save();
 
-                activity('tasks')
-                    ->event('rejected')
-                    ->performedOn($collection)
-                    ->withProperties([
-                        'worker' => [
-                            'id' => $workerId,
-                        ],
-                        'task' => [
-                            'id' => $task->id,
-                            'pid' => $task->pid,
-                            'task_type' => $taskType->value,
-                        ],
-                        'error' => [
-                            'code' => $code,
-                            'allowed_codes' => $allowedCodes,
-                        ],
-                    ])
-                    ->log('worker_task_rejected');
+                $activityLogger->custom('tasks', 'rejected', $collection, [
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'task' => [
+                        'id' => $task->id,
+                        'pid' => $task->pid,
+                        'task_type' => $taskType->value,
+                    ],
+                    'error' => [
+                        'code' => $code,
+                        'allowed_codes' => $allowedCodes,
+                    ],
+                ]);
 
                 return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
             }
@@ -441,19 +422,14 @@ class TaskController extends Controller
                     'error_message' => $message,
             ]);
 
-            activity('tasks')
-                ->event('failed')
-                ->performedOn($task)
-                ->withProperties([
-                    'worker' => [
-                        'id' => $workerId,
-                    ],
-                    'error' => [
-                        'class' => get_class($e),
-                        'message' => $message,
-                    ],
-                ])
-                ->log('worker_task_translation_failed');
+            $activityLogger->failed('tasks', $task, $e, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'error' => [
+                    'message' => $message,
+                ],
+            ], 'worker_task_translation_failed');
 
             return $this->BadRequestResponseExtended($message);
         } catch (\Throwable $e) {
@@ -464,36 +440,24 @@ class TaskController extends Controller
                     'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
                 ]);
 
-            activity('tasks')
-                ->event('failed')
-                ->performedOn($task)
-                ->withProperties([
-                    'worker' => [
-                        'id' => $workerId,
-                    ],
-                    'error' => [
-                        'class' => get_class($e),
-                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                    ],
-                ])
-                ->log('worker_task_translation_failed');
+            $activityLogger->failed('tasks', $task, $e, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+            ], 'worker_task_translation_failed');
 
             return $this->ErrorResponse($e->getMessage());
         }
 
         if (! $translatedQuery) {
-            activity('tasks')
-                ->event('failed')
-                ->performedOn($task)
-                ->withProperties([
-                    'worker' => [
-                        'id' => $workerId,
-                    ],
-                    'error' => [
-                        'message' => 'Context manager failed to translate query',
-                    ],
-                ])
-                ->log('worker_task_translation_failed');
+            $activityLogger->custom('tasks', 'failed', $task, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'error' => [
+                    'message' => 'Context manager failed to translate query',
+                ],
+            ], 'worker_task_translation_failed');
 
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
@@ -575,10 +539,14 @@ class TaskController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function receiveResult(Request $request, string $task_pid, string $collection_pid): JsonResponse
-    {
+    public function receiveResult(
+        Request $request,
+        string $task_pid,
+        string $collection_pid,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         try {
-            DB::transaction(function () use ($request, $task_pid) {
+            DB::transaction(function () use ($request, $task_pid, $activityLogger) {
                 $task = Task::where('pid', $task_pid)
                     ->lockForUpdate()
                     ->first();
@@ -716,35 +684,30 @@ class TaskController extends Controller
                     'leased_by' => null,
                 ]);
 
-                activity('tasks')
-                    ->event('received')
-                    ->performedOn($task)
-                    ->withProperties([
-                        'worker' => [
-                            'id' => $workerId,
-                        ],
-                        'result' => [
-                            'status' => $status,
-                            'count' => $count,
-                            'message' => $message,
-                            'failed' => $isFailedResult,
-                            'files_stored' => count($storedFiles),
-                            'duration_ms' => $durationMs,
-                        ],
-                    ])
-                    ->log('worker_task_result_received');
-
+                $activityLogger->custom('tasks', 'received', $task, [
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'result' => [
+                        'status' => $status,
+                        'count' => $count,
+                        'message' => $message,
+                        'failed' => $isFailedResult,
+                        'files_stored' => count($storedFiles),
+                        'duration_ms' => $durationMs,
+                    ],
+                ]);
             });
 
             return $this->CreatedResponse([
                 'message' => 'Result received successfully.',
             ]);
         } catch (\InvalidArgumentException $e) {
-            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e, $activityLogger);
 
             return $this->BadRequestResponseExtended($e->getMessage());
         } catch (\Throwable $e) {
-            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e, $activityLogger);
 
             Log::error('Failed receiving task result', [
                 'task_pid' => $task_pid,
@@ -757,8 +720,12 @@ class TaskController extends Controller
     }
 
 
-    private function markTaskReceiveResultFailure(string $taskPid, ?string $workerId, \Throwable $e): void
-    {
+    private function markTaskReceiveResultFailure(
+        string $taskPid,
+        ?string $workerId,
+        \Throwable $e,
+        ActivityLogger $activityLogger
+    ): void {
         $now = Carbon::now();
 
         $task = Task::where('pid', $taskPid)->first();
@@ -790,19 +757,11 @@ class TaskController extends Controller
             'leased_by' => null,
         ]);
 
-        activity('tasks')
-            ->event('failed')
-            ->performedOn($task)
-            ->withProperties([
-                'worker' => [
-                    'id' => $workerId,
-                ],
-                'error' => [
-                    'class' => get_class($e),
-                    'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
-                ],
-            ])
-            ->log('worker_task_result_failed');
+        $activityLogger->failed('tasks', $task, $e, [
+            'worker' => [
+                'id' => $workerId,
+            ],
+        ], 'worker_task_result_failed');
     }
 
     /**
@@ -825,7 +784,7 @@ class TaskController extends Controller
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function cloneTask(Request $request, string $pid): JsonResponse
+    public function cloneTask(Request $request, string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $originalTask = Task::where('pid', $pid)
@@ -842,12 +801,9 @@ class TaskController extends Controller
                 'task_type' => $originalTask->task_type
             ]);
 
-            activity('tasks')
-                ->event('cloned')
-                ->causedBy(Auth::user())
-                ->performedOn($originalTask)
-                ->withProperties(['new_task_pid' => $task->pid])
-                ->log('task_was_cloned');
+            $activityLogger->custom('tasks', 'cloned', $originalTask, [
+                'new_task_pid' => $task->pid,
+            ]);
 
             return $this->OKResponse($task);
         } catch (\Throwable $e) {

@@ -4,30 +4,31 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
+use App\Jobs\RefreshDistributionConceptsView;
 use App\Models\Collection;
 use App\Models\Custodian;
+use App\Models\Distribution;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
+use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionStateService;
+use App\Services\Collections\ProcessLatestCollectionMetadataService;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Auth\Access\AuthorizationException;
-use App\Jobs\RefreshDistributionConceptsView;
-use App\Models\Distribution;
-use Illuminate\Database\Eloquent\Builder;
-use App\Services\Collections\ProcessLatestCollectionMetadataService;
 
 /**
  * @OA\Tag(
@@ -72,7 +73,7 @@ class CollectionController extends Controller
      *     )
      * )
      */
-    public function index(ModelBackedRequest $request): JsonResponse
+    public function index(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $collections = Collection::with([
@@ -86,18 +87,14 @@ class CollectionController extends Controller
                 ->applySorting()
                 ->get();
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => $request->query(),
-                    'result' => [
-                        'total' => $collections->count(),
-                        'collection_ids' => $collections->pluck('id')->values()->all(),
-                        'collection_pids' => $collections->pluck('pid')->values()->all(),
-                    ],
-                ])
-                ->log('collections_viewed');
+            $activityLogger->viewed('collections', null, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $collections->count(),
+                    'collection_ids' => $collections->pluck('id')->values()->all(),
+                    'collection_pids' => $collections->pluck('pid')->values()->all(),
+                ],
+            ]);
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
@@ -107,7 +104,6 @@ class CollectionController extends Controller
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
 
     /**
      * @OA\Get(
@@ -133,9 +129,8 @@ class CollectionController extends Controller
      *     )
      * )
      */
-    public function indexForUser(ModelBackedRequest $request): JsonResponse
+    public function indexForUser(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
-
         $user = User::with('custodians.collections')->find(Auth::id());
 
         $userWorkgroupsSubquery = $user
@@ -154,7 +149,6 @@ class CollectionController extends Controller
                ->flatMap(fn (Custodian $c) => $c->collections)
                ->unique('id')
                ->values();
-
 
         $collections = Collection::with([
             'demographics',
@@ -189,18 +183,14 @@ class CollectionController extends Controller
             ->applySorting()
             ->get();
 
-        activity('collections')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'filters' => $request->query(),
-                'result' => [
-                    'total' => $collections->count(),
-                    'collection_ids' => $collections->pluck('id')->values()->all(),
-                    'collection_pids' => $collections->pluck('pid')->values()->all(),
-                ],
-            ])
-            ->log('user_collections_viewed');
+        $activityLogger->viewed('collections', null, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $collections->count(),
+                'collection_ids' => $collections->pluck('id')->values()->all(),
+                'collection_pids' => $collections->pluck('pid')->values()->all(),
+            ],
+        ]);
 
         return $this->OKResponse($collections);
     }
@@ -241,7 +231,7 @@ class CollectionController extends Controller
      *     )
      * )
      */
-    public function indexForAdmin(Request $request): JsonResponse
+    public function indexForAdmin(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAnyForAdmin', Collection::class);
 
@@ -254,18 +244,14 @@ class CollectionController extends Controller
                 })
                 ->paginate($perPage);
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => $request->query(),
-                    'result' => [
-                        'total' => $collections->count(),
-                        'collection_ids' => $collections->pluck('id')->values()->all(),
-                        'collection_pids' => $collections->pluck('pid')->values()->all(),
-                    ],
-                ])
-                ->log('admin_collections_viewed');
+            $activityLogger->viewed('collections', null, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $collections->count(),
+                    'collection_ids' => $collections->pluck('id')->values()->all(),
+                    'collection_pids' => $collections->pluck('pid')->values()->all(),
+                ],
+            ]);
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
@@ -294,7 +280,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function show(ModelBackedRequest $request, int $id): JsonResponse
+    public function show(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
@@ -310,17 +296,7 @@ class CollectionController extends Controller
 
             $this->authorize('view', $collection);
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->withProperties([
-                    'collection' => [
-                        'id' => $collection->id,
-                        'pid' => $collection->pid,
-                    ],
-                ])
-                ->log('collection_viewed');
+            $activityLogger->viewed('collections', $collection);
 
             return $this->OKResponse($collection);
         } catch (AuthorizationException $e) {
@@ -350,7 +326,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function store(ModelBackedRequest $request): JsonResponse
+    public function store(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
 
@@ -360,11 +336,7 @@ class CollectionController extends Controller
 
             $collection = Collection::create($validated);
 
-            activity('collections')
-                ->event('created')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->log('collection_created');
+            $activityLogger->created('collections', $collection);
 
             return $this->CreatedResponse($collection);
         } catch (AuthorizationException $e) {
@@ -401,7 +373,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function update(ModelBackedRequest $request, int $id): JsonResponse
+    public function update(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
@@ -421,15 +393,12 @@ class CollectionController extends Controller
 
                 $collection->refresh();
 
-                activity('collections')
-                    ->event('updated')
-                    ->causedBy(Auth::user())
-                    ->performedOn($collection)
-                    ->withProperties([
-                        'before' => $before,
-                        'after' => $collection->only(array_keys($validated)),
-                    ])
-                    ->log('collection_updated');
+                $activityLogger->updated(
+                    'collections',
+                    $collection,
+                    $before,
+                    $collection->only(array_keys($validated))
+                );
 
                 return $this->OKResponse($collection);
             }
@@ -463,7 +432,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
@@ -473,11 +442,7 @@ class CollectionController extends Controller
             $this->authorize('delete', $collection);
 
             if ($collection->delete()) {
-                activity('collections')
-                    ->event('deleted')
-                    ->causedBy(Auth::user())
-                    ->performedOn($collection)
-                    ->log('collection_deleted');
+                $activityLogger->deleted('collections', $collection);
 
                 return $this->OKResponse([]);
             }
@@ -512,7 +477,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function getCollection($pid): JsonResponse
+    public function getCollection($pid, ActivityLogger $activityLogger): JsonResponse
     {
         $collection = Collection::where('pid', $pid)
             ->with(['latestDemographic','latestMetadata'])
@@ -522,11 +487,7 @@ class CollectionController extends Controller
             return $this->NotFoundResponse();
         }
 
-        activity('collections')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->performedOn($collection)
-            ->log('collection_viewed_by_pid');
+        $activityLogger->viewed('collections', $collection);
 
         return $this->OKResponse($collection);
     }
@@ -554,10 +515,9 @@ class CollectionController extends Controller
      *     )
      * )
      */
-    public function getCollectionDetails(Request $request, string $pid): JsonResponse
+    public function getCollectionDetails(Request $request, string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         try {
-
             $collection = Collection::where('pid', $pid)
                 ->with([
                     'demographics',
@@ -602,18 +562,13 @@ class CollectionController extends Controller
                     ->toArray();
             }
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->withProperties([
-                    'result' => [
-                        'nconcepts' => $nconcepts,
-                        'concept_categories' => count($concept_counts_by_category),
-                        'task_id' => $taskId,
-                    ],
-                ])
-                ->log('collection_details_viewed');
+            $activityLogger->viewed('collections', $collection, [
+                'result' => [
+                    'nconcepts' => $nconcepts,
+                    'concept_categories' => count($concept_counts_by_category),
+                    'task_id' => $taskId,
+                ],
+            ]);
 
             return $this->OKResponse([
                 ...$collection->toArray(),
@@ -631,8 +586,7 @@ class CollectionController extends Controller
         }
     }
 
-
-    public function getCollectionConcepts(Request $request, string $pid): JsonResponse
+    public function getCollectionConcepts(Request $request, string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
@@ -654,20 +608,15 @@ class CollectionController extends Controller
                 ->orderBy('concept_id')
                 ->paginate($perPage);
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->withProperties([
-                    'filters' => $request->query(),
-                    'result' => [
-                        'total' => $data->total(),
-                        'returned' => $data->count(),
-                        'page' => $data->currentPage(),
-                        'per_page' => $data->perPage(),
-                    ],
-                ])
-                ->log('collection_concepts_viewed');
+            $activityLogger->viewed('collections', $collection, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $data->total(),
+                    'returned' => $data->count(),
+                    'page' => $data->currentPage(),
+                    'per_page' => $data->perPage(),
+                ],
+            ]);
 
             return $this->OKResponse($data);
         } catch (AuthorizationException $e) {
@@ -707,7 +656,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=404, description="Custodian not found")
      * )
      */
-    public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
+    public function indexByCustodian(Request $request, string $custodianPid, ActivityLogger $activityLogger): JsonResponse
     {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
         if ($error) {
@@ -721,20 +670,15 @@ class CollectionController extends Controller
                 ->where('custodian_id', $custodian->id)
                 ->paginate($perPage);
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->performedOn($custodian)
-                ->withProperties([
-                    'filters' => $request->query(),
-                    'result' => [
-                        'total' => $collections->total(),
-                        'returned' => $collections->count(),
-                        'page' => $collections->currentPage(),
-                        'per_page' => $collections->perPage(),
-                    ],
-                ])
-                ->log('custodian_collections_viewed');
+            $activityLogger->viewed('collections', $custodian, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $collections->total(),
+                    'returned' => $collections->count(),
+                    'page' => $collections->currentPage(),
+                    'per_page' => $collections->perPage(),
+                ],
+            ]);
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
@@ -770,8 +714,11 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function storeByCustodian(Request $request, string $custodianPid): JsonResponse
-    {
+    public function storeByCustodian(
+        Request $request,
+        string $custodianPid,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         [$custodian, $error] = $this->getAuthorisedCustodian($custodianPid);
         if ($error) {
             return $error;
@@ -808,11 +755,7 @@ class CollectionController extends Controller
 
             $collection->host()->sync([$validated['host_id']]);
 
-            activity('collections')
-                ->event('created')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->log('custodian_collection_created');
+            $activityLogger->created('collections', $collection);
 
             return $this->CreatedResponse($collection);
         } catch (\Exception $e) {
@@ -844,8 +787,11 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function transitionTo(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function transitionTo(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
 
@@ -865,15 +811,10 @@ class CollectionController extends Controller
             $collection->refresh()->load('modelState.state');
             $afterState = $collection->getState();
 
-            activity('collections')
-                ->event('transitioned')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->withProperties([
-                    'before' => $beforeState,
-                    'after' => $afterState,
-                ])
-                ->log('collection_state_transitioned');
+            $activityLogger->custom('collections', 'transitioned', $collection, [
+                'before' => $beforeState,
+                'after' => $afterState,
+            ]);
 
             return $this->OKResponse($collection);
         } catch (AuthorizationException $e) {
@@ -912,7 +853,7 @@ class CollectionController extends Controller
     *     )
     * )
     */
-    public function getByStatus(Request $request, string $status): JsonResponse
+    public function getByStatus(Request $request, string $status, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
@@ -923,21 +864,17 @@ class CollectionController extends Controller
                 ->whereRelation('modelState.state', 'slug', $status)
                 ->paginate($perPage);
 
-            activity('collections')
-                ->event('viewed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => array_merge($request->query(), [
-                        'status' => $status,
-                    ]),
-                    'result' => [
-                        'total' => $collections->total(),
-                        'returned' => $collections->count(),
-                        'page' => $collections->currentPage(),
-                        'per_page' => $collections->perPage(),
-                    ],
-                ])
-                ->log('collections_viewed_by_status');
+            $activityLogger->viewed('collections', null, [
+                'filters' => array_merge($request->query(), [
+                    'status' => $status,
+                ]),
+                'result' => [
+                    'total' => $collections->total(),
+                    'returned' => $collections->count(),
+                    'page' => $collections->currentPage(),
+                    'per_page' => $collections->perPage(),
+                ],
+            ]);
 
             return $this->OKResponse($collections);
         } catch (\Exception $e) {
@@ -988,8 +925,11 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function addToWorkgroup(Request $request, int $collectionId): JsonResponse
-    {
+    public function addToWorkgroup(
+        Request $request,
+        int $collectionId,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $input = $request->validate(app(Collection::class)->getValidationRules('addToWorkgroup'));
 
         try {
@@ -1009,14 +949,9 @@ class CollectionController extends Controller
             'workgroup_id' => $input['workgroup_id'],
         ]);
 
-        activity('collections')
-            ->event('attached')
-            ->causedBy(Auth::user())
-            ->performedOn($collection)
-            ->withProperties([
-                'workgroup_id' => $workgroup->id,
-            ])
-            ->log('collection_added_to_workgroup');
+        $activityLogger->attached('collections', $collection, [
+            'workgroup_id' => $workgroup->id,
+        ]);
 
         return $this->OKResponse([$workgroupHasCollection]);
     }
@@ -1045,8 +980,12 @@ class CollectionController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function removeFromWorkgroup(Request $request, int $collectionId, int $workgroupId): JsonResponse
-    {
+    public function removeFromWorkgroup(
+        Request $request,
+        int $collectionId,
+        int $workgroupId,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $input = $request->validate(app(Collection::class)->getValidationRules('removeFromWorkgroup'));
 
         try {
@@ -1067,21 +1006,15 @@ class CollectionController extends Controller
         ])->delete();
 
         if ($workgroupHasCollection) {
-            activity('collections')
-                ->event('detached')
-                ->causedBy(Auth::user())
-                ->performedOn($collection)
-                ->withProperties([
-                    'workgroup_id' => $workgroup->id,
-                ])
-                ->log('collection_removed_from_workgroup');
+            $activityLogger->detached('collections', $collection, [
+                'workgroup_id' => $workgroup->id,
+            ]);
 
             return $this->OKResponse([]);
         }
 
         return $this->BadRequestResponse();
     }
-
 
     /**
      * @OA\Get(
@@ -1106,7 +1039,7 @@ class CollectionController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function getCollectionTasks($pid): JsonResponse
+    public function getCollectionTasks($pid, ActivityLogger $activityLogger): JsonResponse
     {
         $collection = Collection::where('pid', $pid)->first();
 
@@ -1122,26 +1055,22 @@ class CollectionController extends Controller
 
         $data = $tasks->get();
 
-        activity('collections')
-            ->event('viewed')
-            ->causedBy(Auth::user())
-            ->performedOn($collection)
-            ->withProperties([
-                'filters' => request()->query(),
-                'result' => [
-                    'total' => $data->count(),
-                    'task_ids' => $data->pluck('id')->values()->all(),
-                    'task_pids' => $data->pluck('pid')->values()->all(),
-                ],
-            ])
-            ->log('collection_tasks_viewed');
+        $activityLogger->viewed('collections', $collection, [
+            'filters' => request()->query(),
+            'result' => [
+                'total' => $data->count(),
+                'task_ids' => $data->pluck('id')->values()->all(),
+                'task_pids' => $data->pluck('pid')->values()->all(),
+            ],
+        ]);
 
         return $this->OKResponse($data);
     }
 
     public function processLatestMetadataFiles(
         Request $request,
-        ProcessLatestCollectionMetadataService $service
+        ProcessLatestCollectionMetadataService $service,
+        ActivityLogger $activityLogger
     ): JsonResponse {
         $this->authorize('viewAnyForAdmin', Collection::class);
 
@@ -1155,16 +1084,12 @@ class CollectionController extends Controller
                 collectionIds: $validated['collection_ids'] ?? [],
             );
 
-            activity('collections')
-                ->event('processed')
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'filters' => [
-                        'collection_ids' => $validated['collection_ids'] ?? [],
-                    ],
-                    'result' => $result,
-                ])
-                ->log('latest_collection_metadata_processed');
+            $activityLogger->processed('collections', null, [
+                'filters' => [
+                    'collection_ids' => $validated['collection_ids'] ?? [],
+                ],
+                'result' => $result,
+            ]);
 
             return $this->OKResponse($result);
         } catch (AuthorizationException $e) {
@@ -1181,7 +1106,6 @@ class CollectionController extends Controller
             return $this->ErrorResponse($e->getMessage());
         }
     }
-
 
     protected function collectionsIndexQuery(Request $request): Builder
     {
