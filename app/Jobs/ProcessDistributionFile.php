@@ -2,8 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Traits\HelperFunctions;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
+use App\Traits\HelperFunctions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -40,7 +41,7 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
     }
 
-    public function handle(): void
+    public function handle(ActivityLogger $activityLogger): void
     {
         $file = ResultFile::findOrFail($this->resultFileId);
 
@@ -51,8 +52,16 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
+            $activityLogger->custom('result_files', 'skipped', $file, [], 'distribution_file_processing_skipped');
+
             return;
         }
+
+        $activityLogger->custom('result_files', 'started', $file, [
+            'processing' => [
+                'batch_size' => $this->batchSize,
+            ],
+        ], 'distribution_file_processing_started');
 
         $file->markProcessing();
 
@@ -61,6 +70,13 @@ class ProcessDistributionFile implements ShouldQueue
             Log::error('[' . $this->tag . '] Failed to open file stream', [
                 'path' => $file->path,
             ]);
+
+            $activityLogger->custom('result_files', 'failed', $file, [
+                'error' => [
+                    'message' => "Cannot open {$file->path}",
+                ],
+            ], 'distribution_file_processing_failed');
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -254,6 +270,13 @@ class ProcessDistributionFile implements ShouldQueue
 
             $file->markDone($rowsSeen);
 
+            $activityLogger->processed('result_files', $file, [
+                'result' => [
+                    'rows_seen' => $rowsSeen,
+                    'skipped' => $skipped,
+                ],
+            ], 'distribution_file_processed');
+
             Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
                 'task_id'        => $file->task_id,
@@ -269,6 +292,14 @@ class ProcessDistributionFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'distribution_file_processing_failed'
+            );
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\CollectionMetadata;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -33,7 +34,7 @@ class ProcessMetadataFile implements ShouldQueue
         ]);
     }
 
-    public function handle(): void
+    public function handle(ActivityLogger $activityLogger): void
     {
         $file = ResultFile::with('collection')->findOrFail($this->resultFileId);
 
@@ -44,6 +45,14 @@ class ProcessMetadataFile implements ShouldQueue
             'file_name'      => $file->file_name,
         ]);
 
+        $activityLogger->custom(
+            'result_files',
+            'started',
+            $file,
+            [],
+            'metadata_file_processing_started'
+        );
+
         $file->markProcessing();
 
         $stream = Storage::readStream($file->path);
@@ -52,6 +61,19 @@ class ProcessMetadataFile implements ShouldQueue
             Log::error("[{$this->tag}] failed to open file stream", [
                 'path' => $file->path,
             ]);
+
+            $activityLogger->custom(
+                'result_files',
+                'failed',
+                $file,
+                [
+                    'error' => [
+                        'message' => "Cannot open {$file->path}",
+                    ],
+                ],
+                'metadata_file_processing_failed'
+            );
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -96,7 +118,7 @@ class ProcessMetadataFile implements ShouldQueue
                 'threshold' => null,
             ], $row);
 
-            $this->storeMetadata($file, $payload);
+            $metadata = $this->storeMetadata($file, $payload);
 
             $extraLine = fgets($stream);
             if ($extraLine !== false && trim($extraLine) !== '') {
@@ -106,6 +128,15 @@ class ProcessMetadataFile implements ShouldQueue
             }
 
             $file->markDone(1);
+
+            $activityLogger->processed(
+                'result_files',
+                $file,
+                [
+                    'collection_metadata_id' => $metadata->id,
+                ],
+                'metadata_file_processed'
+            );
 
             Log::info("[{$this->tag}] finished", [
                 'result_file_id' => $file->id,
@@ -120,10 +151,18 @@ class ProcessMetadataFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'metadata_file_processing_failed'
+            );
         }
     }
 
-    private function storeMetadata(ResultFile $file, array $row): void
+    private function storeMetadata(ResultFile $file, array $row): CollectionMetadata
     {
         $metadata = CollectionMetadata::create([
             'collection_id' => $file->collection_id,
@@ -142,6 +181,8 @@ class ProcessMetadataFile implements ShouldQueue
             'collection_id' => $file->collection_id,
             'result_file_id' => $file->id,
         ]);
+
+        return $metadata;
     }
 
     private function nullIfEmpty(?string $value): ?string

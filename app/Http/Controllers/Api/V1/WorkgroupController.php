@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,11 +25,19 @@ class WorkgroupController extends Controller
     /**
      * Intentionally left out of Swagger documentation as this is not a public endpoint.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAny', Workgroup::class);
 
         $workgroup = Workgroup::all();
+
+        $activityLogger->viewed('workgroups', null, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $workgroup->count(),
+                'workgroup_ids' => $workgroup->pluck('id')->values()->all(),
+            ],
+        ]);
 
         return $this->OKResponse($workgroup);
     }
@@ -60,7 +69,7 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('show'));
@@ -68,6 +77,8 @@ class WorkgroupController extends Controller
         try {
             $workgroup = Workgroup::with('collections')->findOrFail($validated['id']);
             $this->authorize('view', $workgroup);
+
+            $activityLogger->viewed('workgroups', $workgroup);
 
         } catch (AuthorizationException $e) {
             throw $e;
@@ -108,13 +119,15 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('store'));
         $this->authorize('create', Workgroup::class);
 
         try {
             $workgroup = Workgroup::create($validated);
+
+            $activityLogger->created('workgroups', $workgroup);
 
             return $this->CreatedResponse($workgroup);
         } catch (AuthorizationException $e) {
@@ -168,7 +181,7 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('update'));
@@ -177,7 +190,17 @@ class WorkgroupController extends Controller
             $workgroup = Workgroup::findOrFail($validated['id']);
             $this->authorize('update', $workgroup);
 
+            $before = $workgroup->only(array_keys($validated));
+
             $workgroup->update($validated);
+            $workgroup->refresh();
+
+            $activityLogger->updated(
+                'workgroups',
+                $workgroup,
+                $before,
+                $workgroup->only(array_keys($validated))
+            );
 
             return $this->OKResponse($workgroup);
         } catch (AuthorizationException $e) {
@@ -214,7 +237,7 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(Workgroup::class)->getValidationRules('delete'));
@@ -224,6 +247,9 @@ class WorkgroupController extends Controller
             $this->authorize('delete', $workgroup);
 
             $workgroup->delete();
+
+            $activityLogger->deleted('workgroups', $workgroup);
+
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
             throw $e;
@@ -254,7 +280,7 @@ class WorkgroupController extends Controller
      *     )
      * )
      */
-    public function usersByWorkgroup(Request $request): JsonResponse
+    public function usersByWorkgroup(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $this->authorize('searchUsers', Workgroup::class);
@@ -266,6 +292,14 @@ class WorkgroupController extends Controller
             if ($workgroups->isEmpty()) {
                 return $this->NotFoundResponse();
             }
+
+            $activityLogger->viewed('workgroups', null, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $workgroups->count(),
+                    'workgroup_ids' => $workgroups->pluck('id')->values()->all(),
+                ],
+            ], 'workgroup_users_viewed');
 
             return $this->OKResponse($workgroups);
         } catch (AuthorizationException $e) {
