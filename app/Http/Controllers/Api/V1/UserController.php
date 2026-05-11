@@ -57,6 +57,17 @@ class UserController extends Controller
             ->applySorting()
             ->get();
 
+        activity('users')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $users->count(),
+                    'user_ids' => $users->pluck('id')->values()->all(),
+                ],
+            ])
+            ->log('users_viewed');
+
         return $this->OKResponse($users);
     }
 
@@ -86,6 +97,11 @@ class UserController extends Controller
         // Stub
         $user = User::where('id', $id)->first();
         if ($user) {
+            activity('users')
+                ->causedBy(Auth::user())
+                ->performedOn($user)
+                ->log('user_viewed');
+
             return $this->OKResponse($user);
         }
 
@@ -184,6 +200,11 @@ class UserController extends Controller
         $user = User::with(['workgroups', 'roles', 'custodians'])
             ->findOrFail(Auth::id());
 
+        activity('users')
+            ->causedBy(Auth::user())
+            ->performedOn($user)
+            ->log('authenticated_user_viewed');
+
         return $this->OKResponse($user);
     }
 
@@ -242,6 +263,17 @@ class UserController extends Controller
             'workgroup_id' => $input['workgroup_id'],
         ]);
 
+        activity('users')
+            ->causedBy(Auth::user())
+            ->performedOn($user)
+            ->withProperties([
+                'workgroup' => [
+                    'id' => $workgroup->id,
+                    'pid' => $workgroup->pid,
+                ],
+            ])
+            ->log('user_added_to_workgroup');
+
         return $this->OKResponse([$userHasWorkgroup]);
     }
 
@@ -293,6 +325,17 @@ class UserController extends Controller
         ])->delete();
 
         if ($userHasWorkgroup) {
+            activity('users')
+                ->causedBy(Auth::user())
+                ->performedOn($user)
+                ->withProperties([
+                    'workgroup' => [
+                        'id' => $workgroup->id,
+                        'pid' => $workgroup->pid,
+                    ],
+                ])
+                ->log('user_removed_from_workgroup');
+
             return $this->OKResponse([]);
         }
 
