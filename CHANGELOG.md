@@ -1,3 +1,14 @@
+## [1.9.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.8.1...v1.9.0) (2026-05-11)
+
+### ✨ Features
+
+* **DP-734:** Bug fixes for the rule builder service (#234) ([a5ed997](https://github.com/HDRUK/cohort-discovery-service-api/commit/a5ed997f8e25b04144ae7aefb9d590f6b5bf40fe))
+
+### 🐛 Bug Fixes
+
+* **DP-734:** Further updates to building rules (#235) ([4fd0511](https://github.com/HDRUK/cohort-discovery-service-api/commit/4fd05113f27c4594e58f2ff0d5174679a6a59b52)), closes [DP-734](DP-734)
+* **DP-763:** Public swagger documentation was wrong (#232) ([83d07ac](https://github.com/HDRUK/cohort-discovery-service-api/commit/83d07acc54ed436ab92282f8ecc1ca3f44eda69e)), closes [DP-763](DP-763)
+
 ## [1.8.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.8.0...v1.8.1) (2026-04-30)
 
 ### 🐛 Bug Fixes
