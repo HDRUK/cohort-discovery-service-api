@@ -858,12 +858,12 @@ class CollectionController extends Controller
             }
 
             $collection->load('modelState.state');
-            $beforeState = $collection->modelState?->state?->slug;
+            $beforeState = $collection->getState();
 
             $this->stateService->transition($collection, $validated['state'], $request->user());
 
             $collection->refresh()->load('modelState.state');
-            $afterState = $collection->modelState?->state?->slug;
+            $afterState = $collection->getState();
 
             activity('collections')
                 ->event('transitioned')

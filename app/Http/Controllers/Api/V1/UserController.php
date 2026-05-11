@@ -273,7 +273,6 @@ class UserController extends Controller
             ->withProperties([
                 'workgroup' => [
                     'id' => $workgroup->id,
-                    'pid' => $workgroup->pid,
                 ],
             ])
             ->log('user_added_to_workgroup');
@@ -336,7 +335,6 @@ class UserController extends Controller
                 ->withProperties([
                     'workgroup' => [
                         'id' => $workgroup->id,
-                        'pid' => $workgroup->pid,
                     ],
                 ])
                 ->log('user_removed_from_workgroup');
