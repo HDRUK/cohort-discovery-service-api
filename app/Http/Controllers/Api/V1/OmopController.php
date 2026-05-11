@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @OA\Tag(
@@ -287,6 +288,30 @@ class OmopController extends Controller
                 $page,
                 ['path' => $request->url(), 'query' => $request->query()]
             );
+
+
+            activity('omop')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => [
+                        'page' => $page,
+                        'per_page' => $perPage,
+                        'collections' => $collectionPids,
+                        'domain' => $domain,
+                        'include_ancestors' => $includeAncestors,
+                        'concept_id' => $search['concept_id'] ?? [],
+                        'concept_name' => $search['concept_name'] ?? [],
+                    ],
+                    'feature_flags' => [
+                        'query-builder-use-collections-in-search' => $useCollectionsInSearch,
+                        'query-builder-use-stats-in-ordering' => $useStatsInOrdering,
+                    ],
+                    'result' => [
+                        'total' => $total,
+                        'returned' => count($rows),
+                    ],
+                ])
+                ->log('omop_concepts_searched');
 
             return $this->OKResponse($paginator);
         } catch (\Exception $e) {

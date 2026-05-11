@@ -44,6 +44,10 @@ class ProcessMetadataFile implements ShouldQueue
             'file_name'      => $file->file_name,
         ]);
 
+        activity('result_files')
+            ->performedOn($file)
+            ->log('metadata_file_processing_started');
+
         $file->markProcessing();
 
         $stream = Storage::readStream($file->path);
@@ -52,6 +56,16 @@ class ProcessMetadataFile implements ShouldQueue
             Log::error("[{$this->tag}] failed to open file stream", [
                 'path' => $file->path,
             ]);
+
+            activity('result_files')
+                ->performedOn($file)
+                ->withProperties([
+                    'error' => [
+                        'message' => "Cannot open {$file->path}",
+                    ],
+                ])
+                ->log('metadata_file_processing_failed');
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -96,7 +110,7 @@ class ProcessMetadataFile implements ShouldQueue
                 'threshold' => null,
             ], $row);
 
-            $this->storeMetadata($file, $payload);
+            $metadata = $this->storeMetadata($file, $payload);
 
             $extraLine = fgets($stream);
             if ($extraLine !== false && trim($extraLine) !== '') {
@@ -106,6 +120,10 @@ class ProcessMetadataFile implements ShouldQueue
             }
 
             $file->markDone(1);
+
+            activity('result_files')
+                ->performedOn($file)
+                ->log('metadata_file_processed');
 
             Log::info("[{$this->tag}] finished", [
                 'result_file_id' => $file->id,
@@ -120,10 +138,20 @@ class ProcessMetadataFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            activity('result_files')
+                ->performedOn($file)
+                ->withProperties([
+                    'error' => [
+                        'class' => get_class($e),
+                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                    ],
+                ])
+                ->log('metadata_file_processing_failed');
         }
     }
 
-    private function storeMetadata(ResultFile $file, array $row): void
+    private function storeMetadata(ResultFile $file, array $row): CollectionMetadata
     {
         $metadata = CollectionMetadata::create([
             'collection_id' => $file->collection_id,
@@ -142,6 +170,8 @@ class ProcessMetadataFile implements ShouldQueue
             'collection_id' => $file->collection_id,
             'result_file_id' => $file->id,
         ]);
+
+        return $metadata;
     }
 
     private function nullIfEmpty(?string $value): ?string

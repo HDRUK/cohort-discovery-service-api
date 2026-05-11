@@ -90,7 +90,22 @@ class QueryController extends Controller
             }
             unset($queries);
 
-            return $this->OKResponse($queryBuilder->paginate($perPage));
+            $paginatedQueries = $queryBuilder->paginate($perPage);
+
+            activity('queries')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->all(),
+                    'result' => [
+                        'total' => $paginatedQueries->total(),
+                        'returned' => $paginatedQueries->count(),
+                        'page' => $paginatedQueries->currentPage(),
+                        'per_page' => $paginatedQueries->perPage(),
+                    ],
+                ])
+                ->log('queries_viewed');
+
+            return $this->OKResponse($paginatedQueries);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -163,6 +178,12 @@ class QueryController extends Controller
 
             $this->authorize('view', $query);
 
+            activity('queries')
+                ->causedBy(Auth::user())
+                ->performedOn($query)
+                ->log('query_viewed');
+
+
             return $this->OKResponse($query);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -203,6 +224,22 @@ class QueryController extends Controller
         try {
             $result = app(QuerySubmissionService::class)
                 ->handle($validated, Auth::id());
+
+            $query = Query::where('pid', $result['query_pid'] ?? null)->first();
+
+            if ($query) {
+                activity('queries')
+                    ->performedOn($query)
+                    ->causedBy(Auth::user())
+                    ->withProperties([
+                        'tasks' => [
+                            'task_count' => $result['task_count'] ?? null,
+                            'task_pids' => $result['task_pids'] ?? [],
+                        ],
+                    ])
+                    ->log('query_created');
+            }
+
 
             return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
@@ -252,7 +289,20 @@ class QueryController extends Controller
 
             $this->authorize('update', $query);
 
+            $before = $query->only(array_keys($validated));
             if ($query->update($validated)) {
+                $query->refresh();
+                $after = $query->only(array_keys($validated));
+
+                activity('queries')
+                    ->causedBy(Auth::user())
+                    ->performedOn($query)
+                    ->withProperties([
+                        'before' => $before,
+                        'after' => $after,
+                    ])
+                    ->log('query_updated');
+
                 return $this->OKResponse($query);
             }
 
@@ -302,6 +352,11 @@ class QueryController extends Controller
             $this->authorize('delete', $query);
 
             if ($query->delete()) {
+                activity('queries')
+                   ->causedBy(Auth::user())
+                   ->performedOn($query)
+                   ->log('query_deleted');
+
                 return $this->OKResponse([]);
             }
 
@@ -385,6 +440,18 @@ class QueryController extends Controller
             foreach ($queries as $query) {
                 $this->authorize('download', $query);
             }
+
+            activity('queries')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'download' => [
+                        'format' => $format,
+                        'query_pids' => $queries->pluck('pid')->values()->all(),
+                    ],
+                ])
+                ->log('queries_downloaded');
+
             unset($queries);
 
             return $queryBuilder->download($format);
@@ -419,6 +486,17 @@ class QueryController extends Controller
 
             $result = app(QuerySubmissionService::class)
                 ->handle($data, Auth::id());
+
+            activity('queries')
+                ->performedOn($query)
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'tasks' => [
+                        'task_count' => $result['task_count'] ?? null,
+                        'task_pids' => $result['task_pids'] ?? [],
+                    ],
+                ])
+                ->log('query_duplicated');
 
             return $this->OKResponse($result);
         } catch (\Throwable $e) {

@@ -51,8 +51,21 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
+            activity('result_files')
+                ->performedOn($file)
+                ->log('distribution_file_processing_skipped');
+
             return;
         }
+
+        activity('result_files')
+            ->performedOn($file)
+            ->withProperties([
+                'processing' => [
+                    'batch_size' => $this->batchSize,
+                ],
+            ])
+            ->log('distribution_file_processing_started');
 
         $file->markProcessing();
 
@@ -61,6 +74,16 @@ class ProcessDistributionFile implements ShouldQueue
             Log::error('[' . $this->tag . '] Failed to open file stream', [
                 'path' => $file->path,
             ]);
+
+            activity('result_files')
+                ->performedOn($file)
+                ->withProperties([
+                    'error' => [
+                        'message' => "Cannot open {$file->path}",
+                    ],
+                ])
+                ->log('distribution_file_processing_failed');
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -254,6 +277,10 @@ class ProcessDistributionFile implements ShouldQueue
 
             $file->markDone($rowsSeen);
 
+            activity('result_files')
+                ->performedOn($file)
+                ->log('distribution_file_processed');
+
             Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
                 'task_id'        => $file->task_id,
@@ -269,6 +296,16 @@ class ProcessDistributionFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            activity('result_files')
+                ->performedOn($file)
+                ->withProperties([
+                    'error' => [
+                        'class' => get_class($e),
+                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                    ],
+                ])
+                ->log('distribution_file_processing_failed');
         }
     }
 

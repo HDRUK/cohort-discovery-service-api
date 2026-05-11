@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
 
 class CollectionConfigController extends Controller
 {
@@ -36,6 +37,18 @@ class CollectionConfigController extends Controller
 
         try {
             $configs = CollectionConfig::all();
+
+            activity('collection_configs')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $configs->count(),
+                        'config_ids' => $configs->pluck('id')->values()->all(),
+                        'collection_ids' => $configs->pluck('collection_id')->values()->all(),
+                    ],
+                ])
+                ->log('collection_configs_viewed');
 
             return $this->OKResponse($configs);
         } catch (\Throwable $e) {
@@ -81,6 +94,11 @@ class CollectionConfigController extends Controller
             $config = CollectionConfig::findOrFail($validated['id']);
             $this->authorize('view', $config);
 
+            activity('collection_configs')
+                ->causedBy(Auth::user())
+                ->performedOn($config)
+                ->log('collection_config_viewed');
+
             return $this->OKResponse($config);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -125,6 +143,11 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::create($validated);
+
+            activity('collection_configs')
+                ->causedBy(Auth::user())
+                ->performedOn($config)
+                ->log('collection_config_created');
 
             return $this->CreatedResponse($config);
 
@@ -181,7 +204,22 @@ class CollectionConfigController extends Controller
         $this->authorize('update', $config);
 
         try {
+            $before = $config->only(array_keys($validated));
+
             if ($config->update($validated)) {
+                $config->refresh();
+
+                $after = $config->only(array_keys($validated));
+
+                activity('collection_configs')
+                    ->causedBy(Auth::user())
+                    ->performedOn($config)
+                    ->withProperties([
+                        'before' => $before,
+                        'after' => $after,
+                    ])
+                    ->log('collection_config_updated');
+
                 return $this->OKResponse($config);
             }
 
@@ -232,6 +270,11 @@ class CollectionConfigController extends Controller
             $this->authorize('delete', $config);
 
             if ($config->delete()) {
+                activity('collection_configs')
+                    ->causedBy(Auth::user())
+                    ->performedOn($config)
+                    ->log('collection_config_deleted');
+
                 return $this->OKResponse([]);
             }
 

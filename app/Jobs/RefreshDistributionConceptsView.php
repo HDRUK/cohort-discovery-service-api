@@ -58,6 +58,14 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'count' => $beforeCount,
         ]);
 
+        activity('omop')
+            ->withProperties([
+                'view' => $this->viewName,
+                'only_active' => $this->onlyActive,
+                'before' => $beforeCount,
+            ])
+            ->log('distribution_concepts_view_refresh_started');
+
         // get the task_ids for the latest concept distribution runs for all collections
         $taskIds = Collection::query()
            ->when($this->onlyActive, function ($q) {
@@ -82,6 +90,20 @@ class RefreshDistributionConceptsView implements ShouldQueue
             Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
                 'view' => $this->viewName,
             ]);
+
+            activity('omop')
+                ->withProperties([
+                    'view' => $this->viewName,
+                    'only_active' => $this->onlyActive,
+                    'before' => $beforeCount,
+                    'result' => [
+                        'task_count' => 0,
+                        'skipped' => true,
+                        'reason' => 'no_latest_tasks_found',
+                    ],
+                ])
+                ->log('distribution_concepts_view_refresh_skipped');
+
             return;
         }
 
@@ -127,5 +149,18 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'view' => $this->viewName,
             'count' => $afterCount,
         ]);
+
+        activity('omop')
+            ->withProperties([
+                'view' => $this->viewName,
+                'only_active' => $this->onlyActive,
+                'before' => $beforeCount,
+                'after' =>  $afterCount,
+                'result' => [
+                    'task_count' => $taskIds->count(),
+                    'task_ids' => $taskIds->values()->all(),
+                ],
+            ])
+            ->log('distribution_concepts_view_refreshed');
     }
 }

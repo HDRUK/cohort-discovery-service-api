@@ -156,6 +156,11 @@ class TaskController extends Controller
             $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
 
+        activity('tasks')
+            ->causedBy(Auth::user())
+            ->performedOn($task)
+            ->log('task_viewed');
+
         return $this->OKResponse($task);
     }
 
@@ -303,7 +308,15 @@ class TaskController extends Controller
 
 
         if (! $task) {
-            error_log('returning no content');
+            activity('tasks')
+                ->performedOn($collection)
+                ->withProperties([
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'task_type' => $taskType->value,
+                ])
+                ->log('worker_no_next_job');
 
             return $this->NoContentResponse();
         }
@@ -319,6 +332,25 @@ class TaskController extends Controller
 
         $task->save();
         $task->refresh()->load('submittedQuery');
+
+        activity('tasks')
+            ->performedOn($collection)
+            ->withProperties([
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'task' => [
+                    'id' => $task->id,
+                    'pid' => $task->pid,
+                    'task_type' => $taskType->value,
+                    'attempts' => $task->attempts,
+                    'max_attempts' => $nMaxAttempts,
+                    'leased_until' => $task->leased_until,
+                    'failed_at' => $task->failed_at,
+                    'completed_at' => $task->completed_at,
+                ],
+            ])
+            ->log('worker_task_claimed');
 
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
@@ -465,9 +497,9 @@ class TaskController extends Controller
                     return;
                 }
 
-                $status = $request->get('status');
-                $message = $request->get('message');
-                $queryResult = $request->get('queryResult');
+                $status = $request->input('status');
+                $message = $request->input('message');
+                $queryResult = $request->input('queryResult');
 
                 $isFailedResult = in_array($status, ['error', 'failed'], true);
 
@@ -589,6 +621,24 @@ class TaskController extends Controller
                     'leased_until' => null,
                     'leased_by' => null,
                 ]);
+
+                activity('tasks')
+                    ->performedOn($task)
+                    ->withProperties([
+                        'worker' => [
+                            'id' => $workerId,
+                        ],
+                        'result' => [
+                            'status' => $status,
+                            'count' => $count,
+                            'message' => $message,
+                            'failed' => $isFailedResult,
+                            'files_stored' => count($storedFiles),
+                            'duration_ms' => $durationMs,
+                        ],
+                    ])
+                    ->log('worker_task_result_received');
+
             });
 
             return $this->CreatedResponse([
@@ -669,19 +719,25 @@ class TaskController extends Controller
     public function cloneTask(Request $request, string $pid): JsonResponse
     {
         try {
-            $task = Task::where('pid', $pid)
+            $originalTask = Task::where('pid', $pid)
                 ->first();
 
-            $query = $task->submittedQuery;
-            $collection = $task->collection;
+            $query = $originalTask->submittedQuery;
+            $collection = $originalTask->collection;
 
             $task = Task::create([
                 'pid' => Str::uuid(),
                 'query_id' => $query->id,
                 'collection_id' => $collection->id,
                 'created_at' => Carbon::now(),
-                'task_type' => $task->task_type
+                'task_type' => $originalTask->task_type
             ]);
+
+            activity('tasks')
+                ->causedBy(Auth::user())
+                ->performedOn($originalTask)
+                ->withProperties(['new_task_pid' => $task->pid])
+                ->log('task_was_cloned');
 
             return $this->OKResponse($task);
         } catch (\Throwable $e) {

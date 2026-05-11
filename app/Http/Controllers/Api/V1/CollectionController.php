@@ -86,6 +86,18 @@ class CollectionController extends Controller
                 ->applySorting()
                 ->get();
 
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $collections->count(),
+                        'collection_ids' => $collections->pluck('id')->values()->all(),
+                        'collection_pids' => $collections->pluck('pid')->values()->all(),
+                    ],
+                ])
+                ->log('collections_viewed');
+
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
             \Log::error('CollectionController@index - failed: '.
@@ -176,6 +188,18 @@ class CollectionController extends Controller
             ->applySorting()
             ->get();
 
+        activity('collections')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $collections->count(),
+                    'collection_ids' => $collections->pluck('id')->values()->all(),
+                    'collection_pids' => $collections->pluck('pid')->values()->all(),
+                ],
+            ])
+            ->log('user_collections_viewed');
+
         return $this->OKResponse($collections);
     }
 
@@ -228,6 +252,18 @@ class CollectionController extends Controller
                 })
                 ->paginate($perPage);
 
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $collections->count(),
+                        'collection_ids' => $collections->pluck('id')->values()->all(),
+                        'collection_pids' => $collections->pluck('pid')->values()->all(),
+                    ],
+                ])
+                ->log('admin_collections_viewed');
+
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
             \Log::error('CollectionController@indexForAdmin - failed: ' . $e->getMessage());
@@ -271,6 +307,17 @@ class CollectionController extends Controller
 
             $this->authorize('view', $collection);
 
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->withProperties([
+                    'collection' => [
+                        'id' => $collection->id,
+                        'pid' => $collection->pid,
+                    ],
+                ])
+                ->log('collection_viewed');
+
             return $this->OKResponse($collection);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -308,6 +355,11 @@ class CollectionController extends Controller
             $this->authorize('create', $custodian);
 
             $collection = Collection::create($validated);
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->log('collection_created');
 
             return $this->CreatedResponse($collection);
         } catch (AuthorizationException $e) {
@@ -353,12 +405,25 @@ class CollectionController extends Controller
             $collection = Collection::with(['host', 'config', 'custodian'])->findOrFail($validated['id']);
             $this->authorize('update', $collection);
 
+            $before = $collection->only(array_keys($validated));
+
             if ($collection->update($validated)) {
                 $collection->host()->sync([$validated['host_id']]);
 
                 if ($collection->wasChanged('is_synthetic')) {
                     RefreshDistributionConceptsView::dispatch();
                 }
+
+                $collection->refresh();
+
+                activity('collections')
+                    ->causedBy(Auth::user())
+                    ->performedOn($collection)
+                    ->withProperties([
+                        'before' => $before,
+                        'after' => $collection->only(array_keys($validated)),
+                    ])
+                    ->log('collection_updated');
 
                 return $this->OKResponse($collection);
             }
@@ -394,6 +459,7 @@ class CollectionController extends Controller
      */
     public function destroy(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $request->merge(['id' => $id]);
         $validated = $request->validated();
 
         try {
@@ -401,6 +467,11 @@ class CollectionController extends Controller
             $this->authorize('delete', $collection);
 
             if ($collection->delete()) {
+                activity('collections')
+                    ->causedBy(Auth::user())
+                    ->performedOn($collection)
+                    ->log('collection_deleted');
+
                 return $this->OKResponse([]);
             }
         } catch (AuthorizationException $e) {
@@ -443,6 +514,11 @@ class CollectionController extends Controller
         if (! $collection) {
             return $this->NotFoundResponse();
         }
+
+        activity('collections')
+            ->causedBy(Auth::user())
+            ->performedOn($collection)
+            ->log('collection_viewed_by_pid');
 
         return $this->OKResponse($collection);
     }
@@ -518,6 +594,18 @@ class CollectionController extends Controller
                     ->toArray();
             }
 
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->withProperties([
+                    'result' => [
+                        'nconcepts' => $nconcepts,
+                        'concept_categories' => count($concept_counts_by_category),
+                        'task_id' => $taskId,
+                    ],
+                ])
+                ->log('collection_details_viewed');
+
             return $this->OKResponse([
                 ...$collection->toArray(),
                 'nconcepts' => $nconcepts,
@@ -556,6 +644,20 @@ class CollectionController extends Controller
                 ])
                 ->orderBy('concept_id')
                 ->paginate($perPage);
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $data->total(),
+                        'returned' => $data->count(),
+                        'page' => $data->currentPage(),
+                        'per_page' => $data->perPage(),
+                    ],
+                ])
+                ->log('collection_concepts_viewed');
 
             return $this->OKResponse($data);
         } catch (AuthorizationException $e) {
@@ -608,6 +710,20 @@ class CollectionController extends Controller
             $collections = $this->collectionsIndexQuery($request)
                 ->where('custodian_id', $custodian->id)
                 ->paginate($perPage);
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($custodian)
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $collections->total(),
+                        'returned' => $collections->count(),
+                        'page' => $collections->currentPage(),
+                        'per_page' => $collections->perPage(),
+                    ],
+                ])
+                ->log('custodian_collections_viewed');
 
             return $this->OKResponse($collections);
         } catch (\Throwable $e) {
@@ -681,6 +797,11 @@ class CollectionController extends Controller
 
             $collection->host()->sync([$validated['host_id']]);
 
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->log('custodian_collection_created');
+
             return $this->CreatedResponse($collection);
         } catch (\Exception $e) {
             return $this->ErrorResponse($e->getMessage());
@@ -713,6 +834,7 @@ class CollectionController extends Controller
      */
     public function transitionTo(ModelBackedRequest $request, int $id): JsonResponse
     {
+        $request->merge(['id' => $id]);
         $validated = $request->validated();
 
         try {
@@ -722,7 +844,23 @@ class CollectionController extends Controller
             if ($collection->isInState($validated['state'])) {
                 return $this->ErrorResponse('collection is already in state: \"'.$validated['state'].'\"');
             }
+
+            $collection->load('modelState.state');
+            $beforeState = $collection->modelState?->state?->slug;
+
             $this->stateService->transition($collection, $validated['state'], $request->user());
+
+            $collection->refresh()->load('modelState.state');
+            $afterState = $collection->modelState?->state?->slug;
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->withProperties([
+                    'before' => $beforeState,
+                    'after' => $afterState,
+                ])
+                ->log('collection_state_transitioned');
 
             return $this->OKResponse($collection);
         } catch (AuthorizationException $e) {
@@ -771,6 +909,21 @@ class CollectionController extends Controller
                 ->with(['modelState.state'])
                 ->whereRelation('modelState.state', 'slug', $status)
                 ->paginate($perPage);
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => array_merge($request->query(), [
+                        'status' => $status,
+                    ]),
+                    'result' => [
+                        'total' => $collections->total(),
+                        'returned' => $collections->count(),
+                        'page' => $collections->currentPage(),
+                        'per_page' => $collections->perPage(),
+                    ],
+                ])
+                ->log('collections_viewed_by_status');
 
             return $this->OKResponse($collections);
         } catch (\Exception $e) {
@@ -842,6 +995,14 @@ class CollectionController extends Controller
             'workgroup_id' => $input['workgroup_id'],
         ]);
 
+        activity('collections')
+            ->causedBy(Auth::user())
+            ->performedOn($collection)
+            ->withProperties([
+                'workgroup_id' => $workgroup->id,
+            ])
+            ->log('collection_added_to_workgroup');
+
         return $this->OKResponse([$workgroupHasCollection]);
     }
 
@@ -891,6 +1052,14 @@ class CollectionController extends Controller
         ])->delete();
 
         if ($workgroupHasCollection) {
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->performedOn($collection)
+                ->withProperties([
+                    'workgroup_id' => $workgroup->id,
+                ])
+                ->log('collection_removed_from_workgroup');
+
             return $this->OKResponse([]);
         }
 
@@ -935,7 +1104,26 @@ class CollectionController extends Controller
             ->filterViaRequest()
             ->applySorting('created_at', 'desc');
 
-        return $this->OKResponse($tasks->get());
+        $data = $tasks->get();
+
+        activity('collections')
+            ->causedBy(Auth::user())
+            ->performedOn($collection)
+            ->withProperties([
+                'collection' => [
+                    'id' => $collection->id,
+                    'pid' => $collection->pid,
+                ],
+                'filters' => request()->query(),
+                'result' => [
+                    'total' => $data->count(),
+                    'task_ids' => $data->pluck('id')->values()->all(),
+                    'task_pids' => $data->pluck('pid')->values()->all(),
+                ],
+            ])
+            ->log('collection_tasks_viewed');
+
+        return $this->OKResponse($data);
     }
 
     public function processLatestMetadataFiles(
@@ -953,6 +1141,16 @@ class CollectionController extends Controller
             $result = $service->handle(
                 collectionIds: $validated['collection_ids'] ?? [],
             );
+
+            activity('collections')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => [
+                        'collection_ids' => $validated['collection_ids'] ?? [],
+                    ],
+                    'result' => $result,
+                ])
+                ->log('latest_collection_metadata_processed');
 
             return $this->OKResponse($result);
         } catch (AuthorizationException $e) {
@@ -994,7 +1192,4 @@ class CollectionController extends Controller
             ->filterViaRequest()
             ->applySorting();
     }
-
-
-
 }
