@@ -65,6 +65,25 @@ class TaskCleanupJob implements ShouldQueue
                         'leased_until' => null,
                         'leased_by' => null,
                     ]);
+
+                    activity('tasks')
+                        ->performedOn($task)
+                        ->withProperties([
+                            'task_run' => [
+                                'id' => $tr->id,
+                                'attempt' => $tr->attempt,
+                            ],
+                            'result' => [
+                                'timeout_seconds' => $timeoutSeconds,
+                                'completed_at' => $task->completed_at,
+                                'failed_at' => $task->failed_at,
+                            ],
+                            'error' => [
+                                'class' => 'Timeout',
+                                'message' => "No result received within {$timeoutSeconds} seconds.",
+                            ],
+                        ])
+                        ->log('task_timed_out');
                 }
             });
     }
