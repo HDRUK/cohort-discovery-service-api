@@ -141,8 +141,8 @@ class QueryController extends Controller
      */
     public function show(
         ModelBackedRequest $request,
-        mixed $key = null,
-        ActivityLogger $activityLogger
+        ActivityLogger $activityLogger,
+        mixed $key = null
     ): JsonResponse {
         $validated = $request->validated();
 
@@ -269,8 +269,8 @@ class QueryController extends Controller
      */
     public function update(
         ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
         mixed $key = null,
-        ActivityLogger $activityLogger
     ): JsonResponse {
         $validated = $request->validated();
 
@@ -331,8 +331,8 @@ class QueryController extends Controller
      */
     public function destroy(
         ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
         mixed $key = null,
-        ActivityLogger $activityLogger
     ): JsonResponse {
         $validated = $request->validated();
 
@@ -426,9 +426,9 @@ class QueryController extends Controller
      */
     public function download(
         Request $request,
+        ActivityLogger $activityLogger,
         string $pid,
-        string $format = 'csv',
-        ActivityLogger $activityLogger
+        string $format = 'csv'
     ): StreamedResponse|BinaryFileResponse|JsonResponse {
         try {
             $queryBuilder = Query::searchViaRequest()
@@ -468,8 +468,8 @@ class QueryController extends Controller
 
     public function duplicateAndReRun(
         ModelBackedRequest $request,
-        mixed $key = null,
-        ActivityLogger $activityLogger
+        ActivityLogger $activityLogger,
+        mixed $key = null
     ): JsonResponse {
         $validated = $request->validated();
         $query = null;

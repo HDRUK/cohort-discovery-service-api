@@ -92,8 +92,8 @@ class CustodianController extends Controller
      */
     public function show(
         ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
         mixed $key = null,
-        ActivityLogger $activityLogger
     ): JsonResponse {
         $validated = $request->validated();
 
