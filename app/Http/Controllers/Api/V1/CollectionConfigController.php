@@ -39,6 +39,7 @@ class CollectionConfigController extends Controller
             $configs = CollectionConfig::all();
 
             activity('collection_configs')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => $request->query(),
@@ -95,6 +96,7 @@ class CollectionConfigController extends Controller
             $this->authorize('view', $config);
 
             activity('collection_configs')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($config)
                 ->log('collection_config_viewed');
@@ -145,6 +147,7 @@ class CollectionConfigController extends Controller
             $config = CollectionConfig::create($validated);
 
             activity('collection_configs')
+                ->event('created')
                 ->causedBy(Auth::user())
                 ->performedOn($config)
                 ->log('collection_config_created');
@@ -212,6 +215,7 @@ class CollectionConfigController extends Controller
                 $after = $config->only(array_keys($validated));
 
                 activity('collection_configs')
+                    ->event('updated')
                     ->causedBy(Auth::user())
                     ->performedOn($config)
                     ->withProperties([
@@ -271,6 +275,7 @@ class CollectionConfigController extends Controller
 
             if ($config->delete()) {
                 activity('collection_configs')
+                    ->event('deleted')
                     ->causedBy(Auth::user())
                     ->performedOn($config)
                     ->log('collection_config_deleted');

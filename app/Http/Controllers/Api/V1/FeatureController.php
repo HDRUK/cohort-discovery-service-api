@@ -61,6 +61,7 @@ class FeatureController extends Controller
         }
 
         activity('feature_flags')
+            ->event('updated')
             ->causedBy(Auth::user())
             ->withProperties([
                 'feature' => $name,

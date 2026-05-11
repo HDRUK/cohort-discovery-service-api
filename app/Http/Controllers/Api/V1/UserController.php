@@ -58,6 +58,7 @@ class UserController extends Controller
             ->get();
 
         activity('users')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->withProperties([
                 'filters' => $request->query(),
@@ -98,6 +99,7 @@ class UserController extends Controller
         $user = User::where('id', $id)->first();
         if ($user) {
             activity('users')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($user)
                 ->log('user_viewed');
@@ -201,6 +203,7 @@ class UserController extends Controller
             ->findOrFail(Auth::id());
 
         activity('users')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->performedOn($user)
             ->log('authenticated_user_viewed');
@@ -264,6 +267,7 @@ class UserController extends Controller
         ]);
 
         activity('users')
+            ->event('attached')
             ->causedBy(Auth::user())
             ->performedOn($user)
             ->withProperties([
@@ -326,6 +330,7 @@ class UserController extends Controller
 
         if ($userHasWorkgroup) {
             activity('users')
+                ->event('detached')
                 ->causedBy(Auth::user())
                 ->performedOn($user)
                 ->withProperties([

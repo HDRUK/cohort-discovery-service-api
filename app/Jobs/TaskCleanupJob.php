@@ -67,6 +67,7 @@ class TaskCleanupJob implements ShouldQueue
                     ]);
 
                     activity('tasks')
+                        ->event('failed')
                         ->performedOn($task)
                         ->withProperties([
                             'task_run' => [

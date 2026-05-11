@@ -52,6 +52,7 @@ class ProcessDistributionFile implements ShouldQueue
 
         if ($file->status === ResultFile::STATUS_DONE) {
             activity('result_files')
+                ->event('skipped')
                 ->performedOn($file)
                 ->log('distribution_file_processing_skipped');
 
@@ -59,6 +60,7 @@ class ProcessDistributionFile implements ShouldQueue
         }
 
         activity('result_files')
+            ->event('started')
             ->performedOn($file)
             ->withProperties([
                 'processing' => [
@@ -76,6 +78,7 @@ class ProcessDistributionFile implements ShouldQueue
             ]);
 
             activity('result_files')
+                ->event('failed')
                 ->performedOn($file)
                 ->withProperties([
                     'error' => [
@@ -278,7 +281,14 @@ class ProcessDistributionFile implements ShouldQueue
             $file->markDone($rowsSeen);
 
             activity('result_files')
+                ->event('processed')
                 ->performedOn($file)
+                ->withProperties([
+                    'result' => [
+                        'rows_seen' => $rowsSeen,
+                        'skipped' => $skipped,
+                    ],
+                ])
                 ->log('distribution_file_processed');
 
             Log::info('[' . $this->tag . '] finished', [
@@ -298,6 +308,7 @@ class ProcessDistributionFile implements ShouldQueue
             $file->markFailed($e->getMessage());
 
             activity('result_files')
+                ->event('failed')
                 ->performedOn($file)
                 ->withProperties([
                     'error' => [

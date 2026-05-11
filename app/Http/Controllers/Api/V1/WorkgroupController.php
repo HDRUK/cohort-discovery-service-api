@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @OA\Tag(
@@ -29,6 +30,18 @@ class WorkgroupController extends Controller
         $this->authorize('viewAny', Workgroup::class);
 
         $workgroup = Workgroup::all();
+
+        activity('workgroups')
+            ->event('viewed')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $workgroup->count(),
+                    'workgroup_ids' => $workgroup->pluck('id')->values()->all(),
+                ],
+            ])
+            ->log('workgroups_viewed');
 
         return $this->OKResponse($workgroup);
     }
@@ -68,6 +81,12 @@ class WorkgroupController extends Controller
         try {
             $workgroup = Workgroup::with('collections')->findOrFail($validated['id']);
             $this->authorize('view', $workgroup);
+
+            activity('workgroups')
+                ->event('viewed')
+                ->causedBy(Auth::user())
+                ->performedOn($workgroup)
+                ->log('workgroup_viewed');
 
         } catch (AuthorizationException $e) {
             throw $e;
@@ -115,6 +134,12 @@ class WorkgroupController extends Controller
 
         try {
             $workgroup = Workgroup::create($validated);
+
+            activity('workgroups')
+                ->event('created')
+                ->causedBy(Auth::user())
+                ->performedOn($workgroup)
+                ->log('workgroup_created');
 
             return $this->CreatedResponse($workgroup);
         } catch (AuthorizationException $e) {
@@ -177,7 +202,20 @@ class WorkgroupController extends Controller
             $workgroup = Workgroup::findOrFail($validated['id']);
             $this->authorize('update', $workgroup);
 
+            $before = $workgroup->only(array_keys($validated));
+
             $workgroup->update($validated);
+            $workgroup->refresh();
+
+            activity('workgroups')
+                ->event('updated')
+                ->causedBy(Auth::user())
+                ->performedOn($workgroup)
+                ->withProperties([
+                    'before' => $before,
+                    'after' => $workgroup->only(array_keys($validated)),
+                ])
+                ->log('workgroup_updated');
 
             return $this->OKResponse($workgroup);
         } catch (AuthorizationException $e) {
@@ -224,6 +262,13 @@ class WorkgroupController extends Controller
             $this->authorize('delete', $workgroup);
 
             $workgroup->delete();
+
+            activity('workgroups')
+                ->event('deleted')
+                ->causedBy(Auth::user())
+                ->performedOn($workgroup)
+                ->log('workgroup_deleted');
+
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
             throw $e;
@@ -266,6 +311,18 @@ class WorkgroupController extends Controller
             if ($workgroups->isEmpty()) {
                 return $this->NotFoundResponse();
             }
+
+            activity('workgroups')
+                ->event('viewed')
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'filters' => $request->query(),
+                    'result' => [
+                        'total' => $workgroups->count(),
+                        'workgroup_ids' => $workgroups->pluck('id')->values()->all(),
+                    ],
+                ])
+                ->log('workgroup_users_viewed');
 
             return $this->OKResponse($workgroups);
         } catch (AuthorizationException $e) {

@@ -59,6 +59,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
         ]);
 
         activity('omop')
+            ->event('started')
             ->withProperties([
                 'view' => $this->viewName,
                 'only_active' => $this->onlyActive,
@@ -92,6 +93,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
             ]);
 
             activity('omop')
+                ->event('skipped')
                 ->withProperties([
                     'view' => $this->viewName,
                     'only_active' => $this->onlyActive,
@@ -151,11 +153,12 @@ class RefreshDistributionConceptsView implements ShouldQueue
         ]);
 
         activity('omop')
+            ->event('refreshed')
             ->withProperties([
                 'view' => $this->viewName,
                 'only_active' => $this->onlyActive,
                 'before' => $beforeCount,
-                'after' =>  $afterCount,
+                'after' => $afterCount,
                 'result' => [
                     'task_count' => $taskIds->count(),
                     'task_ids' => $taskIds->values()->all(),

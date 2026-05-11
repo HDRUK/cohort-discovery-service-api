@@ -291,6 +291,7 @@ class OmopController extends Controller
 
 
             activity('omop')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => [

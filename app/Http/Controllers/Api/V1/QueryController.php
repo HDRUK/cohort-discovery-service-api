@@ -93,6 +93,7 @@ class QueryController extends Controller
             $paginatedQueries = $queryBuilder->paginate($perPage);
 
             activity('queries')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => $request->all(),
@@ -179,6 +180,7 @@ class QueryController extends Controller
             $this->authorize('view', $query);
 
             activity('queries')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($query)
                 ->log('query_viewed');
@@ -229,6 +231,7 @@ class QueryController extends Controller
 
             if ($query) {
                 activity('queries')
+                    ->event('created')
                     ->performedOn($query)
                     ->causedBy(Auth::user())
                     ->withProperties([
@@ -295,6 +298,7 @@ class QueryController extends Controller
                 $after = $query->only(array_keys($validated));
 
                 activity('queries')
+                    ->event('updated')
                     ->causedBy(Auth::user())
                     ->performedOn($query)
                     ->withProperties([
@@ -353,6 +357,7 @@ class QueryController extends Controller
 
             if ($query->delete()) {
                 activity('queries')
+                   ->event('deleted')
                    ->causedBy(Auth::user())
                    ->performedOn($query)
                    ->log('query_deleted');
@@ -442,6 +447,7 @@ class QueryController extends Controller
             }
 
             activity('queries')
+                ->event('downloaded')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => $request->query(),
@@ -488,6 +494,7 @@ class QueryController extends Controller
                 ->handle($data, Auth::id());
 
             activity('queries')
+                ->event('cloned')
                 ->performedOn($query)
                 ->causedBy(Auth::user())
                 ->withProperties([

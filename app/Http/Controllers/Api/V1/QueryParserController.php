@@ -7,6 +7,7 @@ use App\Services\NLP\RuleBuilderService;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @OA\Tag(
@@ -58,6 +59,22 @@ class QueryParserController extends Controller
             $ignoreSynthetic,
             $preferNonSynthetic
         );
+
+        activity('queries')
+            ->event('parsed')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'query' => [
+                    'text' => $query,
+                    'ignore_synthetic' => $ignoreSynthetic,
+                    'prefer_non_synthetic' => $preferNonSynthetic,
+                ],
+                'result' => [
+                    'rules_count' => count($rules['rules'] ?? []),
+                    'warnings_count' => count($rules['warnings'] ?? []),
+                ],
+            ])
+            ->log('query_parsed');
 
         return $this->OKResponse(json_encode($rules));
     }

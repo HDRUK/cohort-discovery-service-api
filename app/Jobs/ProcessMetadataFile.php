@@ -45,6 +45,7 @@ class ProcessMetadataFile implements ShouldQueue
         ]);
 
         activity('result_files')
+            ->event('started')
             ->performedOn($file)
             ->log('metadata_file_processing_started');
 
@@ -58,6 +59,7 @@ class ProcessMetadataFile implements ShouldQueue
             ]);
 
             activity('result_files')
+                ->event('failed')
                 ->performedOn($file)
                 ->withProperties([
                     'error' => [
@@ -122,7 +124,11 @@ class ProcessMetadataFile implements ShouldQueue
             $file->markDone(1);
 
             activity('result_files')
+                ->event('processed')
                 ->performedOn($file)
+                ->withProperties([
+                    'collection_metadata_id' => $metadata->id,
+                ])
                 ->log('metadata_file_processed');
 
             Log::info("[{$this->tag}] finished", [
@@ -140,6 +146,7 @@ class ProcessMetadataFile implements ShouldQueue
             $file->markFailed($e->getMessage());
 
             activity('result_files')
+                ->event('failed')
                 ->performedOn($file)
                 ->withProperties([
                     'error' => [

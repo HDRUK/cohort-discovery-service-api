@@ -87,6 +87,7 @@ class CollectionController extends Controller
                 ->get();
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => $request->query(),
@@ -189,6 +190,7 @@ class CollectionController extends Controller
             ->get();
 
         activity('collections')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->withProperties([
                 'filters' => $request->query(),
@@ -253,6 +255,7 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => $request->query(),
@@ -308,6 +311,7 @@ class CollectionController extends Controller
             $this->authorize('view', $collection);
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->withProperties([
@@ -357,6 +361,7 @@ class CollectionController extends Controller
             $collection = Collection::create($validated);
 
             activity('collections')
+                ->event('created')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->log('collection_created');
@@ -417,6 +422,7 @@ class CollectionController extends Controller
                 $collection->refresh();
 
                 activity('collections')
+                    ->event('updated')
                     ->causedBy(Auth::user())
                     ->performedOn($collection)
                     ->withProperties([
@@ -468,6 +474,7 @@ class CollectionController extends Controller
 
             if ($collection->delete()) {
                 activity('collections')
+                    ->event('deleted')
                     ->causedBy(Auth::user())
                     ->performedOn($collection)
                     ->log('collection_deleted');
@@ -516,6 +523,7 @@ class CollectionController extends Controller
         }
 
         activity('collections')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->performedOn($collection)
             ->log('collection_viewed_by_pid');
@@ -595,6 +603,7 @@ class CollectionController extends Controller
             }
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->withProperties([
@@ -646,6 +655,7 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->withProperties([
@@ -712,6 +722,7 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->performedOn($custodian)
                 ->withProperties([
@@ -798,6 +809,7 @@ class CollectionController extends Controller
             $collection->host()->sync([$validated['host_id']]);
 
             activity('collections')
+                ->event('created')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->log('custodian_collection_created');
@@ -854,6 +866,7 @@ class CollectionController extends Controller
             $afterState = $collection->modelState?->state?->slug;
 
             activity('collections')
+                ->event('transitioned')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->withProperties([
@@ -911,6 +924,7 @@ class CollectionController extends Controller
                 ->paginate($perPage);
 
             activity('collections')
+                ->event('viewed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => array_merge($request->query(), [
@@ -996,6 +1010,7 @@ class CollectionController extends Controller
         ]);
 
         activity('collections')
+            ->event('attached')
             ->causedBy(Auth::user())
             ->performedOn($collection)
             ->withProperties([
@@ -1053,6 +1068,7 @@ class CollectionController extends Controller
 
         if ($workgroupHasCollection) {
             activity('collections')
+                ->event('detached')
                 ->causedBy(Auth::user())
                 ->performedOn($collection)
                 ->withProperties([
@@ -1107,13 +1123,10 @@ class CollectionController extends Controller
         $data = $tasks->get();
 
         activity('collections')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->performedOn($collection)
             ->withProperties([
-                'collection' => [
-                    'id' => $collection->id,
-                    'pid' => $collection->pid,
-                ],
                 'filters' => request()->query(),
                 'result' => [
                     'total' => $data->count(),
@@ -1143,6 +1156,7 @@ class CollectionController extends Controller
             );
 
             activity('collections')
+                ->event('processed')
                 ->causedBy(Auth::user())
                 ->withProperties([
                     'filters' => [

@@ -56,6 +56,16 @@ class TaskController extends Controller
             $query->where('user_id', Auth::id());
         });
 
+        activity('tasks')
+            ->event('viewed')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'result' => [
+                    'total' => $tasks->count(),
+                ],
+            ])
+            ->log('user_tasks_viewed');
+
         return $this->OKResponse($tasks);
     }
 
@@ -114,6 +124,23 @@ class TaskController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
+        activity('tasks')
+            ->event('viewed')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'filters' => [
+                    'collection_filter' => $collectionFilter,
+                    'custodian_filter' => $custodianFilter,
+                ],
+                'result' => [
+                    'total' => $tasks->total(),
+                    'returned' => $tasks->count(),
+                    'page' => $tasks->currentPage(),
+                    'per_page' => $tasks->perPage(),
+                ],
+            ])
+            ->log('admin_tasks_viewed');
+
         return $this->OKResponse($tasks);
     }
 
@@ -157,6 +184,7 @@ class TaskController extends Controller
         }
 
         activity('tasks')
+            ->event('viewed')
             ->causedBy(Auth::user())
             ->performedOn($task)
             ->log('task_viewed');
@@ -222,53 +250,6 @@ class TaskController extends Controller
 
         $nMaxAttempts = config('tasks.default_max_attempts', 3);
         $leaseSeconds =  config('tasks.default_lease_seconds', 10);
-        /*
-        //Note - temporary disable - this locking of tasks logic might be bugged
-
-
-        $task = DB::transaction(function () use ($taskType, $collection, $nMaxAttempts, $leaseSeconds, $workerId) {
-            $now = Carbon::now();
-
-            $q = Task::where([
-                    'task_type' => $taskType,
-                    'completed_at' => null,
-                    'collection_id' => $collection->id,
-                ])
-                ->where('attempts', '<', $nMaxAttempts)
-                ->where(function ($q) use ($now) {
-                    $q->whereNull('leased_until')
-                      ->orWhere('leased_until', '<', $now);
-                })
-                ->orderBy('id')
-                ->lockForUpdate();
-
-
-            $task = $q->first();
-
-            if (! $task) {
-                return null;
-            }
-
-            $newAttempt = (int) $task->attempts + 1;
-
-            $task->update([
-                'leased_until' => $now->copy()->addSeconds($leaseSeconds),
-                'leased_by' => $workerId,
-            ]);
-
-
-            TaskRun::create([
-                'task_id' => $task->id,
-                'attempt' => $newAttempt,
-                'worker_id' => $workerId,
-                'status' => 'claimed',
-                'claimed_at' => $now,
-                'started_at' => $now,
-            ]);
-
-            return $task->fresh();
-        });
-        */
 
         $now = Carbon::now();
         $q = Task::where([
@@ -309,6 +290,7 @@ class TaskController extends Controller
 
         if (! $task) {
             activity('tasks')
+                ->event('checked')
                 ->performedOn($collection)
                 ->withProperties([
                     'worker' => [
@@ -334,6 +316,7 @@ class TaskController extends Controller
         $task->refresh()->load('submittedQuery');
 
         activity('tasks')
+            ->event('claimed')
             ->performedOn($collection)
             ->withProperties([
                 'worker' => [
@@ -363,6 +346,26 @@ class TaskController extends Controller
                 $task->failed_at = now();
                 $task->completed_at = now();
                 $task->save();
+
+                activity('tasks')
+                    ->event('rejected')
+                    ->performedOn($collection)
+                    ->withProperties([
+                        'worker' => [
+                            'id' => $workerId,
+                        ],
+                        'task' => [
+                            'id' => $task->id,
+                            'pid' => $task->pid,
+                            'task_type' => $taskType->value,
+                        ],
+                        'error' => [
+                            'code' => $code,
+                            'allowed_codes' => $allowedCodes,
+                        ],
+                    ])
+                    ->log('worker_task_rejected');
+
                 return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
             }
 
@@ -389,6 +392,21 @@ class TaskController extends Controller
                     'error_class' => get_class($e),
                     'error_message' => $message,
             ]);
+
+            activity('tasks')
+                ->event('failed')
+                ->performedOn($task)
+                ->withProperties([
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'error' => [
+                        'class' => get_class($e),
+                        'message' => $message,
+                    ],
+                ])
+                ->log('worker_task_translation_failed');
+
             return $this->BadRequestResponseExtended($message);
         } catch (\Throwable $e) {
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
@@ -397,10 +415,38 @@ class TaskController extends Controller
                     'error_class' => get_class($e),
                     'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
                 ]);
+
+            activity('tasks')
+                ->event('failed')
+                ->performedOn($task)
+                ->withProperties([
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'error' => [
+                        'class' => get_class($e),
+                        'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                    ],
+                ])
+                ->log('worker_task_translation_failed');
+
             return $this->ErrorResponse($e->getMessage());
         }
 
         if (! $translatedQuery) {
+            activity('tasks')
+                ->event('failed')
+                ->performedOn($task)
+                ->withProperties([
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'error' => [
+                        'message' => 'Context manager failed to translate query',
+                    ],
+                ])
+                ->log('worker_task_translation_failed');
+
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
@@ -623,6 +669,7 @@ class TaskController extends Controller
                 ]);
 
                 activity('tasks')
+                    ->event('received')
                     ->performedOn($task)
                     ->withProperties([
                         'worker' => [
@@ -694,6 +741,20 @@ class TaskController extends Controller
             'leased_until' => null,
             'leased_by' => null,
         ]);
+
+        activity('tasks')
+            ->event('failed')
+            ->performedOn($task)
+            ->withProperties([
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'error' => [
+                    'class' => get_class($e),
+                    'message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
+                ],
+            ])
+            ->log('worker_task_result_failed');
     }
 
     /**
@@ -734,6 +795,7 @@ class TaskController extends Controller
             ]);
 
             activity('tasks')
+                ->event('cloned')
                 ->causedBy(Auth::user())
                 ->performedOn($originalTask)
                 ->withProperties(['new_task_pid' => $task->pid])

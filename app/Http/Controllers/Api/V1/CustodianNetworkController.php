@@ -7,6 +7,7 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Models\CustodianNetwork;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Str;
 
 /**
@@ -41,6 +42,19 @@ class CustodianNetworkController extends Controller
             ->applySorting()
             ->get();
 
+        activity('custodian_networks')
+            ->event('viewed')
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $networks->count(),
+                    'network_ids' => $networks->pluck('id')->values()->all(),
+                    'network_pids' => $networks->pluck('pid')->values()->all(),
+                ],
+            ])
+            ->log('custodian_networks_viewed');
+
         return $this->OKResponse($networks);
     }
 
@@ -74,6 +88,12 @@ class CustodianNetworkController extends Controller
 
         try {
             $network = CustodianNetwork::with('custodians')->findOrFail($validated['id']);
+
+            activity('custodian_networks')
+                ->event('viewed')
+                ->causedBy(Auth::user())
+                ->performedOn($network)
+                ->log('custodian_network_viewed');
 
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
@@ -113,6 +133,12 @@ class CustodianNetworkController extends Controller
                 'name' => $validated['name'],
                 'url'  => $validated['url'] ?? null,
             ]);
+
+            activity('custodian_networks')
+                ->event('created')
+                ->causedBy(Auth::user())
+                ->performedOn($network)
+                ->log('custodian_network_created');
 
             return $this->CreatedResponse($network);
         } catch (\Throwable $e) {
@@ -160,7 +186,21 @@ class CustodianNetworkController extends Controller
 
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
+
+            $before = $network->only(array_keys($validated));
+
             $network->update($validated);
+            $network->refresh();
+
+            activity('custodian_networks')
+                ->event('updated')
+                ->causedBy(Auth::user())
+                ->performedOn($network)
+                ->withProperties([
+                    'before' => $before,
+                    'after' => $network->only(array_keys($validated)),
+                ])
+                ->log('custodian_network_updated');
 
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
@@ -196,6 +236,12 @@ class CustodianNetworkController extends Controller
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
             $network->delete();
+
+            activity('custodian_networks')
+                ->event('deleted')
+                ->causedBy(Auth::user())
+                ->performedOn($network)
+                ->log('custodian_network_deleted');
 
             return $this->OKResponse([]);
         } catch (\Throwable $e) {
