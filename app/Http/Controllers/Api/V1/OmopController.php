@@ -205,13 +205,13 @@ class OmopController extends Controller
                 }
 
                 $scoreClauses[] = "
-                CASE
-                    WHEN LOWER(d.description) = LOWER(?) THEN 1000
-                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
-                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
-                    ELSE 0
-                END
-            ";
+                    CASE
+                        WHEN LOWER(d.description) = LOWER(?) THEN 1000
+                        WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
+                        WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
+                        ELSE 0
+                    END
+                ";
 
                 $scoreBindings[] = $term;             // exact match
                 $scoreBindings[] = $term . '%';       // starts with
@@ -226,11 +226,11 @@ class OmopController extends Controller
                 }
 
                 $scoreClauses[] = "
-                CASE
-                    WHEN d.concept_id = ? THEN 1000
-                    ELSE 0
-                END
-            ";
+                    CASE
+                        WHEN d.concept_id = ? THEN 1000
+                        ELSE 0
+                    END
+                ";
 
                 $scoreBindings[] = (int) $term;
             }
@@ -258,54 +258,54 @@ class OmopController extends Controller
 
             $orderBy = $useStatsInOrdering
                 ? "
-            ORDER BY
-                base.match_score DESC,
-                base.ncollections DESC,
-                base.count DESC,
-                CHAR_LENGTH(base.name) ASC,
-                base.concept_id
-        "
-                : "
-            ORDER BY
-                base.match_score DESC,
-                CHAR_LENGTH(base.name) ASC,
-                base.concept_id
-        ";
+                ORDER BY
+                    base.match_score DESC,
+                    base.ncollections DESC,
+                    base.count DESC,
+                    CHAR_LENGTH(base.name) ASC,
+                    base.concept_id
+            "
+                    : "
+                ORDER BY
+                    base.match_score DESC,
+                    CHAR_LENGTH(base.name) ASC,
+                    base.concept_id
+            ";
 
             $sql = "
-            WITH base AS (
+                WITH base AS (
+                    SELECT
+                        d.concept_id,
+                        d.description AS name,
+                        d.category,
+                        {$scoreSql} AS match_score,
+                        COUNT(DISTINCT d.collection_id) AS ncollections,
+                        SUM(d.count) AS count
+                    FROM distributions d
+                    WHERE {$whereClause}
+                    GROUP BY d.concept_id, d.description, d.category
+                ),
+                total AS (
+                    SELECT COUNT(*) AS cnt FROM base
+                )
                 SELECT
-                    d.concept_id,
-                    d.description AS name,
-                    d.category,
-                    {$scoreSql} AS match_score,
-                    COUNT(DISTINCT d.collection_id) AS ncollections,
-                    SUM(d.count) AS count
-                FROM distributions d
-                WHERE {$whereClause}
-                GROUP BY d.concept_id, d.description, d.category
-            ),
-            total AS (
-                SELECT COUNT(*) AS cnt FROM base
-            )
-            SELECT
-                base.*,
-                total.cnt
-                {$childrenSelect}
-            FROM base
-            CROSS JOIN total
-            {$childrenJoin}
-            GROUP BY
-                base.concept_id,
-                base.name,
-                base.category,
-                base.match_score,
-                base.ncollections,
-                base.count,
-                total.cnt
-            {$orderBy}
-            LIMIT ? OFFSET ?
-        ";
+                    base.*,
+                    total.cnt
+                    {$childrenSelect}
+                FROM base
+                CROSS JOIN total
+                {$childrenJoin}
+                GROUP BY
+                    base.concept_id,
+                    base.name,
+                    base.category,
+                    base.match_score,
+                    base.ncollections,
+                    base.count,
+                    total.cnt
+                {$orderBy}
+                LIMIT ? OFFSET ?
+            ";
 
             $finalBindings = array_merge($scoreBindings, $bindings, [$perPage, $offset]);
 
