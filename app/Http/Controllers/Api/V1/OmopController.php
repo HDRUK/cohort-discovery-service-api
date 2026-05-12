@@ -220,7 +220,6 @@ class OmopController extends Controller
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
                 $term = trim((string) $term);
-
                 if ($term === '' || !ctype_digit($term)) {
                     continue;
                 }
@@ -231,7 +230,6 @@ class OmopController extends Controller
                         ELSE 0
                     END
                 ";
-
                 $scoreBindings[] = (int) $term;
             }
 
@@ -254,7 +252,7 @@ class OmopController extends Controller
                        )
                    END
                ) AS children"
-                   : '';
+                : '';
 
             $orderBy = $useStatsInOrdering
                 ? "
