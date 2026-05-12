@@ -100,7 +100,7 @@ class OmopController extends Controller
             $perPage          = $this->resolvePerPage(100, true);
             $page             = max(1, (int) $request->input('page', 1));
             $offset           = ($page - 1) * $perPage;
-            $collectionPids   = $request->input('collections');
+            $collectionPids   = (array) $request->input('collections', []);
             $domain           = $request->input('domain');
             $includeAncestors = $request->boolean('include_ancestors', true);
             $search           = $request->only(['concept_id', 'concept_name']);
@@ -109,13 +109,24 @@ class OmopController extends Controller
             $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
 
             $useCollectionsInSearch = Feature::active('query-builder-use-collections-in-search');
-            if ($useCollectionsInSearch && $collectionPids) {
-                // this was working fine locally but gets really slow with >3 large collections
-                // - feature flag disabled for now (default disabled)
-                // - refactor candidate
-                $placeholders = implode(',', array_fill(0, count($collectionPids), '?'));
-                $where[] = "d.collection_id IN (SELECT id FROM collections WHERE pid IN ({$placeholders}))";
-                $bindings = array_merge($bindings, $collectionPids);
+
+            if ($useCollectionsInSearch && !empty($collectionPids)) {
+                $collectionIds = DB::table('collections')
+                    ->whereIn('pid', $collectionPids)
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all();
+
+                if (empty($collectionIds)) {
+                    // Collection filters were supplied, but none matched known collections.
+                    // Keep the normal response/logging path, but force the query to return no rows.
+                    $where[] = '1 = 0';
+                } else {
+                    $placeholders = implode(',', array_fill(0, count($collectionIds), '?'));
+                    $where[] = "d.collection_id IN ({$placeholders})";
+                    $bindings = array_merge($bindings, $collectionIds);
+                }
             }
 
             if ($domain) {
@@ -128,15 +139,15 @@ class OmopController extends Controller
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
                 $term = trim((string) $term);
-                if ($term === '') {
+                if ($term === '' || !ctype_digit($term)) {
                     continue;
                 }
-                $searchConditions[] = 'd.concept_id LIKE ?';
-                $searchBindings[]   = '%' . $term . '%';
+                $searchConditions[] = 'd.concept_id = ?';
+                $searchBindings[]   = (int) $term;
             }
 
             foreach ((array) ($search['concept_name'] ?? []) as $term) {
-                $term = trim($term);
+                $term = trim((string) $term);
                 if ($term === '') {
                     continue;
                 }
@@ -157,7 +168,7 @@ class OmopController extends Controller
             $useStatsInOrdering = Feature::active('query-builder-use-stats-in-ordering');
 
             foreach ((array) ($search['concept_name'] ?? []) as $term) {
-                $term = trim($term);
+                $term = trim((string) $term);
 
                 if ($term === '') {
                     continue;
@@ -179,18 +190,17 @@ class OmopController extends Controller
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
                 $term = trim((string) $term);
-                if ($term === '') {
+                if ($term === '' || !ctype_digit($term)) {
                     continue;
                 }
+
                 $scoreClauses[] = "
                     CASE
                         WHEN d.concept_id = ? THEN 1000
-                        WHEN CAST(d.concept_id AS CHAR) LIKE ? THEN 500
                         ELSE 0
                     END
                 ";
                 $scoreBindings[] = (int) $term;
-                $scoreBindings[] = '%' . $term . '%';
             }
 
             $scoreSql = $scoreClauses
