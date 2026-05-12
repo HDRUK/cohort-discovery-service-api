@@ -119,42 +119,14 @@ class OmopController extends Controller
                     ->all();
 
                 if (empty($collectionIds)) {
-                    //no collectionIds and useCollectionsInSearch is enabled
-                    // therefore return an empty result
-                    $paginator = new LengthAwarePaginator(
-                        [],
-                        0,
-                        $perPage,
-                        $page,
-                        ['path' => $request->url(), 'query' => $request->query()]
-                    );
-
-                    $activityLogger->viewed('omop', null, [
-                        'filters' => [
-                            'page' => $page,
-                            'per_page' => $perPage,
-                            'collections' => $collectionPids,
-                            'domain' => $domain,
-                            'include_ancestors' => $includeAncestors,
-                            'concept_id' => $search['concept_id'] ?? [],
-                            'concept_name' => $search['concept_name'] ?? [],
-                        ],
-                        'feature_flags' => [
-                            'query-builder-use-collections-in-search' => $useCollectionsInSearch,
-                            'query-builder-use-stats-in-ordering' => Feature::active('query-builder-use-stats-in-ordering'),
-                        ],
-                        'result' => [
-                            'total' => 0,
-                            'returned' => 0,
-                        ],
-                    ]);
-
-                    return $this->OKResponse($paginator);
+                    // Collection filters were supplied, but none matched known collections.
+                    // Keep the normal response/logging path, but force the query to return no rows.
+                    $where[] = '1 = 0';
+                } else {
+                    $placeholders = implode(',', array_fill(0, count($collectionIds), '?'));
+                    $where[] = "d.collection_id IN ({$placeholders})";
+                    $bindings = array_merge($bindings, $collectionIds);
                 }
-
-                $placeholders = implode(',', array_fill(0, count($collectionIds), '?'));
-                $where[] = "d.collection_id IN ({$placeholders})";
-                $bindings = array_merge($bindings, $collectionIds);
             }
 
             if ($domain) {
