@@ -2,12 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Models\Collection;
 use App\Services\Activity\ActivityLogger;
 use DB;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 
 class RefreshDistributionConceptsView implements ShouldQueue
 {
@@ -42,120 +40,268 @@ class RefreshDistributionConceptsView implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(ActivityLogger $activityLogger): void
+    public function searchConcepts(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
-        $beforeCount = null;
         try {
-            $beforeCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->viewName}")->count ?? 0;
-        } catch (\Throwable $e) {
-            Log::warning('distribution_concepts view count failed before refresh', [
-                'view' => $this->viewName,
-                'error' => $e->getMessage(),
-            ]);
-        }
+            $perPage          = $this->resolvePerPage(100, true);
+            $page             = max(1, (int) $request->input('page', 1));
+            $offset           = ($page - 1) * $perPage;
+            $collectionPids   = (array) $request->input('collections', []);
+            $domain           = $request->input('domain');
+            $includeAncestors = $request->boolean('include_ancestors', true);
+            $search           = $request->only(['concept_id', 'concept_name']);
 
-        Log::info('distribution_concepts view count before refresh', [
-            'view' => $this->viewName,
-            'count' => $beforeCount,
-        ]);
+            $bindings = [];
+            $where    = ['d.concept_id IS NOT NULL', 'd.concept_id > 0'];
 
-        $activityLogger->custom('omop', 'started', null, [
-            'view' => $this->viewName,
-            'only_active' => $this->onlyActive,
-            'before' => $beforeCount,
-        ], 'distribution_concepts_view_refresh_started');
+            $useCollectionsInSearch = Feature::active('query-builder-use-collections-in-search');
 
-        // get the task_ids for the latest concept distribution runs for all collections
-        $taskIds = Collection::query()
-           ->when($this->onlyActive, function ($q) {
-               // reduce size by only including active datasets
-               $q->whereRelation(
-                   'modelState.state',
-                   'states.slug',
-                   Collection::STATUS_ACTIVE
-               );
-           })
-            ->whereHas('latestSuccessfulConceptResultFile')
-            ->withAggregate(
-                'latestSuccessfulConceptResultFile as latest_task_id',
-                'task_id'
-            )
-            ->pluck('latest_task_id')
-            ->filter()
-            ->unique()
-            ->values();
+            if ($useCollectionsInSearch && !empty($collectionPids)) {
+                $collectionIds = DB::table('collections')
+                    ->whereIn('pid', $collectionPids)
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all();
 
-        if ($taskIds->isEmpty()) {
-            Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
-                'view' => $this->viewName,
-            ]);
+                if (empty($collectionIds)) {
+                    $paginator = new LengthAwarePaginator(
+                        [],
+                        0,
+                        $perPage,
+                        $page,
+                        ['path' => $request->url(), 'query' => $request->query()]
+                    );
 
-            $activityLogger->custom('omop', 'skipped', null, [
-                'view' => $this->viewName,
-                'only_active' => $this->onlyActive,
-                'before' => $beforeCount,
-                'result' => [
-                    'task_count' => 0,
-                    'skipped' => true,
-                    'reason' => 'no_latest_tasks_found',
-                ],
-            ], 'distribution_concepts_view_refresh_skipped');
+                    $activityLogger->viewed('omop', null, [
+                        'filters' => [
+                            'page' => $page,
+                            'per_page' => $perPage,
+                            'collections' => $collectionPids,
+                            'domain' => $domain,
+                            'include_ancestors' => $includeAncestors,
+                            'concept_id' => $search['concept_id'] ?? [],
+                            'concept_name' => $search['concept_name'] ?? [],
+                        ],
+                        'feature_flags' => [
+                            'query-builder-use-collections-in-search' => $useCollectionsInSearch,
+                            'query-builder-use-stats-in-ordering' => Feature::active('query-builder-use-stats-in-ordering'),
+                        ],
+                        'result' => [
+                            'total' => 0,
+                            'returned' => 0,
+                        ],
+                    ]);
 
-            return;
-        }
+                    return $this->OKResponse($paginator);
+                }
 
-        $taskIdList = $taskIds
-            ->map(fn ($id) => (int) $id)
-            ->implode(',');
+                $placeholders = implode(',', array_fill(0, count($collectionIds), '?'));
+                $where[] = "d.collection_id IN ({$placeholders})";
+                $bindings = array_merge($bindings, $collectionIds);
+            }
 
-        \DB::statement("
-            CREATE OR REPLACE VIEW {$this->viewName} AS
-            SELECT
-                d.concept_id,
-                c.concept_name,
-                c.concept_name AS description,
-                c.domain_id,
-                c.vocabulary_id,
-                c.concept_class_id AS concept_class,
-                c.standard_concept,
-                c.concept_code,
-                SUM(d.count) AS count,
-                COUNT(DISTINCT d.collection_id) AS ncollections,
+            if ($domain) {
+                $where[]    = 'd.category = ?';
+                $bindings[] = strtolower($domain);
+            }
+
+            $searchConditions = [];
+            $searchBindings   = [];
+
+            foreach ((array) ($search['concept_id'] ?? []) as $term) {
+                $term = trim((string) $term);
+
+                if ($term === '' || !ctype_digit($term)) {
+                    continue;
+                }
+
+                $searchConditions[] = 'd.concept_id = ?';
+                $searchBindings[]   = (int) $term;
+            }
+
+            foreach ((array) ($search['concept_name'] ?? []) as $term) {
+                $term = trim((string) $term);
+
+                if ($term === '') {
+                    continue;
+                }
+
+                $searchConditions[] = 'd.description LIKE ?';
+                $searchBindings[]   = '%' . $term . '%';
+            }
+
+            if ($searchConditions) {
+                $where[]  = '(' . implode(' OR ', $searchConditions) . ')';
+                $bindings = array_merge($bindings, $searchBindings);
+            }
+
+            $whereClause = implode(' AND ', $where);
+
+            $scoreClauses  = [];
+            $scoreBindings = [];
+
+            $useStatsInOrdering = Feature::active('query-builder-use-stats-in-ordering');
+
+            foreach ((array) ($search['concept_name'] ?? []) as $term) {
+                $term = trim((string) $term);
+
+                if ($term === '') {
+                    continue;
+                }
+
+                $scoreClauses[] = "
                 CASE
-                    WHEN MIN(CASE WHEN col.is_synthetic THEN 1 ELSE 0 END) = 1 THEN 1
+                    WHEN LOWER(d.description) = LOWER(?) THEN 1000
+                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 500
+                    WHEN LOWER(d.description) LIKE LOWER(?) THEN 100
                     ELSE 0
-                END AS all_synthetic
-            FROM {$this->distributionTable} d
-            INNER JOIN {$this->conceptTable} c
-                ON d.concept_id = c.concept_id
-            INNER JOIN {$this->collectionTable} col
-                ON d.collection_id = col.id
-            WHERE d.task_id IN ({$taskIdList})
+                END
+            ";
+
+                $scoreBindings[] = $term;             // exact match
+                $scoreBindings[] = $term . '%';       // starts with
+                $scoreBindings[] = '%' . $term . '%'; // contains
+            }
+
+            foreach ((array) ($search['concept_id'] ?? []) as $term) {
+                $term = trim((string) $term);
+
+                if ($term === '' || !ctype_digit($term)) {
+                    continue;
+                }
+
+                $scoreClauses[] = "
+                CASE
+                    WHEN d.concept_id = ? THEN 1000
+                    ELSE 0
+                END
+            ";
+
+                $scoreBindings[] = (int) $term;
+            }
+
+            $scoreSql = $scoreClauses
+                ? '(' . implode(' + ', $scoreClauses) . ')'
+                : '0';
+
+            $childrenJoin = $includeAncestors
+                ? 'LEFT JOIN concept_ancestors ca ON ca.parent_concept_id = base.concept_id
+               LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
+                : '';
+
+            $childrenSelect = $includeAncestors
+                ? ", JSON_ARRAYAGG(
+                CASE WHEN dc.concept_id IS NOT NULL THEN
+                    JSON_OBJECT(
+                        'concept_id', dc.concept_id,
+                        'name', dc.description,
+                        'category', dc.category
+                    )
+                END
+            ) AS children"
+                : '';
+
+            $orderBy = $useStatsInOrdering
+                ? "
+            ORDER BY
+                base.match_score DESC,
+                base.ncollections DESC,
+                base.count DESC,
+                CHAR_LENGTH(base.name) ASC,
+                base.concept_id
+        "
+                : "
+            ORDER BY
+                base.match_score DESC,
+                CHAR_LENGTH(base.name) ASC,
+                base.concept_id
+        ";
+
+            $sql = "
+            WITH base AS (
+                SELECT
+                    d.concept_id,
+                    d.description AS name,
+                    d.category,
+                    {$scoreSql} AS match_score,
+                    COUNT(DISTINCT d.collection_id) AS ncollections,
+                    SUM(d.count) AS count
+                FROM distributions d
+                WHERE {$whereClause}
+                GROUP BY d.concept_id, d.description, d.category
+            ),
+            total AS (
+                SELECT COUNT(*) AS cnt FROM base
+            )
+            SELECT
+                base.*,
+                total.cnt
+                {$childrenSelect}
+            FROM base
+            CROSS JOIN total
+            {$childrenJoin}
             GROUP BY
-                d.concept_id,
-                c.concept_name,
-                c.domain_id,
-                c.vocabulary_id,
-                c.concept_class_id,
-                c.standard_concept,
-                c.concept_code
-        ");
+                base.concept_id,
+                base.name,
+                base.category,
+                base.match_score,
+                base.ncollections,
+                base.count,
+                total.cnt
+            {$orderBy}
+            LIMIT ? OFFSET ?
+        ";
 
-        $afterCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->viewName}")->count ?? 0;
-        Log::info('distribution_concepts view count after refresh', [
-            'view' => $this->viewName,
-            'count' => $afterCount,
-        ]);
+            $finalBindings = array_merge($scoreBindings, $bindings, [$perPage, $offset]);
 
-        $activityLogger->custom('omop', 'refreshed', null, [
-            'view' => $this->viewName,
-            'only_active' => $this->onlyActive,
-            'before' => $beforeCount,
-            'after' => $afterCount,
-            'result' => [
-                'task_count' => $taskIds->count(),
-                'task_ids' => $taskIds->values()->all(),
-            ],
-        ], 'distribution_concepts_view_refreshed');
+            $rows  = DB::select($sql, $finalBindings);
+            $total = $rows[0]->cnt ?? 0;
+
+            foreach ($rows as $row) {
+                unset($row->cnt);
+
+                if ($includeAncestors) {
+                    $row->children = array_values(array_filter(
+                        json_decode($row->children ?? '[]', true) ?? [],
+                        fn ($c) => $c !== null
+                    ));
+                }
+            }
+
+            $paginator = new LengthAwarePaginator(
+                $rows,
+                $total,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            $activityLogger->viewed('omop', null, [
+                'filters' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'collections' => $collectionPids,
+                    'domain' => $domain,
+                    'include_ancestors' => $includeAncestors,
+                    'concept_id' => $search['concept_id'] ?? [],
+                    'concept_name' => $search['concept_name'] ?? [],
+                ],
+                'feature_flags' => [
+                    'query-builder-use-collections-in-search' => $useCollectionsInSearch,
+                    'query-builder-use-stats-in-ordering' => $useStatsInOrdering,
+                ],
+                'result' => [
+                    'total' => $total,
+                    'returned' => count($rows),
+                ],
+            ]);
+
+            return $this->OKResponse($paginator);
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 }
