@@ -246,15 +246,15 @@ class OmopController extends Controller
 
             $childrenSelect = $includeAncestors
                 ? ", JSON_ARRAYAGG(
-                    CASE WHEN dc.concept_id IS NOT NULL THEN
-                        JSON_OBJECT(
-                            'concept_id', dc.concept_id,
-                            'name', dc.description,
-                            'category', dc.category
-                        )
-                    END
-                ) AS children"
-                    : '';
+                   CASE WHEN dc.concept_id IS NOT NULL THEN
+                       JSON_OBJECT(
+                           'concept_id', dc.concept_id,
+                           'name', dc.description,
+                           'category', dc.category
+                       )
+                   END
+               ) AS children"
+                   : '';
 
             $orderBy = $useStatsInOrdering
                 ? "
