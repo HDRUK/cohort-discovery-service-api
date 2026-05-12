@@ -167,11 +167,9 @@ class OmopController extends Controller
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
                 $term = trim((string) $term);
-
                 if ($term === '' || !ctype_digit($term)) {
                     continue;
                 }
-
                 $searchConditions[] = 'd.concept_id = ?';
                 $searchBindings[]   = (int) $term;
             }
@@ -214,8 +212,8 @@ class OmopController extends Controller
                 ";
 
                 $scoreBindings[] = $term;             // exact match
-                $scoreBindings[] = $term . '%';       // starts with
                 $scoreBindings[] = '%' . $term . '%'; // contains
+                $scoreBindings[] = $term . '%';       // starts with
             }
 
             foreach ((array) ($search['concept_id'] ?? []) as $term) {
