@@ -241,20 +241,20 @@ class OmopController extends Controller
 
             $childrenJoin = $includeAncestors
                 ? 'LEFT JOIN concept_ancestors ca ON ca.parent_concept_id = base.concept_id
-               LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
+                   LEFT JOIN distributions dc ON dc.concept_id = ca.child_concept_id'
                 : '';
 
             $childrenSelect = $includeAncestors
                 ? ", JSON_ARRAYAGG(
-                CASE WHEN dc.concept_id IS NOT NULL THEN
-                    JSON_OBJECT(
-                        'concept_id', dc.concept_id,
-                        'name', dc.description,
-                        'category', dc.category
-                    )
-                END
-            ) AS children"
-                : '';
+                    CASE WHEN dc.concept_id IS NOT NULL THEN
+                        JSON_OBJECT(
+                            'concept_id', dc.concept_id,
+                            'name', dc.description,
+                            'category', dc.category
+                        )
+                    END
+                ) AS children"
+                    : '';
 
             $orderBy = $useStatsInOrdering
                 ? "
@@ -265,7 +265,7 @@ class OmopController extends Controller
                     CHAR_LENGTH(base.name) ASC,
                     base.concept_id
             "
-                    : "
+                : "
                 ORDER BY
                     base.match_score DESC,
                     CHAR_LENGTH(base.name) ASC,
