@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\CustodianNetwork;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Str;
@@ -33,13 +34,22 @@ class CustodianNetworkController extends Controller
      *     )
      * )
      */
-    public function index(ModelBackedRequest $request): JsonResponse
+    public function index(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $networks = CustodianNetwork::with('custodians')
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
             ->get();
+
+        $activityLogger->viewed('custodian_networks', null, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $networks->count(),
+                'network_ids' => $networks->pluck('id')->values()->all(),
+                'network_pids' => $networks->pluck('pid')->values()->all(),
+            ],
+        ]);
 
         return $this->OKResponse($networks);
     }
@@ -68,12 +78,17 @@ class CustodianNetworkController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function show(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function show(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
             $network = CustodianNetwork::with('custodians')->findOrFail($validated['id']);
+
+            $activityLogger->viewed('custodian_networks', $network);
 
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
@@ -103,7 +118,7 @@ class CustodianNetworkController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function store(ModelBackedRequest $request): JsonResponse
+    public function store(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
 
@@ -113,6 +128,8 @@ class CustodianNetworkController extends Controller
                 'name' => $validated['name'],
                 'url'  => $validated['url'] ?? null,
             ]);
+
+            $activityLogger->created('custodian_networks', $network);
 
             return $this->CreatedResponse($network);
         } catch (\Throwable $e) {
@@ -154,13 +171,27 @@ class CustodianNetworkController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function update(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function update(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
+
+            $before = $network->only(array_keys($validated));
+
             $network->update($validated);
+            $network->refresh();
+
+            $activityLogger->updated(
+                'custodian_networks',
+                $network,
+                $before,
+                $network->only(array_keys($validated))
+            );
 
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
@@ -189,13 +220,18 @@ class CustodianNetworkController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function destroy(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
             $network = CustodianNetwork::findOrFail($validated['id']);
             $network->delete();
+
+            $activityLogger->deleted('custodian_networks', $network);
 
             return $this->OKResponse([]);
         } catch (\Throwable $e) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Activity\ActivityLogger;
 use App\Services\NLP\RuleBuilderService;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
@@ -39,8 +40,11 @@ class QueryParserController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function parse(Request $request, RuleBuilderService $ruleBuilderService): JsonResponse
-    {
+    public function parse(
+        Request $request,
+        RuleBuilderService $ruleBuilderService,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->validate([
             'query' => 'required|string',
             'ignore_synthetic' => 'sometimes|boolean',
@@ -58,6 +62,18 @@ class QueryParserController extends Controller
             $ignoreSynthetic,
             $preferNonSynthetic
         );
+
+        $activityLogger->custom('queries', 'parsed', null, [
+            'query' => [
+                'text' => $query,
+                'ignore_synthetic' => $ignoreSynthetic,
+                'prefer_non_synthetic' => $preferNonSynthetic,
+            ],
+            'result' => [
+                'rules_count' => count($rules['rules'] ?? []),
+                'warnings_count' => count($rules['warnings'] ?? []),
+            ],
+        ]);
 
         return $this->OKResponse(json_encode($rules));
     }

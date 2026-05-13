@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\Collection;
 use DB;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use App\Models\Collection;
 
 class RefreshDistributionConceptsView implements ShouldQueue
 {
@@ -82,6 +82,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
             Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
                 'view' => $this->viewName,
             ]);
+
             return;
         }
 
@@ -127,5 +128,6 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'view' => $this->viewName,
             'count' => $afterCount,
         ]);
+
     }
 }

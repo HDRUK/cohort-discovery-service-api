@@ -2,8 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Traits\HelperFunctions;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
+use App\Traits\HelperFunctions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -51,8 +52,10 @@ class ProcessDistributionFile implements ShouldQueue
         ]);
 
         if ($file->status === ResultFile::STATUS_DONE) {
+            Log::info('... skipping file as is already complete');
             return;
         }
+
 
         $file->markProcessing();
 
@@ -61,6 +64,7 @@ class ProcessDistributionFile implements ShouldQueue
             Log::error('[' . $this->tag . '] Failed to open file stream', [
                 'path' => $file->path,
             ]);
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -269,6 +273,14 @@ class ProcessDistributionFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'distribution_file_processing_failed'
+            );
         }
     }
 

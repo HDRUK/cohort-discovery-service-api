@@ -7,6 +7,7 @@ use App\Http\Requests\ModelBackedRequest;
 use App\Models\Custodian;
 use App\Models\CustodianNetwork;
 use App\Models\CustodianNetworkHasCustodian;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -38,19 +39,28 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function index(ModelBackedRequest $request): JsonResponse
+    public function index(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAny', Custodian::class);
 
-        return $this->OKResponse(
-            Custodian::with([
-                'hosts',
-                'network',
-            ])
-                ->searchViaRequest()
-                ->applySorting()
-                ->get()
-        );
+        $custodians = Custodian::with([
+            'hosts',
+            'network',
+        ])
+            ->searchViaRequest()
+            ->applySorting()
+            ->get();
+
+        $activityLogger->viewed('custodians', null, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $custodians->count(),
+                'custodian_ids' => $custodians->pluck('id')->values()->all(),
+                'custodian_pids' => $custodians->pluck('pid')->values()->all(),
+            ],
+        ]);
+
+        return $this->OKResponse($custodians);
     }
 
     /**
@@ -80,8 +90,11 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function show(ModelBackedRequest $request, mixed $key = null): JsonResponse
-    {
+    public function show(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        mixed $key = null,
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
@@ -96,6 +109,10 @@ class CustodianController extends Controller
             ->firstOrFail();
 
             $this->authorize('view', $custodian);
+
+            $activityLogger->viewed('custodians', $custodian, [
+                'filters' => $request->query(),
+            ]);
 
             return $this->OKResponse($custodian);
         } catch (AuthorizationException $e) {
@@ -130,13 +147,15 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function store(ModelBackedRequest $request): JsonResponse
+    public function store(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
         $this->authorize('create', Custodian::class);
 
         try {
             $custodian = Custodian::create($validated);
+
+            $activityLogger->created('custodians', $custodian);
 
             return $this->CreatedResponse($custodian);
         } catch (AuthorizationException $e) {
@@ -186,15 +205,28 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function update(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function update(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
             $custodian = Custodian::findOrFail($validated['id']);
             $this->authorize('update', $custodian);
 
+            $before = $custodian->only(array_keys($validated));
+
             $custodian->update($validated);
+            $custodian->refresh();
+
+            $activityLogger->updated(
+                'custodians',
+                $custodian,
+                $before,
+                $custodian->only(array_keys($validated))
+            );
 
             return $this->OKResponse($custodian);
         } catch (AuthorizationException $e) {
@@ -231,8 +263,11 @@ class CustodianController extends Controller
      *     )
      * )
      */
-    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
-    {
+    public function destroy(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
@@ -240,6 +275,8 @@ class CustodianController extends Controller
             $this->authorize('delete', $custodian);
 
             $custodian->delete();
+
+            $activityLogger->deleted('custodians', $custodian);
 
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
@@ -252,21 +289,38 @@ class CustodianController extends Controller
         }
     }
 
-    public function linkToNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
-    {
+    public function linkToNetwork(
+        Request $request,
+        int $custodianId,
+        int $networkId,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         try {
             $custodian = Custodian::findOrFail($custodianId);
             $network = CustodianNetwork::findOrFail($networkId);
 
             //note - for now, only allow a custodian to be in one custodian network
             //       by deleting it from other networks
-            CustodianNetworkHasCustodian::where('custodian_id', $custodian->id)
+            $removedLinks = CustodianNetworkHasCustodian::where('custodian_id', $custodian->id)
                 ->where('network_id', '!=', $network->id)
+                ->get(['id', 'network_id']);
+
+            CustodianNetworkHasCustodian::whereKey($removedLinks->pluck('id'))
                 ->delete();
 
             $link = CustodianNetworkHasCustodian::firstOrCreate([
                 'custodian_id' => $custodian->id,
                 'network_id' => $network->id,
+            ]);
+
+            $activityLogger->attached('custodians', $custodian, [
+                'network' => [
+                    'id' => $network->id,
+                    'pid' => $network->pid,
+                ],
+                'result' => [
+                    'removed_other_network_links' => $removedLinks->values()->all(),
+                ],
             ]);
 
             return $this->OKResponse($link);
@@ -277,8 +331,12 @@ class CustodianController extends Controller
         }
     }
 
-    public function unlinkFromNetwork(Request $request, int $custodianId, int $networkId): JsonResponse
-    {
+    public function unlinkFromNetwork(
+        Request $request,
+        int $custodianId,
+        int $networkId,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         try {
             $custodian = Custodian::findOrFail($custodianId);
             $network = CustodianNetwork::findOrFail($networkId);
@@ -289,6 +347,13 @@ class CustodianController extends Controller
             ]);
 
             if ($link->delete()) {
+                $activityLogger->detached('custodians', $custodian, [
+                    'network' => [
+                        'id' => $network->id,
+                        'pid' => $network->pid,
+                    ],
+                ]);
+
                 return $this->OKResponse([]);
             }
 

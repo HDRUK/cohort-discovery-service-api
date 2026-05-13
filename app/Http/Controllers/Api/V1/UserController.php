@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -47,7 +48,7 @@ class UserController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAny', User::class);
 
@@ -56,6 +57,14 @@ class UserController extends Controller
             ->withStatus()
             ->applySorting()
             ->get();
+
+        $activityLogger->viewed('users', null, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $users->count(),
+                'user_ids' => $users->pluck('id')->values()->all(),
+            ],
+        ]);
 
         return $this->OKResponse($users);
     }
@@ -79,13 +88,15 @@ class UserController extends Controller
      *     @OA\Response(response=404, description="User not found")
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('view', User::class);
 
         // Stub
         $user = User::where('id', $id)->first();
         if ($user) {
+            $activityLogger->viewed('users', $user);
+
             return $this->OKResponse($user);
         }
 
@@ -179,10 +190,12 @@ class UserController extends Controller
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
      */
-    public function getMe(Request $request)
+    public function getMe(Request $request, ActivityLogger $activityLogger)
     {
         $user = User::with(['workgroups', 'roles', 'custodians'])
             ->findOrFail(Auth::id());
+
+        $activityLogger->viewed('users', $user, [], 'authenticated_user_viewed');
 
         return $this->OKResponse($user);
     }
@@ -217,7 +230,7 @@ class UserController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function addToWorkgroup(Request $request, int $id): JsonResponse
+    public function addToWorkgroup(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('addToWorkgroup', User::class);
 
@@ -240,6 +253,12 @@ class UserController extends Controller
         $userHasWorkgroup = UserHasWorkgroup::firstOrCreate([
             'user_id' => $user->id,
             'workgroup_id' => $input['workgroup_id'],
+        ]);
+
+        $activityLogger->attached('users', $user, [
+            'workgroup' => [
+                'id' => $workgroup->id,
+            ],
         ]);
 
         return $this->OKResponse([$userHasWorkgroup]);
@@ -269,8 +288,12 @@ class UserController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function removeFromWorkgroup(Request $request, int $id, int $workgroupId): JsonResponse
-    {
+    public function removeFromWorkgroup(
+        Request $request,
+        int $id,
+        int $workgroupId,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $this->authorize('removeFromWorkgroup', User::class);
 
         $input = $request->validate([]);
@@ -293,6 +316,12 @@ class UserController extends Controller
         ])->delete();
 
         if ($userHasWorkgroup) {
+            $activityLogger->detached('users', $user, [
+                'workgroup' => [
+                    'id' => $workgroup->id,
+                ],
+            ]);
+
             return $this->OKResponse([]);
         }
 

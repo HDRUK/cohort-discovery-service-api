@@ -24,12 +24,92 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
+    private function normaliseImplicitOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        if (preg_match(
+            '/^(.+?\b(?:with|who have|who has|having)\s+)(.+\s+or\s+.+)$/i',
+            $query,
+            $matches
+        )) {
+            return rtrim($matches[1]) . ' (' . trim($matches[2]) . ')';
+        }
+
+        return $query;
+    }
+
+    private function normaliseEitherOrScope(string $query): string
+    {
+        if (str_contains($query, '(') || str_contains($query, ')')) {
+            return $query;
+        }
+
+        /*
+         * Turns:
+         *   adults who either had pfizer or moderna and tested positive for covid-19
+         *
+         * Into:
+         *   adults with (pfizer or moderna) and tested positive for covid-19
+         */
+        return preg_replace_callback(
+            '/\bwho\s+either\s+(?:had|has|have|received|got|were given|was given|been given|given)?\s*(.+?)\s+or\s+(.+?)(?=\s+and\s+|\s*,|$)/i',
+            function (array $matches): string {
+                $left = trim($matches[1]);
+                $right = trim($matches[2]);
+
+                return 'with (' . $left . ' or ' . $right . ')';
+            },
+            $query
+        );
+    }
+
     private function splitTopLevelOr(string $query): array
     {
-        // $q = strtolower($query); // LS: Ruins work done with Acronyms. Removing.
-        $segments = preg_split('/\s+or\s+/i', $query);
+        $segments = [];
+        $buffer = '';
+        $depth = 0;
+        $length = strlen($query);
 
-        return array_map('trim', $segments);
+        /*
+         * Splits on outer or rather than any inner ORs e.g. (moderna or covid)
+         * which the NLP service will handle..
+         */
+        for ($i = 0; $i < $length; $i++) {
+            $char = $query[$i];
+
+            if ($char === '(') {
+                $depth++;
+                $buffer .= $char;
+                continue;
+            }
+
+            if ($char === ')') {
+                $depth = max(0, $depth - 1);
+                $buffer .= $char;
+                continue;
+            }
+
+            if (
+                $depth === 0
+                && preg_match('/\G\s+or\s+/i', $query, $match, 0, $i)
+            ) {
+                $segments[] = trim($buffer);
+                $buffer = '';
+                $i += strlen($match[0]) - 1;
+                continue;
+            }
+
+            $buffer .= $char;
+        }
+
+        if (trim($buffer) !== '') {
+            $segments[] = trim($buffer);
+        }
+
+        return $segments;
     }
 
     private function getConceptsForSegment(
@@ -58,11 +138,43 @@ class RuleBuilderService
                 continue;
             }
 
+            $originalCandidates = $candidates;
+
             if ($ignoreSynthetic) {
                 $candidates = array_values(array_filter(
                     $candidates,
                     fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
                 ));
+
+                //temporary fix to at least have one blank candidate if we are removing
+                // due to being synthetic data only
+                if (empty($candidates)) {
+                    $primary = $originalCandidates[0];
+                    $text = $primary['text'] ?? $textKey;
+
+                    $candidates = [[
+                        'text' => $text,
+                        'label' => null,
+                        'start' => $primary['start'] ?? 0,
+                        'end' => $primary['end'] ?? strlen($text),
+                        'negated' => $primary['negated'] ?? false,
+                        'age_constraints' => $primary['age_constraints'] ?? [],
+                        'time_constraints' => $primary['time_constraints'] ?? [],
+                        'attributes' => [
+                            'concept_id' => null,
+                            'concept_name' => $text,
+                            'description' => $text,
+                            'domain_id' => $primary['attributes']['domain_id'] ?? null,
+                            'ncollections' => 0,
+                            'all_synthetic' => 0,
+                            'match_score' => 0,
+                            'tokens' => [],
+                            'phrase_tokens' => [],
+                            'unmatched' => true,
+                            'synthetic_filtered' => true,
+                        ],
+                    ]];
+                }
             }
 
             if (empty($candidates)) {
@@ -162,6 +274,10 @@ class RuleBuilderService
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
+
+        $query = $this->normaliseEitherOrScope($query);
+        $query = $this->normaliseImplicitOrScope($query);
+
         $segments = $this->splitTopLevelOr($query);
 
         $segmentCount = count($segments);
@@ -216,18 +332,37 @@ class RuleBuilderService
 
             if (empty($rules)) {
                 $rules = [$ageFilter];
-            } else {
-                if (count($rules) === 1 && isset($rules[0]['rules']) && is_array($rules[0]['rules'])) {
-                    $targetRules = &$rules[0]['rules'];
-                } else {
-                    $rules = [$this->makeGroup($rules)];
-                    $targetRules = &$rules[0]['rules'];
-                }
+            } elseif ($this->rulesContainCombinator($rules, 'or')) {
+                $orGroup = (
+                    count($rules) === 1
+                    && isset($rules[0]['rules'])
+                    && is_array($rules[0]['rules'])
+                )
+                    ? $rules[0]
+                    : $this->makeGroup($rules);
 
-                if (! empty($targetRules)) {
-                    $targetRules[] = $this->makeOperator('and');
-                }
-                $targetRules[] = $ageFilter;
+                $rules = [
+                    $this->makeGroup([
+                        $orGroup,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
+            } elseif (
+                count($rules) === 1
+                && isset($rules[0]['rules'])
+                && is_array($rules[0]['rules'])
+            ) {
+                $rules[0]['rules'][] = $this->makeOperator('and');
+                $rules[0]['rules'][] = $ageFilter;
+            } else {
+                $rules = [
+                    $this->makeGroup([
+                        ...$rules,
+                        $this->makeOperator('and'),
+                        $ageFilter,
+                    ]),
+                ];
             }
         }
 
@@ -686,5 +821,24 @@ class RuleBuilderService
         }
 
         return $constraints;
+    }
+
+    private function rulesContainCombinator(array $rules, string $combinator): bool
+    {
+        foreach ($rules as $rule) {
+            if (($rule['combinator'] ?? null) === $combinator) {
+                return true;
+            }
+
+            if (
+                isset($rule['rules'])
+                && is_array($rule['rules'])
+                && $this->rulesContainCombinator($rule['rules'], $combinator)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

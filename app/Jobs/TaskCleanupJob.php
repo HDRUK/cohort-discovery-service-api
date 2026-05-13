@@ -65,6 +65,7 @@ class TaskCleanupJob implements ShouldQueue
                         'leased_until' => null,
                         'leased_by' => null,
                     ]);
+
                 }
             });
     }
