@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Task;
 use App\Models\TaskRun;
-use App\Services\Activity\ActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,7 +18,7 @@ class TaskCleanupJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function handle(ActivityLogger $activityLogger)
+    public function handle()
     {
         $timeoutSeconds = (int) config('tasks.default_timeout_seconds', 60);
         $now = Carbon::now();
@@ -28,7 +27,7 @@ class TaskCleanupJob implements ShouldQueue
         Task::query()
             ->whereNull('completed_at')
             ->where('created_at', '<', $cutoff)
-            ->chunkById(100, function ($tasks) use ($now, $timeoutSeconds, $activityLogger) {
+            ->chunkById(100, function ($tasks) use ($now, $timeoutSeconds) {
                 foreach ($tasks as $t) {
                     //$task = Task::whereKey($t->id)->lockForUpdate()->first(); // temp disabled
                     $task = Task::whereKey($t->id)->first();
@@ -67,21 +66,6 @@ class TaskCleanupJob implements ShouldQueue
                         'leased_by' => null,
                     ]);
 
-                    $activityLogger->custom('tasks', 'failed', $task, [
-                        'task_run' => [
-                            'id' => $tr->id,
-                            'attempt' => $tr->attempt,
-                        ],
-                        'result' => [
-                            'timeout_seconds' => $timeoutSeconds,
-                            'completed_at' => $task->completed_at,
-                            'failed_at' => $task->failed_at,
-                        ],
-                        'error' => [
-                            'class' => 'Timeout',
-                            'message' => "No result received within {$timeoutSeconds} seconds.",
-                        ],
-                    ], 'task_timed_out');
                 }
             });
     }

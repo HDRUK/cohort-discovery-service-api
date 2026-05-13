@@ -34,7 +34,7 @@ class ProcessMetadataFile implements ShouldQueue
         ]);
     }
 
-    public function handle(ActivityLogger $activityLogger): void
+    public function handle(): void
     {
         $file = ResultFile::with('collection')->findOrFail($this->resultFileId);
 
@@ -45,14 +45,6 @@ class ProcessMetadataFile implements ShouldQueue
             'file_name'      => $file->file_name,
         ]);
 
-        $activityLogger->custom(
-            'result_files',
-            'started',
-            $file,
-            [],
-            'metadata_file_processing_started'
-        );
-
         $file->markProcessing();
 
         $stream = Storage::readStream($file->path);
@@ -61,18 +53,6 @@ class ProcessMetadataFile implements ShouldQueue
             Log::error("[{$this->tag}] failed to open file stream", [
                 'path' => $file->path,
             ]);
-
-            $activityLogger->custom(
-                'result_files',
-                'failed',
-                $file,
-                [
-                    'error' => [
-                        'message' => "Cannot open {$file->path}",
-                    ],
-                ],
-                'metadata_file_processing_failed'
-            );
 
             throw new RuntimeException("Cannot open {$file->path}");
         }
@@ -128,15 +108,6 @@ class ProcessMetadataFile implements ShouldQueue
             }
 
             $file->markDone(1);
-
-            $activityLogger->processed(
-                'result_files',
-                $file,
-                [
-                    'collection_metadata_id' => $metadata->id,
-                ],
-                'metadata_file_processed'
-            );
 
             Log::info("[{$this->tag}] finished", [
                 'result_file_id' => $file->id,

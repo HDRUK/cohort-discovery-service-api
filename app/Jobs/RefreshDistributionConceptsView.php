@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Collection;
-use App\Services\Activity\ActivityLogger;
 use DB;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,7 +41,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(ActivityLogger $activityLogger): void
+    public function handle(): void
     {
         $beforeCount = null;
         try {
@@ -58,12 +57,6 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'view' => $this->viewName,
             'count' => $beforeCount,
         ]);
-
-        $activityLogger->custom('omop', 'started', null, [
-            'view' => $this->viewName,
-            'only_active' => $this->onlyActive,
-            'before' => $beforeCount,
-        ], 'distribution_concepts_view_refresh_started');
 
         // get the task_ids for the latest concept distribution runs for all collections
         $taskIds = Collection::query()
@@ -89,17 +82,6 @@ class RefreshDistributionConceptsView implements ShouldQueue
             Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
                 'view' => $this->viewName,
             ]);
-
-            $activityLogger->custom('omop', 'skipped', null, [
-                'view' => $this->viewName,
-                'only_active' => $this->onlyActive,
-                'before' => $beforeCount,
-                'result' => [
-                    'task_count' => 0,
-                    'skipped' => true,
-                    'reason' => 'no_latest_tasks_found',
-                ],
-            ], 'distribution_concepts_view_refresh_skipped');
 
             return;
         }
@@ -147,15 +129,5 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'count' => $afterCount,
         ]);
 
-        $activityLogger->custom('omop', 'refreshed', null, [
-            'view' => $this->viewName,
-            'only_active' => $this->onlyActive,
-            'before' => $beforeCount,
-            'after' => $afterCount,
-            'result' => [
-                'task_count' => $taskIds->count(),
-                'task_ids' => $taskIds->values()->all(),
-            ],
-        ], 'distribution_concepts_view_refreshed');
     }
 }
