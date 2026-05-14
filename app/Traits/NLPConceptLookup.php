@@ -8,6 +8,8 @@ trait NLPConceptLookup
 {
     protected ?array $nlpEntities = null;
     protected ?array $nlpGroups = null;
+    protected ?string $nlpRootOperator = null;
+    protected array $nlpRootGroups = [];
     protected array $nlpRootAgeConstraints = [];
     protected array $nlpRootTimeConstraints = [];
     protected array $nlpWarnings = [];
@@ -23,6 +25,8 @@ trait NLPConceptLookup
 
         $entities = $payload['entities'] ?? $payload;
         $this->nlpGroups = $payload['groups'] ?? [];
+        $this->nlpRootOperator = $payload['root_operator'] ?? null;
+        $this->nlpRootGroups = $payload['root_groups'] ?? [];
         $this->nlpRootAgeConstraints = $payload['age_constraints'] ?? [];
         $this->nlpRootTimeConstraints = $payload['time_constraints'] ?? [];
         $this->nlpWarnings = $payload['warnings'] ?? [];
