@@ -77,19 +77,12 @@ class QueryController extends Controller
                 ->applySorting('created_at', 'desc')
                 ->with([
                     'tasks.collection.custodian.network',
-                    'tasks.collection.latestDemographic',
                     'tasks.result',
                 ])
                 ->where('user_id', Auth::id())
                 ->whereHas('tasks', function ($query) {
                     $query->where('task_type', TaskType::A);
                 });
-
-            $queries = (clone $queryBuilder)->get();
-            foreach ($queries as $query) {
-                $this->authorize('view', $query);
-            }
-            unset($queries);
 
             $paginatedQueries = $queryBuilder->paginate($perPage);
 

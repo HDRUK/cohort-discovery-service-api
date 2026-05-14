@@ -137,7 +137,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     ];
 
     protected $appends = ['last_ping'];
-
+    //needed to eager load for last_ping that is always appended
+    protected $with = ['lastAActivity', 'lastBActivity'];
 
     protected static array $transitions = [
         self::STATUS_DRAFT => [
