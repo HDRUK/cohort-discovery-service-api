@@ -15,9 +15,9 @@ class NLPConceptExtractor
         $this->baseUri = config('services.nlp.base_uri');
     }
 
-    public function extract(string $query, float $threshold = 50): array
+    public function extract(string $query, float $threshold = 50, int $max_matches = 10): array
     {
-        $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}", [
+        $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}&max_matches={$max_matches}", [
             'query' => $query,
         ]);
 
