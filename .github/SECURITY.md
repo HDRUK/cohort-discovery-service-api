@@ -1,6 +1,6 @@
 # Security Policy
 
-This security policy applies to public projects under [HDRUK organization][gh-organization] on GitHub.
+This security policy applies to public projects under [HDRUK organisation][gh-organization] on GitHub.
 
 ## Security/Bugfix Versions
 
