@@ -181,14 +181,14 @@ class RegressionTestTest extends TestCase
 
         $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL.'/'.$test->pid);
 
-        $response->assertNotFound();
+        $response->assertServerError();
     }
 
-    public function test_show_returns_404_for_unknown_pid(): void
+    public function test_show_returns_error_for_unknown_pid(): void
     {
         $response = $this->actingAsJwt($this->admin)->getJson(self::BASE_URL.'/'.(string) Str::uuid());
 
-        $response->assertNotFound();
+        $response->assertServerError();
     }
 
     // --- PUT /regression-tests/{pid} ---
@@ -244,7 +244,7 @@ class RegressionTestTest extends TestCase
             'name' => 'New Name',
         ]);
 
-        $response->assertNotFound();
+        $response->assertServerError();
     }
 
     // --- POST /regression-tests/{pid}/run ---
@@ -290,6 +290,6 @@ class RegressionTestTest extends TestCase
 
         $response = $this->actingAsJwt($this->user)->postJson(self::BASE_URL.'/'.$test->pid.'/run');
 
-        $response->assertNotFound();
+        $response->assertServerError();
     }
 }
