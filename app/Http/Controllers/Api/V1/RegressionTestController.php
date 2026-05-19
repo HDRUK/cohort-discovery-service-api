@@ -86,8 +86,8 @@ class RegressionTestController extends Controller
             $this->authorize('view', $test);
 
             return $this->OKResponse($service->getWithStats($test));
-        } catch (\Throwable) {
-            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -106,7 +106,7 @@ class RegressionTestController extends Controller
         } catch (\Throwable $e) {
             \Log::error('RegressionTestController@update - failed: '.$e->getMessage());
 
-            return $this->NotFoundResponse();
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -114,14 +114,15 @@ class RegressionTestController extends Controller
     {
         try {
             $test = RegressionTest::where('pid', $pid)
-                ->where('user_id', Auth::id())
                 ->firstOrFail();
+
+            $this->authorize('delete', $test);
 
             $test->delete();
 
             return $this->OKResponse([]);
-        } catch (\Throwable) {
-            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
@@ -136,7 +137,7 @@ class RegressionTestController extends Controller
         } catch (\Throwable $e) {
             \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
 
-            return $this->NotFoundResponse();
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 }

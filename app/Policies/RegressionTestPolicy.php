@@ -29,6 +29,12 @@ class RegressionTestPolicy
         // Future: || $test->user_id === $user->id
     }
 
+    public function delete(User $user, RegressionTest $test): bool
+    {
+        return $user->hasRole('admin');
+        // Future: || $test->user_id === $user->id
+    }
+
     public function run(User $user, RegressionTest $test): bool
     {
         return $user->hasRole('admin');
