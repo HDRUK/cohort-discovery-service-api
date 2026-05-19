@@ -162,7 +162,8 @@ Route::middleware(['decode.jwt'])->group(function () {
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
-    Route::get('/v1/regression-tests', [RegressionTestController::class, 'index']);
+    Route::get('/v1/admin/regression-tests', [RegressionTestController::class, 'indexForAdmin']);
+    Route::get('/v1/user/regression-tests', [RegressionTestController::class, 'indexForUser']);
     Route::post('/v1/regression-tests', [RegressionTestController::class, 'store']);
     Route::get('/v1/regression-tests/{pid}', [RegressionTestController::class, 'show'])->whereUuid('pid');
     Route::put('/v1/regression-tests/{pid}', [RegressionTestController::class, 'update'])->whereUuid('pid');

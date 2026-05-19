@@ -67,11 +67,12 @@ class RegressionTest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /** @phpstan-return BelongsToMany<Collection, $this, RegressionTestHasCollection, 'pivot'> */
+    /** @phpstan-return BelongsToMany<Collection, $this, RegressionTestHasCollection, 'regressionTestPivot'> */
     public function collections(): BelongsToMany
     {
         return $this->belongsToMany(Collection::class, 'regression_test_collection')
             ->withPivot('expected_result')
-            ->using(RegressionTestHasCollection::class);
+            ->using(RegressionTestHasCollection::class)
+            ->as('regressionTestPivot');
     }
 }

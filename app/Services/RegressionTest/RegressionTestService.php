@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class RegressionTestService
 {
-    public function create(array $data, int $userId): RegressionTest
+    public function create(array $data, ?int $userId = null): RegressionTest
     {
         return DB::transaction(function () use ($data, $userId) {
             $query = Query::create([
@@ -115,7 +115,7 @@ class RegressionTestService
             $tasks = $tasksByKey->get($key, collect());
             $latestTask = $tasks->first();
             $completedTasks = $tasks->filter(fn ($t) => $t->completed_at !== null);
-            $expected = $collection->pivot->expected_result;
+            $expected = $collection->regressionTestPivot->expected_result;
 
             $passCount = $completedTasks->filter(
                 fn ($t) => $t->result && $t->result->count == $expected
