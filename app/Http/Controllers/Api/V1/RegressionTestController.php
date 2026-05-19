@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Auth;
 
 class RegressionTestController extends Controller
 {
-    use AuthorizesRequests, Responses;
+    use AuthorizesRequests;
+    use Responses;
 
     public function indexForAdmin(RegressionTestService $service): JsonResponse
     {

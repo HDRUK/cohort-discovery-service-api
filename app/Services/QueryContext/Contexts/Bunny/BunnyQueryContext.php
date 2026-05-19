@@ -6,7 +6,6 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 
-
 class BunnyQueryContext implements QueryContextInterface
 {
     public function translate(array $definition, bool $flattenNestedGroups = true): array
@@ -14,21 +13,21 @@ class BunnyQueryContext implements QueryContextInterface
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
-        // Check for the special case where it's only a single group of ANDs - 
+        // Check for the special case where it's only a single group of ANDs -
         // in this case we can skip the flattening step and just convert to "standard form" (OR-of-ANDs) directly
         $specialForm = true;
         if ($groupwiseForm['rules_oper'] === 'OR') {
             $specialForm = false;
         }
-        
+
         foreach ($groupwiseForm['rules'] as $child) {
             if ($this->isGroupNode($child)) {
                 $specialForm = false;
                 break;
             }
         }
-        
-        if ($specialForm)   {
+
+        if ($specialForm) {
             $rules = $groupwiseForm["rules"];
             return [
                 "groups_oper" => 'OR',
@@ -60,11 +59,9 @@ class BunnyQueryContext implements QueryContextInterface
         foreach ($children as $child) {
             if ($this->isGroupNode($child)) {
                 $groups[] = $this->convertToGroupwiseForm($child);
-            }
-            elseif ($this->isLeafNode($child)) {
+            } elseif ($this->isLeafNode($child)) {
                 $groups[] = $this->makeLeafRule($child);
-            }
-            elseif ($this->isAgeFilter($child)) {
+            } elseif ($this->isAgeFilter($child)) {
                 $groups[] = $this->makeLeafAgeFilter($child);
             }
         }
@@ -80,8 +77,8 @@ class BunnyQueryContext implements QueryContextInterface
      * - a leaf node (a single rule)
      * - a group node (a group of rules with a combinator)
      * The groupwise form is easier to parse for the next step of flattening into "standard form".
-     * 
-     * Example input: 
+     *
+     * Example input:
      * [
      *   'id' => '9f71c79e-8e3c-467c-9970-d8b9ee4badca',
      *   'rules' => [
@@ -140,9 +137,9 @@ class BunnyQueryContext implements QueryContextInterface
      *       ],
      *   ],
      * ]
-     * 
+     *
      * Example output:
-     * [ 
+     * [
      *   "rules_oper" => "OR",
      *   "rules" => [
      *       [
@@ -211,8 +208,7 @@ class BunnyQueryContext implements QueryContextInterface
         $groupOperator = $this->groupOperator($node);
         if ($groupOperator || $this->isGroupNode($node)) {
             return $this->convertGroup($node, $groupOperator ?? 'OR');
-        }
-        else {
+        } else {
             $leafRule = null;
             if ($this->isLeafNode($node)) {
                 $leafRule = $this->makeLeafRule($node);
@@ -235,43 +231,44 @@ class BunnyQueryContext implements QueryContextInterface
         return array_key_exists("rules_oper", $rule);
     }
 
-    private function combineStandardsWithAnd(array $first, array $second): array {
-        // Given two arrays of standardised rules of the form 
-        // $first = ["rules_oper" => "OR", 
-        //           "rules" => [ 
-        //              ["rules_oper" => "AND", "rules" => [A, B]], 
-        //              ["rules_oper" => "AND", "rules" => [C]], 
+    private function combineStandardsWithAnd(array $first, array $second): array
+    {
+        // Given two arrays of standardised rules of the form
+        // $first = ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [A, B]],
+        //              ["rules_oper" => "AND", "rules" => [C]],
         //                       ]
-        //           ], 
-        // $second = ["rules_oper" => "OR", 
-        //           "rules" => [ 
-        //              ["rules_oper" => "AND", "rules" => [G, H]], 
-        //              ["rules_oper" => "AND", "rules" => [I, J]], 
+        //           ],
+        // $second = ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [G, H]],
+        //              ["rules_oper" => "AND", "rules" => [I, J]],
         //              ["rules_oper" => "AND", "rules" => [K]]
         //                       ]
         //           ],
-        // combine them via the AND operator into a single standardised rule of the form 
-        // ["rules_oper" => "OR", 
-        //           "rules" => [ 
-        //              ["rules_oper" => "AND", "rules" => [A, B, G, H]], 
-        //              ["rules_oper" => "AND", "rules" => [A, B, I, J]], 
-        //              ["rules_oper" => "AND", "rules" => [A, B, K]], 
-        //              ["rules_oper" => "AND", "rules" => [C, G, H]], 
-        //              ["rules_oper" => "AND", "rules" => [C, I, J]], 
-        //              ["rules_oper" => "AND", "rules" => [C, K]], 
+        // combine them via the AND operator into a single standardised rule of the form
+        // ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [A, B, G, H]],
+        //              ["rules_oper" => "AND", "rules" => [A, B, I, J]],
+        //              ["rules_oper" => "AND", "rules" => [A, B, K]],
+        //              ["rules_oper" => "AND", "rules" => [C, G, H]],
+        //              ["rules_oper" => "AND", "rules" => [C, I, J]],
+        //              ["rules_oper" => "AND", "rules" => [C, K]],
         //                       ]
         //           ]
 
         $combinedRules = [];
         foreach ($first['rules'] as $firstRule) {
-            // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]] 
+            // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]]
             $innerNewStandardisedRules = [];
             foreach ($second["rules"] as $secondRule) {
-                // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]] 
+                // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]]
                 $combinedRules[] = [
-                    "rules_oper" => "AND", 
+                    "rules_oper" => "AND",
                     "rules" => array_merge(
-                        $firstRule["rules"], 
+                        $firstRule["rules"],
                         $secondRule["rules"]
                     )
                 ];
@@ -279,7 +276,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         return [
-            "rules_oper" => "OR", 
+            "rules_oper" => "OR",
             "rules" => $combinedRules
         ];
     }
@@ -293,8 +290,8 @@ class BunnyQueryContext implements QueryContextInterface
      *
      * @param array $groupwiseForm The groupwise form to process.
      * @return array The transformed structure in "standard form".
-     * 
-     * This function always returns in the form of 
+     *
+     * This function always returns in the form of
      * [
      *   "rules_oper": "OR",
      *   "rules": [
@@ -315,7 +312,7 @@ class BunnyQueryContext implements QueryContextInterface
      * as the outer layer
      */
     private function flattenToStandardForm(array $groupwiseForm, int $depth): array
-    {           
+    {
         $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
         $rules = $groupwiseForm['rules'] ?? [];
 
@@ -335,26 +332,25 @@ class BunnyQueryContext implements QueryContextInterface
                         ]
                     ]
                 ];
-            }
-            else {
-                // Child has children. Check that _its_ children are all in standard form, 
+            } else {
+                // Child has children. Check that _its_ children are all in standard form,
                 // then convert this to standard form recursively
-                $standardisedChildren[] = $this->flattenToStandardForm($rule, $depth+1);
+                $standardisedChildren[] = $this->flattenToStandardForm($rule, $depth + 1);
             }
         }
 
         // All $standarisedChildren are of the form "standard form"
-        // specifically 
-        // [ 
+        // specifically
+        // [
         //    [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]], [ ...] ], ]
         //    ...
         // ]
-        // 
+        //
         // Loop back again over all the standardised children.
         // Combine these using the current group operator:
         // - If it's an OR, then we spread all children into one array
         // - If it's an AND, then we distribute
-        
+
         if ($groupOperator === "OR") {
             $standardisedRules = [];
             foreach ($standardisedChildren as $standardisedChild) {
@@ -365,8 +361,7 @@ class BunnyQueryContext implements QueryContextInterface
                 "rules_oper" => "OR",
                 "rules" => $standardisedRules
             ];
-        }
-        else {
+        } else {
             // $groupOperator is AND, we need to distribute
             if (count($standardisedChildren) < 2) {
                 return $standardisedChildren[0] ?? [
@@ -375,7 +370,7 @@ class BunnyQueryContext implements QueryContextInterface
                 ];
             }
             $standardisedRules = $this->combineStandardsWithAnd($standardisedChildren[0], $standardisedChildren[1]);
-            foreach($standardisedChildren as $index => $standardisedChild) {
+            foreach ($standardisedChildren as $index => $standardisedChild) {
                 if ($index === 0 || $index === 1) {
                     continue; // already combined the first two children
                 }
