@@ -16,6 +16,7 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use App\Services\TokenSync\RoleSyncerService;
 use App\Services\TokenSync\CustodianSyncerService;
+use App\Services\TokenSync\UserInfoSyncerService;
 use App\Services\TokenSync\WorkgroupSyncerService;
 
 class DecodeJwt
@@ -27,6 +28,7 @@ class DecodeJwt
         private readonly WorkgroupSyncerService $workgroupSyncer,
         private readonly RoleSyncerService $roleSyncer,
         private readonly CustodianSyncerService $custodianSyncer,
+        private readonly UserInfoSyncerService $userInfoSyncer,
     ) {
     }
 
@@ -151,6 +153,12 @@ class DecodeJwt
                 $this->custodianSyncer->sync(
                     $user,
                     $jwtUser->cohort_admin_teams ?? []
+                );
+
+                $this->userInfoSyncer->sync(
+                    $user,
+                    $jwtUser->name ?? null,
+                    isset($jwtUser->id) ? (string) $jwtUser->id : null,
                 );
 
                 Cache::put($cacheKey, true, $ttl);
