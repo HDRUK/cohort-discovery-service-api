@@ -9,7 +9,6 @@ use App\Services\RegressionTest\RegressionTestService;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class RegressionTestController extends Controller
@@ -127,28 +126,36 @@ class RegressionTestController extends Controller
         }
     }
 
-    public function run(Request $request, RegressionTestService $service, string $pid): JsonResponse
+    public function runAll(RegressionTestService $service, string $pid): JsonResponse
     {
         try {
             $test = RegressionTest::where('pid', $pid)->firstOrFail();
-
             $this->authorize('run', $test);
 
-            $collection = null;
-            if ($request->filled('collection_pid')) {
-                $collection = $test->collections()
-                    ->where('pid', $request->input('collection_pid'))
-                    ->first();
+            return $this->OKResponse($service->run($test));
+        } catch (\Throwable $e) {
+            \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
 
-                if (!$collection) {
-                    return $this->ValidationErrorResponse(['collection_pid' => ['Collection not linked to this regression test.']]);
-                }
+    public function runSingle(RegressionTestService $service, string $pid, string $collectionPid): JsonResponse
+    {
+        try {
+            $test = RegressionTest::where('pid', $pid)->firstOrFail();
+            $this->authorize('run', $test);
+
+            $collection = $test->collections()
+                ->where('pid', $collectionPid)
+                ->first();
+
+            if (!$collection) {
+                return $this->ValidationErrorResponse(['collection_pid' => ['Collection not linked to this regression test.']]);
             }
 
             return $this->OKResponse($service->run($test, $collection));
         } catch (\Throwable $e) {
             \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
-
             return $this->ErrorResponse($e->getMessage());
         }
     }
