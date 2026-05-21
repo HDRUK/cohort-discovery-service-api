@@ -294,9 +294,8 @@ class RegressionTestTest extends TestCase
             $second->id => ['expected_result' => null],
         ]);
 
-        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run', [
-            'collection_pid' => $this->collection->pid,
-        ]);
+        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run/'.$this->collection->pid);
+
 
         $response->assertOk();
         $this->assertEquals(1, $response->json('data.task_count'));
@@ -311,9 +310,7 @@ class RegressionTestTest extends TestCase
 
         $unlinked = Collection::factory()->create();
 
-        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run', [
-            'collection_pid' => $unlinked->pid,
-        ]);
+        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run/'. $unlinked->pid);
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['collection_pid']);
