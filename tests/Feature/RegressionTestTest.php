@@ -284,6 +284,41 @@ class RegressionTestTest extends TestCase
         $this->assertDatabaseHas(Task::class, ['query_id' => $test->query_id, 'collection_id' => $second->id]);
     }
 
+    public function test_run_with_collection_pid_creates_only_one_task(): void
+    {
+        $second = Collection::factory()->create();
+
+        $test = RegressionTest::factory()->create();
+        $test->collections()->attach([
+            $this->collection->id => ['expected_result' => null],
+            $second->id => ['expected_result' => null],
+        ]);
+
+        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run', [
+            'collection_pid' => $this->collection->pid,
+        ]);
+
+        $response->assertOk();
+        $this->assertEquals(1, $response->json('data.task_count'));
+        $this->assertDatabaseHas(Task::class, ['query_id' => $test->query_id, 'collection_id' => $this->collection->id]);
+        $this->assertDatabaseMissing(Task::class, ['query_id' => $test->query_id, 'collection_id' => $second->id]);
+    }
+
+    public function test_run_with_unlinked_collection_pid_returns_422(): void
+    {
+        $test = RegressionTest::factory()->create();
+        $test->collections()->attach([$this->collection->id => ['expected_result' => null]]);
+
+        $unlinked = Collection::factory()->create();
+
+        $response = $this->actingAsJwt($this->admin)->postJson(self::BASE_URL.'/'.$test->pid.'/run', [
+            'collection_pid' => $unlinked->pid,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['collection_pid']);
+    }
+
     public function test_non_admin_cannot_run_a_regression_test(): void
     {
         $test = RegressionTest::factory()->create();
