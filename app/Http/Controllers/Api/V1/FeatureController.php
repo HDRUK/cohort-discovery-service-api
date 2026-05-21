@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
-use Laravel\Pennant\Feature;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Laravel\Pennant\Feature;
 
 class FeatureController extends Controller
 {
@@ -34,7 +35,7 @@ class FeatureController extends Controller
         return $this->OKResponse($data);
     }
 
-    public function update(Request $request, string $name): JsonResponse
+    public function update(Request $request, string $name, ActivityLogger $activityLogger): JsonResponse
     {
         if (!Auth::user()?->hasRole('admin')) {
             return $this->ForbiddenResponse();
@@ -60,16 +61,12 @@ class FeatureController extends Controller
             Feature::deactivateForEveryone($name);
         }
 
-        activity('feature_flags')
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'feature' => $name,
-                'before' => ['enabled' => $before],
-                'after' => ['enabled' => $after],
-            ])
-            ->log('feature_flag_updated');
+        $activityLogger->custom('feature_flags', 'updated', null, [
+            'feature' => $name,
+            'before' => ['enabled' => $before],
+            'after' => ['enabled' => $after],
+        ]);
 
         return $this->OKResponse([]);
-
     }
 }

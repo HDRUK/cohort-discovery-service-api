@@ -14,6 +14,8 @@ class FeatureSeeder extends Seeder
         'query-builder-use-stats-in-ordering' => false,
         'query-builder-use-collections-in-search' => false,
         'constrain-for-bunny-v1' => true,
+        'query-builder-allow-nested-groups' => false,
+        'flatten-nested-groups' => true,
         'query-nlp' => true,
         'in-app-messenger' => false,
         'integrated-sync-workgroups-every-request' => false,

@@ -11,20 +11,22 @@ use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
 use App\Models\TaskRun;
+use App\Services\Activity\ActivityLogger;
 use App\Services\QueryContext\QueryContextManager;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Str;
 use Log;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
+use Str;
 
 /**
  * @OA\Tag(
@@ -50,11 +52,17 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function getTasks(): JsonResponse
+    public function getTasks(ActivityLogger $activityLogger): JsonResponse
     {
         $tasks = Task::whereHas('submittedQuery', function ($query) {
             $query->where('user_id', Auth::id());
         });
+
+        $activityLogger->viewed('tasks', null, [
+            'result' => [
+                'total' => $tasks->count(),
+            ],
+        ]);
 
         return $this->OKResponse($tasks);
     }
@@ -83,7 +91,7 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function getAdminTasks(): JsonResponse
+    public function getAdminTasks(ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAdmin', Task::class);
 
@@ -114,6 +122,19 @@ class TaskController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
+        $activityLogger->viewed('tasks', null, [
+            'filters' => [
+                'collection_filter' => $collectionFilter,
+                'custodian_filter' => $custodianFilter,
+            ],
+            'result' => [
+                'total' => $tasks->total(),
+                'returned' => $tasks->count(),
+                'page' => $tasks->currentPage(),
+                'per_page' => $tasks->perPage(),
+            ],
+        ]);
+
         return $this->OKResponse($tasks);
     }
 
@@ -138,7 +159,7 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function getTask(string $pid): JsonResponse
+    public function getTask(string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         $task = Task::with(['submittedQuery.user', 'collection', 'result'])
             ->where('pid', $pid)
@@ -155,6 +176,8 @@ class TaskController extends Controller
         if ($task->submittedQuery->user?->email) {
             $task->submittedQuery->user->email = $this->maskEmail($task->submittedQuery->user->email);
         }
+
+        $activityLogger->viewed('tasks', $task);
 
         return $this->OKResponse($task);
     }
@@ -189,8 +212,12 @@ class TaskController extends Controller
      *     @OA\Response(response=404, description="Collection not found")
      * )
      */
-    public function nextJob(Request $request, string $collectionId, QueryContextManager $contextManager): JsonResponse|Response
-    {
+    public function nextJob(
+        Request $request,
+        string $collectionId,
+        QueryContextManager $contextManager,
+        ActivityLogger $activityLogger
+    ): JsonResponse|Response {
         // note - it'd be better if BUNNY could give us a worker ID in the headers
         // - also could give us some information like the BUNNY version it is using (git sha?)
         $workerId =  $request->ip();
@@ -232,7 +259,7 @@ class TaskController extends Controller
                 ->where('attempts', '<', $nMaxAttempts)
                 ->where(function ($q) use ($now) {
                     $q->whereNull('leased_until')
-                      ->orWhere('leased_until', '<', $now);
+                        ->orWhere('leased_until', '<', $now);
                 })
                 ->orderBy('id')
                 ->lockForUpdate();
@@ -264,6 +291,7 @@ class TaskController extends Controller
             return $task->fresh();
         });
         */
+
 
         $now = Carbon::now();
         $q = Task::where([
@@ -303,8 +331,6 @@ class TaskController extends Controller
 
 
         if (! $task) {
-            error_log('returning no content');
-
             return $this->NoContentResponse();
         }
 
@@ -320,6 +346,22 @@ class TaskController extends Controller
         $task->save();
         $task->refresh()->load('submittedQuery');
 
+        $activityLogger->custom('tasks', 'claimed', $collection, [
+            'worker' => [
+                'id' => $workerId,
+            ],
+            'task' => [
+                'id' => $task->id,
+                'pid' => $task->pid,
+                'task_type' => $taskType->value,
+                'attempts' => $task->attempts,
+                'max_attempts' => $nMaxAttempts,
+                'leased_until' => $task->leased_until,
+                'failed_at' => $task->failed_at,
+                'completed_at' => $task->completed_at,
+            ],
+        ]);
+
         $submittedQuery = $task->submittedQuery;
         $rawQuery = $submittedQuery->definition;
 
@@ -331,6 +373,22 @@ class TaskController extends Controller
                 $task->failed_at = now();
                 $task->completed_at = now();
                 $task->save();
+
+                $activityLogger->custom('tasks', 'rejected', $collection, [
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'task' => [
+                        'id' => $task->id,
+                        'pid' => $task->pid,
+                        'task_type' => $taskType->value,
+                    ],
+                    'error' => [
+                        'code' => $code,
+                        'allowed_codes' => $allowedCodes,
+                    ],
+                ]);
+
                 return $this->BadRequestResponseExtended("Invalid distribution query code: {$code}");
             }
 
@@ -348,7 +406,7 @@ class TaskController extends Controller
         $translatedQuery = null;
         try {
             $contextType = $collection->type;
-            $translatedQuery = $contextManager->handle($rawQuery, $contextType);
+            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'));
         } catch (\ValueError $e) {
             $message = 'Unsupported collection type';
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
@@ -357,6 +415,16 @@ class TaskController extends Controller
                     'error_class' => get_class($e),
                     'error_message' => $message,
             ]);
+
+            $activityLogger->failed('tasks', $task, $e, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'error' => [
+                    'message' => $message,
+                ],
+            ], 'worker_task_translation_failed');
+
             return $this->BadRequestResponseExtended($message);
         } catch (\Throwable $e) {
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
@@ -365,10 +433,26 @@ class TaskController extends Controller
                     'error_class' => get_class($e),
                     'error_message' => mb_strimwidth($e->getMessage(), 0, 2000, '…'),
                 ]);
+
+            $activityLogger->failed('tasks', $task, $e, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+            ], 'worker_task_translation_failed');
+
             return $this->ErrorResponse($e->getMessage());
         }
 
         if (! $translatedQuery) {
+            $activityLogger->custom('tasks', 'failed', $task, [
+                'worker' => [
+                    'id' => $workerId,
+                ],
+                'error' => [
+                    'message' => 'Context manager failed to translate query',
+                ],
+            ], 'worker_task_translation_failed');
+
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
@@ -449,10 +533,14 @@ class TaskController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function receiveResult(Request $request, string $task_pid, string $collection_pid): JsonResponse
-    {
+    public function receiveResult(
+        Request $request,
+        string $task_pid,
+        string $collection_pid,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         try {
-            DB::transaction(function () use ($request, $task_pid) {
+            DB::transaction(function () use ($request, $task_pid, $activityLogger) {
                 $task = Task::where('pid', $task_pid)
                     ->lockForUpdate()
                     ->first();
@@ -465,9 +553,9 @@ class TaskController extends Controller
                     return;
                 }
 
-                $status = $request->get('status');
-                $message = $request->get('message');
-                $queryResult = $request->get('queryResult');
+                $status = $request->input('status');
+                $message = $request->input('message');
+                $queryResult = $request->input('queryResult');
 
                 $isFailedResult = in_array($status, ['error', 'failed'], true);
 
@@ -589,17 +677,31 @@ class TaskController extends Controller
                     'leased_until' => null,
                     'leased_by' => null,
                 ]);
+
+                $activityLogger->custom('tasks', 'received', $task, [
+                    'worker' => [
+                        'id' => $workerId,
+                    ],
+                    'result' => [
+                        'status' => $status,
+                        'count' => $count,
+                        'message' => $message,
+                        'failed' => $isFailedResult,
+                        'files_stored' => count($storedFiles),
+                        'duration_ms' => $durationMs,
+                    ],
+                ]);
             });
 
             return $this->CreatedResponse([
                 'message' => 'Result received successfully.',
             ]);
         } catch (\InvalidArgumentException $e) {
-            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e, $activityLogger);
 
             return $this->BadRequestResponseExtended($e->getMessage());
         } catch (\Throwable $e) {
-            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e);
+            $this->markTaskReceiveResultFailure($task_pid, $request->ip(), $e, $activityLogger);
 
             Log::error('Failed receiving task result', [
                 'task_pid' => $task_pid,
@@ -612,8 +714,12 @@ class TaskController extends Controller
     }
 
 
-    private function markTaskReceiveResultFailure(string $taskPid, ?string $workerId, \Throwable $e): void
-    {
+    private function markTaskReceiveResultFailure(
+        string $taskPid,
+        ?string $workerId,
+        \Throwable $e,
+        ActivityLogger $activityLogger
+    ): void {
         $now = Carbon::now();
 
         $task = Task::where('pid', $taskPid)->first();
@@ -644,6 +750,12 @@ class TaskController extends Controller
             'leased_until' => null,
             'leased_by' => null,
         ]);
+
+        $activityLogger->failed('tasks', $task, $e, [
+            'worker' => [
+                'id' => $workerId,
+            ],
+        ], 'worker_task_result_failed');
     }
 
     /**
@@ -666,21 +778,25 @@ class TaskController extends Controller
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function cloneTask(Request $request, string $pid): JsonResponse
+    public function cloneTask(Request $request, string $pid, ActivityLogger $activityLogger): JsonResponse
     {
         try {
-            $task = Task::where('pid', $pid)
+            $originalTask = Task::where('pid', $pid)
                 ->first();
 
-            $query = $task->submittedQuery;
-            $collection = $task->collection;
+            $query = $originalTask->submittedQuery;
+            $collection = $originalTask->collection;
 
             $task = Task::create([
                 'pid' => Str::uuid(),
                 'query_id' => $query->id,
                 'collection_id' => $collection->id,
                 'created_at' => Carbon::now(),
-                'task_type' => $task->task_type
+                'task_type' => $originalTask->task_type
+            ]);
+
+            $activityLogger->custom('tasks', 'cloned', $originalTask, [
+                'new_task_pid' => $task->pid,
             ]);
 
             return $this->OKResponse($task);

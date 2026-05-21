@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\DistributionController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryController;
 use App\Http\Controllers\Api\V1\QueryParserController;
+use App\Http\Controllers\Api\V1\RegressionTestController;
 use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -160,6 +161,14 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
+
+    Route::get('/v1/admin/regression-tests', [RegressionTestController::class, 'indexForAdmin']);
+    Route::get('/v1/user/regression-tests', [RegressionTestController::class, 'indexForUser']);
+    Route::post('/v1/regression-tests', [RegressionTestController::class, 'store']);
+    Route::get('/v1/regression-tests/{pid}', [RegressionTestController::class, 'show'])->whereUuid('pid');
+    Route::put('/v1/regression-tests/{pid}', [RegressionTestController::class, 'update'])->whereUuid('pid');
+    Route::delete('/v1/regression-tests/{pid}', [RegressionTestController::class, 'destroy'])->whereUuid('pid');
+    Route::post('/v1/regression-tests/{pid}/run', [RegressionTestController::class, 'run'])->whereUuid('pid');
 
     // Custodian Networks - "public" routes.
     Route::get('/v1/custodian_networks', [CustodianNetworkController::class, 'index']);

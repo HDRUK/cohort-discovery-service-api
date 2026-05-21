@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\Collection;
 use DB;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use App\Models\Collection;
 
 class RefreshDistributionConceptsView implements ShouldQueue
 {
@@ -78,16 +78,19 @@ class RefreshDistributionConceptsView implements ShouldQueue
             ->unique()
             ->values();
 
-        if ($taskIds->isEmpty()) {
-            Log::warning('distribution_concepts view refresh skipped because no latest tasks were found', [
+        $whereClause = '1 = 0';
+
+        if ($taskIds->isNotEmpty()) {
+            $taskIdList = $taskIds
+                ->map(fn ($id) => (int) $id)
+                ->implode(',');
+
+            $whereClause = "d.task_id IN ({$taskIdList})";
+        } else {
+            Log::info('distribution_concepts view refresh found no latest tasks; creating empty view', [
                 'view' => $this->viewName,
             ]);
-            return;
         }
-
-        $taskIdList = $taskIds
-            ->map(fn ($id) => (int) $id)
-            ->implode(',');
 
         \DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
@@ -111,7 +114,7 @@ class RefreshDistributionConceptsView implements ShouldQueue
                 ON d.concept_id = c.concept_id
             INNER JOIN {$this->collectionTable} col
                 ON d.collection_id = col.id
-            WHERE d.task_id IN ({$taskIdList})
+            WHERE {$whereClause}
             GROUP BY
                 d.concept_id,
                 c.concept_name,
@@ -127,5 +130,6 @@ class RefreshDistributionConceptsView implements ShouldQueue
             'view' => $this->viewName,
             'count' => $afterCount,
         ]);
+
     }
 }

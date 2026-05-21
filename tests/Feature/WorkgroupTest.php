@@ -128,7 +128,7 @@ class WorkgroupTest extends TestCase
 
         $content = $response->json();
         $this->assertEquals($payload['name'], $content['data']['name']);
-        $this->assertFalse($content['data']['active']);
+        $this->assertEquals($content['data']['active'], 0);
     }
 
     public function test_the_application_can_delete_a_workgroup(): void

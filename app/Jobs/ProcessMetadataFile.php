@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\CollectionMetadata;
 use App\Models\ResultFile;
+use App\Services\Activity\ActivityLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -52,6 +53,7 @@ class ProcessMetadataFile implements ShouldQueue
             Log::error("[{$this->tag}] failed to open file stream", [
                 'path' => $file->path,
             ]);
+
             throw new RuntimeException("Cannot open {$file->path}");
         }
 
@@ -96,7 +98,7 @@ class ProcessMetadataFile implements ShouldQueue
                 'threshold' => null,
             ], $row);
 
-            $this->storeMetadata($file, $payload);
+            $metadata = $this->storeMetadata($file, $payload);
 
             $extraLine = fgets($stream);
             if ($extraLine !== false && trim($extraLine) !== '') {
@@ -120,10 +122,18 @@ class ProcessMetadataFile implements ShouldQueue
     {
         if ($file = ResultFile::find($this->resultFileId)) {
             $file->markFailed($e->getMessage());
+
+            app(ActivityLogger::class)->failed(
+                'result_files',
+                $file,
+                $e,
+                [],
+                'metadata_file_processing_failed'
+            );
         }
     }
 
-    private function storeMetadata(ResultFile $file, array $row): void
+    private function storeMetadata(ResultFile $file, array $row): CollectionMetadata
     {
         $metadata = CollectionMetadata::create([
             'collection_id' => $file->collection_id,
@@ -142,6 +152,8 @@ class ProcessMetadataFile implements ShouldQueue
             'collection_id' => $file->collection_id,
             'result_file_id' => $file->id,
         ]);
+
+        return $metadata;
     }
 
     private function nullIfEmpty(?string $value): ?string

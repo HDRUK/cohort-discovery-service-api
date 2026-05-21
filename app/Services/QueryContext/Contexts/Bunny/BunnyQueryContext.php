@@ -8,130 +8,387 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
-    public function translate(array $definition): array
+    public function translate(array $definition, bool $flattenNestedGroups = true): array
+    {
+        // Convert to groupwise form for easier parsing of nodes per group.
+        $groupwiseForm = $this->convertToGroupwiseForm($definition);
+
+        // Check for the special case where it's only a single group of ANDs -
+        // in this case we can skip the flattening step and just convert to "standard form" (OR-of-ANDs) directly
+        $specialForm = true;
+        if ($groupwiseForm['rules_oper'] === 'OR') {
+            $specialForm = false;
+        }
+
+        foreach ($groupwiseForm['rules'] as $child) {
+            if ($this->isGroupNode($child)) {
+                $specialForm = false;
+                break;
+            }
+        }
+
+        if ($specialForm) {
+            $rules = $groupwiseForm["rules"];
+            return [
+                "groups_oper" => 'OR',
+                "groups" => [
+                        [
+                            "rules_oper" => 'AND',
+                            "rules" => $rules
+                        ]
+                    ]
+                ];
+        }
+
+        if (!$flattenNestedGroups) {
+            // Equally, if we want to skip the flattening step, then we can just return as-is with modified outer layer.
+            return [
+                "groups_oper" => $groupwiseForm['rules_oper'] ?? 'AND',
+                "groups" => $groupwiseForm['rules'] ?? [],
+            ];
+        }
+
+        // Now we know it's not in that form, collapse to "standard form".
+        return $this->flattenToStandardForm($groupwiseForm, 0);
+    }
+
+    private function convertGroup(array $node, string $groupOperator): array
     {
         $groups = [];
-
-        $this->processNode($definition, $groups);
+        $children = $node['rules'] ?? [];
+        foreach ($children as $child) {
+            if ($this->isGroupNode($child)) {
+                $groups[] = $this->convertToGroupwiseForm($child);
+            } elseif ($this->isLeafNode($child)) {
+                $groups[] = $this->makeLeafRule($child);
+            } elseif ($this->isAgeFilter($child)) {
+                $groups[] = $this->makeLeafAgeFilter($child);
+            }
+        }
 
         return [
-            'groups' => $groups,
-            'groups_oper' => strtoupper($definition['combinator'] ?? 'AND'),
+            'rules_oper' => $groupOperator,
+            'rules' => $groups,
         ];
     }
 
-    /*
-    - Note: this entire piece will need to be revisited
-    - - functions getting more complex - needs to be
-    */
-    protected function processNode(array $node, array &$groups): void
+    /**
+     * Converts a rule definition into a "groupwise form", where each node is either:
+     * - a leaf node (a single rule)
+     * - a group node (a group of rules with a combinator)
+     * The groupwise form is easier to parse for the next step of flattening into "standard form".
+     *
+     * Example input:
+     * [
+     *   'id' => '9f71c79e-8e3c-467c-9970-d8b9ee4badca',
+     *   'rules' => [
+     *       [
+     *           'id' => '91b16f34-c7c8-4a64-b4d9-1c82eb64e353',
+     *           'exclude' => false,
+     *           'rules' => [
+     *               [
+     *                   'id' => '3f696208-11a8-4daf-86be-ce158b53606c',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955320,
+     *                           'description' => 'Moderna - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => 'ca15e2ad-0cca-421e-8012-58cacf0987cd',
+     *                   'combinator' => 'or',
+     *                   'exclude' => false,
+     *                   'valid' => true,
+     *               ],
+     *               [
+     *                   'id' => '08e3d082-f05b-4ab1-9c61-c65a02aac43a',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955321,
+     *                           'description' => 'Pfizer - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *       [
+     *           'id' => '3ceaec2e-3764-4514-ae83-32d0445c37e3',
+     *           'combinator' => 'and',
+     *           'exclude' => false,
+     *       ],
+     *       [
+     *           'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *           'exclude' => true,
+     *           'rule' => [
+     *               'concept' => [
+     *                   'concept_id' => 3955322,
+     *                   'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                   'category' => 'Drug',
+     *                   'children' => [],
+     *               ],
+     *           ],
+     *       ],
+     *   ],
+     * ]
+     *
+     * Example output:
+     * [
+     *   "rules_oper" => "OR",
+     *   "rules" => [
+     *       [
+     *           "rules_oper" => "AND",
+     *           "rules" => [
+     *               [
+     *                   'id' => '3f696208-11a8-4daf-86be-ce158b53606c',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955320,
+     *                           'description' => 'Moderna - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *                   'exclude' => true,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955322,
+     *                           'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *       [
+     *           "rules_oper" => "AND",
+     *           "rules" => [
+     *               [
+     *                   'id' => '08e3d082-f05b-4ab1-9c61-c65a02aac43a',
+     *                   'exclude' => false,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955321,
+     *                           'description' => 'Pfizer - SARS-CoV-2 (COVID-19) vaccine',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *               [
+     *                   'id' => '011bcab3-ec65-42ce-91bf-66e54f4b2a7a',
+     *                   'exclude' => true,
+     *                   'rule' => [
+     *                       'concept' => [
+     *                           'concept_id' => 3955322,
+     *                           'description' => 'Oxford, AstraZeneca - SARS-CoV-2 (COVID-19) vaccine AZD1222',
+     *                           'category' => 'Drug',
+     *                           'children' => [],
+     *                       ],
+     *                   ],
+     *               ],
+     *           ],
+     *       ],
+     *    ],
+     * ]
+    **/
+    private function convertToGroupwiseForm(array $node): array
     {
-        $children = $node['rules'] ?? [];
-        if (empty($children)) {
-            return;
-        }
-
-        // 1) recurse into nested groups first
-        foreach ($children as $child) {
-            if ($this->isGroupNode($child)) {
-                $this->processNode($child, $groups);
-            }
-        }
-
-        // 2) flatten this level into leaf list + operator list
-        //    $leafRules[i]   = rule for leaf i
-        //    $ops[i]         = operator betwene leaf (i-1) and leaf i
-        $leafRules = [];
-        $ops = [];
-        $pendingOp = null;
-
-        foreach ($children as $child) {
-            if ($this->isOperatorNode($child)) {
-                $pendingOp = strtoupper($child['combinator'] ?? 'AND');
-                continue;
-            }
+        $groupOperator = $this->groupOperator($node);
+        if ($groupOperator || $this->isGroupNode($node)) {
+            return $this->convertGroup($node, $groupOperator ?? 'OR');
+        } else {
             $leafRule = null;
-            if ($this->isLeafNode($child)) {
-                $leafRule = $this->makeLeafRule($child);
-            } elseif ($this->isAgeFilter($child)) {
-                $leafRule = $this->makeLeafAgeFilter($child);
-            } elseif ($this->isGroupNode($child)) {
-                //throw new \Error('No support for groups within groups yet');
-                continue;
+            if ($this->isLeafNode($node)) {
+                $leafRule = $this->makeLeafRule($node);
+            } elseif ($this->isAgeFilter($node)) {
+                $leafRule = $this->makeLeafAgeFilter($node);
             } else {
-                throw new \Error('unknown leaf rule' . json_encode($child));
+                throw new \Error('unknown leaf rule' . json_encode($node));
             }
-            $leafRules[] = $leafRule;
-            $leafIndex = count($leafRules) - 1;
-
-            // operator applies between previous leaf and this one
-            if ($pendingOp !== null && $leafIndex > 0) {
-                $ops[$leafIndex] = $pendingOp;
-            }
-
-            $pendingOp = null;
-
+            return $leafRule;
         }
+    }
 
-        $n = count($leafRules);
-        if ($n === 0) {
-            return;
-        }
+    private function groupOperator(array $node): ?string
+    {
+        return $this->isGroupNode($node) && count($node['rules']) > 1 && isset($node['rules'][1]['combinator']) ? strtoupper($node['rules'][1]['combinator']) : null;
+    }
 
-        // Only one leaf at this level → single AND-group
-        if ($n === 1) {
-            $groups[] = [
-                'rules_oper' => 'AND',
-                'rules' => [$leafRules[0]],
-            ];
+    private function hasOperator(array $rule): bool
+    {
+        return array_key_exists("rules_oper", $rule);
+    }
 
-            return;
-        }
+    private function combineStandardsWithAnd(array $first, array $second): array
+    {
+        // Given two arrays of standardised rules of the form
+        // $first = ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [A, B]],
+        //              ["rules_oper" => "AND", "rules" => [C]],
+        //                       ]
+        //           ],
+        // $second = ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [G, H]],
+        //              ["rules_oper" => "AND", "rules" => [I, J]],
+        //              ["rules_oper" => "AND", "rules" => [K]]
+        //                       ]
+        //           ],
+        // combine them via the AND operator into a single standardised rule of the form
+        // ["rules_oper" => "OR",
+        //           "rules" => [
+        //              ["rules_oper" => "AND", "rules" => [A, B, G, H]],
+        //              ["rules_oper" => "AND", "rules" => [A, B, I, J]],
+        //              ["rules_oper" => "AND", "rules" => [A, B, K]],
+        //              ["rules_oper" => "AND", "rules" => [C, G, H]],
+        //              ["rules_oper" => "AND", "rules" => [C, I, J]],
+        //              ["rules_oper" => "AND", "rules" => [C, K]],
+        //                       ]
+        //           ]
 
-        // 3) group leaves:
-        //    - ops[i] is the operator between leaf i-1 and i
-        //    - when operator changes, we takethe last leaf into
-        //      the new block so that e.g. A AND B AND C OR D =>
-        //      [A AND B] + [C OR D]
-        // - this needs to be revisited
-        $currentBlock = [$leafRules[0]];
-        $currentOp = null;
-
-        for ($i = 1; $i < $n; $i++) {
-            $op = $ops[$i] ?? null;
-            if ($currentOp === null) {
-                $currentOp = $op ?? 'AND';
-            }
-
-            if ($op === $currentOp || $op === null) {
-                $currentBlock[] = $leafRules[$i];
-            } else {
-                if (count($currentBlock) >= 2) {
-                    $lastRule = array_pop($currentBlock);
-
-                    $groups[] = [
-                        'rules_oper' => $currentOp,
-                        'rules' => $currentBlock,
-                    ];
-
-                    $currentBlock = [$lastRule, $leafRules[$i]];
-                } else {
-                    // only one leaf in the old block
-                    $groups[] = [
-                        'rules_oper' => $currentOp,
-                        'rules' => $currentBlock,
-                    ];
-
-                    $currentBlock = [$leafRules[$i]];
-                }
-                /** @phpstan-ignore-next-line */
-                $currentOp = $op ?? 'AND';
+        $combinedRules = [];
+        foreach ($first['rules'] as $firstRule) {
+            // $firstRule is of the form ["rules_oper" => "AND", "rules" => [A, B]]
+            $innerNewStandardisedRules = [];
+            foreach ($second["rules"] as $secondRule) {
+                // $secondRule is of the form ["rules_oper" => "AND", "rules" => [G, H]]
+                $combinedRules[] = [
+                    "rules_oper" => "AND",
+                    "rules" => array_merge(
+                        $firstRule["rules"],
+                        $secondRule["rules"]
+                    )
+                ];
             }
         }
-        $groups[] = [
-            'rules_oper' => $currentOp ?? 'AND', // @phpstan-ignore-line
-            'rules' => $currentBlock,
+
+        return [
+            "rules_oper" => "OR",
+            "rules" => $combinedRules
         ];
+    }
+
+    /**
+     * Flattens a groupwise form into "standard form" with a maximum depth of 2 groups
+     * (i.e. OR of ANDs), by recursively applying the following rules:,
+     * 1) ((A or B) and (C or D)) → ((A and C) or (B and C) or (A and D) or (B and D))
+     * 2) (A and (B and C)) → (A and B and C)
+     * 3) (A or (B or C)) → (A or B or C)
+     *
+     * @param array $groupwiseForm The groupwise form to process.
+     * @return array The transformed structure in "standard form".
+     *
+     * This function always returns in the form of
+     * [
+     *   "rules_oper": "OR",
+     *   "rules": [
+     *     [
+     *      "rules_oper": "AND",
+     *     "rules": [ ... ] // leaf rules
+     *     ],
+     *     ... // more AND groups
+     *   ]
+     * ]
+     * except when it's at the top level, where it returns
+     * [
+     *   "groups_oper": "OR",
+     *   "groups": [
+     *     ...
+     *   ]
+     * ]
+     * as the outer layer
+     */
+    private function flattenToStandardForm(array $groupwiseForm, int $depth): array
+    {
+        $groupOperator = $groupwiseForm['rules_oper'] ?? 'AND';
+        $rules = $groupwiseForm['rules'] ?? [];
+
+        $standardisedChildren = [];
+        // Loop over all children, converting each to standard form
+        foreach ($rules as $rule) {
+            if (!$this->hasOperator($rule)) {
+                // Child is a singleton. It won't have its own rules. Return OR([AND([$rule])])
+                $standardisedChildren[] = [
+                    "rules_oper" => "OR",
+                    "rules" => [
+                        [
+                            "rules_oper" => "AND",
+                            "rules" => [
+                                $rule
+                            ]
+                        ]
+                    ]
+                ];
+            } else {
+                // Child has children. Check that _its_ children are all in standard form,
+                // then convert this to standard form recursively
+                $standardisedChildren[] = $this->flattenToStandardForm($rule, $depth + 1);
+            }
+        }
+
+        // All $standarisedChildren are of the form "standard form"
+        // specifically
+        // [
+        //    [ "rules_oper" => "OR", "rules" => [["rules_oper" => "AND", "rules" => [$rule]], [ ...] ], ]
+        //    ...
+        // ]
+        //
+        // Loop back again over all the standardised children.
+        // Combine these using the current group operator:
+        // - If it's an OR, then we spread all children into one array
+        // - If it's an AND, then we distribute
+
+        if ($groupOperator === "OR") {
+            $standardisedRules = [];
+            foreach ($standardisedChildren as $standardisedChild) {
+                $standardisedRules = array_merge($standardisedRules, $standardisedChild['rules']);
+            }
+
+            $standardisedForm = [
+                "rules_oper" => "OR",
+                "rules" => $standardisedRules
+            ];
+        } else {
+            // $groupOperator is AND, we need to distribute
+            if (count($standardisedChildren) < 2) {
+                return $standardisedChildren[0] ?? [
+                    "rules_oper" => "OR",
+                    "rules" => []
+                ];
+            }
+            $standardisedRules = $this->combineStandardsWithAnd($standardisedChildren[0], $standardisedChildren[1]);
+            foreach ($standardisedChildren as $index => $standardisedChild) {
+                if ($index === 0 || $index === 1) {
+                    continue; // already combined the first two children
+                }
+                $standardisedRules = $this->combineStandardsWithAnd($standardisedRules, $standardisedChild);
+            }
+            $standardisedForm = $standardisedRules;
+        }
+
+        // We now have a single object of "standard form" (OR-of-ANDs)
+        // If we're at the top level, rename to "groups" for the final form
+        if ($depth === 0) {
+            return [
+                "groups_oper" => "OR",
+                "groups" => $standardisedForm['rules']
+            ];
+        }
+
+        return $standardisedForm;
     }
 
     protected function makeLeafRule(array $child): array

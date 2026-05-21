@@ -50,14 +50,17 @@ class IntegratedAuthenticationService implements AuthenticationServiceInterface
             $user = User::create([
                 'email' => $userData['email'],
                 'name' => $userData['name'],
+                'external_id' => isset($userClaims['id']) ? (string) $userClaims['id'] : null,
                 // LS: Removed as integrated mode, and Hash::make added a fair latency that is avoidable in
                 // this instance.
                 'password' => '',
             ]);
         } else {
-            $user->fill([
-                'name' => $userData['name'],
-            ]);
+            $updates = ['name' => $userData['name']];
+            if (isset($userClaims['id']) && $user->external_id !== (string) $userClaims['id']) {
+                $updates['external_id'] = (string) $userClaims['id'];
+            }
+            $user->fill($updates);
 
             if ($user->isDirty()) {
                 $user->save();

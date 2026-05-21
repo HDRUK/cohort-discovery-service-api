@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -30,12 +31,21 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $this->authorize('viewAny', CollectionConfig::class);
 
         try {
             $configs = CollectionConfig::all();
+
+            $activityLogger->viewed('collection_configs', null, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $configs->count(),
+                    'config_ids' => $configs->pluck('id')->values()->all(),
+                    'collection_ids' => $configs->pluck('collection_id')->values()->all(),
+                ],
+            ]);
 
             return $this->OKResponse($configs);
         } catch (\Throwable $e) {
@@ -72,14 +82,19 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function show(Request $request, int $id): JsonResponse
-    {
+    public function show(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('show'));
 
         try {
             $config = CollectionConfig::findOrFail($validated['id']);
             $this->authorize('view', $config);
+
+            $activityLogger->viewed('collection_configs', $config);
 
             return $this->OKResponse($config);
         } catch (AuthorizationException $e) {
@@ -116,7 +131,7 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('store'));
 
@@ -125,6 +140,8 @@ class CollectionConfigController extends Controller
 
         try {
             $config = CollectionConfig::create($validated);
+
+            $activityLogger->created('collection_configs', $config);
 
             return $this->CreatedResponse($config);
 
@@ -172,8 +189,11 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
-    {
+    public function update(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('update'));
 
@@ -181,7 +201,20 @@ class CollectionConfigController extends Controller
         $this->authorize('update', $config);
 
         try {
+            $before = $config->only(array_keys($validated));
+
             if ($config->update($validated)) {
+                $config->refresh();
+
+                $after = $config->only(array_keys($validated));
+
+                $activityLogger->updated(
+                    'collection_configs',
+                    $config,
+                    $before,
+                    $after
+                );
+
                 return $this->OKResponse($config);
             }
 
@@ -222,8 +255,11 @@ class CollectionConfigController extends Controller
      *     )
      * )
      */
-    public function destroy(Request $request, int $id): JsonResponse
-    {
+    public function destroy(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
         $request->merge(['id' => $id]);
         $validated = $request->validate(app(CollectionConfig::class)->getValidationRules('delete'));
 
@@ -232,6 +268,8 @@ class CollectionConfigController extends Controller
             $this->authorize('delete', $config);
 
             if ($config->delete()) {
+                $activityLogger->deleted('collection_configs', $config);
+
                 return $this->OKResponse([]);
             }
 

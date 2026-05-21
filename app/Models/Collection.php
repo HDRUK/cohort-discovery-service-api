@@ -76,6 +76,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $demographics
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $concepts
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Distribution> $conceptCountsByCategory
+ * @property-read \App\Models\RegressionTestHasCollection $regressionTestPivot
  */
 class Collection extends Model implements HasStateTransitions, ValidatableModel
 {
@@ -137,7 +138,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     ];
 
     protected $appends = ['last_ping'];
-
+    //needed to eager load for last_ping that is always appended
+    protected $with = ['lastAActivity', 'lastBActivity'];
 
     protected static array $transitions = [
         self::STATUS_DRAFT => [

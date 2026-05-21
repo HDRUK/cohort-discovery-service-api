@@ -66,64 +66,10 @@ class RuleBuilderService
         );
     }
 
-    private function splitTopLevelOr(string $query): array
-    {
-        $segments = [];
-        $buffer = '';
-        $depth = 0;
-        $length = strlen($query);
-
-        /*
-         * Splits on outer or rather than any inner ORs e.g. (moderna or covid)
-         * which the NLP service will handle..
-         */
-        for ($i = 0; $i < $length; $i++) {
-            $char = $query[$i];
-
-            if ($char === '(') {
-                $depth++;
-                $buffer .= $char;
-                continue;
-            }
-
-            if ($char === ')') {
-                $depth = max(0, $depth - 1);
-                $buffer .= $char;
-                continue;
-            }
-
-            if (
-                $depth === 0
-                && preg_match('/\G\s+or\s+/i', $query, $match, 0, $i)
-            ) {
-                $segments[] = trim($buffer);
-                $buffer = '';
-                $i += strlen($match[0]) - 1;
-                continue;
-            }
-
-            $buffer .= $char;
-        }
-
-        if (trim($buffer) !== '') {
-            $segments[] = trim($buffer);
-        }
-
-        return $segments;
-    }
-
-    private function getConceptsForSegment(
-        string $segment,
-        ConstraintAccumulator $constraints,
-        array &$warnings,
+    private function buildConceptRules(
         bool $ignoreSynthetic = false,
         bool $preferNonSynthetic = true
     ): array {
-        $this->loadNlpEntities($segment);
-        $this->mergeNlpWarnings($warnings);
-        $this->applyNlpAgeConstraints($constraints, $warnings);
-        $this->applyNlpTimeConstraints($constraints, $warnings);
-
         $rules = [];
 
         foreach (($this->nlpGroups ?? []) as $nlpGroup) {
@@ -278,44 +224,58 @@ class RuleBuilderService
         $query = $this->normaliseEitherOrScope($query);
         $query = $this->normaliseImplicitOrScope($query);
 
-        $segments = $this->splitTopLevelOr($query);
-
-        $segmentCount = count($segments);
         $rules = [];
         $warnings = [];
 
         $this->applyConstraints($query, $constraints, $warnings);
 
-        foreach ($segments as $i => $segment) {
-            \Log::info('Finding OMOP concepts for segment: '.$segment);
-            $concepts = $this->getConceptsForSegment(
-                $segment,
-                $constraints,
-                $warnings,
-                $ignoreSynthetic,
-                $preferNonSynthetic
-            );
-            \Log::info('Found '.count($concepts));
+        $this->loadNlpEntities($query);
+        $this->mergeNlpWarnings($warnings);
+        $this->applyNlpAgeConstraints($constraints, $warnings);
+        $this->applyNlpTimeConstraints($constraints, $warnings);
 
-            // If there are multiple concepts, wrap in AND group
+        if ($this->nlpRootOperator === 'or' && ! empty($this->nlpRootGroups)) {
+            $rootGroups = $this->nlpRootGroups;
+            foreach ($rootGroups as $i => $rootGroup) {
+                $this->nlpEntities = collect($rootGroup['entities'] ?? [])
+                    ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
+                    ->map(fn ($g) => $g->values()->all())
+                    ->toArray();
+                $this->nlpGroups = $rootGroup['groups'] ?? [];
+
+                $concepts = $this->buildConceptRules($ignoreSynthetic, $preferNonSynthetic);
+
+                if (count($concepts) > 1) {
+                    $groupNodes = [];
+                    foreach ($concepts as $index => $c) {
+                        if ($index > 0) {
+                            $groupNodes[] = $this->makeOperator('and');
+                        }
+                        $groupNodes[] = $c;
+                    }
+                    $rules[] = $this->makeGroup($groupNodes);
+                } elseif (count($concepts) === 1) {
+                    $rules[] = $concepts[0];
+                }
+
+                if ($i < count($rootGroups) - 1) {
+                    $rules[] = $this->makeOperator('or');
+                }
+            }
+        } else {
+            $concepts = $this->buildConceptRules($ignoreSynthetic, $preferNonSynthetic);
+
             if (count($concepts) > 1) {
-                // Inject AND combinators between multiple concepts
                 $groupNodes = [];
-
                 foreach ($concepts as $index => $c) {
                     if ($index > 0) {
                         $groupNodes[] = $this->makeOperator('and');
                     }
                     $groupNodes[] = $c;
                 }
-
                 $rules[] = $this->makeGroup($groupNodes);
             } elseif (count($concepts) === 1) {
                 $rules[] = $concepts[0];
-            }
-
-            if ($i < $segmentCount - 1) {
-                $rules[] = $this->makeOperator('or');
             }
         }
 

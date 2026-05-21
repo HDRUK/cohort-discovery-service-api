@@ -6,6 +6,7 @@ use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Query;
+use App\Services\Activity\ActivityLogger;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -66,7 +67,7 @@ class QueryController extends Controller
      *     )
      * )
      */
-    public function index(ModelBackedRequest $request): JsonResponse
+    public function index(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $perPage = $this->resolvePerPage();
@@ -76,7 +77,6 @@ class QueryController extends Controller
                 ->applySorting('created_at', 'desc')
                 ->with([
                     'tasks.collection.custodian.network',
-                    'tasks.collection.latestDemographic',
                     'tasks.result',
                 ])
                 ->where('user_id', Auth::id())
@@ -84,13 +84,19 @@ class QueryController extends Controller
                     $query->where('task_type', TaskType::A);
                 });
 
-            $queries = (clone $queryBuilder)->get();
-            foreach ($queries as $query) {
-                $this->authorize('view', $query);
-            }
-            unset($queries);
+            $paginatedQueries = $queryBuilder->paginate($perPage);
 
-            return $this->OKResponse($queryBuilder->paginate($perPage));
+            $activityLogger->viewed('queries', null, [
+                'filters' => $request->all(),
+                'result' => [
+                    'total' => $paginatedQueries->total(),
+                    'returned' => $paginatedQueries->count(),
+                    'page' => $paginatedQueries->currentPage(),
+                    'per_page' => $paginatedQueries->perPage(),
+                ],
+            ]);
+
+            return $this->OKResponse($paginatedQueries);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -126,8 +132,11 @@ class QueryController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function show(ModelBackedRequest $request, mixed $key = null): JsonResponse
-    {
+    public function show(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        mixed $key = null
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
@@ -163,6 +172,8 @@ class QueryController extends Controller
 
             $this->authorize('view', $query);
 
+            $activityLogger->viewed('queries', $query);
+
             return $this->OKResponse($query);
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
@@ -196,13 +207,24 @@ class QueryController extends Controller
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function store(ModelBackedRequest $request): JsonResponse
+    public function store(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
 
         try {
             $result = app(QuerySubmissionService::class)
                 ->handle($validated, Auth::id());
+
+            $query = Query::where('pid', $result['query_pid'] ?? null)->first();
+
+            if ($query) {
+                $activityLogger->created('queries', $query, [
+                    'tasks' => [
+                        'task_count' => $result['task_count'] ?? null,
+                        'task_pids' => $result['task_pids'] ?? [],
+                    ],
+                ]);
+            }
 
             return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
@@ -238,8 +260,11 @@ class QueryController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function update(ModelBackedRequest $request, mixed $key = null): JsonResponse
-    {
+    public function update(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        mixed $key = null,
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
@@ -252,7 +277,17 @@ class QueryController extends Controller
 
             $this->authorize('update', $query);
 
+            $before = $query->only(array_keys($validated));
             if ($query->update($validated)) {
+                $query->refresh();
+
+                $activityLogger->updated(
+                    'queries',
+                    $query,
+                    $before,
+                    $query->only(array_keys($validated))
+                );
+
                 return $this->OKResponse($query);
             }
 
@@ -287,8 +322,11 @@ class QueryController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function destroy(ModelBackedRequest $request, mixed $key = null): JsonResponse
-    {
+    public function destroy(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        mixed $key = null,
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
@@ -302,6 +340,8 @@ class QueryController extends Controller
             $this->authorize('delete', $query);
 
             if ($query->delete()) {
+                $activityLogger->deleted('queries', $query);
+
                 return $this->OKResponse([]);
             }
 
@@ -316,12 +356,20 @@ class QueryController extends Controller
         }
     }
 
-    public function destroyBulk(Request $request): JsonResponse
+    public function destroyBulk(Request $request, ActivityLogger $activityLogger): JsonResponse
     {
         $input = $request->validate(app(Query::class)->getValidationRules('deletebulk'));
 
         try {
             Query::whereIn('pid', $input['keys'])->delete();
+
+            $activityLogger->custom('queries', 'deleted', null, [
+                'query_pids' => $input['keys'],
+                'result' => [
+                    'total' => count($input['keys']),
+                ],
+            ]);
+
             return $this->OKResponse([]);
 
         } catch (\Throwable $e) {
@@ -369,8 +417,12 @@ class QueryController extends Controller
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function download(Request $request, string $pid, string $format = 'csv'): StreamedResponse|BinaryFileResponse|JsonResponse
-    {
+    public function download(
+        Request $request,
+        ActivityLogger $activityLogger,
+        string $pid,
+        string $format = 'csv'
+    ): StreamedResponse|BinaryFileResponse|JsonResponse {
         try {
             $queryBuilder = Query::searchViaRequest()
                 ->filterViaRequest()
@@ -385,6 +437,15 @@ class QueryController extends Controller
             foreach ($queries as $query) {
                 $this->authorize('download', $query);
             }
+
+            $activityLogger->custom('queries', 'downloaded', null, [
+                'filters' => $request->query(),
+                'download' => [
+                    'format' => $format,
+                    'query_pids' => $queries->pluck('pid')->values()->all(),
+                ],
+            ]);
+
             unset($queries);
 
             return $queryBuilder->download($format);
@@ -398,8 +459,11 @@ class QueryController extends Controller
         }
     }
 
-    public function duplicateAndReRun(ModelBackedRequest $request, mixed $key = null): JsonResponse
-    {
+    public function duplicateAndReRun(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        mixed $key = null
+    ): JsonResponse {
         $validated = $request->validated();
         $query = null;
         $data = [];
@@ -419,6 +483,13 @@ class QueryController extends Controller
 
             $result = app(QuerySubmissionService::class)
                 ->handle($data, Auth::id());
+
+            $activityLogger->custom('queries', 'cloned', $query, [
+                'tasks' => [
+                    'task_count' => $result['task_count'] ?? null,
+                    'task_pids' => $result['task_pids'] ?? [],
+                ],
+            ]);
 
             return $this->OKResponse($result);
         } catch (\Throwable $e) {

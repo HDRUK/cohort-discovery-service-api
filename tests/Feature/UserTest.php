@@ -133,6 +133,13 @@ class UserTest extends TestCase
 
     public function test_the_application_can_search_users_or_and(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
+
         $names = [
             [
                 'name' => 'Alice Smith',
