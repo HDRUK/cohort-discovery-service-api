@@ -66,6 +66,7 @@ class User extends Authenticatable implements OAuthenticatable
     protected $fillable = [
         'name',
         'email',
+        'external_id',
         'password',
     ];
 

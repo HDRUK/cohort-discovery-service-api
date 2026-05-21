@@ -1,0 +1,64 @@
+# CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# Order matters — last matching pattern takes precedence.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ====================
+# Default — catch-all
+# ====================
+*                               @HDRUK/tech-team-backend
+
+# ====================
+# CI / DevOps
+# ====================
+.github/                        @HDRUK/tech-team-devops @HDRUK/tech-team-backend
+docker-compose*.yml             @HDRUK/tech-team-devops
+Dockerfile*                     @HDRUK/tech-team-devops
+.env.example                    @HDRUK/tech-team-devops
+
+# ====================
+# App Core
+# ====================
+app/Http/Controllers/           @HDRUK/tech-team-backend
+app/Http/Middleware/            @HDRUK/tech-team-backend
+app/Http/Requests/              @HDRUK/tech-team-backend
+app/Models/                     @HDRUK/tech-team-backend
+app/Services/                   @HDRUK/tech-team-backend
+app/Repositories/               @HDRUK/tech-team-backend
+app/Providers/                  @HDRUK/tech-team-backend
+
+# ====================
+# Routes
+# ====================
+routes/                         @HDRUK/tech-team-backend
+
+# ====================
+# Database
+# ====================
+database/migrations/            @HDRUK/tech-team-backend @HDRUK/tech-team-devops
+database/seeders/               @HDRUK/tech-team-backend
+database/factories/             @HDRUK/tech-team-backend
+
+# ====================
+# Configuration
+# ====================
+config/                         @HDRUK/tech-team-backend @HDRUK/tech-team-devops
+
+# ====================
+# Tests
+# ====================
+tests/                          @HDRUK/tech-team-backend
+
+# ====================
+# Dependencies
+# ====================
+composer.json                   @HDRUK/tech-team-backend @HDRUK/tech-team-devops
+composer.lock                   @HDRUK/tech-team-backend @HDRUK/tech-team-devops
+package.json                    @HDRUK/tech-team-backend @HDRUK/tech-team-devops
+
+# ====================
+# Docs
+# ====================
+README.md                       @HDRUK/tech-team-backend
+docs/                           @HDRUK/tech-team-backend
+*.md                            @HDRUK/tech-team-backend

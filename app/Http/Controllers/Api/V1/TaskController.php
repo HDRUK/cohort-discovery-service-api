@@ -331,13 +331,6 @@ class TaskController extends Controller
 
 
         if (! $task) {
-            $activityLogger->custom('tasks', 'checked', $collection, [
-                'worker' => [
-                    'id' => $workerId,
-                ],
-                'task_type' => $taskType->value,
-            ]);
-
             return $this->NoContentResponse();
         }
 

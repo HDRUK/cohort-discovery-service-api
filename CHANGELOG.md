@@ -1,3 +1,14 @@
+## [1.10.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.9.0...v1.10.0) (2026-05-21)
+
+### ✨ Features
+
+* **DP-000:** Support nested groups in Bunny context (#233) ([69257f0](https://github.com/HDRUK/cohort-discovery-service-api/commit/69257f00f7f5ae5d9a7735cbbf0be0a51def5304)), closes [DP-000](DP-000)
+* **DP-751:** Add in activity logger (#238) ([72b2caa](https://github.com/HDRUK/cohort-discovery-service-api/commit/72b2caa3f223b687387f1aee250319fbfe7ada0e)), closes [DP-751](DP-751)
+* **DP-785:** OmopController SearchConcept Optimisation (#239) ([9d33337](https://github.com/HDRUK/cohort-discovery-service-api/commit/9d333371e325a8444d1a2a373815810f0ff973ae)), closes [DP-785](DP-785)
+* **DP-825:**  Delegate top-level OR parsing to NLP service + performance fixes (#242) ([9c779c6](https://github.com/HDRUK/cohort-discovery-service-api/commit/9c779c67ca3e7e5575bbecbd92a4f8f777a51b5d))
+* **DP-833:** Implementing endpoint for regression testing (#243) ([60ca9f5](https://github.com/HDRUK/cohort-discovery-service-api/commit/60ca9f5ea7ffae0ae7643063448d30142725d48a)), closes [DP-833](DP-833) [endpoint](dpoint)
+* **DP-838:** Record external userId for gateway lookup (#245) ([3884471](https://github.com/HDRUK/cohort-discovery-service-api/commit/388447111f9a4d9f2a596fc83bc8732df81ef2e0)), closes [DP-838](DP-838) [gateway](gateway)
+
 ## [1.9.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.8.1...v1.9.0) (2026-05-11)
 
 ### ✨ Features
