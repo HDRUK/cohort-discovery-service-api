@@ -8,8 +8,11 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
-    public function translate(array $definition, bool $flattenNestedGroups = true): array
+    private bool $useDeathObservation = false;
+
+    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false): array
     {
+        $this->useDeathObservation = $useDeathObservation;
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
@@ -435,14 +438,43 @@ class BunnyQueryContext implements QueryContextInterface
     protected function makeLeafAgeFilter(array $child): array
     {
         $values = $child['value'];
-        $rule = [
+        $ageRule = [
             'varname' => 'AGE',
             'varcat' => 'Person',
             'type' => 'NUM',
             'oper' => '=',
             'value' => $values[0].'|'.$values[1],
         ];
-        return $rule;
+
+        if (! array_key_exists('deceased', $child)) {
+            return $ageRule;
+        }
+
+        return [
+            'rules_oper' => 'AND',
+            'rules' => [$ageRule, $this->makeLeafDeathFilter($child['deceased'])],
+        ];
+    }
+
+    protected function makeLeafDeathFilter(bool $deceased): array
+    {
+        if ($this->useDeathObservation) {
+            return [
+                'varname' => 'OMOP',
+                'varcat'  => 'Observation',
+                'type'    => 'TEXT',
+                'oper'    => $deceased ? '=' : '!=',
+                'value'   => '4306655',
+            ];
+        }
+
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Death',
+            'type'    => 'TEXT',
+            'oper'    => $deceased ? '=' : '!=',
+            'value'   => '',
+        ];
     }
 
     protected function isOperatorNode(array $node): bool

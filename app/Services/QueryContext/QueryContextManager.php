@@ -21,13 +21,17 @@ class QueryContextManager
         }
     }
 
-    public function handle(array $query, QueryContextType $contextType, bool $flattenNestedGroups = true): array
-    {
+    public function handle(
+        array $query,
+        QueryContextType $contextType,
+        bool $flattenNestedGroups = true,
+        bool $useDeathObservation = false
+    ): array {
         $context = $this->contexts[$contextType->value] ?? null;
         if (! $context) {
             throw new UnsupportedContextTypeException($contextType->value);
         }
 
-        return $context->translate($query, $flattenNestedGroups);
+        return $context->translate($query, $flattenNestedGroups, $useDeathObservation);
     }
 }

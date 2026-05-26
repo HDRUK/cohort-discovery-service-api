@@ -655,6 +655,109 @@ class QueryContextTest extends TestCase
         $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
     }*/
 
+    public function test_age_filter_without_deceased_produces_age_rule_only(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [20, 40], 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rule = $result['groups'][0]['rules'][0];
+        $this->assertEquals('AGE', $rule['varname']);
+        $this->assertEquals('20|40', $rule['value']);
+    }
+
+    public function test_age_filter_with_deceased_true_produces_age_and_death_rules(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'deceased' => true, 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+
+        $ageRule = $rules[0];
+        $this->assertEquals('AGE', $ageRule['varname']);
+        $this->assertEquals('0|120', $ageRule['value']);
+
+        $deathRule = $rules[1];
+        $this->assertEquals('OMOP', $deathRule['varname']);
+        $this->assertEquals('Death', $deathRule['varcat']);
+        $this->assertEquals('=', $deathRule['oper']);
+        $this->assertEquals('', $deathRule['value']);
+    }
+
+    public function test_age_filter_with_deceased_false_produces_age_and_alive_rules(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'deceased' => false, 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+
+        $deathRule = $rules[1];
+        $this->assertEquals('OMOP', $deathRule['varname']);
+        $this->assertEquals('Death', $deathRule['varcat']);
+        $this->assertEquals('!=', $deathRule['oper']);
+        $this->assertEquals('', $deathRule['value']);
+    }
+
+    public function test_age_filter_with_deceased_true_uses_observation_when_flag_set(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'deceased' => true, 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input, true, true);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+
+        $deathRule = $rules[1];
+        $this->assertEquals('OMOP', $deathRule['varname']);
+        $this->assertEquals('Observation', $deathRule['varcat']);
+        $this->assertEquals('=', $deathRule['oper']);
+        $this->assertEquals('4306655', $deathRule['value']);
+    }
+
+    public function test_age_filter_with_deceased_false_uses_observation_when_flag_set(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'deceased' => false, 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input, true, true);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+
+        $deathRule = $rules[1];
+        $this->assertEquals('Observation', $deathRule['varcat']);
+        $this->assertEquals('!=', $deathRule['oper']);
+        $this->assertEquals('4306655', $deathRule['value']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager
