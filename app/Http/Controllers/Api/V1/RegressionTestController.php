@@ -134,7 +134,7 @@ class RegressionTestController extends Controller
 
             return $this->OKResponse($service->run($test));
         } catch (\Throwable $e) {
-            \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
+            \Log::error('RegressionTestController@runAll - failed: '.$e->getMessage());
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -155,7 +155,7 @@ class RegressionTestController extends Controller
 
             return $this->OKResponse($service->run($test, $collection));
         } catch (\Throwable $e) {
-            \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
+            \Log::error('RegressionTestController@runSingle - failed: '.$e->getMessage());
             return $this->ErrorResponse($e->getMessage());
         }
     }
