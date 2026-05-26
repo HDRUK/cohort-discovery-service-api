@@ -24,6 +24,11 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
+    public function __construct(
+        private readonly ConceptCandidateResolver $conceptCandidateResolver
+    ) {
+    }
+
     private function normaliseImplicitOrScope(string $query): string
     {
         if (str_contains($query, '(') || str_contains($query, ')')) {
@@ -84,6 +89,8 @@ class RuleBuilderService
                 continue;
             }
 
+            // NLP identifies the term and query structure, then API concept search resolves the final ranked concepts used by rules.
+            $candidates = $this->conceptCandidateResolver->resolveGroup($textKey, $candidates);
             $originalCandidates = $candidates;
 
             if ($ignoreSynthetic) {
@@ -471,6 +478,9 @@ class RuleBuilderService
             if (empty($candidates)) {
                 continue;
             }
+
+            // Grouped terms use the same final concept resolution path as standalone terms.
+            $candidates = $this->conceptCandidateResolver->resolveGroup($textKey, $candidates);
 
             usort(
                 $candidates,
