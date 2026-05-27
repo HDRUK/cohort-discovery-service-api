@@ -24,15 +24,13 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
 
-      - uses: actions/checkout@v6
-
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }} "
-          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
+          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }}"
+          echo "docker_build_args=${ARGS}" | tr -d '\n' >> "$GITHUB_OUTPUT"
 
-  build-integrated:
+  build:
     needs: setup
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
@@ -42,7 +40,7 @@ jobs:
     secrets: inherit
 
   deploy-integrated:
-    needs: build-integrated
+    needs: build
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
       env: dev-integrated
@@ -50,17 +48,8 @@ jobs:
       git_ref: dev
     secrets: inherit
 
-  build-stadalone:
-    needs: setup
-    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
-    with:
-      chart_path: chart/cohort-api/Chart.yaml
-      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
-      environment: dev-standalone
-    secrets: inherit
-
   deploy-stadalone:
-    needs: build-stadalone
+    needs: build
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
       env: dev-standalone
