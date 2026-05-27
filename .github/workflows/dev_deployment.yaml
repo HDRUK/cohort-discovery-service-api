@@ -14,21 +14,11 @@ jobs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
 
     steps:
-      - name: Generate GitHub App token
-        id: generate-deployment-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
-
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }}"
-          echo "docker_build_args=${ARGS}" | tr -d '\n' >> "$GITHUB_OUTPUT"
+          ARGS+="--build-arg GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
   build:
     needs: setup
