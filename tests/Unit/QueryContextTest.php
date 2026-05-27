@@ -655,6 +655,52 @@ class QueryContextTest extends TestCase
         $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
     }*/
 
+    public function test_multi_concept_rule_expands_to_or_groups(): void
+    {
+        $input = ['id' => 'root', 'rules' => [
+            ['id' => 'r1', 'exclude' => false, 'rule' => ['concept' => [
+                ['concept_id' => 37311061, 'category' => 'Condition'],
+                ['concept_id' => 605554,   'category' => 'Condition'],
+                ['concept_id' => 37311060, 'category' => 'Observation'],
+            ]], 'valid' => true],
+        ]];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(3, $result['groups']);
+        $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
+        $this->assertEquals('Condition', $result['groups'][0]['rules'][0]['varcat']);
+        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
+        $this->assertEquals('37311060', $result['groups'][2]['rules'][0]['value']);
+        $this->assertEquals('Observation', $result['groups'][2]['rules'][0]['varcat']);
+    }
+
+    public function test_multi_concept_rule_anded_with_single_concept_distributes(): void
+    {
+        $input = ['id' => 'root', 'rules' => [
+            ['id' => 'r1', 'exclude' => false, 'rule' => ['concept' => [
+                ['concept_id' => 37311061, 'category' => 'Condition'],
+                ['concept_id' => 605554,   'category' => 'Condition'],
+            ]], 'valid' => true],
+            ['id' => 'op', 'combinator' => 'and'],
+            ['id' => 'r2', 'exclude' => false, 'rule' => ['concept' => [
+                'concept_id' => 3955322, 'category' => 'Drug',
+            ]], 'valid' => true],
+        ]];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // (C1 OR C2) AND D  →  (C1 AND D) OR (C2 AND D)
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
+        $this->assertCount(2, $result['groups'][0]['rules']); // C1 + D
+        $this->assertCount(2, $result['groups'][1]['rules']); // C2 + D
+        $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
+        $this->assertEquals('3955322',  $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('605554',   $result['groups'][1]['rules'][0]['value']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager
