@@ -19,7 +19,7 @@ jobs:
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GITHUB_TOKEN "
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
   setup-prod:
@@ -31,7 +31,7 @@ jobs:
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GITHUB_TOKEN "
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
   build-preprod:
