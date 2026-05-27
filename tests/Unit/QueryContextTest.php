@@ -758,6 +758,41 @@ class QueryContextTest extends TestCase
         $this->assertEquals('4306655', $deathRule['value']);
     }
 
+    public function test_age_filter_with_location_produces_age_and_location_rules(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432'], 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
+        $this->assertEquals('Location', $rules[1]['varcat']);
+        $this->assertEquals(['S01014432'], $rules[1]['secondary_modifier']);
+        $this->assertEquals('', $rules[1]['value']);
+    }
+
+    public function test_age_filter_with_multiple_locations_passes_all_as_secondary_modifier(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432', 'S01014433'], 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+        $this->assertEquals(['S01014432', 'S01014433'], $rules[1]['secondary_modifier']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager

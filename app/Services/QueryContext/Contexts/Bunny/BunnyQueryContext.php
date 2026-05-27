@@ -440,19 +440,41 @@ class BunnyQueryContext implements QueryContextInterface
         $values = $child['value'];
         $ageRule = [
             'varname' => 'AGE',
-            'varcat' => 'Person',
-            'type' => 'NUM',
-            'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
+            'varcat'  => 'Person',
+            'type'    => 'NUM',
+            'oper'    => '=',
+            'value'   => $values[0].'|'.$values[1],
         ];
 
-        if (! array_key_exists('deceased', $child)) {
+        $extra = [];
+
+        if (array_key_exists('location', $child)) {
+            $extra[] = $this->makeLeafLocationFilter($child['location']);
+        }
+
+        if (array_key_exists('deceased', $child)) {
+            $extra[] = $this->makeLeafDeathFilter($child['deceased']);
+        }
+
+        if (empty($extra)) {
             return $ageRule;
         }
 
         return [
             'rules_oper' => 'AND',
-            'rules' => [$ageRule, $this->makeLeafDeathFilter($child['deceased'])],
+            'rules'      => array_merge([$ageRule], $extra),
+        ];
+    }
+
+    protected function makeLeafLocationFilter(array $location): array
+    {
+        return [
+            'varname'            => 'OMOP',
+            'varcat'             => 'Location',
+            'type'               => 'TEXT',
+            'oper'               => '=',
+            'value'              => '',
+            'secondary_modifier' => $location,
         ];
     }
 
