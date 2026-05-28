@@ -655,6 +655,34 @@ class QueryContextTest extends TestCase
         $this->assertEquals('Gender:F', $firstRule['id'] ?? null);
     }*/
 
+    public function test_multi_concept_rule_propagates_age_constraint_to_all_expanded_rules(): void
+    {
+        $input = ['id' => 'root', 'rules' => [
+            [
+                'id'            => 'r1',
+                'exclude'       => false,
+                'rule'          => ['concept' => [
+                    ['concept_id' => 605554,   'category' => 'Condition'],
+                    ['concept_id' => 3959296,  'category' => 'Observation'],
+                    ['concept_id' => 37311061, 'category' => 'Condition'],
+                ]],
+                'valid'         => true,
+                'ageConstraint' => [10, null],
+            ],
+        ]];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(3, $result['groups']);
+
+        foreach ($result['groups'] as $group) {
+            $rule = $group['rules'][0];
+            $this->assertArrayHasKey('time', $rule, 'Each expanded concept rule must carry the age constraint');
+            $this->assertEquals('10|:AGE:Y', $rule['time']);
+        }
+    }
+
     public function test_multi_concept_rule_expands_to_or_groups(): void
     {
         $input = ['id' => 'root', 'rules' => [
