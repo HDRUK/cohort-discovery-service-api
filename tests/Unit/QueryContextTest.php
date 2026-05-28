@@ -706,16 +706,31 @@ class QueryContextTest extends TestCase
 
     public function test_multi_concept_rule_anded_with_single_concept_distributes(): void
     {
-        $input = ['id' => 'root', 'rules' => [
-            ['id' => 'r1', 'exclude' => false, 'rule' => ['concept' => [
-                ['concept_id' => 37311061, 'category' => 'Condition'],
-                ['concept_id' => 605554,   'category' => 'Condition'],
-            ]], 'valid' => true],
-            ['id' => 'op', 'combinator' => 'and'],
-            ['id' => 'r2', 'exclude' => false, 'rule' => ['concept' => [
-                'concept_id' => 3955322, 'category' => 'Drug',
-            ]], 'valid' => true],
-        ]];
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'      => 'r1',
+                    'exclude' => false,
+                    'rule'    => [
+                        'concept' => [
+                            ['concept_id' => 37311061, 'category' => 'Condition'],
+                            ['concept_id' => 605554,   'category' => 'Condition'],
+                        ],
+                    ],
+                    'valid'   => true,
+                ],
+                ['id' => 'op', 'combinator' => 'and'],
+                [
+                    'id'      => 'r2',
+                    'exclude' => false,
+                    'rule'    => [
+                        'concept' => ['concept_id' => 3955322, 'category' => 'Drug'],
+                    ],
+                    'valid'   => true,
+                ],
+            ],
+        ];
 
         $result = $this->bunnyContext->translate($input);
 
