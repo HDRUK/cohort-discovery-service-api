@@ -725,8 +725,8 @@ class QueryContextTest extends TestCase
         $this->assertCount(2, $result['groups'][0]['rules']); // C1 + D
         $this->assertCount(2, $result['groups'][1]['rules']); // C2 + D
         $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
-        $this->assertEquals('3955322',  $result['groups'][0]['rules'][1]['value']);
-        $this->assertEquals('605554',   $result['groups'][1]['rules'][0]['value']);
+        $this->assertEquals('3955322', $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
     }
 
     public function test_application_can_translate_via_manager(): void
