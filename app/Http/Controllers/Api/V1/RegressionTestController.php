@@ -126,17 +126,36 @@ class RegressionTestController extends Controller
         }
     }
 
-    public function run(RegressionTestService $service, string $pid): JsonResponse
+    public function runAll(RegressionTestService $service, string $pid): JsonResponse
     {
         try {
             $test = RegressionTest::where('pid', $pid)->firstOrFail();
-
             $this->authorize('run', $test);
 
             return $this->OKResponse($service->run($test));
         } catch (\Throwable $e) {
-            \Log::error('RegressionTestController@run - failed: '.$e->getMessage());
+            \Log::error('RegressionTestController@runAll - failed: '.$e->getMessage());
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
 
+    public function runSingle(RegressionTestService $service, string $pid, string $collectionPid): JsonResponse
+    {
+        try {
+            $test = RegressionTest::where('pid', $pid)->firstOrFail();
+            $this->authorize('run', $test);
+
+            $collection = $test->collections()
+                ->where('pid', $collectionPid)
+                ->first();
+
+            if (!$collection) {
+                return $this->ValidationErrorResponse(['collection_pid' => ['Collection not linked to this regression test.']]);
+            }
+
+            return $this->OKResponse($service->run($test, $collection));
+        } catch (\Throwable $e) {
+            \Log::error('RegressionTestController@runSingle - failed: '.$e->getMessage());
             return $this->ErrorResponse($e->getMessage());
         }
     }
