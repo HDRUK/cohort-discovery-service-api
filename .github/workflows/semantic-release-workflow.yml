@@ -12,30 +12,7 @@ jobs:
       chart_path: chart/soursd-web/Chart.yaml
     secrets: inherit
 
-  setup-preprod:
-    runs-on: ubuntu-latest
-    environment: preprod
-    outputs:
-      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - id: args
-        run: |
-          ARGS=""
-          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
-          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
-
-  build-preprod:
-    needs: setup-preprod
-    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
-    with:
-      chart_path: chart/cohort-api/Chart.yaml
-      docker_build_args: ${{ needs.setup-preprod.outputs.docker_build_args }}
-      environment: preprod
-    secrets: inherit
-
-  setup-prod:
+  setup:
     runs-on: ubuntu-latest
     environment: prod
     outputs:
@@ -50,10 +27,10 @@ jobs:
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
   build-prod:
-    needs: setup-prod
+    needs: setup
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
       chart_path: chart/cohort-api/Chart.yaml
-      docker_build_args: ${{ needs.setup-prod.outputs.docker_build_args }}
+      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
       environment: prod
     secrets: inherit
