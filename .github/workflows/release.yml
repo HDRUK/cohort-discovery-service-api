@@ -13,23 +13,12 @@ jobs:
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
     steps:
-
       - uses: actions/checkout@v6
-
       - id: args
         run: |
           ARGS=""
           ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
-
-  build-preprod:
-    needs: setup
-    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
-    with:
-      environment: preprod
-      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
-      chart_path: chart/soursd-api/Chart.yaml
-    secrets: inherit
 
   build-prod:
     needs: setup
