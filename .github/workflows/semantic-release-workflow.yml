@@ -26,7 +26,7 @@ jobs:
           ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
-  build:
+  build-prod:
     needs: setup
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
