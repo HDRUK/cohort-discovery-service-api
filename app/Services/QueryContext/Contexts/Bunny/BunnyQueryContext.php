@@ -8,8 +8,11 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
-    public function translate(array $definition, bool $flattenNestedGroups = true): array
+    private bool $useDeathObservation = false;
+
+    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false): array
     {
+        $this->useDeathObservation = $useDeathObservation;
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
@@ -451,14 +454,79 @@ class BunnyQueryContext implements QueryContextInterface
     protected function makeLeafAgeFilter(array $child): array
     {
         $values = $child['value'];
-        $rule = [
+        $ageRule = [
             'varname' => 'AGE',
-            'varcat' => 'Person',
-            'type' => 'NUM',
-            'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
+            'varcat'  => 'Person',
+            'type'    => 'NUM',
+            'oper'    => '=',
+            'value'   => $values[0].'|'.$values[1],
         ];
-        return $rule;
+
+        $extra = [];
+
+        if (array_key_exists('location', $child)) {
+            $loc = $child['location'];
+            $extra[] = isset($loc['lat'])
+                ? $this->makeLeafGeoRadiusFilter($loc)
+                : $this->makeLeafLocationFilter($loc);
+        }
+
+        if (array_key_exists('deceased', $child)) {
+            $extra[] = $this->makeLeafDeathFilter($child['deceased']);
+        }
+
+        if (empty($extra)) {
+            return $ageRule;
+        }
+
+        return [
+            'rules_oper' => 'AND',
+            'rules'      => array_merge([$ageRule], $extra),
+        ];
+    }
+
+    protected function makeLeafLocationFilter(array $location): array
+    {
+        return [
+            'varname'            => 'OMOP',
+            'varcat'             => 'Location',
+            'type'               => 'TEXT',
+            'oper'               => '=',
+            'value'              => '',
+            'secondary_modifier' => $location,
+        ];
+    }
+
+    protected function makeLeafGeoRadiusFilter(array $location): array
+    {
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Location',
+            'type'    => 'GEO_RADIUS',
+            'oper'    => '=',
+            'value'   => $location['lat'].'|'.$location['lon'].'|'.$location['radius'],
+        ];
+    }
+
+    protected function makeLeafDeathFilter(bool $deceased): array
+    {
+        if ($this->useDeathObservation) {
+            return [
+                'varname' => 'OMOP',
+                'varcat'  => 'Observation',
+                'type'    => 'TEXT',
+                'oper'    => $deceased ? '=' : '!=',
+                'value'   => '4306655',
+            ];
+        }
+
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Death',
+            'type'    => 'TEXT',
+            'oper'    => $deceased ? '=' : '!=',
+            'value'   => '',
+        ];
     }
 
     protected function isOperatorNode(array $node): bool

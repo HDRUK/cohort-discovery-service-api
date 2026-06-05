@@ -19,6 +19,9 @@ class CollectionMetadata extends Model
         'datamodel',
         'rounding',
         'threshold',
+        'death_filter',
+        'supports_death_filter',
+        'supports_location_filter',
     ];
 
     public function collection(): BelongsTo

@@ -256,6 +256,16 @@ class ProcessDistributionFile implements ShouldQueue
             Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
             RefreshDistributionConceptsView::dispatch();
 
+            $metadataFile = ResultFile::where('collection_id', $file->collection_id)
+                ->where('file_name', 'like', '%metadata.bcos')
+                ->where('status', ResultFile::STATUS_DONE)
+                ->latest('id')
+                ->first();
+
+            if ($metadataFile) {
+                SyncCollectionDeathFilter::dispatch($metadataFile->id);
+            }
+
             $file->markDone($rowsSeen);
 
             Log::info('[' . $this->tag . '] finished', [

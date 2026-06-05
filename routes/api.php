@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
+use App\Http\Controllers\Api\V1\PostcodeLookupController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CustodianNetworkController;
 use App\Http\Controllers\Api\V1\DistributionController;
@@ -79,6 +80,13 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
 });
 
+
+Route::middleware([
+        'throttle:polling',
+        CollectionHostBasicAuth::class
+    ])->group(function () {
+        Route::get('/v1/lookup/postcode', [PostcodeLookupController::class, 'lookup']);
+});
 
 Route::prefix('v1/task')
     ->middleware([

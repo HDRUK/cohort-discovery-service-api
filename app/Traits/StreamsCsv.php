@@ -11,7 +11,7 @@ trait StreamsCsv
      *
      * @return \Generator<array<string, string|null>>
      */
-    protected function csvRows(string $fullPath): \Generator
+    protected function csvRows(string $fullPath, string $delimiter = ','): \Generator
     {
         if (! is_readable($fullPath)) {
             throw new \RuntimeException("CSV not readable: {$fullPath}");
@@ -23,7 +23,7 @@ trait StreamsCsv
         }
 
         try {
-            $header = fgetcsv($fh);
+            $header = fgetcsv($fh, 0, $delimiter);
             if ($header === false) {
                 return;
             }
@@ -35,7 +35,7 @@ trait StreamsCsv
                 return trim((string) $h);
             }, $header);
 
-            while (($row = fgetcsv($fh)) !== false) {
+            while (($row = fgetcsv($fh, 0, $delimiter)) !== false) {
                 // Skip empty lines
                 if ($row === [null] || $row === false) {
                     continue;

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDistributionFile;
 use App\Jobs\ProcessMetadataFile;
 use App\Models\Collection;
+use App\Models\Distribution;
 use App\Models\Result;
 use App\Models\ResultFile;
 use App\Models\Task;
@@ -403,10 +404,23 @@ class TaskController extends Controller
             ]);
         }
 
+        $deathFilter = $collection->latestMetadata?->death_filter;
+        if ($deathFilter === null) {
+            $latestFile = $collection->latestSuccessfulConceptResultFile;
+            $hasDeathDist = $latestFile
+                ? Distribution::where('collection_id', $collection->id)
+                    ->where('task_id', $latestFile->task_id)
+                    ->where('category', 'Death')
+                    ->exists()
+                : false;
+            $deathFilter = $hasDeathDist ? 1 : 0;
+        }
+        $useDeathObservation = $deathFilter === 0;
+
         $translatedQuery = null;
         try {
             $contextType = $collection->type;
-            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'));
+            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'), $useDeathObservation);
         } catch (\ValueError $e) {
             $message = 'Unsupported collection type';
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)

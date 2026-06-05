@@ -9,7 +9,7 @@ interface QueryContextInterface
     /**
      * Translate the given query context to a specific format.
      */
-    public function translate(array $query): array;
+    public function translate(array $query, bool $flattenNestedGroups = true, bool $useDeathObservation = false): array;
 
     /**
      * Return the type of this QueryContentInterface.

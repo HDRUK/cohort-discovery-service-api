@@ -13,6 +13,8 @@ class FeatureSeeder extends Seeder
         'query-builder-show-concept-stats' => false,
         'query-builder-use-stats-in-ordering' => false,
         'query-builder-use-collections-in-search' => false,
+        'query-builder-death-filter' => true,
+        'query-builder-location-filter' => true,
         'constrain-for-bunny-v1' => true,
         'query-builder-allow-nested-groups' => false,
         'flatten-nested-groups' => true,
