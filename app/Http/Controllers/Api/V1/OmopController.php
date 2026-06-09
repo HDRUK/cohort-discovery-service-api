@@ -152,9 +152,9 @@ class OmopController extends Controller
                     continue;
                 }
 
-                $normalized = preg_replace('/[^a-zA-Z0-9]+/', '%', $term);
+                $normalised = preg_replace('/[^a-zA-Z0-9]+/', '%', $term);
                 $searchConditions[] = 'd.description LIKE ?';
-                $searchBindings[]   = '%' . $normalized . '%';
+                $searchBindings[]   = '%' . $normalised . '%';
             }
 
             if ($searchConditions) {
