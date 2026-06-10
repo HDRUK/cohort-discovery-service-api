@@ -856,7 +856,7 @@ class QueryContextTest extends TestCase
             ],
         ];
 
-        $result = $this->bunnyContext->translate($input);
+        $result = $this->bunnyContext->translate($input, supportsLocation: true);
 
         $rules = $result['groups'][0]['rules'];
         $this->assertCount(2, $rules);
@@ -875,7 +875,7 @@ class QueryContextTest extends TestCase
             ],
         ];
 
-        $result = $this->bunnyContext->translate($input);
+        $result = $this->bunnyContext->translate($input, supportsLocation: true);
 
         $rules = $result['groups'][0]['rules'];
         $this->assertCount(2, $rules);
@@ -896,7 +896,7 @@ class QueryContextTest extends TestCase
             ],
         ];
 
-        $result = $this->bunnyContext->translate($input);
+        $result = $this->bunnyContext->translate($input, supportsLocation: true);
 
         $rules = $result['groups'][0]['rules'];
         $this->assertCount(2, $rules);
@@ -924,10 +924,47 @@ class QueryContextTest extends TestCase
             ],
         ];
 
-        $result = $this->bunnyContext->translate($input);
+        $result = $this->bunnyContext->translate($input, supportsLocation: true);
 
         $locationRule = $result['groups'][0]['rules'][1];
         $this->assertEquals('53.4808|-2.2426|10000', $locationRule['value']);
+    }
+
+    public function test_location_stripped_when_supports_location_false(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432'], 'valid' => true],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input, supportsLocation: false);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(1, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
+    }
+
+    public function test_geo_radius_stripped_when_supports_location_false(): void
+    {
+        $input = [
+            'id' => 'root',
+            'rules' => [
+                [
+                    'id' => 'r1',
+                    'value' => [0, 120],
+                    'location' => ['lat' => 51.5074, 'lon' => -0.1278, 'radius' => 5000],
+                    'valid' => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input, supportsLocation: false);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(1, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
     }
 
     public function test_application_can_translate_via_manager(): void

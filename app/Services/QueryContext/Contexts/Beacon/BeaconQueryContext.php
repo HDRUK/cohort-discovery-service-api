@@ -10,7 +10,7 @@ use Throwable;
 
 class BeaconQueryContext implements QueryContextInterface
 {
-    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false): array
+    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false, bool $supportsLocation = false): array
     {
         // note: this is discovery work
         // - still a lot to be done and improved upon

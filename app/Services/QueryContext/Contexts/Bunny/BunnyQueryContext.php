@@ -10,9 +10,12 @@ class BunnyQueryContext implements QueryContextInterface
 {
     private bool $useDeathObservation = false;
 
-    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false): array
+    private bool $supportsLocation = false;
+
+    public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false, bool $supportsLocation = false): array
     {
         $this->useDeathObservation = $useDeathObservation;
+        $this->supportsLocation = $supportsLocation;
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
@@ -464,7 +467,7 @@ class BunnyQueryContext implements QueryContextInterface
 
         $extra = [];
 
-        if (array_key_exists('location', $child)) {
+        if (array_key_exists('location', $child) && $this->supportsLocation) {
             $loc = $child['location'];
             $extra[] = isset($loc['lat'])
                 ? $this->makeLeafGeoRadiusFilter($loc)

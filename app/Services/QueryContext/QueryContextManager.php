@@ -25,13 +25,14 @@ class QueryContextManager
         array $query,
         QueryContextType $contextType,
         bool $flattenNestedGroups = true,
-        bool $useDeathObservation = false
+        bool $useDeathObservation = false,
+        bool $supportsLocation = false,
     ): array {
         $context = $this->contexts[$contextType->value] ?? null;
         if (! $context) {
             throw new UnsupportedContextTypeException($contextType->value);
         }
 
-        return $context->translate($query, $flattenNestedGroups, $useDeathObservation);
+        return $context->translate($query, $flattenNestedGroups, $useDeathObservation, $supportsLocation);
     }
 }

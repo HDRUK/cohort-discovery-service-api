@@ -263,7 +263,7 @@ class ProcessDistributionFile implements ShouldQueue
                 ->first();
 
             if ($metadataFile) {
-                SyncCollectionDeathFilter::dispatch($metadataFile->id);
+                SyncCollectionCapabilities::dispatch($metadataFile->id);
             }
 
             $file->markDone($rowsSeen);

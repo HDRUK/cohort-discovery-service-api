@@ -85,8 +85,8 @@ Route::middleware([
         'throttle:polling',
         CollectionHostBasicAuth::class
     ])->group(function () {
-        Route::get('/v1/lookup/postcode', [PostcodeLookupController::class, 'lookup']);
-});
+        Route::post('/v1/lookup/postcode', [PostcodeLookupController::class, 'lookup']);
+    });
 
 Route::prefix('v1/task')
     ->middleware([

@@ -22,6 +22,12 @@ class CollectionMetadata extends Model
         'death_filter',
         'supports_death_filter',
         'supports_location_filter',
+        'supports_condition',
+        'supports_drug',
+        'supports_observation',
+        'supports_measurement',
+        'supports_demographics',
+        'location_has_coordinates',
     ];
 
     public function collection(): BelongsTo

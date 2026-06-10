@@ -417,10 +417,12 @@ class TaskController extends Controller
         }
         $useDeathObservation = $deathFilter === 0;
 
+        $supportsLocation = (bool) ($collection->latestMetadata?->supports_location_filter ?? 0);
+
         $translatedQuery = null;
         try {
             $contextType = $collection->type;
-            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'), $useDeathObservation);
+            $translatedQuery = $contextManager->handle($rawQuery, $contextType, Feature::active('flatten-nested-groups'), $useDeathObservation, $supportsLocation);
         } catch (\ValueError $e) {
             $message = 'Unsupported collection type';
             TaskRun::where('task_id', $task->id)->where('attempt', $task->attempts)
