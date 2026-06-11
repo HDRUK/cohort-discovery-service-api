@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'slack_webhook' => [
+        'url' => env('SLACK_WEBHOOK_URL'),
+    ],
+
     'nlp' => [
         'base_uri' => env('COHORT_DISCOVER_NLP_SERVICE_BASE_URI'),
     ],

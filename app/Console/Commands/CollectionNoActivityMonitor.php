@@ -8,6 +8,7 @@ use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
 use App\Enums\TaskType;
 use DB;
+use Illuminate\Support\Facades\Http;
 use Log;
 
 class CollectionNoActivityMonitor implements ApiCommand
@@ -44,6 +45,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
                     $this->setCollectionSuspended($c);
+                    $this->notifySlack($c);
                 } else {
                     $this->logActivity($c->id);
                 }
@@ -87,6 +89,23 @@ class CollectionNoActivityMonitor implements ApiCommand
             'slug',
             Collection::STATUS_ACTIVE
         )->get();
+    }
+
+    private function notifySlack(Collection $c): void
+    {
+        $url = config('services.slack_webhook.url');
+
+        if (!$url) {
+            return;
+        }
+
+        try {
+            Http::post($url, [
+                'text' => "Collection suspended due to inactivity: *{$c->name}* (ID: `{$c->id}`)",
+            ]);
+        } catch (\Throwable) {
+            // Slack failure must not break the monitor command
+        }
     }
 
     private function logNoActivity(int $collectionId): void
