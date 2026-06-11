@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
 use App\Models\Collection;
+use App\Services\Notifications\SlackNotifier;
 use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
 use App\Enums\TaskType;
 use DB;
-use Illuminate\Support\Facades\Http;
 use Log;
 
 class CollectionNoActivityMonitor implements ApiCommand
@@ -93,19 +93,9 @@ class CollectionNoActivityMonitor implements ApiCommand
 
     private function notifySlack(Collection $c): void
     {
-        $url = config('services.slack_webhook.url');
-
-        if (!$url) {
-            return;
-        }
-
-        try {
-            Http::post($url, [
-                'text' => "Collection suspended due to inactivity: *{$c->name}* (ID: `{$c->id}`)",
-            ]);
-        } catch (\Throwable) {
-            // Slack failure must not break the monitor command
-        }
+        app(SlackNotifier::class)->send(
+            "Collection suspended due to inactivity: *{$c->name}* (ID: `{$c->id}`)"
+        );
     }
 
     private function logNoActivity(int $collectionId): void
