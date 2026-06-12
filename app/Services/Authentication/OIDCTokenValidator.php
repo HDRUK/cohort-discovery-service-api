@@ -3,6 +3,7 @@
 namespace App\Services\Authentication;
 
 use App\Models\User;
+use App\Models\Workgroup;
 use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
 use GuzzleHttp\Client;
@@ -44,6 +45,8 @@ class OIDCTokenValidator
         $oidcSub = $this->resolveOidcSub($claims, $userInfo);
         $user = User::where('oidc_sub', $oidcSub)->first()
             ?? $this->provisionUserFromOidc($oidcSub, $userInfo, $claims);
+
+        $this->syncWorkgroupsFromEntitlements($user, $userInfo, $claims);
 
         return [
             'user' => $user,
@@ -392,5 +395,57 @@ class OIDCTokenValidator
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $userInfo
+     * @param  array<string, mixed>  $claims
+     */
+    private function syncWorkgroupsFromEntitlements(User $user, array $userInfo, array $claims): void
+    {
+        $entitlements = $this->resolveEdupersonEntitlement($userInfo, $claims);
+
+        if ($entitlements === []) {
+            return;
+        }
+
+        $workgroupIds = Workgroup::whereIn('claim_value', $entitlements)
+            ->pluck('id')
+            ->all();
+
+        if ($workgroupIds !== []) {
+            $user->workgroups()->sync($workgroupIds);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $userInfo
+     * @param  array<string, mixed>  $claims
+     * @return list<string>
+     */
+    private function resolveEdupersonEntitlement(array $userInfo, array $claims): array
+    {
+        $raw = $userInfo['eduperson_entitlement']
+            ?? $claims['eduperson_entitlement']
+            ?? null;
+
+        if ($raw === null) {
+            return [];
+        }
+
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded, 'is_string'));
+            }
+
+            return [$raw];
+        }
+
+        if (is_array($raw)) {
+            return array_values(array_filter($raw, 'is_string'));
+        }
+
+        return [];
     }
 }

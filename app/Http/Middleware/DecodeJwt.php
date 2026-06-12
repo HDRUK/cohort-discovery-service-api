@@ -29,6 +29,7 @@ class DecodeJwt
         private readonly RoleSyncerService $roleSyncer,
         private readonly CustodianSyncerService $custodianSyncer,
         private readonly UserInfoSyncerService $userInfoSyncer,
+        private readonly ValidateOidcToken $validateOidcToken,
     ) {
     }
 
