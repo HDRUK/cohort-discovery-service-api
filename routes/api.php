@@ -168,7 +168,9 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/regression-tests/{pid}', [RegressionTestController::class, 'show'])->whereUuid('pid');
     Route::put('/v1/regression-tests/{pid}', [RegressionTestController::class, 'update'])->whereUuid('pid');
     Route::delete('/v1/regression-tests/{pid}', [RegressionTestController::class, 'destroy'])->whereUuid('pid');
-    Route::post('/v1/regression-tests/{pid}/run', [RegressionTestController::class, 'run'])->whereUuid('pid');
+    Route::post('/v1/regression-tests/{pid}/run', [RegressionTestController::class, 'runAll'])->whereUuid('pid');
+    Route::post('/v1/regression-tests/{pid}/run/{collectionPid}', [RegressionTestController::class, 'runSingle'])->whereUuid('pid')->whereUuid('collectionPid');
+
 
     // Custodian Networks - "public" routes.
     Route::get('/v1/custodian_networks', [CustodianNetworkController::class, 'index']);

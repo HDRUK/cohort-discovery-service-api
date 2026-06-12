@@ -1,74 +1,15 @@
 name: PR Title Validation
 
+permissions:
+  contents: read
+  actions: read
+
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited, synchronize]
+
 
 jobs:
   check-title:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate GitHub App token
-        id: generate-deployment-token
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
-
-      - name: Check PR Title Format
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-deployment-token.outputs.token }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_REPO: ${{ github.repository }}
-        run: |
-          TITLE="$PR_TITLE"
-          REPO="$PR_REPO"
-
-          echo "PR Title: $TITLE"
-
-          # Define regex patterns
-          RELEASE_PATTERN="^RELEASE: .+$"
-          REVERT_PATTERN="^Revert .+$"
-          STANDARD_PATTERN="^(feat|fix|chore|docs|style|refactor|test|perf)(!?)\(DP-[0-9]+\): .+$"
-
-          if echo "$TITLE" | grep -E -q "$RELEASE_PATTERN"; then
-            echo "✅ PR title is a valid RELEASE PR!"
-
-            COMMENT="🎉 **Great job!** Your PR title follows the correct format for a release. 🚀"
-          elif echo "$TITLE" | grep -E -q "$STANDARD_PATTERN"; then
-            echo "✅ PR title is valid!"
-
-            COMMENT="🎉 **Great job!** Your PR title follows the correct format. 🚀"
-          elif echo "$TITLE" | grep -E -q "$REVERT_PATTERN"; then
-            echo "✅ PR title is a valid REVERT PR!"
-
-            COMMENT="🎉 **Great job!** Your PR title is a valid revert PR. 👍"
-          else
-            echo "❌ Invalid PR title format!"
-
-            COMMENT="🚨 **Invalid PR title format!**\n\nYour PR title must follow one of these formats:\n- \`feat(DP-1234): Your title\`\n- \`fix!(DP-5678): Breaking change\`\n- \`RELEASE: vX.Y.Z\`\n\nPlease update your PR title accordingly. 😊"
-            
-            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" \
-              -d "{\"body\": \"$COMMENT\"}"
-
-            exit 1
-          fi
-
-          # Check if an existing comment already exists
-          EXISTING_COMMENT=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" | jq -r '.[] | select(.body | contains("Great job!")) | .id')
-
-          if [[ -z "$EXISTING_COMMENT" ]]; then
-            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" \
-              -d "{\"body\": \"$COMMENT\"}"
-          fi
+    uses: HDRUK/github-actions-templates/.github/workflows/pr-title-check.yml@main
+    secrets: inherit

@@ -394,6 +394,22 @@ class BunnyQueryContext implements QueryContextInterface
     protected function makeLeafRule(array $child): array
     {
         $concept = $child['rule']['concept'];
+
+        if (array_is_list($concept)) {
+            return [
+                'rules_oper' => 'OR',
+                'rules'      => array_map(
+                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
+                    $concept
+                ),
+            ];
+        }
+
+        return $this->makeSingleConceptRule($child, $concept);
+    }
+
+    private function makeSingleConceptRule(array $child, array $concept): array
+    {
         $isExcluded = (bool) ($child['exclude'] ?? false);
         $timeConstraint = $child['timeConstraint'] ?? [null, null];
         $ageConstraint = $child['ageConstraint'] ?? [null, null];
@@ -406,10 +422,10 @@ class BunnyQueryContext implements QueryContextInterface
 
         $rule = [
             'varname' => 'OMOP',
-            'varcat' => $category,
-            'type' => 'TEXT',
-            'oper' => $isExcluded ? '!=' : '=',
-            'value' => (string) ($concept['concept_id'] ?? ''),
+            'varcat'  => $category,
+            'type'    => 'TEXT',
+            'oper'    => $isExcluded ? '!=' : '=',
+            'value'   => (string) ($concept['concept_id'] ?? ''),
         ];
 
         // note: bunny cannot handle both time and age constraints

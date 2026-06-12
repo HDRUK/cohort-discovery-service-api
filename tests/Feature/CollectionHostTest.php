@@ -161,4 +161,86 @@ class CollectionHostTest extends TestCase
         $this->assertEquals(count($content), 1);
         $this->assertEquals($content[0]['name'], $host->name);
     }
+
+    public function test_it_can_sort_custodian_collection_hosts_by_name(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Zebra Host',
+        ]);
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Alpha Host',
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts?sort=name:asc');
+
+        $response->assertStatus(200);
+
+        $this->assertEquals(
+            ['Alpha Host', 'Zebra Host'],
+            array_column($response->json('data'), 'name')
+        );
+    }
+
+    public function test_it_can_sort_custodian_collection_hosts_by_name_desc(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Alpha Host',
+        ]);
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Zebra Host',
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts?sort=name:desc');
+
+        $response->assertStatus(200);
+
+        $this->assertEquals(
+            ['Zebra Host', 'Alpha Host'],
+            array_column($response->json('data'), 'name')
+        );
+    }
+
+    public function test_it_errors_for_invalid_custodian_collection_host_sort_direction(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Alpha Host',
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts?sort=name:sideways');
+
+        $response->assertStatus(500)
+            ->assertJsonFragment(['message' => 'unexpected error'])
+            ->assertJsonFragment(['data' => 'invalid sort direction sideways']);
+    }
+
+    public function test_it_errors_for_invalid_custodian_collection_host_sort_field(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+            'name' => 'Alpha Host',
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts?sort=created_at:asc');
+
+        $response->assertStatus(500)
+            ->assertJsonFragment(['message' => 'unexpected error'])
+            ->assertJsonFragment(['data' => 'field created_at is not a sortable column']);
+    }
 }

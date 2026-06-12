@@ -80,6 +80,31 @@ class OmopControllerTest extends TestCase
         $this->assertContains('Sickle cell-thalassemia disease', $names);
     }
 
+public function test_separator_variants_match_hyphenated_concept_name(): void
+    {
+        $variants = [
+            'sickle cell hemoglobin',
+            'sickle-cell-hemoglobin',
+            'sickle cell-hemoglobin',
+            'sickle, cell (hemoglobin)',
+        ];
+
+        foreach ($variants as $query) {
+            $response = $this->postJson(self::SEARCH_URL, [
+                'concept_name' => [$query],
+            ]);
+
+            $response->assertOk();
+            $names = array_column($response->json('data.data'), 'name');
+
+            $this->assertContains(
+                'Sickle cell-hemoglobin C disease',
+                $names,
+                "Query '{$query}' should match the hyphenated concept"
+            );
+        }
+    }
+
     public function test_search_by_concept_id_returns_matching_rows(): void
     {
         $response = $this->postJson(self::SEARCH_URL, [

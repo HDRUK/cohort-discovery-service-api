@@ -59,13 +59,17 @@ class RegressionTestService
         });
     }
 
-    public function run(RegressionTest $test): array
+    public function run(RegressionTest $test, ?Collection $collection = null): array
     {
         $test->loadMissing('collections');
 
-        $tasks = $test->collections->map(fn (Collection $collection) => Task::create([
+        $collections = $collection
+            ? $test->collections->filter(fn (Collection $c) => $c->id === $collection->id)->values()
+            : $test->collections;
+
+        $tasks = $collections->map(fn (Collection $c) => Task::create([
             'query_id' => $test->query_id,
-            'collection_id' => $collection->id,
+            'collection_id' => $c->id,
             'created_at' => Carbon::now(),
             'task_type' => TaskType::A,
         ]));
