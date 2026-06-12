@@ -1,3 +1,19 @@
+## [1.11.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.10.0...v1.11.0) (2026-06-12)
+
+### ✨ Features
+
+* **DP-833:** Update for the regression controller (#247) ([3fb8105](https://github.com/HDRUK/cohort-discovery-service-api/commit/3fb8105cedf3a55637a3c01a7d281a4bba048dba)), closes [DP-833](undefinedDP-833)
+* **DP-848:** implementation of multiple concept selector (#251) ([07cf5f9](https://github.com/HDRUK/cohort-discovery-service-api/commit/07cf5f932c5e9fc28189842a70c77147a78c5421)), closes [DP-848](undefinedDP-848)
+
+### 🐛 Bug Fixes
+
+* **DP-896:** Fix term search returning no results for concepts with punctuation (#258) ([5afe905](https://github.com/HDRUK/cohort-discovery-service-api/commit/5afe90566fe6bfbd333a48ca097cc91b142bca14))
+* **GAT-8811:** added docker build for prod in semantic release (#254) ([33ee1dc](https://github.com/HDRUK/cohort-discovery-service-api/commit/33ee1dc06834a40c67178fa6fac3eb0a953e5d1d)), closes [GAT-8811](undefinedGAT-8811)
+* **GAT-8811:** added docker build in the semantic pipeline (#253) ([2ea098a](https://github.com/HDRUK/cohort-discovery-service-api/commit/2ea098a7307e13128555925bfc3badc060be76c3)), closes [GAT-8811](undefinedGAT-8811)
+* **GAT-8811:** updated github token passing as secret (#252) ([646386c](https://github.com/HDRUK/cohort-discovery-service-api/commit/646386cf93a528a09ee5489027de2c8477248306)), closes [GAT-8811](undefinedGAT-8811)
+* **GAT-8811:** updated the pipeline to avoid multiple builds for api (#249) ([57f962e](https://github.com/HDRUK/cohort-discovery-service-api/commit/57f962e237385a4eda2f0d1ea26da23b420f62a5)), closes [GAT-8811](undefinedGAT-8811)
+* **GAT-8811:** updated the pipeline to use the github token from the reusable pipeline (#250) ([4c6337f](https://github.com/HDRUK/cohort-discovery-service-api/commit/4c6337f37f43a8bb038887afdfdb6f0497ff4894)), closes [GAT-8811](undefinedGAT-8811)
+
 ## [1.10.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.9.0...v1.10.0) (2026-05-21)
 
 ### ✨ Features
