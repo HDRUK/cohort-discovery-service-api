@@ -153,6 +153,11 @@ class OIDCTokenValidator
         }
 
         $parsedToken = (new Parser(new JoseEncoder()))->parse($token);
+
+        if (! $parsedToken instanceof \Lcobucci\JWT\UnencryptedToken) {
+            throw new \RuntimeException('OIDC token is not an unencrypted token');
+        }
+
         $claims = $parsedToken->claims()->all();
 
         $this->validateClaims($claims, $issuer);
@@ -244,7 +249,7 @@ class OIDCTokenValidator
                 'headers' => ['Accept' => 'application/json'],
             ], 'OIDC JWKS');
 
-            if (! is_array($payload) || ! isset($payload['keys']) || ! is_array($payload['keys'])) {
+            if (! isset($payload['keys']) || ! is_array($payload['keys'])) {
                 throw new \RuntimeException('OIDC JWKS payload is invalid');
             }
 
