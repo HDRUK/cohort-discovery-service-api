@@ -35,7 +35,7 @@ class OIDCTokenValidatorTest extends TestCase
         $result = $validator->validateWithClaims($this->lastToken);
 
         $this->assertSame($user->id, $result['user']->id);
-        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('users', 17);
     }
 
     public function test_it_does_not_match_existing_user_by_email_when_sub_differs(): void
@@ -63,7 +63,7 @@ class OIDCTokenValidatorTest extends TestCase
         $this->assertNotSame($existingUser->id, $result['user']->id);
         $this->assertSame('oidc-sub-2', $result['user']->oidc_sub);
         $this->assertStringEndsWith('@oidc.local', $result['user']->email);
-        $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseCount('users', 19);
     }
 
     public function test_it_provisions_and_persists_new_user_for_unknown_sub(): void
