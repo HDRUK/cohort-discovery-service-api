@@ -193,21 +193,12 @@ class OIDCTokenValidator
      */
     private function buildUserInfoRequestOptions(string $token): array
     {
-        $options = [
+        return [
             'headers' => [
                 'Accept' => 'application/json',
                 'Authorization' => 'Bearer '.$token,
             ],
         ];
-
-        $clientId = trim((string) config('services.oidc.client_id'));
-        $clientSecret = trim((string) config('services.oidc.client_secret'));
-
-        if ($clientId !== '' && $clientSecret !== '') {
-            $options['auth'] = [$clientId, $clientSecret];
-        }
-
-        return $options;
     }
 
     /**

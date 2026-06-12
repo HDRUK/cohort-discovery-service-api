@@ -109,8 +109,6 @@ class OIDCTokenValidatorTest extends TestCase
         config([
             'services.oidc.issuer' => $issuer,
             'services.oidc.audience' => 'cohort-api',
-            'services.oidc.client_id' => 'test-client-id',
-            'services.oidc.client_secret' => 'test-client-secret',
             'services.oidc.userinfo_endpoint' => '',
             'services.oidc.clock_skew_seconds' => 60,
             'services.oidc.discovery_cache_ttl_seconds' => 1,
