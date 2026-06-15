@@ -93,9 +93,23 @@ class CollectionNoActivityMonitor implements ApiCommand
 
     private function notifySlack(Collection $c): void
     {
-        app(SlackNotifier::class)->send(
-            "Collection suspended due to inactivity: *{$c->name}* (ID: `{$c->id}`)"
-        );
+        $minutes = (int) config('system.collection_inactivity_minutes', 30);
+
+        app(SlackNotifier::class)->sendBlocks([
+            [
+                'type' => 'header',
+                'text' => ['type' => 'plain_text', 'text' => '🚨 Collection Suspended', 'emoji' => true],
+            ],
+            [
+                'type' => 'section',
+                'fields' => [
+                    ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Status:*\n⛔ Suspended"],
+                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Reason:*\nNo activity in {$minutes} minutes"],
+                ],
+            ],
+        ], "🚨 Collection suspended due to inactivity: {$c->name}");
     }
 
     private function logNoActivity(int $collectionId): void

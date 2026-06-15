@@ -62,10 +62,21 @@ class CollectionStateService
         $result = $collection->transitionTo($state);
 
         if ($wasDraft && strtolower($state) === Collection::STATUS_PENDING) {
-            $this->slack->send(
-                "Collection requested to be made active: *{$collection->name}* "
-                . "(ID: `{$collection->id}`) — requested by {$user->email}"
-            );
+            $this->slack->sendBlocks([
+                [
+                    'type' => 'header',
+                    'text' => ['type' => 'plain_text', 'text' => '📋 Collection Activation Request', 'emoji' => true],
+                ],
+                [
+                    'type' => 'section',
+                    'fields' => [
+                        ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$collection->name}"],
+                        ['type' => 'mrkdwn', 'text' => "*Action:*\nRequested to be made active"],
+                        ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$collection->custodian->name}"],
+                        ['type' => 'mrkdwn', 'text' => "*Requested by:*\n{$user->email}"],
+                    ],
+                ],
+            ], "📋 Collection activation request: {$collection->name}");
         }
 
         return $result;
