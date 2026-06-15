@@ -30,10 +30,10 @@ class SlackNotifier
             return;
         }
 
-        $env = config('session.domain') ?? 'local';
+        $envName = config('session.domain') ?? 'local';
         $blocks[] = [
             'type' => 'context',
-            'elements' => [['type' => 'mrkdwn', 'text' => "🌍 *Environment:* {$env}"]],
+            'elements' => [['type' => 'mrkdwn', 'text' => "🌍 *Environment:* {$envName}"]],
         ];
 
         try {
