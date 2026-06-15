@@ -25,21 +25,7 @@ class CollectionStateServiceTest extends TestCase
         CustodianHasUser::truncate();
         Collection::truncate();
         ModelState::truncate();
-        State::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
-        foreach ([
-            Collection::STATUS_DRAFT,
-            Collection::STATUS_PENDING,
-            Collection::STATUS_ACTIVE,
-            Collection::STATUS_REJECTED,
-            Collection::STATUS_SUSPENDED,
-        ] as $slug) {
-            State::firstOrCreate(
-                ['slug' => $slug],
-                ['name' => ucfirst($slug)]
-            );
-        }
     }
 
     public function test_it_sends_slack_message_on_draft_to_pending_transition(): void
