@@ -76,7 +76,7 @@ class CollectionStateService
                         ['type' => 'mrkdwn', 'text' => "*Requested by:*\n{$user->email}"],
                     ],
                 ],
-            ], "📋 Collection activation request: {$collection->name}", 'good');
+            ], "📋 Collection activation request: {$collection->name}", '#2EB67D');
         }
 
         return $result;
