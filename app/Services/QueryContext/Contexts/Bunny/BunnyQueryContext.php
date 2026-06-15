@@ -15,7 +15,7 @@ class BunnyQueryContext implements QueryContextInterface
     public function translate(array $definition, bool $flattenNestedGroups = true, bool $useDeathObservation = false, bool $supportsLocation = false): array
     {
         $this->useDeathObservation = $useDeathObservation;
-        $this->supportsLocation = $supportsLocation;
+        $this->supportsLocation = true;//$supportsLocation;
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
