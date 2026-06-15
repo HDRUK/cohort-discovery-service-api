@@ -109,7 +109,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                     ['type' => 'mrkdwn', 'text' => "*Reason:*\nNo activity in {$minutes} minutes"],
                 ],
             ],
-        ], "🚨 Collection suspended due to inactivity: {$c->name}");
+        ], "🚨 Collection suspended due to inactivity: {$c->name}", 'danger');
     }
 
     private function logNoActivity(int $collectionId): void

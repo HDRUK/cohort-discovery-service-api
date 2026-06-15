@@ -22,7 +22,7 @@ class SlackNotifier
         }
     }
 
-    public function sendBlocks(array $blocks, string $fallbackText = ''): void
+    public function sendBlocks(array $blocks, string $fallbackText = '', ?string $color = null): void
     {
         $url = config('services.slack_webhook.url');
         if (!$url) {
@@ -36,11 +36,16 @@ class SlackNotifier
             'elements' => [['type' => 'mrkdwn', 'text' => "🌍 *Environment:* {$envName}"]],
         ];
 
+        $payload = array_filter(['text' => $fallbackText]);
+
+        if ($color !== null) {
+            $payload['attachments'] = [['color' => $color, 'blocks' => $blocks]];
+        } else {
+            $payload['blocks'] = $blocks;
+        }
+
         try {
-            Http::post($url, array_filter([
-                'text' => $fallbackText,
-                'blocks' => $blocks,
-            ]));
+            Http::post($url, $payload);
         } catch (\Throwable $e) {
             Log::error('SlackNotifier: failed to send blocks', ['error' => $e->getMessage()]);
         }
