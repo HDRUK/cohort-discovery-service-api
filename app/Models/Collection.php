@@ -219,6 +219,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->morphOne(ModelState::class, 'stateable');
     }
 
+    /** @return BelongsTo<Custodian, $this> */
     public function custodian(): BelongsTo
     {
         return $this->belongsTo(Custodian::class);
