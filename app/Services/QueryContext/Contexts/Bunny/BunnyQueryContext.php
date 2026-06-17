@@ -450,15 +450,55 @@ class BunnyQueryContext implements QueryContextInterface
 
     protected function makeLeafAgeFilter(array $child): array
     {
-        $values = $child['value'];
-        $rule = [
+        $ageLeaf = [
             'varname' => 'AGE',
-            'varcat' => 'Person',
-            'type' => 'NUM',
-            'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
+            'varcat'  => 'Person',
+            'type'    => 'NUM',
+            'oper'    => '=',
+            'value'   => $child['age'][0].'|'.$child['age'][1],
         ];
-        return $rule;
+
+        $parts = [$ageLeaf];
+
+        if (! empty($child['sex'])) {
+            $parts[] = $this->makePersonConceptFilter($child['sex']);
+        }
+
+        if (! empty($child['race'])) {
+            $parts[] = $this->makePersonConceptFilter($child['race']);
+        }
+
+        if (count($parts) === 1) {
+            return $parts[0];
+        }
+
+        return [
+            'rules_oper' => 'AND',
+            'rules'      => $parts,
+        ];
+    }
+
+    private function makePersonConceptFilter(array $concepts): array
+    {
+        if (count($concepts) === 1) {
+            return $this->makePersonConceptLeaf($concepts[0]);
+        }
+
+        return [
+            'rules_oper' => 'OR',
+            'rules'      => array_map(fn ($c) => $this->makePersonConceptLeaf($c), $concepts),
+        ];
+    }
+
+    private function makePersonConceptLeaf(array $concept): array
+    {
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Person',
+            'type'    => 'TEXT',
+            'oper'    => '=',
+            'value'   => (string) $concept['concept_id'],
+        ];
     }
 
     protected function isOperatorNode(array $node): bool
@@ -478,7 +518,7 @@ class BunnyQueryContext implements QueryContextInterface
 
     protected function isAgeFilter(array $node): bool
     {
-        return isset($node['value']) && ! isset($node['rules'])  && ! isset($node['rule']);
+        return isset($node['age']) && ! isset($node['rules']) && ! isset($node['rule']);
     }
 
     public function getRelativeMonths(string $date): int

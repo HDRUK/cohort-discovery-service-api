@@ -522,7 +522,7 @@ class RuleBuilderService
     {
         return [
             'id' => Str::uuid()->toString(),
-            'value' => $ageConstraint,
+            'age' => $ageConstraint,
             'valid' => true,
         ];
     }

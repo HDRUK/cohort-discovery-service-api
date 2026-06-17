@@ -744,6 +744,120 @@ class QueryContextTest extends TestCase
         $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
     }
 
+    public function test_age_filter_with_single_sex_produces_and_group(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'    => 'r1',
+                    'age'   => [18, 65],
+                    'sex'   => [['concept_id' => 8532, 'concept_name' => 'FEMALE', 'domain_id' => 'Gender']],
+                    'valid' => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
+        $this->assertEquals('18|65', $rules[0]['value']);
+        $this->assertEquals('OMOP', $rules[1]['varname']);
+        $this->assertEquals('Person', $rules[1]['varcat']);
+        $this->assertEquals('8532', $rules[1]['value']);
+    }
+
+    public function test_age_filter_with_multiple_sex_distributes_into_or_groups(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'    => 'r1',
+                    'age'   => [18, 65],
+                    'sex'   => [
+                        ['concept_id' => 8532, 'concept_name' => 'FEMALE', 'domain_id' => 'Gender'],
+                        ['concept_id' => 8507, 'concept_name' => 'MALE', 'domain_id' => 'Gender'],
+                    ],
+                    'valid' => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // (AGE AND (FEMALE OR MALE)) → (AGE AND FEMALE) OR (AGE AND MALE)
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
+
+        $this->assertEquals('18|65', $result['groups'][0]['rules'][0]['value']);
+        $this->assertEquals('8532', $result['groups'][0]['rules'][1]['value']);
+
+        $this->assertEquals('18|65', $result['groups'][1]['rules'][0]['value']);
+        $this->assertEquals('8507', $result['groups'][1]['rules'][1]['value']);
+    }
+
+    public function test_age_filter_with_single_race_produces_and_group(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'    => 'r1',
+                    'age'   => [18, 65],
+                    'race'  => [['concept_id' => 8527, 'concept_name' => 'White', 'domain_id' => 'Race']],
+                    'valid' => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(2, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
+        $this->assertEquals('18|65', $rules[0]['value']);
+        $this->assertEquals('OMOP', $rules[1]['varname']);
+        $this->assertEquals('Person', $rules[1]['varcat']);
+        $this->assertEquals('8527', $rules[1]['value']);
+    }
+
+    public function test_age_filter_with_sex_and_race_produces_and_group(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'    => 'r1',
+                    'age'   => [18, 65],
+                    'sex'   => [['concept_id' => 8532, 'concept_name' => 'FEMALE', 'domain_id' => 'Gender']],
+                    'race'  => [['concept_id' => 8527, 'concept_name' => 'White', 'domain_id' => 'Race']],
+                    'valid' => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $rules = $result['groups'][0]['rules'];
+        $this->assertCount(3, $rules);
+        $this->assertEquals('AGE', $rules[0]['varname']);
+        $this->assertEquals('18|65', $rules[0]['value']);
+        $this->assertEquals('8532', $rules[1]['value']);
+        $this->assertEquals('8527', $rules[2]['value']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager
