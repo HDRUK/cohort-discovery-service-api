@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\CollectionHostController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CustodianNetworkController;
+use App\Http\Controllers\Api\V1\DistributionConceptController;
 use App\Http\Controllers\Api\V1\DistributionController;
 use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryController;
@@ -155,6 +156,9 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/codes', [CodeController::class, 'getAllCodes']);
     Route::get('/v1/codes/stats', [CodeController::class, 'getCodeStats']);
     Route::get('/v1/codes/{domain}', [CodeController::class, 'getCodes']);
+
+    Route::get('/v1/distribution_concepts/domains', [DistributionConceptController::class, 'domains']);
+    Route::get('/v1/distribution_concepts', [DistributionConceptController::class, 'index']);
 
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
