@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "semi": "npx semantic-release",
+    "release:preview": "node previewRelease.js",
+    "jira:fix-version": "node tagJiraFixVersion.js",
     "lint:workflows": "actionlint"
   },
   "dependencies": {

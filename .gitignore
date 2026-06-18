@@ -23,6 +23,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+RELEASE_NOTES_PREVIEW.md
 composer.lock
 **/caddy
 frankenphp
