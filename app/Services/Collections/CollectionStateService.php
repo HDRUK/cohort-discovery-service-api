@@ -6,9 +6,15 @@ use App\Exceptions\Errors_1xxx\CollectionPermissionsNotMetException as Collectio
 use App\Models\Collection;
 use App\Models\CustodianHasUser;
 use App\Models\User;
+use App\Services\Notifications\SlackNotifier;
 
 class CollectionStateService
 {
+    public function __construct(private SlackNotifier $slack)
+    {
+    }
+
+
     /**
      * Determines if the incoming Collection can be transitions to $state by $user
      * based upon user roles assigned.
@@ -52,6 +58,27 @@ class CollectionStateService
             throw new CollectionException($state);
         }
 
-        return $collection->transitionTo($state);
+        $wasDraft = $collection->isInState(Collection::STATUS_DRAFT);
+        $result = $collection->transitionTo($state);
+
+        if ($wasDraft && strtolower($state) === Collection::STATUS_PENDING) {
+            $this->slack->sendBlocks([
+                [
+                    'type' => 'header',
+                    'text' => ['type' => 'plain_text', 'text' => '📋 Collection Activation Request', 'emoji' => true],
+                ],
+                [
+                    'type' => 'section',
+                    'fields' => [
+                        ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$collection->name}"],
+                        ['type' => 'mrkdwn', 'text' => "*Action:*\nRequested to be made active"],
+                        ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$collection->custodian->name}"],
+                        ['type' => 'mrkdwn', 'text' => "*Requested by:*\n{$user->email}"],
+                    ],
+                ],
+            ], "📋 Collection activation request: {$collection->name}", '#2EB67D');
+        }
+
+        return $result;
     }
 }

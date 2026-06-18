@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Hdruk\LaravelModelStates\Models\State;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CollectionNoActivityMonitorTest extends TestCase
@@ -32,6 +33,8 @@ class CollectionNoActivityMonitorTest extends TestCase
 
     public function test_it_suspends_collections_after_24_hours_of_inactivity(): void
     {
+        Http::fake(['*' => Http::response([], 200)]);
+        config()->set('services.slack_webhook.url', 'https://hooks.slack.com/test');
 
         $this->disableObservers();
 
@@ -96,10 +99,15 @@ class CollectionNoActivityMonitorTest extends TestCase
         $this->assertDatabaseHas('model_states', [
             'state_id' => $suspendedState->id,
         ]);
+
+        Http::assertSent(fn ($request) =>
+            str_contains($request->body(), $collection->name)
+        );
     }
 
     public function test_it_suspends_collections_with_activity_older_than_60_minutes(): void
     {
+        Http::fake(['*' => Http::response([], 200)]);
         config()->set('system.collection_inactivity_minutes', 60);
 
         $this->disableObservers();
@@ -132,6 +140,34 @@ class CollectionNoActivityMonitorTest extends TestCase
         $collection->load('modelState.state');
 
         $this->assertSame($suspendedState->id, $collection->modelState->state_id);
+    }
+
+    public function test_it_does_not_call_slack_when_webhook_is_not_configured(): void
+    {
+        config()->set('services.slack_webhook.url', null);
+        Http::fake();
+
+        $this->disableObservers();
+
+        $now = CarbonImmutable::now($this->timezone);
+        Carbon::setTestNow($now);
+
+        $activeState = $this->getStateBySlugOrFail(Collection::STATUS_ACTIVE);
+
+        $collection = Collection::factory()->create(['name' => 'Activity_TestCollection']);
+        $collection->modelState()->create(['state_id' => $activeState->id]);
+
+        CollectionActivityLog::create([
+            'created_at' => $now->subDay(5)->setTime(0, 0, 0),
+            'updated_at' => $now->subDay(5)->setTime(0, 0, 0),
+            'collection_id' => $collection->id,
+            'task_type' => TaskType::A->value,
+        ]);
+
+        $command = new CollectionNoActivityMonitor();
+        $command->handle([]);
+
+        Http::assertNothingSent();
     }
 
     private function getStateBySlugOrFail(string $slug): State
