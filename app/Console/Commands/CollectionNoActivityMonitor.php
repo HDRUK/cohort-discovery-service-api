@@ -15,7 +15,9 @@ class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
 
-    public function __construct(private SlackNotifier $slackNotifier) {}
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
 
     public function rules(): array
     {

@@ -38,10 +38,12 @@ use Str;
 class TaskController extends Controller
 {
     use HelperFunctions;
-
-    public function __construct(private SlackNotifier $slackNotifier) {}
     use Responses;
     use AuthorizesRequests;
+
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
 
     /**
      * @OA\Get(

@@ -10,7 +10,9 @@ use App\Services\Notifications\SlackNotifier;
 
 class CollectionStateService
 {
-    public function __construct(private SlackNotifier $slackNotifier) {}
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
 
 
     /**

@@ -879,7 +879,8 @@ class TaskControllerTest extends TestCase
         $collection->refresh();
         $this->assertSame(Collection::STATUS_ACTIVE, $collection->modelState->state->slug);
 
-        Http::assertSent(fn ($request) =>
+        Http::assertSent(
+            fn ($request) =>
             str_contains($request->body(), $collection->name)
         );
     }
