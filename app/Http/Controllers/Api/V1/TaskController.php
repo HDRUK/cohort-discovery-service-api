@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\Notifications\SlackNotifier;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Log;
@@ -37,6 +38,8 @@ use Str;
 class TaskController extends Controller
 {
     use HelperFunctions;
+
+    public function __construct(private SlackNotifier $slackNotifier) {}
     use Responses;
     use AuthorizesRequests;
 
@@ -240,7 +243,10 @@ class TaskController extends Controller
         }
 
         // Always log activity, regardless of if jobs exist
-        Collection::logActivity($collection, $taskType);
+        $restored = Collection::logActivity($collection, $taskType);
+        if ($restored) {
+            $this->slackNotifier->collectionBackOnline($collection);
+        }
 
         $nMaxAttempts = config('tasks.default_max_attempts', 3);
         $leaseSeconds =  config('tasks.default_lease_seconds', 10);
