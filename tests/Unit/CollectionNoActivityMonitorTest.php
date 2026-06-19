@@ -84,7 +84,7 @@ class CollectionNoActivityMonitorTest extends TestCase
             'task_type' => TaskType::A->value,
         ]);
 
-        $command = new CollectionNoActivityMonitor();
+        $command = app(CollectionNoActivityMonitor::class);
         $result = $command->handle([]);
 
         $this->assertSame(1, $result);
@@ -100,7 +100,8 @@ class CollectionNoActivityMonitorTest extends TestCase
             'state_id' => $suspendedState->id,
         ]);
 
-        Http::assertSent(fn ($request) =>
+        Http::assertSent(
+            fn ($request) =>
             str_contains($request->body(), $collection->name)
         );
     }
@@ -133,7 +134,7 @@ class CollectionNoActivityMonitorTest extends TestCase
             'task_type' => TaskType::A->value,
         ]);
 
-        $command = new CollectionNoActivityMonitor();
+        $command = app(CollectionNoActivityMonitor::class);
         $command->handle([]);
 
         $collection->refresh();
@@ -164,7 +165,7 @@ class CollectionNoActivityMonitorTest extends TestCase
             'task_type' => TaskType::A->value,
         ]);
 
-        $command = new CollectionNoActivityMonitor();
+        $command = app(CollectionNoActivityMonitor::class);
         $command->handle([]);
 
         Http::assertNothingSent();

@@ -10,7 +10,7 @@ use App\Services\Notifications\SlackNotifier;
 
 class CollectionStateService
 {
-    public function __construct(private SlackNotifier $slack)
+    public function __construct(private SlackNotifier $slackNotifier)
     {
     }
 
@@ -62,21 +62,7 @@ class CollectionStateService
         $result = $collection->transitionTo($state);
 
         if ($wasDraft && strtolower($state) === Collection::STATUS_PENDING) {
-            $this->slack->sendBlocks([
-                [
-                    'type' => 'header',
-                    'text' => ['type' => 'plain_text', 'text' => '📋 Collection Activation Request', 'emoji' => true],
-                ],
-                [
-                    'type' => 'section',
-                    'fields' => [
-                        ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$collection->name}"],
-                        ['type' => 'mrkdwn', 'text' => "*Action:*\nRequested to be made active"],
-                        ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$collection->custodian->name}"],
-                        ['type' => 'mrkdwn', 'text' => "*Requested by:*\n{$user->email}"],
-                    ],
-                ],
-            ], "📋 Collection activation request: {$collection->name}", '#2EB67D');
+            $this->slackNotifier->collectionActivationRequested($collection, $user);
         }
 
         return $result;
