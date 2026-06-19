@@ -47,7 +47,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
                     $this->setCollectionSuspended($c);
-                    $this->notifySlack($c);
+                    $this->slackNotifier->collectionSuspended($c);
                 } else {
                     $this->logActivity($c->id);
                 }
@@ -91,11 +91,6 @@ class CollectionNoActivityMonitor implements ApiCommand
             'slug',
             Collection::STATUS_ACTIVE
         )->get();
-    }
-
-    private function notifySlack(Collection $c): void
-    {
-        $this->slackNotifier->collectionSuspended($c);
     }
 
     private function logNoActivity(int $collectionId): void

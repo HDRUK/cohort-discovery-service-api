@@ -14,6 +14,7 @@ use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 use Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -858,6 +859,29 @@ class TaskControllerTest extends TestCase
             ]);
 
         $this->disableMiddleware();
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_sends_slack_alert_when_suspended_collection_comes_back_online(): void
+    {
+        Http::fake(['*' => Http::response([], 200)]);
+        config()->set('services.slack_webhook.url', 'https://hooks.slack.com/test');
+
+        $custodian = Custodian::factory()->create(['name' => 'Test Custodian']);
+        $collection = Collection::factory()->bunny()->create([
+            'name' => 'Test Collection',
+            'custodian_id' => $custodian->id,
+        ]);
+        $collection->setState(Collection::STATUS_SUSPENDED);
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}");
+
+        $collection->refresh();
+        $this->assertSame(Collection::STATUS_ACTIVE, $collection->modelState->state->slug);
+
+        Http::assertSent(fn ($request) =>
+            str_contains($request->body(), $collection->name)
+        );
     }
 
 }
