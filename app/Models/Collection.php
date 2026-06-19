@@ -431,7 +431,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             );
     }
 
-    public static function logActivity(Collection $c, TaskType $type): bool
+    public static function logActivity(Collection $c, TaskType $type): void
     {
         $log = CollectionActivityLog::firstOrCreate([
             'collection_id' => $c->id,
@@ -440,12 +440,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         if (!$log->wasRecentlyCreated) {
             $log->touch();
         }
-        //change state if -type BUNNY has come online
-        if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
-            $c->setState(Collection::STATUS_ACTIVE);
-            return true;
-        }
-        return false;
     }
 
     public function scopeWithTaskCounts(Builder $query): Builder

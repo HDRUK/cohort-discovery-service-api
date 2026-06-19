@@ -243,8 +243,10 @@ class TaskController extends Controller
         }
 
         // Always log activity, regardless of if jobs exist
-        $restored = Collection::logActivity($collection, $taskType);
-        if ($restored) {
+        $wasSuspended = $taskType === TaskType::A && $collection->isInState(Collection::STATUS_SUSPENDED);
+        Collection::logActivity($collection, $taskType);
+        if ($wasSuspended) {
+            $collection->setState(Collection::STATUS_ACTIVE);
             $this->slackNotifier->collectionBackOnline($collection);
         }
 
