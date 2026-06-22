@@ -11,8 +11,6 @@ on:
 
 jobs:
   jira:
-    # TEST: pinned to the jira-tags branch while validating.
-    # Switch to @main once the reusable workflow is merged.
     uses: HDRUK/github-actions-templates/.github/workflows/jira-fix-version.yaml@jira-tags
     with:
       jira_projects: "DP"
