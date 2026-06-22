@@ -42,6 +42,16 @@ class BunnyQueryContext implements QueryContextInterface
 
         if (!$flattenNestedGroups) {
             // Equally, if we want to skip the flattening step, then we can just return as-is with modified outer layer.
+            // We do need to ensure that the inner layer contains the "rules_oper" key, and not just bare rules,
+            // so we can add it if it's missing.
+            foreach ($groupwiseForm['rules'] as &$child) {
+                if (!$this->hasOperator($child)) {
+                    $child = [
+                        "rules_oper" => 'AND',
+                        "rules" => [$child]
+                    ];
+                }
+            }
             return [
                 "groups_oper" => $groupwiseForm['rules_oper'] ?? 'AND',
                 "groups" => $groupwiseForm['rules'] ?? [],
