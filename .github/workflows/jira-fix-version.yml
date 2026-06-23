@@ -1,0 +1,18 @@
+name: Tag Jira fix version
+run-name: ${{ github.actor }} tagging Jira fix version for ${{ github.ref_name }}
+
+# Runs on temporary release branches. Delegates to the reusable workflow, which
+# generates the release-notes preview, derives the version from the branch name
+# (release/1.12.0 -> 1.12.0), and tags the referenced Jira tickets.
+on:
+  push:
+    branches:
+      - "release/*"
+
+jobs:
+  jira:
+    uses: HDRUK/github-actions-templates/.github/workflows/jira-fix-version.yml@main
+    with:
+      jira_projects: "DP"
+    secrets: inherit
+    
