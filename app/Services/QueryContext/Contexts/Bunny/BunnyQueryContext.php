@@ -8,6 +8,9 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
+    private const BUNNY_NUM_LOWER_SENTINEL = -1_000_000_000;
+    private const BUNNY_NUM_UPPER_SENTINEL = 1_000_000_000;
+
     public function translate(array $definition, bool $flattenNestedGroups = true): array
     {
         // Convert to groupwise form for easier parsing of nodes per group.
@@ -433,7 +436,7 @@ class BunnyQueryContext implements QueryContextInterface
 
         $conceptId = (string) ($concept['concept_id'] ?? '');
 
-        if ($category === 'Measurement' && $measurementValue !== null && count($measurementValue) === 2) {
+        if ($measurementValue !== null && count($measurementValue) === 2) {
             [$lower, $upper] = $measurementValue;
 
             if ($lower !== null || $upper !== null) {
@@ -442,7 +445,7 @@ class BunnyQueryContext implements QueryContextInterface
                     'varcat'  => 'Measurement',
                     'type'    => 'NUM',
                     'oper'    => $isExcluded ? '!=' : '=',
-                    'value'   => ($lower ?? -1000000000) . '|' . ($upper ?? 1000000000),
+                    'value'   => ($lower ?? self::BUNNY_NUM_LOWER_SENTINEL) . '|' . ($upper ?? self::BUNNY_NUM_UPPER_SENTINEL),
                 ];
             }
         }
