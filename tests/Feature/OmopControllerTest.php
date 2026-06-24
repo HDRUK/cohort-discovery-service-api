@@ -80,7 +80,7 @@ class OmopControllerTest extends TestCase
         $this->assertContains('Sickle cell-thalassemia disease', $names);
     }
 
-    public function test_separator_variants_match_hyphenated_concept_name(): void
+public function test_separator_variants_match_hyphenated_concept_name(): void
     {
         $variants = [
             'sickle cell hemoglobin',

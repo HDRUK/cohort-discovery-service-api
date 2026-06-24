@@ -70,10 +70,10 @@ class TermDirectoryController extends Controller
         try {
             $perPage = $this->resolvePerPage();
 
-            DistributionConcept::searchViaRequest()   // WHERE (concept_name LIKE '%…%' OR …)
-                ->filterViaRequest()                  // AND (domain_id = '…')
-                ->applySorting('count', 'desc')       // ORDER BY count DESC
-                ->paginate($perPage);                 // LIMIT/OFFSET — and RUNS it
+        DistributionConcept::searchViaRequest()   // WHERE (concept_name LIKE '%…%' OR …)
+            ->filterViaRequest()                  // AND (domain_id = '…')
+            ->applySorting('count', 'desc')       // ORDER BY count DESC
+            ->paginate($perPage);                 // LIMIT/OFFSET — and RUNS it
 
             $activityLogger->viewed('term_directory', null, [
                 'filters' => $request->query(),

@@ -38,8 +38,7 @@ class CollectionStateServiceTest extends TestCase
         $service = app(CollectionStateService::class);
         $service->transition($collection, Collection::STATUS_PENDING, $user);
 
-        Http::assertSent(
-            fn ($request) =>
+        Http::assertSent(fn ($request) =>
             str_contains($request->body(), $collection->name)
             && str_contains($request->body(), $user->email)
         );

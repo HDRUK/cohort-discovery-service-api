@@ -100,8 +100,7 @@ class CollectionNoActivityMonitorTest extends TestCase
             'state_id' => $suspendedState->id,
         ]);
 
-        Http::assertSent(
-            fn ($request) =>
+        Http::assertSent(fn ($request) =>
             str_contains($request->body(), $collection->name)
         );
     }
