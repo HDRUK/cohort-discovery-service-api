@@ -423,6 +423,7 @@ class BunnyQueryContext implements QueryContextInterface
         $isExcluded = (bool) ($child['exclude'] ?? false);
         $timeConstraint = $child['timeConstraint'] ?? [null, null];
         $ageConstraint = $child['ageConstraint'] ?? [null, null];
+        $measurementValue = $child['valueAsNumber'] ?? null;
 
         $category = $concept['category'] ?? 'UNKNOWN';
 
@@ -430,12 +431,28 @@ class BunnyQueryContext implements QueryContextInterface
             $category = 'Person';
         }
 
+        $conceptId = (string) ($concept['concept_id'] ?? '');
+
+        if ($category === 'Measurement' && $measurementValue !== null && count($measurementValue) === 2) {
+            [$lower, $upper] = $measurementValue;
+
+            if ($lower !== null || $upper !== null) {
+                return [
+                    'varname' => 'OMOP=' . $conceptId,
+                    'varcat'  => 'Measurement',
+                    'type'    => 'NUM',
+                    'oper'    => $isExcluded ? '!=' : '=',
+                    'value'   => ($lower ?? -1000000000) . '|' . ($upper ?? 1000000000),
+                ];
+            }
+        }
+
         $rule = [
             'varname' => 'OMOP',
             'varcat'  => $category,
             'type'    => 'TEXT',
             'oper'    => $isExcluded ? '!=' : '=',
-            'value'   => (string) ($concept['concept_id'] ?? ''),
+            'value'   => $conceptId,
         ];
 
         // note: bunny cannot handle both time and age constraints

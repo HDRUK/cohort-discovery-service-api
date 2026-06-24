@@ -744,6 +744,120 @@ class QueryContextTest extends TestCase
         $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
     }
 
+    public function test_measurement_concept_with_value_range_encodes_as_num_rule(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'description' => 'Body weight',
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [1.0, 3.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('Measurement', $rule['varcat']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('1|3', $rule['value']);
+    }
+
+    public function test_measurement_concept_with_only_lower_bound(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [5.5, null],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('5.5|1000000000', $rule['value']);
+    }
+
+    public function test_measurement_concept_with_only_upper_bound(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [null, 10.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('-1000000000|10', $rule['value']);
+    }
+
+    public function test_measurement_concept_without_value_range_encodes_as_text_rule(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('46236952', $rule['value']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager
