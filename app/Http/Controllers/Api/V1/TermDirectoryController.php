@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\DistributionConcept;
+use App\Models\Collection;
 use App\Models\LatestDistribution;
+use App\Models\User;
 use App\Services\Activity\ActivityLogger;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -71,23 +73,15 @@ class TermDirectoryController extends Controller
         try {
             $perPage = $this->resolvePerPage();
 
-            $concepts = DistributionConcept::searchViaRequest()
+            $user = User::find(Auth::id());
+            
+            $visibleCollectionIds = Collection::visibleToUser($user)->pluck('id');
+
+            $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
+                ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting('count', 'desc')
                 ->paginate($perPage);
-
-            // Alternative: query directly from the latest_distributions view.
-            // Searchable: concept_id, name, description. Filterable: category, concept_id. Sortable: concept_id, name, count.
-            // $concepts = LatestDistribution::searchViaRequest()
-            //     ->filterViaRequest()
-            //     ->applySorting('count', 'desc')
-            //     ->paginate($perPage);
-
-            // also this should in some way use a relationship with collections() and then user the user scope visibleForUser()
-            //   $user = User::find(Auth::id());
-
-            //   $collectionIds = Collection::visibleToUser($user)->select('id')->get()
-            //    LatestDistribution::.....->whereIn('collection_id',$collectionIds)
 
             $activityLogger->viewed('term_directory', null, [
                 'filters' => $request->query(),
