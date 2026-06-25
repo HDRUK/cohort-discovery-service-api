@@ -11,10 +11,12 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use JsonException;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Token\Parser;
+use Throwable;
 
 class OIDCTokenValidator
 {
@@ -36,6 +38,8 @@ class OIDCTokenValidator
 
     /**
      * @return array{user: User, claims: array<string, mixed>}
+     *
+     * @throws Throwable
      */
     public function validateWithClaims(string $token): array
     {
@@ -49,8 +53,11 @@ class OIDCTokenValidator
         }
 
         $oidcSub = $this->resolveOidcSub($claims, $userInfo);
-        $user = User::where('oidc_sub', $oidcSub)->first()
-            ?? $this->provisionUserFromOidc($oidcSub, $userInfo, $claims);
+        $user = DB::transaction(function () use ($oidcSub, $userInfo, $claims) {
+            $existing = User::where('oidc_sub', $oidcSub)->lockForUpdate()->first();
+
+            return $existing ?? $this->provisionUserFromOidc($oidcSub, $userInfo, $claims);
+        });
 
         $this->syncWorkgroupsFromEntitlements($user, $userInfo, $claims);
 
@@ -129,6 +136,9 @@ class OIDCTokenValidator
         return $candidate;
     }
 
+    /**
+     * @throws Throwable
+     */
     public function validate(string $token): User
     {
         return $this->validateWithClaims($token)['user'];
