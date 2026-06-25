@@ -19,18 +19,17 @@ class LatestDistribution extends Model
 
     protected static $searchableColumns = [
         'concept_id',
-        'name',
-        'description',
+        'concept_name',
     ];
 
     protected static $sortableColumns = [
         'concept_id',
-        'name',
+        'concept_name',
         'count',
     ];
 
     protected static $filterableColumns = [
-        'category',
+        'domain_id',
         'concept_id',
     ];
 

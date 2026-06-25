@@ -16,12 +16,16 @@ class RefreshLatestDistributionsView implements ShouldQueue
 
     private string $distributionTable = '';
 
+    private string $conceptTable = '';
+
     public function __construct()
     {
         $mysqlDb = config('database.connections.mysql.database');
+        $omopDb  = config('database.connections.omop.database');
 
         $this->viewName          = "`{$mysqlDb}`.`latest_distributions`";
         $this->distributionTable = "`{$mysqlDb}`.`distributions`";
+        $this->conceptTable      = "`{$omopDb}`.`concept`";
     }
 
     public function handle(): void
@@ -56,7 +60,7 @@ class RefreshLatestDistributionsView implements ShouldQueue
                 ->map(fn ($id) => (int) $id)
                 ->implode(',');
 
-            $whereClause = "result_file_id IN ({$idList})";
+            $whereClause = "d.result_file_id IN ({$idList})";
         } else {
             Log::info('latest_distributions view refresh found no result files; creating empty view', [
                 'view' => $this->viewName,
@@ -65,7 +69,13 @@ class RefreshLatestDistributionsView implements ShouldQueue
 
         DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
-            SELECT * FROM {$this->distributionTable}
+            SELECT
+                d.*,
+                c.concept_name,
+                c.domain_id
+            FROM {$this->distributionTable} d
+            INNER JOIN {$this->conceptTable} c
+                ON d.concept_id = c.concept_id
             WHERE {$whereClause}
         ");
 
