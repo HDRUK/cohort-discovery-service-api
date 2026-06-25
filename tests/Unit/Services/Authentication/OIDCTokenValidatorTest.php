@@ -156,19 +156,20 @@ class OIDCTokenValidatorTest extends TestCase
 
     public function test_it_preserves_workgroups_when_entitlement_claim_is_absent(): void
     {
+        $sub = 'oidc-sub-wg1-' . uniqid();
         $user = User::factory()->create([
-            'oidc_sub' => 'oidc-sub-wg1',
+            'oidc_sub' => $sub,
         ]);
         $workgroup = Workgroup::create([
             'name' => 'Existing Workgroup',
             'active' => true,
-            'claim_value' => 'urn:wg:existing',
+            'claim_value' => 'urn:wg:existing:' . $sub,
         ]);
         $user->workgroups()->attach($workgroup);
 
         $validator = $this->makeValidator(
-            tokenClaims: ['sub' => 'oidc-sub-wg1'],
-            userInfoPayload: ['sub' => 'oidc-sub-wg1'],
+            tokenClaims: ['sub' => $sub],
+            userInfoPayload: ['sub' => $sub],
         );
 
         $result = $validator->validateWithClaims($this->lastToken);
@@ -178,22 +179,23 @@ class OIDCTokenValidatorTest extends TestCase
 
     public function test_it_clears_workgroups_when_entitlement_claim_is_present_but_empty(): void
     {
+        $sub = 'oidc-sub-wg2-' . uniqid();
         $user = User::factory()->create([
-            'oidc_sub' => 'oidc-sub-wg2',
+            'oidc_sub' => $sub,
         ]);
         $workgroup = Workgroup::create([
             'name' => 'Existing Workgroup',
             'active' => true,
-            'claim_value' => 'urn:wg:existing',
+            'claim_value' => 'urn:wg:existing:' . $sub,
         ]);
         $user->workgroups()->attach($workgroup);
 
         $validator = $this->makeValidator(
             tokenClaims: [
-                'sub' => 'oidc-sub-wg2',
+                'sub' => $sub,
                 'eduperson_entitlement' => [],
             ],
-            userInfoPayload: ['sub' => 'oidc-sub-wg2'],
+            userInfoPayload: ['sub' => $sub],
         );
 
         $result = $validator->validateWithClaims($this->lastToken);
@@ -203,26 +205,27 @@ class OIDCTokenValidatorTest extends TestCase
 
     public function test_it_syncs_workgroups_from_eduperson_entitlement_claim(): void
     {
+        $sub = 'oidc-sub-wg3-' . uniqid();
         $user = User::factory()->create([
-            'oidc_sub' => 'oidc-sub-wg3',
+            'oidc_sub' => $sub,
         ]);
         $matched = Workgroup::create([
             'name' => 'Matched Workgroup',
             'active' => true,
-            'claim_value' => 'urn:wg:matched',
+            'claim_value' => 'urn:wg:matched:' . $sub,
         ]);
         $unmatched = Workgroup::create([
             'name' => 'Unmatched Workgroup',
             'active' => true,
-            'claim_value' => 'urn:wg:unmatched',
+            'claim_value' => 'urn:wg:unmatched:' . $sub,
         ]);
         $user->workgroups()->attach($unmatched);
 
         $validator = $this->makeValidator(
-            tokenClaims: ['sub' => 'oidc-sub-wg3'],
+            tokenClaims: ['sub' => $sub],
             userInfoPayload: [
-                'sub' => 'oidc-sub-wg3',
-                'eduperson_entitlement' => ['urn:wg:matched'],
+                'sub' => $sub,
+                'eduperson_entitlement' => ['urn:wg:matched:' . $sub],
             ],
         );
 
