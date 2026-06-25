@@ -15,6 +15,8 @@ class OIDCTokenValidatorTest extends TestCase
 {
     public function test_it_returns_existing_user_by_oidc_sub_only(): void
     {
+        $initialCount = User::count();
+
         $user = User::factory()->create([
             'oidc_sub' => 'oidc-sub-1',
             'email' => 'existing@example.com',
@@ -36,11 +38,13 @@ class OIDCTokenValidatorTest extends TestCase
         $result = $validator->validateWithClaims($this->lastToken);
 
         $this->assertSame($user->id, $result['user']->id);
-        $this->assertDatabaseCount('users', 17);
+        $this->assertSame($initialCount + 1, User::count());
     }
 
     public function test_it_does_not_match_existing_user_by_email_when_sub_differs(): void
     {
+        $initialCount = User::count();
+
         $existingUser = User::factory()->create([
             'oidc_sub' => null,
             'email' => 'shared@example.com',
@@ -64,7 +68,7 @@ class OIDCTokenValidatorTest extends TestCase
         $this->assertNotSame($existingUser->id, $result['user']->id);
         $this->assertSame('oidc-sub-2', $result['user']->oidc_sub);
         $this->assertStringEndsWith('@oidc.local', $result['user']->email);
-        $this->assertDatabaseCount('users', 19);
+        $this->assertSame($initialCount + 2, User::count());
     }
 
     public function test_it_provisions_and_persists_new_user_for_unknown_sub(): void
