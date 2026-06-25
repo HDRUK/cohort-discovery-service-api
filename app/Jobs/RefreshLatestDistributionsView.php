@@ -70,7 +70,12 @@ class RefreshLatestDistributionsView implements ShouldQueue
         DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
             SELECT
-                d.*,
+                d.id,
+                d.collection_id,
+                d.task_id,
+                d.result_file_id,
+                d.concept_id,
+                d.count,
                 c.concept_name,
                 c.domain_id
             FROM {$this->distributionTable} d
