@@ -30,6 +30,14 @@ class OIDCTokenValidator
 
     public function __construct(?ClientInterface $httpClient = null)
     {
+        if ((bool) config('services.oidc.enabled', false)
+            && empty(trim((string) config('services.oidc.audience', '')))
+        ) {
+            throw new \RuntimeException(
+                'OIDC_AUDIENCE must be set when OIDC is enabled — leaving it blank accepts tokens from any audience'
+            );
+        }
+
         $this->httpClient = $httpClient ?? new Client([
             'timeout' => (float) config('services.oidc.http_timeout_seconds', 10),
             'connect_timeout' => (float) config('services.oidc.connect_timeout_seconds', 3),
