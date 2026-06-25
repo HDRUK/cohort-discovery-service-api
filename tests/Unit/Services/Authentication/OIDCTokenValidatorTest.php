@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\Authentication;
 
 use App\Models\User;
+use App\Models\Workgroup;
 use App\Services\Authentication\OIDCTokenValidator;
 use Firebase\JWT\JWT;
 use GuzzleHttp\ClientInterface;
@@ -91,6 +92,145 @@ class OIDCTokenValidatorTest extends TestCase
             'id' => $result['user']->id,
             'oidc_sub' => 'oidc-sub-3',
         ]);
+    }
+
+    public function test_it_throws_when_userinfo_sub_does_not_match_token_sub(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OIDC userinfo sub does not match token sub');
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'token-sub'],
+            userInfoPayload: ['sub' => 'userinfo-sub'],
+        );
+
+        $validator->validateWithClaims($this->lastToken);
+    }
+
+    public function test_it_resolves_user_from_token_sub_when_userinfo_lacks_sub(): void
+    {
+        $user = User::factory()->create([
+            'oidc_sub' => 'token-sub',
+        ]);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'token-sub'],
+            userInfoPayload: ['name' => 'No Sub User'],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertSame($user->id, $result['user']->id);
+    }
+
+    public function test_it_throws_when_oidc_is_enabled_without_an_audience(): void
+    {
+        $originalConfig = config('services.oidc');
+        config([
+            'services.oidc.enabled' => true,
+            'services.oidc.audience' => '',
+        ]);
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('OIDC_AUDIENCE must be set when OIDC is enabled');
+
+            new OIDCTokenValidator();
+        } finally {
+            config(['services.oidc' => $originalConfig]);
+        }
+    }
+
+    public function test_it_throws_when_token_audience_does_not_match_configured_audience(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OIDC audience claim mismatch');
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['aud' => 'wrong-audience'],
+            userInfoPayload: ['sub' => 'oidc-sub-aud'],
+        );
+
+        $validator->validateWithClaims($this->lastToken);
+    }
+
+    public function test_it_preserves_workgroups_when_entitlement_claim_is_absent(): void
+    {
+        $user = User::factory()->create([
+            'oidc_sub' => 'oidc-sub-wg1',
+        ]);
+        $workgroup = Workgroup::create([
+            'name' => 'Existing Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:existing',
+        ]);
+        $user->workgroups()->attach($workgroup);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'oidc-sub-wg1'],
+            userInfoPayload: ['sub' => 'oidc-sub-wg1'],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertTrue($result['user']->workgroups->contains($workgroup));
+    }
+
+    public function test_it_clears_workgroups_when_entitlement_claim_is_present_but_empty(): void
+    {
+        $user = User::factory()->create([
+            'oidc_sub' => 'oidc-sub-wg2',
+        ]);
+        $workgroup = Workgroup::create([
+            'name' => 'Existing Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:existing',
+        ]);
+        $user->workgroups()->attach($workgroup);
+
+        $validator = $this->makeValidator(
+            tokenClaims: [
+                'sub' => 'oidc-sub-wg2',
+                'eduperson_entitlement' => [],
+            ],
+            userInfoPayload: ['sub' => 'oidc-sub-wg2'],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertCount(0, $result['user']->workgroups);
+    }
+
+    public function test_it_syncs_workgroups_from_eduperson_entitlement_claim(): void
+    {
+        $user = User::factory()->create([
+            'oidc_sub' => 'oidc-sub-wg3',
+        ]);
+        $matched = Workgroup::create([
+            'name' => 'Matched Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:matched',
+        ]);
+        $unmatched = Workgroup::create([
+            'name' => 'Unmatched Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:unmatched',
+        ]);
+        $user->workgroups()->attach($unmatched);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'oidc-sub-wg3'],
+            userInfoPayload: [
+                'sub' => 'oidc-sub-wg3',
+                'eduperson_entitlement' => ['urn:wg:matched'],
+            ],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertCount(1, $result['user']->workgroups);
+        $this->assertTrue($result['user']->workgroups->contains($matched));
+        $this->assertFalse($result['user']->workgroups->contains($unmatched));
     }
 
     private string $lastToken = '';
