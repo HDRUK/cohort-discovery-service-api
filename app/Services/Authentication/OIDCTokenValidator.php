@@ -434,7 +434,7 @@ class OIDCTokenValidator
     {
         $entitlements = $this->resolveEdupersonEntitlement($userInfo, $claims);
 
-        if ($entitlements === []) {
+        if ($entitlements === null) {
             return;
         }
 
@@ -442,24 +442,22 @@ class OIDCTokenValidator
             ->pluck('id')
             ->all();
 
-        if ($workgroupIds !== []) {
-            $user->workgroups()->sync($workgroupIds);
-        }
+        $user->workgroups()->sync($workgroupIds);
     }
 
     /**
      * @param  array<string, mixed>  $userInfo
      * @param  array<string, mixed>  $claims
-     * @return list<string>
+     * @return list<string>|null
      */
-    private function resolveEdupersonEntitlement(array $userInfo, array $claims): array
+    private function resolveEdupersonEntitlement(array $userInfo, array $claims): ?array
     {
         $raw = $userInfo['eduperson_entitlement']
             ?? $claims['eduperson_entitlement']
             ?? null;
 
         if ($raw === null) {
-            return [];
+            return null;
         }
 
         if (is_string($raw)) {
