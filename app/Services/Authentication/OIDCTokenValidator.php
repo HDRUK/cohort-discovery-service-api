@@ -42,6 +42,12 @@ class OIDCTokenValidator
         $claims = $this->decodeAndValidateToken($token);
         $userInfo = $this->fetchUserInfo($token);
 
+        $tokenSub = $this->extractStringClaim($claims, 'sub');
+        $userInfoSub = $this->extractStringClaim($userInfo, 'sub');
+        if ($userInfoSub !== null && $userInfoSub !== $tokenSub) {
+            throw new \RuntimeException('OIDC userinfo sub does not match token sub — possible token substitution');
+        }
+
         $oidcSub = $this->resolveOidcSub($claims, $userInfo);
         $user = User::where('oidc_sub', $oidcSub)->first()
             ?? $this->provisionUserFromOidc($oidcSub, $userInfo, $claims);
@@ -60,7 +66,7 @@ class OIDCTokenValidator
      */
     private function resolveOidcSub(array $claims, array $userInfo): string
     {
-        $oidcSub = $this->extractStringClaim($userInfo, 'sub') ?? $this->extractStringClaim($claims, 'sub');
+        $oidcSub = $this->extractStringClaim($claims, 'sub') ?? $this->extractStringClaim($userInfo, 'sub');
         if ($oidcSub === null) {
             throw new \RuntimeException('OIDC token/userinfo missing sub claim');
         }
