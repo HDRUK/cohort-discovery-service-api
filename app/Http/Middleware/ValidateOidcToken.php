@@ -6,6 +6,7 @@ use App\Services\Authentication\OIDCTokenValidator;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ValidateOidcToken
 {
@@ -33,7 +34,9 @@ class ValidateOidcToken
 
             return $next($request);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
+            Log::error('OIDC token validation failed', ['exception' => $e]);
+
+            return response()->json(['error' => 'Invalid token'], 401);
         }
     }
 }
