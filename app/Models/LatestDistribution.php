@@ -17,6 +17,10 @@ class LatestDistribution extends Model
 
     public $timestamps = false;
 
+    protected $casts = [
+        'count' => 'integer',
+    ];
+
     protected static $searchableColumns = [
         'concept_id',
         'concept_name',
