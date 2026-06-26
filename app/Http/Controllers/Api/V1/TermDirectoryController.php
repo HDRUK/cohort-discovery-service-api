@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -80,6 +81,13 @@ class TermDirectoryController extends Controller
             $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
                 ->searchViaRequest()
                 ->filterViaRequest()
+                ->select([
+                    'concept_id',
+                    'concept_name',
+                    'domain_id',
+                    DB::raw('SUM(count) AS count'),
+                ])
+                ->groupBy('concept_id', 'concept_name', 'domain_id')
                 ->applySorting('count', 'desc')
                 ->paginate($perPage);
 
