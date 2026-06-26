@@ -85,7 +85,8 @@ class TermDirectoryController extends Controller
                     'concept_id',
                     'concept_name',
                     'domain_id',
-                    DB::raw('SUM(count) AS count'),
+                    DB::raw('SUM(`count`) AS count'),
+                    DB::raw('COUNT(DISTINCT collection_id) AS ncollections'),
                 ])
                 ->groupBy('concept_id', 'concept_name', 'domain_id')
                 ->applySorting('count', 'desc')

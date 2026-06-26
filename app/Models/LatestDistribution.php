@@ -19,6 +19,7 @@ class LatestDistribution extends Model
 
     protected $casts = [
         'count' => 'integer',
+        'ncollections' => 'integer',
     ];
 
     protected static $searchableColumns = [
@@ -30,6 +31,7 @@ class LatestDistribution extends Model
         'concept_id',
         'concept_name',
         'count',
+        'ncollections',
     ];
 
     protected static $filterableColumns = [
