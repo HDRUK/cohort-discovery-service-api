@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 
@@ -26,7 +25,6 @@ use Illuminate\Database\Eloquent\Model;
  */
 class DistributionConcept extends Model
 {
-    use Filter;
     use Search;
 
     protected $table = 'distribution_concepts';
@@ -49,12 +47,6 @@ class DistributionConcept extends Model
         'concept_id',
         'concept_name',
         'all_synthetic',
-        'count',
-        'ncollections',
-    ];
-
-    protected static $filterableColumns = [
-        'domain_id',
     ];
 
 
