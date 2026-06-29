@@ -158,6 +158,19 @@ class OIDCTokenValidatorTest extends TestCase
         $validator->validateWithClaims($this->lastToken);
     }
 
+    public function test_it_rejects_tokens_signed_with_symmetric_algorithms(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('does not contain any allowed signature algorithms');
+
+        $result = $this->makeHmacValidator(
+            tokenClaims: ['sub' => 'oidc-sub-hs256'],
+            userInfoPayload: ['sub' => 'oidc-sub-hs256'],
+        );
+
+        $result['validator']->validateWithClaims($result['token']);
+    }
+
     public function test_it_preserves_workgroups_when_entitlement_claim_is_absent(): void
     {
         $sub = 'oidc-sub-wg1-' . uniqid();
@@ -242,6 +255,44 @@ class OIDCTokenValidatorTest extends TestCase
 
     private string $lastToken = '';
 
+    /** @var array{private: string, n: string, e: string}|null */
+    private static ?array $rsaKeyPair = null;
+
+    /**
+     * @return array{private: string, n: string, e: string}
+     */
+    private function rsaKeyPair(): array
+    {
+        if (self::$rsaKeyPair === null) {
+            $privateKey = openssl_pkey_new([
+                'private_key_bits' => 2048,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            ]);
+
+            if ($privateKey === false) {
+                throw new \RuntimeException('Unable to generate RSA key pair for OIDC test');
+            }
+
+            $exported = openssl_pkey_export($privateKey, $privatePem);
+            if (! $exported) {
+                throw new \RuntimeException('Unable to export RSA private key for OIDC test');
+            }
+
+            $details = openssl_pkey_get_details($privateKey);
+            if ($details === false) {
+                throw new \RuntimeException('Unable to read RSA key details for OIDC test');
+            }
+
+            self::$rsaKeyPair = [
+                'private' => $privatePem,
+                'n' => $this->base64UrlEncode($details['rsa']['n']),
+                'e' => $this->base64UrlEncode($details['rsa']['e']),
+            ];
+        }
+
+        return self::$rsaKeyPair;
+    }
+
     /**
      * @param  array<string, mixed>  $tokenClaims
      * @param  array<string, mixed>  $userInfoPayload
@@ -251,7 +302,7 @@ class OIDCTokenValidatorTest extends TestCase
         $issuer = 'https://issuer-'.uniqid('', true).'.example.com';
         $jwksUri = $issuer.'/jwks';
         $userinfoEndpoint = $issuer.'/userinfo';
-        $secret = 'oidc-test-shared-secret';
+        $keyPair = $this->rsaKeyPair();
 
         config([
             'services.oidc.issuer' => $issuer,
@@ -270,14 +321,16 @@ class OIDCTokenValidatorTest extends TestCase
             'exp' => time() + 3600,
         ], $tokenClaims);
 
-        $this->lastToken = JWT::encode($claims, $secret, 'HS256', 'test-kid');
+        $this->lastToken = JWT::encode($claims, $keyPair['private'], 'RS256', 'test-kid');
 
         $jwks = [
             'keys' => [[
-                'kty' => 'oct',
+                'kty' => 'RSA',
                 'kid' => 'test-kid',
-                'alg' => 'HS256',
-                'k' => $this->base64UrlEncode($secret),
+                'alg' => 'RS256',
+                'use' => 'sig',
+                'n' => $keyPair['n'],
+                'e' => $keyPair['e'],
             ]],
         ];
 
@@ -308,6 +361,78 @@ class OIDCTokenValidatorTest extends TestCase
         });
 
         return new OIDCTokenValidator($httpClient);
+    }
+
+    /**
+     * @param  array<string, mixed>  $tokenClaims
+     * @param  array<string, mixed>  $userInfoPayload
+     * @return array{validator: OIDCTokenValidator, token: string}
+     */
+    private function makeHmacValidator(array $tokenClaims, array $userInfoPayload): array
+    {
+        $issuer = 'https://issuer-'.uniqid('', true).'.example.com';
+        $jwksUri = $issuer.'/jwks';
+        $userinfoEndpoint = $issuer.'/userinfo';
+        $secret = 'oidc-test-shared-secret';
+
+        config([
+            'services.oidc.issuer' => $issuer,
+            'services.oidc.audience' => 'cohort-api',
+            'services.oidc.userinfo_endpoint' => '',
+            'services.oidc.clock_skew_seconds' => 60,
+            'services.oidc.discovery_cache_ttl_seconds' => 1,
+            'services.oidc.jwks_cache_ttl_seconds' => 1,
+        ]);
+
+        $claims = array_replace([
+            'iss' => $issuer,
+            'aud' => 'cohort-api',
+            'sub' => 'default-sub',
+            'iat' => time() - 30,
+            'exp' => time() + 3600,
+        ], $tokenClaims);
+
+        $token = JWT::encode($claims, $secret, 'HS256', 'test-kid');
+
+        $jwks = [
+            'keys' => [[
+                'kty' => 'oct',
+                'kid' => 'test-kid',
+                'alg' => 'HS256',
+                'k' => $this->base64UrlEncode($secret),
+            ]],
+        ];
+
+        $discoveryPayload = [
+            'jwks_uri' => $jwksUri,
+            'userinfo_endpoint' => $userinfoEndpoint,
+        ];
+
+        $httpClient = Mockery::mock(ClientInterface::class);
+        $httpClient->shouldReceive('request')->andReturnUsing(function (string $method, string $uri, array $options = []) use ($issuer, $jwksUri, $userinfoEndpoint, $discoveryPayload, $jwks, $userInfoPayload, $token) {
+            $this->assertSame('GET', $method);
+
+            if ($uri === rtrim($issuer, '/').'/.well-known/openid-configuration') {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($discoveryPayload));
+            }
+
+            if ($uri === $jwksUri) {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($jwks));
+            }
+
+            if ($uri === $userinfoEndpoint) {
+                $this->assertSame('Bearer '.$token, $options['headers']['Authorization'] ?? null);
+
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($userInfoPayload));
+            }
+
+            $this->fail('Unexpected request URI: '.$uri);
+        });
+
+        return [
+            'validator' => new OIDCTokenValidator($httpClient),
+            'token' => $token,
+        ];
     }
 
     private function base64UrlEncode(string $value): string

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Workgroup;
 use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
@@ -26,12 +27,25 @@ class OIDCTokenValidator
     private const DEFAULT_JWKS_TTL_SECONDS = 300;
     private const DEFAULT_CLOCK_SKEW_SECONDS = 60;
 
+    /**
+     * Asymmetric signature algorithms only. Symmetric algorithms (HS256/HS384/HS512)
+     * are intentionally excluded to prevent algorithm-confusion attacks where a
+     * public key is abused as a shared secret.
+     *
+     * @var list<string>
+     */
+    private const ALLOWED_SIGNATURE_ALGORITHMS = [
+        'RS256', 'RS384', 'RS512',
+        'ES256', 'ES256K', 'ES384',
+        'EdDSA',
+    ];
+
     private readonly ClientInterface $httpClient;
 
     public function __construct(?ClientInterface $httpClient = null)
     {
-        if ((bool) config('services.oidc.enabled', false)
-            && empty(trim((string) config('services.oidc.audience', '')))
+        if ((bool)config('services.oidc.enabled', false)
+            && empty(trim((string)config('services.oidc.audience', '')))
         ) {
             throw new \RuntimeException(
                 'OIDC_AUDIENCE must be set when OIDC is enabled — leaving it blank accepts tokens from any audience'
@@ -39,8 +53,8 @@ class OIDCTokenValidator
         }
 
         $this->httpClient = $httpClient ?? new Client([
-            'timeout' => (float) config('services.oidc.http_timeout_seconds', 10),
-            'connect_timeout' => (float) config('services.oidc.connect_timeout_seconds', 3),
+            'timeout' => (float)config('services.oidc.http_timeout_seconds', 10),
+            'connect_timeout' => (float)config('services.oidc.connect_timeout_seconds', 3),
         ]);
     }
 
@@ -76,8 +90,8 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
-     * @param  array<string, mixed>  $userInfo
+     * @param array<string, mixed> $claims
+     * @param array<string, mixed> $userInfo
      */
     private function resolveOidcSub(array $claims, array $userInfo): string
     {
@@ -90,8 +104,8 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $userInfo
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $userInfo
+     * @param array<string, mixed> $claims
      */
     private function provisionUserFromOidc(string $oidcSub, array $userInfo, array $claims): User
     {
@@ -128,12 +142,12 @@ class OIDCTokenValidator
 
     private function resolveProvisioningEmail(?string $email, string $oidcSub): string
     {
-        if ($email !== null && ! User::where('email', $email)->exists()) {
+        if ($email !== null && !User::where('email', $email)->exists()) {
             return $email;
         }
 
-        $base = 'oidc-'.substr(sha1($oidcSub), 0, 16);
-        $candidate = $base.'@oidc.local';
+        $base = 'oidc-' . substr(sha1($oidcSub), 0, 16);
+        $candidate = $base . '@oidc.local';
         $counter = 1;
 
         while (User::where('email', $candidate)->exists()) {
@@ -166,19 +180,27 @@ class OIDCTokenValidator
         $jwks = $this->getJwks($discovery);
         $clockSkewSeconds = $this->clockSkewSeconds();
 
+        $keySet = array_filter(
+            JWK::parseKeySet($jwks),
+            static fn (Key $key): bool => in_array($key->getAlgorithm(), self::ALLOWED_SIGNATURE_ALGORITHMS, true)
+        );
+        if ($keySet === []) {
+            throw new \RuntimeException('OIDC JWKS does not contain any allowed signature algorithms');
+        }
+
         // Signature verification using provider JWKS.
         $previousLeeway = JWT::$leeway;
         JWT::$leeway = $clockSkewSeconds;
 
         try {
-            JWT::decode($token, JWK::parseKeySet($jwks));
+            JWT::decode($token, $keySet);
         } finally {
             JWT::$leeway = $previousLeeway;
         }
 
         $parsedToken = (new Parser(new JoseEncoder()))->parse($token);
 
-        if (! $parsedToken instanceof \Lcobucci\JWT\UnencryptedToken) {
+        if (!$parsedToken instanceof \Lcobucci\JWT\UnencryptedToken) {
             throw new \RuntimeException('OIDC token is not an unencrypted token');
         }
 
@@ -204,13 +226,13 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $discovery
+     * @param array<string, mixed> $discovery
      */
     private function resolveUserInfoEndpoint(array $discovery): string
     {
-        $userInfoEndpoint = trim((string) config('services.oidc.userinfo_endpoint', ''));
+        $userInfoEndpoint = trim((string)config('services.oidc.userinfo_endpoint', ''));
         if ($userInfoEndpoint === '') {
-            $userInfoEndpoint = (string) ($discovery['userinfo_endpoint'] ?? '');
+            $userInfoEndpoint = (string)($discovery['userinfo_endpoint'] ?? '');
         }
 
         if ($userInfoEndpoint === '') {
@@ -228,7 +250,7 @@ class OIDCTokenValidator
         return [
             'headers' => [
                 'Accept' => 'application/json',
-                'Authorization' => 'Bearer '.$token,
+                'Authorization' => 'Bearer ' . $token,
             ],
         ];
     }
@@ -238,12 +260,12 @@ class OIDCTokenValidator
      */
     private function getDiscoveryDocument(string $issuer): array
     {
-        $cacheKey = self::DISCOVERY_CACHE_PREFIX.md5($issuer);
-        $ttl = max(1, (int) config('services.oidc.discovery_cache_ttl_seconds', self::DEFAULT_DISCOVERY_TTL_SECONDS));
+        $cacheKey = self::DISCOVERY_CACHE_PREFIX . md5($issuer);
+        $ttl = max(1, (int)config('services.oidc.discovery_cache_ttl_seconds', self::DEFAULT_DISCOVERY_TTL_SECONDS));
 
         /** @var array<string, mixed> $discovery */
         $discovery = Cache::remember($cacheKey, $ttl, function () use ($issuer) {
-            $url = rtrim($issuer, '/').'/.well-known/openid-configuration';
+            $url = rtrim($issuer, '/') . '/.well-known/openid-configuration';
 
             return $this->requestJson('GET', $url, [
                 'headers' => ['Accept' => 'application/json'],
@@ -254,18 +276,18 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $discovery
+     * @param array<string, mixed> $discovery
      * @return array<string, mixed>
      */
     private function getJwks(array $discovery): array
     {
         $jwksUri = $discovery['jwks_uri'] ?? null;
-        if (! is_string($jwksUri) || $jwksUri === '') {
+        if (!is_string($jwksUri) || $jwksUri === '') {
             throw new \RuntimeException('OIDC provider is missing jwks_uri');
         }
 
-        $cacheKey = self::JWKS_CACHE_PREFIX.md5($jwksUri);
-        $ttl = max(1, (int) config('services.oidc.jwks_cache_ttl_seconds', self::DEFAULT_JWKS_TTL_SECONDS));
+        $cacheKey = self::JWKS_CACHE_PREFIX . md5($jwksUri);
+        $ttl = max(1, (int)config('services.oidc.jwks_cache_ttl_seconds', self::DEFAULT_JWKS_TTL_SECONDS));
 
         /** @var array<string, mixed> $jwks */
         $jwks = Cache::remember($cacheKey, $ttl, function () use ($jwksUri) {
@@ -273,7 +295,7 @@ class OIDCTokenValidator
                 'headers' => ['Accept' => 'application/json'],
             ], 'OIDC JWKS');
 
-            if (! isset($payload['keys']) || ! is_array($payload['keys'])) {
+            if (!isset($payload['keys']) || !is_array($payload['keys'])) {
                 throw new \RuntimeException('OIDC JWKS payload is invalid');
             }
 
@@ -284,7 +306,7 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function validateClaims(array $claims, string $issuer): void
     {
@@ -294,7 +316,7 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function assertIssuerClaim(array $claims, string $issuer): void
     {
@@ -305,11 +327,11 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function assertAudienceClaim(array $claims): void
     {
-        $configuredAudience = trim((string) config('services.oidc.audience', ''));
+        $configuredAudience = trim((string)config('services.oidc.audience', ''));
         $expectedAudiences = array_values(array_filter(array_map('trim', explode(',', $configuredAudience))));
 
         if ($expectedAudiences !== []) {
@@ -324,14 +346,14 @@ class OIDCTokenValidator
                 }
             }
 
-            if (! $matched) {
+            if (!$matched) {
                 throw new \RuntimeException('OIDC audience claim mismatch');
             }
         }
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function assertNotExpired(array $claims): void
     {
@@ -341,7 +363,7 @@ class OIDCTokenValidator
         if ($exp instanceof \DateTimeInterface) {
             $expTimestamp = $exp->getTimestamp();
         } elseif (is_numeric($exp)) {
-            $expTimestamp = (int) $exp;
+            $expTimestamp = (int)$exp;
         } else {
             throw new \RuntimeException('OIDC token is expired');
         }
@@ -353,16 +375,16 @@ class OIDCTokenValidator
 
     private function configuredIssuer(): string
     {
-        return trim((string) config('services.oidc.issuer'));
+        return trim((string)config('services.oidc.issuer'));
     }
 
     private function clockSkewSeconds(): int
     {
-        return max(0, (int) config('services.oidc.clock_skew_seconds', self::DEFAULT_CLOCK_SKEW_SECONDS));
+        return max(0, (int)config('services.oidc.clock_skew_seconds', self::DEFAULT_CLOCK_SKEW_SECONDS));
     }
 
     /**
-     * @param  array<string, mixed>  $options
+     * @param array<string, mixed> $options
      * @return array<string, mixed>
      */
     private function requestJson(string $method, string $url, array $options, string $context): array
@@ -374,12 +396,12 @@ class OIDCTokenValidator
         }
 
         try {
-            $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+            $payload = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new \RuntimeException(sprintf('%s payload is invalid', $context), 0, $e);
         }
 
-        if (! is_array($payload)) {
+        if (!is_array($payload)) {
             throw new \RuntimeException(sprintf('%s payload is invalid', $context));
         }
 
@@ -387,7 +409,7 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function extractStringClaim(array $claims, string $key): ?string
     {
@@ -397,7 +419,7 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $claims
      */
     private function extractBoolClaim(array $claims, string $key): ?bool
     {
@@ -427,8 +449,8 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $userInfo
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $userInfo
+     * @param array<string, mixed> $claims
      */
     private function syncWorkgroupsFromEntitlements(User $user, array $userInfo, array $claims): void
     {
@@ -446,8 +468,8 @@ class OIDCTokenValidator
     }
 
     /**
-     * @param  array<string, mixed>  $userInfo
-     * @param  array<string, mixed>  $claims
+     * @param array<string, mixed> $userInfo
+     * @param array<string, mixed> $claims
      * @return list<string>|null
      */
     private function resolveEdupersonEntitlement(array $userInfo, array $claims): ?array
