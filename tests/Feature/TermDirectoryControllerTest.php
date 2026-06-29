@@ -38,6 +38,7 @@ class TermDirectoryControllerTest extends TestCase
 
         $collection = Collection::factory()->create();
 
+        // The job that builds the view looks for ResultFiles.
         // ResultFile requires a Task, so we need to create those first.
         $task = Task::factory()->create(['collection_id' => $collection->id]);
 
@@ -99,5 +100,62 @@ class TermDirectoryControllerTest extends TestCase
         $names = array_column($data, 'concept_name');
         $this->assertContains('Hypertension in chronic kidney disease stage 3B due to type 1 diabetes mellitus', $names);
         $this->assertContains('Hypertension in chronic kidney disease stage 3A due to type 1 diabetes mellitus', $names);
+    }
+
+        public function test_search_by_concept_name_with_no_match_returns_empty(): void
+    {
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?concept_name=thisdoesnotexist');
+
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_unauthenticated_request_returns_401(): void
+    {
+        $response = $this->getJson(self::BASE_URL);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_domain_filter_restricts_results(): void
+    {
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Condition');
+
+        $response->assertOk();
+        $this->assertEquals(2, $response->json('data.total'));
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Observation');
+
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_response_shape_has_expected_fields(): void
+    {
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?concept_name=hypertension');
+
+        $response->assertOk();
+
+        $item = $response->json('data.data.0');
+        $this->assertArrayHasKey('concept_id', $item);
+        $this->assertArrayHasKey('concept_name', $item);
+        $this->assertArrayHasKey('domain_id', $item);
+        $this->assertArrayHasKey('count', $item);
+        $this->assertArrayHasKey('ncollections', $item);
+    }
+
+    public function test_non_admin_without_collection_access_sees_no_results(): void
+    {
+        $basicUser = User::factory()->create();
+
+        $response = $this->actingAsJwt($basicUser)
+            ->getJson(self::BASE_URL . '?concept_name=hypertension');
+
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
     }
 }
