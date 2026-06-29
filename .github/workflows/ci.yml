@@ -27,8 +27,18 @@ jobs:
           --health-retries=5
 
     steps:
+      - name: Generate GitHub App token
+        id: gh-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+            
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token:  ${{ steps.gh-token.outputs.token }}
+          fetch-depth: 0
 
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
@@ -38,7 +48,12 @@ jobs:
           coverage: none
 
       - name: Composer install
-        run: "composer install"
+        env:
+          COMPOSER_HOME: /tmp/composer
+        run: |
+          mkdir -p /tmp/composer
+          printf '%s' '{"github-oauth":{"github.com":"${{ steps.gh-token.outputs.token }}"}}' > /tmp/composer/auth.json
+          composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Run code sniffer
         run: "composer run lint"
