@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\QueryParserController;
 use App\Http\Controllers\Api\V1\RegressionTestController;
 use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TermDirectoryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\FeatureController;
@@ -159,6 +160,8 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/omop/concept/{concept_id}', [OmopController::class, 'getConcept']);
     Route::get('/v1/omop/{concept_id}/find_similar', [OmopController::class, 'getPeersAtLevel']);
     Route::post('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
+
+    Route::get('/v1/term-directory', [TermDirectoryController::class, 'index']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
