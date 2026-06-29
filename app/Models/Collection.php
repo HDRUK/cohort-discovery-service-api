@@ -440,10 +440,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         if (!$log->wasRecentlyCreated) {
             $log->touch();
         }
-        //change state if -type BUNNY has come online
-        if ($type === TaskType::A && $c->isInState(Collection::STATUS_SUSPENDED)) {
-            $c->setState(Collection::STATUS_ACTIVE);
-        }
     }
 
     public function scopeVisibleToUser(Builder $query, User $user): void

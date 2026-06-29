@@ -15,6 +15,10 @@ class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
 
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
+
     public function rules(): array
     {
         return [];
@@ -45,7 +49,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
                     $this->setCollectionSuspended($c);
-                    $this->notifySlack($c);
+                    $this->slackNotifier->collectionSuspended($c);
                 } else {
                     $this->logActivity($c->id);
                 }
@@ -89,27 +93,6 @@ class CollectionNoActivityMonitor implements ApiCommand
             'slug',
             Collection::STATUS_ACTIVE
         )->get();
-    }
-
-    private function notifySlack(Collection $c): void
-    {
-        $minutes = (int) config('system.collection_inactivity_minutes', 30);
-
-        app(SlackNotifier::class)->sendBlocks([
-            [
-                'type' => 'header',
-                'text' => ['type' => 'plain_text', 'text' => '🚨 Collection Suspended', 'emoji' => true],
-            ],
-            [
-                'type' => 'section',
-                'fields' => [
-                    ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
-                    ['type' => 'mrkdwn', 'text' => "*Status:*\n⛔ Suspended"],
-                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
-                    ['type' => 'mrkdwn', 'text' => "*Reason:*\nNo activity in {$minutes} minutes"],
-                ],
-            ],
-        ], "🚨 Collection suspended due to inactivity: {$c->name}", '#E01E5A');
     }
 
     private function logNoActivity(int $collectionId): void
