@@ -33,7 +33,6 @@ jobs:
         with:
           client-id: ${{ secrets.DEPLOY_APP_ID }}
           private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
             
       - name: Checkout
         uses: actions/checkout@v4
