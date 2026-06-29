@@ -131,15 +131,13 @@ class CollectionController extends Controller
      */
     public function indexForUser(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
-        $user = User::find(Auth::id());
-
         $collections = Collection::with([
             'demographics',
             'custodian.network',
             'modelState.state',
             'latestMetadata',
         ])
-            ->visibleToUser($user)
+            ->visibleToUser(User::find(Auth::id()))
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()
