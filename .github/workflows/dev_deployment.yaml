@@ -1,0 +1,48 @@
+name: Build and deploy to DEV
+run-name:  ${{ github.actor }} triggered deploy to DEV pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
+
+    steps:
+      - id: args
+        run: |
+          ARGS=""
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: setup
+    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
+    with:
+      chart_path: chart/cohort-api/Chart.yaml
+      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
+      environment: dev-integrated
+    secrets: inherit
+
+  deploy-integrated:
+    needs: build
+    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
+    with:
+      env: dev-integrated
+      chart_path: chart/cohort-api/Chart.yaml
+      git_ref: dev
+    secrets: inherit
+
+  deploy-stadalone:
+    needs: build
+    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
+    with:
+      env: dev-standalone
+      chart_path: chart/cohort-api/Chart.yaml
+      git_ref: dev
+    secrets: inherit
