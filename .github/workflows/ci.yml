@@ -27,8 +27,20 @@ jobs:
           --health-retries=5
 
     steps:
+      - name: Generate GitHub App token
+        id: gh-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: HDRUK
+          repositories: |
+            ${{ github.event.repository.name }}
+            
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token:  ${{ steps.gh-token.outputs.token }}
 
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
