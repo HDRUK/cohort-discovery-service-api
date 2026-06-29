@@ -34,8 +34,6 @@ jobs:
           client-id: ${{ secrets.DEPLOY_APP_ID }}
           private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
           owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
             
       - name: Checkout
         uses: actions/checkout@v4
