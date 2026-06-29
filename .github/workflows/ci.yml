@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
 
-        run: "composer install --no-interaction"
+        run: "composer install --no-interaction --prefer-dist --no-progress"
 
       - name: Run code sniffer
         run: "composer run lint"
