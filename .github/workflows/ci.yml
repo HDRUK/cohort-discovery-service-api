@@ -49,6 +49,7 @@ jobs:
 
       - name: Composer install
         env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ steps.gh-token.outputs.token }}"}}'
           GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
 
         run: "composer install --no-interaction --prefer-dist --no-progress"
