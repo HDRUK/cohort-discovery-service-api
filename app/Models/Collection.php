@@ -219,7 +219,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         return $this->morphOne(ModelState::class, 'stateable');
     }
 
-    /** @return BelongsTo<Custodian, $this> */
     public function custodian(): BelongsTo
     {
         return $this->belongsTo(Custodian::class);
@@ -440,6 +439,41 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         if (!$log->wasRecentlyCreated) {
             $log->touch();
         }
+    }
+
+    /**
+     * Constrain a Collection query to the collections a user is allowed to see.
+     *
+     * Admins see everything. Any other user sees a collection when it is either
+     * (a) attached to one of their workgroups AND in the active state, or
+     * (b) owned by a custodian they administer.
+     */
+    public function scopeVisibleToUser(Builder $query, User $user): Builder
+    {
+        $isAdmin = $user->hasRole('admin');
+
+        return $query->when(
+            !$isAdmin,
+            fn ($q) => $q->where(
+                fn ($inner) =>
+                    $inner->where(
+                        fn ($workgroupQuery) =>
+                            $workgroupQuery->whereHas(
+                                'workgroups',
+                                fn ($wq) => $wq->whereIn(
+                                    'workgroups.id',
+                                    $user->workgroups()->select('workgroups.id')
+                                )
+                            )
+                            ->whereRelation(
+                                'modelState.state',
+                                'states.slug',
+                                self::STATUS_ACTIVE
+                            )
+                    )
+                    ->orWhereIn('custodian_id', $user->custodians()->select('custodians.id'))
+            )
+        );
     }
 
     public function scopeWithTaskCounts(Builder $query): Builder
