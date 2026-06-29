@@ -36,6 +36,9 @@ jobs:
             
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token:  ${{ steps.gh-token.outputs.token }}
+          fetch-depth: 0
 
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
@@ -43,7 +46,10 @@ jobs:
           php-version: "8.3"
           extensions: mbstring, bcmath, pdo_mysql
           coverage: none
-          
+
+      - name: Create Composer auth
+        run: printf '%s' '{"github-oauth":{"github.com":"${{ steps.gh-token.outputs.token }}"}}' > auth.json
+
       - name: Composer install
         env:
           COMPOSER_HOME: /tmp/composer
