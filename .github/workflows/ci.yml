@@ -52,9 +52,11 @@ jobs:
 
       - name: Composer install
         env:
-          GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
-
-        run: "composer install --no-interaction --prefer-dist --no-progress"
+          COMPOSER_HOME: /tmp/composer
+        run: |
+          mkdir -p /tmp/composer
+          printf '%s' '{"github-oauth":{"github.com":"${{ steps.gh-token.outputs.token }}"}}' > /tmp/composer/auth.json
+          composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Run code sniffer
         run: "composer run lint"
