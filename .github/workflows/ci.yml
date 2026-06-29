@@ -2,7 +2,13 @@ name: Run quality checks
 run-name: ${{ github.actor }} triggered quality check pipeline
 on:
   push:
+    branches:
+      - dev
+      - main
   pull_request:
+    branches:
+      - main
+      - dev
 
 jobs:
   test:
