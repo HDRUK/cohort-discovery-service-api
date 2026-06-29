@@ -118,15 +118,25 @@ class OmopController extends Controller
                     ->all();
             }
 
+            $conceptIds = [];
+            foreach ((array) ($search['concept_id'] ?? []) as $t) {
+                $t = trim((string) $t);
+                if ($t !== '' && ctype_digit($t)) {
+                    $conceptIds[] = (int) $t;
+                }
+            }
+
+            $conceptNames = [];
+            foreach ((array) ($search['concept_name'] ?? []) as $t) {
+                $t = trim((string) $t);
+                if ($t !== '') {
+                    $conceptNames[] = $t;
+                }
+            }
+
             $nlp = $extractor->searchConcepts([
-                'concept_id'            => array_map('intval', array_values(array_filter(
-                    array_map('trim', (array) ($search['concept_id'] ?? [])),
-                    fn ($t) => $t !== '' && ctype_digit($t)
-                ))),
-                'concept_name'          => array_values(array_filter(
-                    array_map('trim', (array) ($search['concept_name'] ?? [])),
-                    fn ($t) => $t !== ''
-                )),
+                'concept_id'            => $conceptIds,
+                'concept_name'          => $conceptNames,
                 'domain'                => $domain,
                 'collection_ids'        => $collectionIds ?: null,
                 'use_collection_filter' => $useCollectionsInSearch && ! empty($collectionIds),
