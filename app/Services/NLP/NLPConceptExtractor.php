@@ -15,6 +15,17 @@ class NLPConceptExtractor
         $this->baseUri = config('services.nlp.base_uri');
     }
 
+    public function searchConcepts(array $params): array
+    {
+        $response = Http::timeout(30)->post("{$this->baseUri}/concepts/search", $params);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('NLP concept search failed: '.$response->body());
+        }
+
+        return $response->json();
+    }
+
     public function extract(string $query, float $threshold = 50, int $max_matches = 10): array
     {
         $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}&max_matches={$max_matches}", [

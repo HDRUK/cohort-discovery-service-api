@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 use App\Models\Collection;
+use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
 
 class OmopControllerTest extends TestCase
@@ -14,149 +15,121 @@ class OmopControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::table('distributions')->truncate();
-        Collection::truncate();
-        Collection::factory(2)->create();
-
-        DB::table('distributions')->insert([
-            [
-                'collection_id' => 1,
-                'name'          => 'SICKLE_CELL_C',
-                'description'   => 'Sickle cell-hemoglobin C disease',
-                'category'      => 'Condition',
-                'concept_id'    => 24006,
-                'count'         => 10,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ],
-            [
-                'collection_id' => 1,
-                'name'          => 'SICKLE_CELL_THAL',
-                'description'   => 'Sickle cell-thalassemia disease',
-                'category'      => 'Condition',
-                'concept_id'    => 24007,
-                'count'         => 5,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ],
-            [
-                'collection_id' => 1,
-                'name'          => 'HYPERTENSION',
-                'description'   => 'Essential hypertension',
-                'category'      => 'Condition',
-                'concept_id'    => 320128,
-                'count'         => 50,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ],
-            [
-                'collection_id' => 2,
-                'name'          => 'HEART_RATE',
-                'description'   => 'Heart rate',
-                'category'      => 'Measurement',
-                'concept_id'    => 3027018,
-                'count'         => 20,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ],
-        ]);
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        config(['services.nlp.base_uri' => 'http://localhost:5001']);
+        Http::preventStrayRequests();
     }
 
-    public function test_search_by_concept_name_returns_matching_rows(): void
+    private function nlpUrl(): string
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'concept_name' => ['sickle'],
-        ]);
-
-        $response->assertOk();
-        $data = $response->json('data.data');
-
-        $this->assertCount(2, $data);
-        $names = array_column($data, 'name');
-        $this->assertContains('Sickle cell-hemoglobin C disease', $names);
-        $this->assertContains('Sickle cell-thalassemia disease', $names);
+        return config('services.nlp.base_uri') . '/concepts/search';
     }
 
-    public function test_separator_variants_match_hyphenated_concept_name(): void
+    private function mockNlpResponse(array $items = [], int $total = null): array
     {
-        $variants = [
-            'sickle cell hemoglobin',
-            'sickle-cell-hemoglobin',
-            'sickle cell-hemoglobin',
-            'sickle, cell (hemoglobin)',
+        $total = $total ?? count($items);
+
+        return [
+            'total'        => $total,
+            'per_page'     => 25,
+            'current_page' => 1,
+            'last_page'    => max(1, (int) ceil($total / 25)),
+            'data'         => $items,
         ];
-
-        foreach ($variants as $query) {
-            $response = $this->postJson(self::SEARCH_URL, [
-                'concept_name' => [$query],
-            ]);
-
-            $response->assertOk();
-            $names = array_column($response->json('data.data'), 'name');
-
-            $this->assertContains(
-                'Sickle cell-hemoglobin C disease',
-                $names,
-                "Query '{$query}' should match the hyphenated concept"
-            );
-        }
     }
 
-    public function test_search_by_concept_id_returns_matching_rows(): void
+    private function makeConcept(int $id, string $name, string $category = 'Condition'): array
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'concept_id' => ['24006'],
-        ]);
+        return [
+            'concept_id'   => $id,
+            'name'         => $name,
+            'category'     => $category,
+            'match_score'  => 500,
+            'ncollections' => 1,
+            'count'        => 10,
+            'children'     => [],
+        ];
+    }
+
+    public function test_search_by_concept_name_forwards_term_to_nlp(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+            $this->makeConcept(24007, 'Sickle cell-thalassemia disease'),
+        ]), 200)]);
+
+        $response = $this->postJson(self::SEARCH_URL, ['concept_name' => ['sickle']]);
 
         $response->assertOk();
         $data = $response->json('data.data');
+        $this->assertCount(2, $data);
 
-        $this->assertCount(1, $data);
-        $this->assertEquals(24006, $data[0]['concept_id']);
+        Http::assertSent(fn ($req) => $req->data()['concept_name'] === ['sickle']);
     }
 
-    public function test_concept_name_and_concept_id_are_combined_with_or(): void
+    public function test_separator_variants_are_forwarded_verbatim_to_nlp(): void
     {
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+        ]), 200)]);
+
+        $query = 'sickle cell-hemoglobin';
+        $this->postJson(self::SEARCH_URL, ['concept_name' => [$query]]);
+
+        Http::assertSent(fn ($req) => $req->data()['concept_name'] === [$query]);
+    }
+
+    public function test_search_by_concept_id_forwards_id_to_nlp(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+        ]), 200)]);
+
+        $response = $this->postJson(self::SEARCH_URL, ['concept_id' => ['24006']]);
+
+        $response->assertOk();
+        $this->assertEquals(24006, $response->json('data.data.0.concept_id'));
+
+        Http::assertSent(fn ($req) => in_array(24006, $req->data()['concept_id'] ?? []));
+    }
+
+    public function test_invalid_concept_id_strings_are_filtered(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse(), 200)]);
+
+        $this->postJson(self::SEARCH_URL, ['concept_id' => ['abc', '123']]);
+
+        Http::assertSent(fn ($req) => $req->data()['concept_id'] === [123]);
+    }
+
+    public function test_concept_name_and_concept_id_are_both_forwarded(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+            $this->makeConcept(24007, 'Sickle cell-thalassemia disease'),
+            $this->makeConcept(320128, 'Essential hypertension'),
+        ], 3), 200)]);
+
         $response = $this->postJson(self::SEARCH_URL, [
             'concept_name' => ['sickle'],
             'concept_id'   => ['320128'],
         ]);
 
         $response->assertOk();
-        $data = $response->json('data.data');
+        $this->assertCount(3, $response->json('data.data'));
 
-        $this->assertCount(3, $data);
-        $ids = array_column($data, 'concept_id');
-        $this->assertContains(24006, $ids);
-        $this->assertContains(24007, $ids);
-        $this->assertContains(320128, $ids);
+        Http::assertSent(function ($req) {
+            return $req->data()['concept_name'] === ['sickle']
+                && in_array(320128, $req->data()['concept_id'] ?? []);
+        });
     }
 
-    public function test_multiple_values_across_params_are_combined_with_or(): void
+    public function test_response_shape_matches_nlp_output(): void
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'concept_name' => ['sickle', 'hypertension'],
-            'concept_id'   => ['320128'],
-        ]);
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+        ]), 200)]);
 
-        $response->assertOk();
-        $data = $response->json('data.data');
-
-        $this->assertCount(3, $data);
-        $ids = array_column($data, 'concept_id');
-        $this->assertContains(24006, $ids);
-        $this->assertContains(24007, $ids);
-        $this->assertContains(320128, $ids);
-    }
-
-    public function test_response_shape_has_no_description_field(): void
-    {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'concept_name' => ['sickle'],
-        ]);
+        $response = $this->postJson(self::SEARCH_URL, ['concept_name' => ['sickle']]);
 
         $response->assertOk();
         $item = $response->json('data.data.0');
@@ -168,46 +141,25 @@ class OmopControllerTest extends TestCase
         $this->assertArrayNotHasKey('description', $item);
     }
 
-    public function test_name_field_contains_concept_name_not_distribution_name(): void
+    public function test_domain_filter_forwarded_to_nlp(): void
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'concept_id' => ['24006'],
-        ]);
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(3027018, 'Heart rate', 'Measurement'),
+        ]), 200)]);
+
+        $response = $this->postJson(self::SEARCH_URL, ['domain' => 'Measurement']);
 
         $response->assertOk();
-        $item = $response->json('data.data.0');
+        $this->assertEquals('Measurement', $response->json('data.data.0.category'));
 
-        $this->assertEquals('Sickle cell-hemoglobin C disease', $item['name']);
-        $this->assertEquals(24006, $item['concept_id']);
+        Http::assertSent(fn ($req) => $req->data()['domain'] === 'Measurement');
     }
 
-    public function test_domain_filter_restricts_results(): void
+    public function test_no_search_params_forwarded_with_nulls(): void
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'domain' => 'Measurement',
-        ]);
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([], 4), 200)]);
 
-        $response->assertOk();
-        $data = $response->json('data.data');
-
-        $this->assertCount(1, $data);
-        $this->assertEquals('Heart rate', $data[0]['name']);
-        $this->assertEquals('Measurement', $data[0]['category']);
-    }
-
-    public function test_no_search_params_returns_all_rows(): void
-    {
         $response = $this->postJson(self::SEARCH_URL, []);
-
-        $response->assertOk();
-        $this->assertEquals(4, $response->json('data.total'));
-    }
-
-    public function test_old_description_param_is_not_used_for_search(): void
-    {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'description' => 'sickle',
-        ]);
 
         $response->assertOk();
         $this->assertEquals(4, $response->json('data.total'));
@@ -217,35 +169,78 @@ class OmopControllerTest extends TestCase
     {
         Feature::activate('query-builder-use-collections-in-search');
 
-        $cpid = Collection::find(2)->pid;
-        $response = $this->postJson(self::SEARCH_URL, [
-            'collections' => [$cpid],
-        ]);
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        Collection::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $collection = Collection::factory()->create();
+
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse([
+            $this->makeConcept(3027018, 'Heart rate', 'Measurement'),
+        ]), 200)]);
+
+        $response = $this->postJson(self::SEARCH_URL, ['collections' => [$collection->pid]]);
 
         $response->assertOk();
-        $data = $response->json('data.data');
 
-        $this->assertCount(1, $data);
-        $this->assertEquals(3027018, $data[0]['concept_id']);
+        Http::assertSent(function ($req) use ($collection) {
+            $data = $req->data();
+            return $data['use_collection_filter'] === true
+                && in_array($collection->id, $data['collection_ids'] ?? []);
+        });
     }
 
-    public function test_pagination_uses_per_page_and_page_from_request_body(): void
+    public function test_collections_filter_not_applied_when_feature_disabled(): void
     {
-        $response = $this->postJson(self::SEARCH_URL, [
-            'per_page' => 2,
-            'page'     => 2,
-        ]);
+        Feature::deactivate('query-builder-use-collections-in-search');
+
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse(), 200)]);
+
+        $this->postJson(self::SEARCH_URL, ['collections' => ['some-pid']]);
+
+        Http::assertSent(fn ($req) => $req->data()['use_collection_filter'] === false);
+    }
+
+    public function test_stats_ordering_flag_forwarded_to_nlp(): void
+    {
+        Feature::activate('query-builder-use-stats-in-ordering');
+
+        Http::fake([$this->nlpUrl() => Http::response($this->mockNlpResponse(), 200)]);
+
+        $this->postJson(self::SEARCH_URL, []);
+
+        Http::assertSent(fn ($req) => $req->data()['use_stats_ordering'] === true);
+    }
+
+    public function test_pagination_params_forwarded_and_paginator_built_correctly(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response([
+            'total'        => 4,
+            'per_page'     => 2,
+            'current_page' => 2,
+            'last_page'    => 2,
+            'data'         => [
+                $this->makeConcept(24007, 'Sickle cell-thalassemia disease'),
+                $this->makeConcept(24006, 'Sickle cell-hemoglobin C disease'),
+            ],
+        ], 200)]);
+
+        $response = $this->postJson(self::SEARCH_URL, ['per_page' => 2, 'page' => 2]);
 
         $response->assertOk();
-
-        $data = $response->json('data.data');
-
-        $this->assertCount(2, $data);
+        $this->assertCount(2, $response->json('data.data'));
         $this->assertEquals(4, $response->json('data.total'));
         $this->assertEquals(2, $response->json('data.current_page'));
         $this->assertEquals(2, $response->json('data.per_page'));
 
-        $ids = array_column($data, 'concept_id');
-        $this->assertEquals([24007, 24006], $ids);
+        Http::assertSent(fn ($req) => $req->data()['per_page'] === 2 && $req->data()['page'] === 2);
+    }
+
+    public function test_nlp_error_returns_error_response(): void
+    {
+        Http::fake([$this->nlpUrl() => Http::response('Internal Server Error', 500)]);
+
+        $response = $this->postJson(self::SEARCH_URL, []);
+
+        $response->assertStatus(500);
     }
 }
