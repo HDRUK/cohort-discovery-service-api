@@ -442,6 +442,26 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         }
     }
 
+    public function scopeVisibleToUser(Builder $query, User $user): void
+    {
+        if ($user->roles()->where('name', 'admin')->exists()) {
+            return;
+        }
+
+        $userWorkgroupIds = $user->workgroups()->select('workgroups.id');
+        $userCustodianIds = $user->custodians()->select('custodians.id');
+
+        $query->where(
+            fn ($q) => $q
+                ->where(
+                    fn ($qq) => $qq
+                        ->whereHas('workgroups', fn ($wq) => $wq->whereIn('workgroups.id', $userWorkgroupIds))
+                        ->whereRelation('modelState.state', 'states.slug', self::STATUS_ACTIVE)
+                )
+                ->orWhereIn('custodian_id', $userCustodianIds)
+        );
+    }
+
     public function scopeWithTaskCounts(Builder $query): Builder
     {
         return $query->withCount([
