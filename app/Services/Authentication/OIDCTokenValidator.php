@@ -13,6 +13,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use JsonException;
 use Lcobucci\JWT\Encoding\JoseEncoder;
@@ -230,14 +231,17 @@ class OIDCTokenValidator
      */
     private function resolveUserInfoEndpoint(array $discovery): string
     {
-        $userInfoEndpoint = trim((string)config('services.oidc.userinfo_endpoint', ''));
-        if ($userInfoEndpoint === '') {
-            $userInfoEndpoint = (string)($discovery['userinfo_endpoint'] ?? '');
+        $configuredEndpoint = trim((string)config('services.oidc.userinfo_endpoint', ''));
+        if ($configuredEndpoint !== '') {
+            return $configuredEndpoint;
         }
 
+        $userInfoEndpoint = (string)($discovery['userinfo_endpoint'] ?? '');
         if ($userInfoEndpoint === '') {
             throw new \RuntimeException('OIDC userinfo endpoint is not configured');
         }
+
+        $this->assertUrlBelongsToIssuer($userInfoEndpoint, 'userinfo_endpoint');
 
         return $userInfoEndpoint;
     }
@@ -285,6 +289,8 @@ class OIDCTokenValidator
         if (!is_string($jwksUri) || $jwksUri === '') {
             throw new \RuntimeException('OIDC provider is missing jwks_uri');
         }
+
+        $this->assertUrlBelongsToIssuer($jwksUri, 'jwks_uri');
 
         $cacheKey = self::JWKS_CACHE_PREFIX . md5($jwksUri);
         $ttl = max(1, (int)config('services.oidc.jwks_cache_ttl_seconds', self::DEFAULT_JWKS_TTL_SECONDS));
@@ -347,6 +353,11 @@ class OIDCTokenValidator
             }
 
             if (!$matched) {
+                Log::warning('OIDC audience claim mismatch', [
+                    'received_aud' => $audiences,
+                    'expected_aud' => $expectedAudiences,
+                ]);
+
                 throw new \RuntimeException('OIDC audience claim mismatch');
             }
         }
@@ -381,6 +392,46 @@ class OIDCTokenValidator
     private function clockSkewSeconds(): int
     {
         return max(0, (int)config('services.oidc.clock_skew_seconds', self::DEFAULT_CLOCK_SKEW_SECONDS));
+    }
+
+    private function assertUrlBelongsToIssuer(string $url, string $context): void
+    {
+        $issuer = $this->configuredIssuer();
+        if ($issuer === '') {
+            throw new \RuntimeException('OIDC issuer is not configured');
+        }
+
+        $urlParts = parse_url($url);
+        $issuerParts = parse_url($issuer);
+
+        if ($urlParts === false || $issuerParts === false) {
+            throw new \RuntimeException(sprintf('OIDC %s URL is invalid', $context));
+        }
+
+        $urlScheme = strtolower($urlParts['scheme'] ?? '');
+        $issuerScheme = strtolower($issuerParts['scheme'] ?? '');
+        $urlHost = strtolower($urlParts['host'] ?? '');
+        $issuerHost = strtolower($issuerParts['host'] ?? '');
+
+        if ($urlScheme === '' || $urlHost === '' || $issuerScheme === '' || $issuerHost === '') {
+            throw new \RuntimeException(sprintf('OIDC %s URL is invalid', $context));
+        }
+
+        $urlPort = $urlParts['port'] ?? $this->defaultPortForScheme($urlScheme);
+        $issuerPort = $issuerParts['port'] ?? $this->defaultPortForScheme($issuerScheme);
+
+        if ($urlScheme !== $issuerScheme || $urlHost !== $issuerHost || $urlPort !== $issuerPort) {
+            throw new \RuntimeException(sprintf('OIDC %s URL does not belong to configured issuer', $context));
+        }
+    }
+
+    private function defaultPortForScheme(string $scheme): ?int
+    {
+        return match ($scheme) {
+            'http' => 80,
+            'https' => 443,
+            default => null,
+        };
     }
 
     /**
