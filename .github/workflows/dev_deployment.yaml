@@ -7,12 +7,11 @@ on:
       - dev
 
 jobs:
-  setup:
+  setup-standalone:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: dev-standalone
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
-
     steps:
       - id: args
         run: |
@@ -20,29 +19,50 @@ jobs:
           ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: setup
+  build-standalone:
+    needs: setup-standalone
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
       chart_path: chart/cohort-api/Chart.yaml
-      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
-      environment: dev-integrated
+      environment: dev-standalone
+      docker_build_args: ${{ needs.setup-standalone.outputs.docker_build_args }}
     secrets: inherit
 
-  deploy-integrated:
-    needs: build
+  deploy-standalone:
+    needs: build-standalone
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
-      env: dev-integrated
+      env: dev-standalone
       chart_path: chart/cohort-api/Chart.yaml
       git_ref: dev
     secrets: inherit
 
-  deploy-stadalone:
-    needs: build
+  setup-integrated:
+    runs-on: ubuntu-latest
+    environment: dev-integrated
+    outputs:
+      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
+    steps:
+      - id: args
+        run: |
+          ARGS=""
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+  build-integrated:
+    needs: setup-integrated
+    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
+    with:
+      chart_path: chart/cohort-api/Chart.yaml
+      environment: dev-integrated
+      docker_build_args: ${{ needs.setup-integrated.outputs.docker_build_args }}
+    secrets: inherit
+
+  deploy-integrated:
+    needs: build-integrated
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
-      env: dev-standalone
+      env: dev-integrated
       chart_path: chart/cohort-api/Chart.yaml
       git_ref: dev
     secrets: inherit
