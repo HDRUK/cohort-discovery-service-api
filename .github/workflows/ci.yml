@@ -52,7 +52,7 @@ jobs:
 
       - name: Composer install
         env:
-          GH_TOKEN: ${{ steps.gh-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.gh-token.outputs.token }}
 
         run: "composer install"
 
