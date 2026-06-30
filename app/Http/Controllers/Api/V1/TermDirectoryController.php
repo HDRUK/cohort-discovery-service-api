@@ -73,7 +73,7 @@ class TermDirectoryController extends Controller
     {
         try {
             $perPage = $this->resolvePerPage();
-            
+
             $visibleCollectionIds = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
 
             $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)

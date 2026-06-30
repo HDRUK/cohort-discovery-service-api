@@ -75,7 +75,6 @@ DESC;
 
         if ($tableFilter && ! in_array($tableFilter, $this->vocabFiles)) {
             $this->error("Unknown table: {$tableFilter}. Valid tables: ".implode(', ', $this->vocabFiles));
-
             return;
         }
 
