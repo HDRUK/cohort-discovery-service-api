@@ -66,9 +66,9 @@ DESC;
         $path = rtrim($this->argument('path'), '/');
         $useBulk = $this->option('bulk');
         /** @var string|null $shouldTruncate */
-        $shouldTruncate = $this->option('truncate');
+        $shouldTruncate = $this->option('truncate') ?: false;
         /** @var string|null $shouldClean */
-        $shouldClean = $this->option('clean-file');
+        $shouldClean = $this->option('clean-file') ?: false;
         $tmpFile = '';
 
         $tableFilter = $this->option('table') ? strtoupper($this->option('table')) : null;
