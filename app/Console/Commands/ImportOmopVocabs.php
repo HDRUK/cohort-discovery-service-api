@@ -65,7 +65,9 @@ DESC;
     {
         $path = rtrim($this->argument('path'), '/');
         $useBulk = $this->option('bulk');
+        /** @var string|null $shouldTruncate */
         $shouldTruncate = $this->option('truncate');
+        /** @var string|null $shouldClean */
         $shouldClean = $this->option('clean-file');
         $tmpFile = '';
 
