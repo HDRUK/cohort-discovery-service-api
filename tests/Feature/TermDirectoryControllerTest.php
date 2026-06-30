@@ -102,7 +102,7 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertContains('Hypertension in chronic kidney disease stage 3A due to type 1 diabetes mellitus', $names);
     }
 
-        public function test_search_by_concept_name_with_no_match_returns_empty(): void
+    public function test_search_by_concept_name_with_no_match_returns_empty(): void
     {
         $response = $this->actingAsJwt($this->user)
             ->getJson(self::BASE_URL . '?concept_name=thisdoesnotexist');
