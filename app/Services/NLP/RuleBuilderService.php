@@ -215,7 +215,8 @@ class RuleBuilderService
     public function parseToRules(
         string $query,
         bool $ignoreSynthetic = false,
-        bool $preferNonSynthetic = true
+        bool $preferNonSynthetic = true,
+        array $collectionIds = []
     ): array {
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
@@ -229,7 +230,7 @@ class RuleBuilderService
 
         $this->applyConstraints($query, $constraints, $warnings);
 
-        $this->loadNlpEntities($query);
+        $this->loadNlpEntities($query, collectionIds: $collectionIds);
         $this->mergeNlpWarnings($warnings);
         $this->applyNlpAgeConstraints($constraints, $warnings);
         $this->applyNlpTimeConstraints($constraints, $warnings);

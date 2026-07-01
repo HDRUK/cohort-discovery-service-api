@@ -49,6 +49,8 @@ class QueryParserController extends Controller
             'query' => 'required|string',
             'ignore_synthetic' => 'sometimes|boolean',
             'prefer_non_synthetic' => 'sometimes|boolean',
+            'collection_ids' => 'sometimes|array',
+            'collection_ids.*' => 'string',
         ]);
 
         $query = $request->input('query');
@@ -56,11 +58,13 @@ class QueryParserController extends Controller
 
         $ignoreSynthetic = $request->boolean('ignore_synthetic', false);
         $preferNonSynthetic = $request->boolean('prefer_non_synthetic', true);
+        $collectionIds = $request->input('collection_ids', []);
 
         $rules = $ruleBuilderService->parseToRules(
             $query,
             $ignoreSynthetic,
-            $preferNonSynthetic
+            $preferNonSynthetic,
+            $collectionIds
         );
 
         $activityLogger->custom('queries', 'parsed', null, [
@@ -68,6 +72,7 @@ class QueryParserController extends Controller
                 'text' => $query,
                 'ignore_synthetic' => $ignoreSynthetic,
                 'prefer_non_synthetic' => $preferNonSynthetic,
+                'collection_ids' => $collectionIds,
             ],
             'result' => [
                 'rules_count' => count($rules['rules'] ?? []),
