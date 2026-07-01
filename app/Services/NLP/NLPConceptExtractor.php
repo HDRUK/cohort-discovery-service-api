@@ -36,7 +36,7 @@ class NLPConceptExtractor
         $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}&max_matches={$max_matches}", [
             'query'                => $query,
             'use_stats_ordering'   => Feature::active('query-builder-use-stats-in-ordering'),
-            'use_collection_filter'=> Feature::active('query-builder-use-collections-in-search'),
+            'use_collection_filter' => Feature::active('query-builder-use-collections-in-search'),
             'collection_ids'       => $collectionIds ?: null,
         ]);
 
