@@ -8,7 +8,6 @@ use App\Services\NLP\RuleBuilderService;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Laravel\Pennant\Feature;
 
 /**
  * @OA\Tag(
@@ -59,16 +58,12 @@ class QueryParserController extends Controller
 
         $ignoreSynthetic = $request->boolean('ignore_synthetic', false);
         $preferNonSynthetic = $request->boolean('prefer_non_synthetic', true);
-        $useStatsOrdering = Feature::active('query-builder-use-stats-in-ordering');
-        $useCollectionFilter = Feature::active('query-builder-use-collections-in-search');
         $collectionIds = $request->input('collection_ids', []);
 
         $rules = $ruleBuilderService->parseToRules(
             $query,
             $ignoreSynthetic,
             $preferNonSynthetic,
-            $useStatsOrdering,
-            $useCollectionFilter,
             $collectionIds
         );
 
@@ -77,8 +72,6 @@ class QueryParserController extends Controller
                 'text' => $query,
                 'ignore_synthetic' => $ignoreSynthetic,
                 'prefer_non_synthetic' => $preferNonSynthetic,
-                'use_stats_ordering' => $useStatsOrdering,
-                'use_collection_filter' => $useCollectionFilter,
                 'collection_ids' => $collectionIds,
             ],
             'result' => [

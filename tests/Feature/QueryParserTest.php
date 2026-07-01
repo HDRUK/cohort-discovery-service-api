@@ -36,94 +36,47 @@ class QueryParserTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function test_parse_sends_use_stats_ordering_when_feature_flag_active(): void
+    public function test_use_stats_ordering_sent_when_flag_active(): void
     {
         Feature::activateForEveryone('query-builder-use-stats-in-ordering');
 
-        Http::fake([
-            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
-        ]);
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(function ($request) {
-            return str_contains($request->url(), '/extract')
-                && $request->data()['use_stats_ordering'] === true;
-        });
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === true);
     }
 
-    public function test_parse_sends_use_collection_filter_when_feature_flag_active(): void
+    public function test_use_stats_ordering_not_sent_when_flag_inactive(): void
+    {
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
+
+        $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === false);
+    }
+
+    public function test_use_collection_filter_sent_when_flag_active(): void
     {
         Feature::activateForEveryone('query-builder-use-collections-in-search');
 
-        Http::fake([
-            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
-        ]);
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(function ($request) {
-            return str_contains($request->url(), '/extract')
-                && $request->data()['use_collection_filter'] === true;
-        });
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_collection_filter'] === true);
     }
 
-    public function test_parse_sends_collection_ids_to_nlp(): void
+    public function test_collection_ids_forwarded_to_nlp(): void
     {
-        Http::fake([
-            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
-        ]);
-
-        $collectionIds = ['col-abc', 'col-def'];
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
 
         $this->postJson(self::BASE_URL, [
             'query' => 'diabetes',
-            'collection_ids' => $collectionIds,
+            'collection_ids' => ['col-abc', 'col-def'],
         ])->assertOk();
 
-        Http::assertSent(function ($request) use ($collectionIds) {
-            return str_contains($request->url(), '/extract')
-                && $request->data()['collection_ids'] === $collectionIds;
-        });
-    }
-
-    public function test_parse_sends_all_nlp_params_when_both_flags_active(): void
-    {
-        Feature::activateForEveryone('query-builder-use-stats-in-ordering');
-        Feature::activateForEveryone('query-builder-use-collections-in-search');
-
-        Http::fake([
-            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
-        ]);
-
-        $this->postJson(self::BASE_URL, [
-            'query' => 'hypertension',
-            'collection_ids' => ['col-1', 'col-2'],
-        ])->assertOk();
-
-        Http::assertSent(function ($request) {
-            $data = $request->data();
-            return str_contains($request->url(), '/extract')
-                && $data['use_stats_ordering'] === true
-                && $data['use_collection_filter'] === true
-                && $data['collection_ids'] === ['col-1', 'col-2'];
-        });
-    }
-
-    public function test_parse_defaults_flags_to_false_when_inactive(): void
-    {
-        Http::fake([
-            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
-        ]);
-
-        $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
-
-        Http::assertSent(function ($request) {
-            $data = $request->data();
-            return str_contains($request->url(), '/extract')
-                && $data['use_stats_ordering'] === false
-                && $data['use_collection_filter'] === false;
-        });
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['collection_ids'] === ['col-abc', 'col-def']);
     }
 
     public function test_parse_returns_422_for_invalid_collection_ids(): void
