@@ -38,7 +38,7 @@ class QueryParserTest extends TestCase
 
     public function test_use_stats_ordering_sent_when_flag_active(): void
     {
-        Feature::activateForEveryone('query-builder-use-stats-in-ordering');
+        Feature::for(null)->activate('query-builder-use-stats-in-ordering');
 
         Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
 
@@ -58,7 +58,7 @@ class QueryParserTest extends TestCase
 
     public function test_use_collection_filter_sent_when_flag_active(): void
     {
-        Feature::activateForEveryone('query-builder-use-collections-in-search');
+        Feature::for(null)->activate('query-builder-use-collections-in-search');
 
         Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200)]);
 
