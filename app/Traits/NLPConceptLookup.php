@@ -20,7 +20,7 @@ trait NLPConceptLookup
 
         $nlp = App::make(\App\Services\NLP\NLPConceptExtractor::class);
 
-        $payload = $nlp->extract($query, $threshold, 10, $collectionIds);
+        $payload = $nlp->extract($query, $threshold, collectionIds: $collectionIds);
         \Log::info(json_encode(collect($payload)));
 
         $entities = $payload['entities'] ?? $payload;

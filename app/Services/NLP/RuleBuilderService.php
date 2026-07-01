@@ -230,7 +230,7 @@ class RuleBuilderService
 
         $this->applyConstraints($query, $constraints, $warnings);
 
-        $this->loadNlpEntities($query, 80, $collectionIds);
+        $this->loadNlpEntities($query, collectionIds: $collectionIds);
         $this->mergeNlpWarnings($warnings);
         $this->applyNlpAgeConstraints($constraints, $warnings);
         $this->applyNlpTimeConstraints($constraints, $warnings);
