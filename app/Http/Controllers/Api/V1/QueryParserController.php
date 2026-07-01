@@ -8,6 +8,7 @@ use App\Services\NLP\RuleBuilderService;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Pennant\Feature;
 
 /**
  * @OA\Tag(
@@ -49,8 +50,6 @@ class QueryParserController extends Controller
             'query' => 'required|string',
             'ignore_synthetic' => 'sometimes|boolean',
             'prefer_non_synthetic' => 'sometimes|boolean',
-            'use_stats_ordering' => 'sometimes|boolean',
-            'use_collection_filter' => 'sometimes|boolean',
             'collection_ids' => 'sometimes|array',
             'collection_ids.*' => 'string',
         ]);
@@ -60,14 +59,17 @@ class QueryParserController extends Controller
 
         $ignoreSynthetic = $request->boolean('ignore_synthetic', false);
         $preferNonSynthetic = $request->boolean('prefer_non_synthetic', true);
+        $useStatsOrdering = Feature::active('query-builder-use-stats-in-ordering');
+        $useCollectionFilter = Feature::active('query-builder-use-collections-in-search');
+        $collectionIds = $request->input('collection_ids', []);
 
         $rules = $ruleBuilderService->parseToRules(
             $query,
             $ignoreSynthetic,
             $preferNonSynthetic,
-            $request->boolean('use_stats_ordering', false),
-            $request->boolean('use_collection_filter', false),
-            $request->input('collection_ids', [])
+            $useStatsOrdering,
+            $useCollectionFilter,
+            $collectionIds
         );
 
         $activityLogger->custom('queries', 'parsed', null, [
@@ -75,9 +77,9 @@ class QueryParserController extends Controller
                 'text' => $query,
                 'ignore_synthetic' => $ignoreSynthetic,
                 'prefer_non_synthetic' => $preferNonSynthetic,
-                'use_stats_ordering' => $request->boolean('use_stats_ordering', false),
-                'use_collection_filter' => $request->boolean('use_collection_filter', false),
-                'collection_ids' => $request->input('collection_ids', []),
+                'use_stats_ordering' => $useStatsOrdering,
+                'use_collection_filter' => $useCollectionFilter,
+                'collection_ids' => $collectionIds,
             ],
             'result' => [
                 'rules_count' => count($rules['rules'] ?? []),

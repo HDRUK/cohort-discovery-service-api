@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
 class QueryParserTest extends TestCase
@@ -26,6 +27,8 @@ class QueryParserTest extends TestCase
     {
         parent::setUp();
         Config::set('services.nlp.base_uri', self::NLP_BASE);
+        Feature::deactivateForEveryone('query-builder-use-stats-in-ordering');
+        Feature::deactivateForEveryone('query-builder-use-collections-in-search');
     }
 
     public function test_true(): void
@@ -33,16 +36,15 @@ class QueryParserTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function test_parse_sends_use_stats_ordering_to_nlp(): void
+    public function test_parse_sends_use_stats_ordering_when_feature_flag_active(): void
     {
+        Feature::activateForEveryone('query-builder-use-stats-in-ordering');
+
         Http::fake([
             self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
         ]);
 
-        $this->postJson(self::BASE_URL, [
-            'query' => 'diabetes',
-            'use_stats_ordering' => true,
-        ])->assertOk();
+        $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), '/extract')
@@ -50,16 +52,15 @@ class QueryParserTest extends TestCase
         });
     }
 
-    public function test_parse_sends_use_collection_filter_to_nlp(): void
+    public function test_parse_sends_use_collection_filter_when_feature_flag_active(): void
     {
+        Feature::activateForEveryone('query-builder-use-collections-in-search');
+
         Http::fake([
             self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
         ]);
 
-        $this->postJson(self::BASE_URL, [
-            'query' => 'diabetes',
-            'use_collection_filter' => true,
-        ])->assertOk();
+        $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), '/extract')
@@ -86,16 +87,17 @@ class QueryParserTest extends TestCase
         });
     }
 
-    public function test_parse_sends_all_nlp_params_together(): void
+    public function test_parse_sends_all_nlp_params_when_both_flags_active(): void
     {
+        Feature::activateForEveryone('query-builder-use-stats-in-ordering');
+        Feature::activateForEveryone('query-builder-use-collections-in-search');
+
         Http::fake([
             self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
         ]);
 
         $this->postJson(self::BASE_URL, [
             'query' => 'hypertension',
-            'use_stats_ordering' => true,
-            'use_collection_filter' => true,
             'collection_ids' => ['col-1', 'col-2'],
         ])->assertOk();
 
@@ -108,7 +110,7 @@ class QueryParserTest extends TestCase
         });
     }
 
-    public function test_parse_defaults_nlp_params_to_false_and_empty(): void
+    public function test_parse_defaults_flags_to_false_when_inactive(): void
     {
         Http::fake([
             self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
@@ -120,8 +122,7 @@ class QueryParserTest extends TestCase
             $data = $request->data();
             return str_contains($request->url(), '/extract')
                 && $data['use_stats_ordering'] === false
-                && $data['use_collection_filter'] === false
-                && $data['collection_ids'] === null; // empty array sent as null per extractor logic
+                && $data['use_collection_filter'] === false;
         });
     }
 
