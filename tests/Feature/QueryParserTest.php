@@ -2,38 +2,30 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class QueryParserTest extends TestCase
 {
-    // LS - Removed for now, as it relies upon python service. Needs mocking instead
-    //
-    //
     private const BASE_URL = '/api/v1/parse-query';
 
-    private array $queries = [
-        [
-            'query' => 'People who (received Moderna COVID-19 vaccine or Pfizer COVID-19 vaccine) and not (received Oxford, AstraZeneca COVID-19 vaccine) and observed with Close contact with confirmed COVID-19 case person and measured with SARS-CoV-2 antibody to nucleocapsid (N) protein present and diagnosed with Chronic kidney disease stage 3',
-            'file' => 'test_query_1.json',
-        ],
-        [
-            'query' => 'People who tested Positive for Influenza A virus and not (tested Positive for SARS-CoV-2) and measured with Leukocyte count decreased and diagnosed with Pneumonia',
-            'file' => 'test_query_2.json',
-        ],
-        [
-            'query' => 'Individuals who (received either Moderna or Pfizer COVID-19 vaccines), excluding Oxford-AstraZeneca recipients, observed to have close exposure to a confirmed COVID-19 case, measured positive for SARS-CoV-2 nucleocapsid antibodies, and diagnosed with chronic kidney disease stage 3',
-            'file' => 'test_query_3.json',
-        ],
-        [
-            'query' => 'Individuals who (received Moderna or Pfizer COVID-19 shots), without having received Oxford-AstraZeneca, had close contact with a confirmed COVID-19 patient, were found positive for SARS-CoV-2 N protein antibodies, and carry a diagnosis of chronic kidney disease stage 3',
-            'file' => 'test_query_4.json',
-        ],
+    private const NLP_BASE = 'http://nlp-test';
+
+    private array $minimalNlpResponse = [
+        'entities' => [],
+        'groups' => [],
+        'root_operator' => null,
+        'root_groups' => [],
+        'age_constraints' => [],
+        'time_constraints' => [],
+        'warnings' => [],
     ];
 
     protected function setUp(): void
     {
         parent::setUp();
+        Config::set('services.nlp.base_uri', self::NLP_BASE);
     }
 
     public function test_true(): void
@@ -41,38 +33,103 @@ class QueryParserTest extends TestCase
         $this->assertTrue(true);
     }
 
-    // public function test_it_can_parse_queries()
-    // {
-    //     foreach ($this->queries as $q) {
-    //         $response = $this->postJson(self::BASE_URL, [
-    //             'query' => $q['query'],
-    //         ]);
-    //         $response->assertStatus(200);
-    //         $content = $this->stripDynamicIds(json_decode($response->json('data'), true));
+    public function test_parse_sends_use_stats_ordering_to_nlp(): void
+    {
+        Http::fake([
+            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
+        ]);
 
-    //         $this->assertNotNull($content);
+        $this->postJson(self::BASE_URL, [
+            'query' => 'diabetes',
+            'use_stats_ordering' => true,
+        ])->assertOk();
 
-    //         $expectedQuery = json_decode(file_get_contents(__DIR__ . '/files/' . $q['file']), true);
-    //         $this->assertEquals(
-    //             $expectedQuery,
-    //             $content
-    //         );
-    //     }
-    // }
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/extract')
+                && $request->data()['use_stats_ordering'] === true;
+        });
+    }
 
-    // protected function stripDynamicIds(array $data): array
-    // {
-    //     $data = Arr::except($data, ['id']);
+    public function test_parse_sends_use_collection_filter_to_nlp(): void
+    {
+        Http::fake([
+            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
+        ]);
 
-    //     if (isset($data['rules'])) {
-    //         $data['rules'] = array_map(fn ($r) => $this->stripDynamicIds($r), $data['rules']);
-    //     }
+        $this->postJson(self::BASE_URL, [
+            'query' => 'diabetes',
+            'use_collection_filter' => true,
+        ])->assertOk();
 
-    //     if (isset($data['rule']['concept']['children'])) {
-    //         $data['rule']['concept']['children'] = array_map(fn ($r) => $this->stripDynamicIds($r), $data['rule']['concept']['children']);
-    //     }
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/extract')
+                && $request->data()['use_collection_filter'] === true;
+        });
+    }
 
-    //     return $data;
-    // }
+    public function test_parse_sends_collection_ids_to_nlp(): void
+    {
+        Http::fake([
+            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
+        ]);
 
+        $collectionIds = ['col-abc', 'col-def'];
+
+        $this->postJson(self::BASE_URL, [
+            'query' => 'diabetes',
+            'collection_ids' => $collectionIds,
+        ])->assertOk();
+
+        Http::assertSent(function ($request) use ($collectionIds) {
+            return str_contains($request->url(), '/extract')
+                && $request->data()['collection_ids'] === $collectionIds;
+        });
+    }
+
+    public function test_parse_sends_all_nlp_params_together(): void
+    {
+        Http::fake([
+            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
+        ]);
+
+        $this->postJson(self::BASE_URL, [
+            'query' => 'hypertension',
+            'use_stats_ordering' => true,
+            'use_collection_filter' => true,
+            'collection_ids' => ['col-1', 'col-2'],
+        ])->assertOk();
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            return str_contains($request->url(), '/extract')
+                && $data['use_stats_ordering'] === true
+                && $data['use_collection_filter'] === true
+                && $data['collection_ids'] === ['col-1', 'col-2'];
+        });
+    }
+
+    public function test_parse_defaults_nlp_params_to_false_and_empty(): void
+    {
+        Http::fake([
+            self::NLP_BASE . '/extract*' => Http::response($this->minimalNlpResponse, 200),
+        ]);
+
+        $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            return str_contains($request->url(), '/extract')
+                && $data['use_stats_ordering'] === false
+                && $data['use_collection_filter'] === false
+                && $data['collection_ids'] === null; // empty array sent as null per extractor logic
+        });
+    }
+
+    public function test_parse_returns_422_for_invalid_collection_ids(): void
+    {
+        $this->postJson(self::BASE_URL, [
+            'query' => 'diabetes',
+            'collection_ids' => 'not-an-array',
+        ])->assertUnprocessable();
+    }
 }
