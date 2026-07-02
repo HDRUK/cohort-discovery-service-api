@@ -102,14 +102,14 @@ class OmopController extends Controller
             $page             = max(1, (int) $request->input('page', 1));
             $collectionPids   = (array) $request->input('collections', []);
             $domain           = $request->input('domain');
-            $includeAncestors = $request->boolean('include_ancestors', true);
+            $includeAncestors = $request->boolean('include_ancestors', false);
             $search           = $request->only(['concept_id', 'concept_name']);
 
             $useCollectionsInSearch = Feature::active('query-builder-use-collections-in-search');
             $useStatsInOrdering     = Feature::active('query-builder-use-stats-in-ordering');
 
             $collectionIds = [];
-            if ($useCollectionsInSearch && ! empty($collectionPids)) {
+            if (! empty($collectionPids)) {
                 $collectionIds = DB::table('collections')
                     ->whereIn('pid', $collectionPids)
                     ->pluck('id')
