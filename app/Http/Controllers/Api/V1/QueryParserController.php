@@ -8,6 +8,7 @@ use App\Services\NLP\RuleBuilderService;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -49,8 +50,8 @@ class QueryParserController extends Controller
             'query' => 'required|string',
             'ignore_synthetic' => 'sometimes|boolean',
             'prefer_non_synthetic' => 'sometimes|boolean',
-            'collection_ids' => 'sometimes|array',
-            'collection_ids.*' => 'string',
+            'collections' => 'sometimes|array',
+            'collections.*' => 'string',
         ]);
 
         $query = $request->input('query');
@@ -58,7 +59,16 @@ class QueryParserController extends Controller
 
         $ignoreSynthetic = $request->boolean('ignore_synthetic', false);
         $preferNonSynthetic = $request->boolean('prefer_non_synthetic', true);
-        $collectionIds = $request->input('collection_ids', []);
+        $collectionPids = (array) $request->input('collections', []);
+        $collectionIds = [];
+        if (! empty($collectionPids)) {
+            $collectionIds = DB::table('collections')
+                ->whereIn('pid', $collectionPids)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+        }
 
         $rules = $ruleBuilderService->parseToRules(
             $query,
@@ -72,7 +82,7 @@ class QueryParserController extends Controller
                 'text' => $query,
                 'ignore_synthetic' => $ignoreSynthetic,
                 'prefer_non_synthetic' => $preferNonSynthetic,
-                'collection_ids' => $collectionIds,
+                'collections' => $collectionPids,
             ],
             'result' => [
                 'rules_count' => count($rules['rules'] ?? []),

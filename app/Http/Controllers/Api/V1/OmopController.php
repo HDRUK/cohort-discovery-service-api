@@ -109,7 +109,7 @@ class OmopController extends Controller
             $useStatsInOrdering     = Feature::active('query-builder-use-stats-in-ordering');
 
             $collectionIds = [];
-            if ($useCollectionsInSearch && ! empty($collectionPids)) {
+            if (! empty($collectionPids)) {
                 $collectionIds = DB::table('collections')
                     ->whereIn('pid', $collectionPids)
                     ->pluck('id')
