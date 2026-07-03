@@ -47,6 +47,7 @@ jobs:
     with:
       env: dev-integrated
       chart_path: chart/cohort-api/Chart.yaml
+      git_ref: dev
     secrets: inherit
 
   deploy-standalone:
