@@ -24,7 +24,7 @@ class LatestDistribution extends Model
 
     protected static $searchableColumns = [
         'concept_id',
-        'concept_name',
+        'concept_name' => ['concept_name', 'concept_id'],
     ];
 
     protected static $sortableColumns = [
