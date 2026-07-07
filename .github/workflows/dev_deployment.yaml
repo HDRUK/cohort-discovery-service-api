@@ -17,11 +17,12 @@ on:
           - dev-standalone
 
 jobs:
-  setup-standalone:
+  setup:
     runs-on: ubuntu-latest
-    environment: dev-standalone
+    environment: dev
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
+
     steps:
       - id: args
         run: |
@@ -29,42 +30,11 @@ jobs:
           ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
-  build-standalone:
-    needs: setup-standalone
+  build:
+    needs: setup
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
       chart_path: chart/cohort-api/Chart.yaml
-      environment: dev-standalone
-      docker_build_args: ${{ needs.setup-standalone.outputs.docker_build_args }}
-    secrets: inherit
-
-  deploy-standalone:
-    needs: build-standalone
-    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
-    with:
-      env: dev-standalone
-      chart_path: chart/cohort-api/Chart.yaml
-      git_ref: dev
-    secrets: inherit
-
-  setup-integrated:
-    runs-on: ubuntu-latest
-    environment: dev-integrated
-    outputs:
-      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
-    steps:
-      - id: args
-        run: |
-          ARGS=""
-          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
-          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
-
-  build-integrated:
-    needs: setup-integrated
-    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
-    with:
-      chart_path: chart/cohort-api/Chart.yaml
-<<<<<<< HEAD
       docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
       environment: ${{ github.event_name == 'push' && 'dev-integrated' || 'dev-standalone' }}
 
@@ -73,21 +43,12 @@ jobs:
   deploy-integrated:
     if: github.event_name == 'push'
     needs: build
-=======
-      environment: dev-integrated
-      docker_build_args: ${{ needs.setup-integrated.outputs.docker_build_args }}
-    secrets: inherit
-
-  deploy-integrated:
-    needs: build-integrated
->>>>>>> 9be008a (new deployment branch)
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
       env: dev-integrated
       chart_path: chart/cohort-api/Chart.yaml
       git_ref: dev
     secrets: inherit
-<<<<<<< HEAD
 
   deploy-standalone:
     needs: build
@@ -97,5 +58,3 @@ jobs:
       chart_path: chart/cohort-api/Chart.yaml
       git_ref: ${{ github.ref_name }}
     secrets: inherit
-=======
->>>>>>> 9be008a (new deployment branch)
