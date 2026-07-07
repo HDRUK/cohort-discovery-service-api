@@ -9,5 +9,28 @@ jobs:
   semantic:
     uses: HDRUK/github-actions-templates/.github/workflows/semantic.yaml@main
     with:
-      chart_path: chart/soursd-web/Chart.yaml
+      chart_path: chart/cohort-api/Chart.yaml
+    secrets: inherit
+
+  setup:
+    runs-on: ubuntu-latest
+    environment: prod
+    outputs:
+      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: args
+        run: |
+          ARGS=""
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+  build-prod:
+    needs: setup
+    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
+    with:
+      chart_path: chart/cohort-api/Chart.yaml
+      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
+      environment: prod
     secrets: inherit

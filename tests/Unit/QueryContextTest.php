@@ -744,227 +744,118 @@ class QueryContextTest extends TestCase
         $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
     }
 
-    public function test_age_filter_without_deceased_produces_age_rule_only(): void
+    public function test_measurement_concept_with_value_range_encodes_as_num_rule(): void
     {
         $input = [
-            'id' => 'root',
             'rules' => [
-                ['id' => 'r1', 'value' => [20, 40], 'valid' => true],
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'description' => 'Body weight',
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [1.0, 3.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
             ],
+            'valid' => true,
         ];
 
         $result = $this->bunnyContext->translate($input);
-
         $rule = $result['groups'][0]['rules'][0];
-        $this->assertEquals('AGE', $rule['varname']);
-        $this->assertEquals('20|40', $rule['value']);
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('Measurement', $rule['varcat']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('1|3', $rule['value']);
     }
 
-    public function test_age_filter_with_deceased_true_produces_age_and_death_rules(): void
+    public function test_measurement_concept_with_only_lower_bound(): void
     {
         $input = [
-            'id' => 'root',
             'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'deceased' => true, 'valid' => true],
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [5.5, null],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
             ],
+            'valid' => true,
         ];
 
         $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
 
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-
-        $ageRule = $rules[0];
-        $this->assertEquals('AGE', $ageRule['varname']);
-        $this->assertEquals('0|120', $ageRule['value']);
-
-        $deathRule = $rules[1];
-        $this->assertEquals('OMOP', $deathRule['varname']);
-        $this->assertEquals('Death', $deathRule['varcat']);
-        $this->assertEquals('=', $deathRule['oper']);
-        $this->assertEquals('', $deathRule['value']);
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('5.5|1000000000', $rule['value']);
     }
 
-    public function test_age_filter_with_deceased_false_produces_age_and_alive_rules(): void
+    public function test_measurement_concept_with_only_upper_bound(): void
     {
         $input = [
-            'id' => 'root',
             'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'deceased' => false, 'valid' => true],
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [null, 10.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
             ],
+            'valid' => true,
         ];
 
         $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
 
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-
-        $deathRule = $rules[1];
-        $this->assertEquals('OMOP', $deathRule['varname']);
-        $this->assertEquals('Death', $deathRule['varcat']);
-        $this->assertEquals('!=', $deathRule['oper']);
-        $this->assertEquals('', $deathRule['value']);
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('-1000000000|10', $rule['value']);
     }
 
-    public function test_age_filter_with_deceased_true_uses_observation_when_flag_set(): void
+    public function test_measurement_concept_without_value_range_encodes_as_text_rule(): void
     {
         $input = [
-            'id' => 'root',
-            'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'deceased' => true, 'valid' => true],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, true, true);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-
-        $deathRule = $rules[1];
-        $this->assertEquals('OMOP', $deathRule['varname']);
-        $this->assertEquals('Observation', $deathRule['varcat']);
-        $this->assertEquals('=', $deathRule['oper']);
-        $this->assertEquals('4306655', $deathRule['value']);
-    }
-
-    public function test_age_filter_with_deceased_false_uses_observation_when_flag_set(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'deceased' => false, 'valid' => true],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, true, true);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-
-        $deathRule = $rules[1];
-        $this->assertEquals('Observation', $deathRule['varcat']);
-        $this->assertEquals('!=', $deathRule['oper']);
-        $this->assertEquals('4306655', $deathRule['value']);
-    }
-
-    public function test_age_filter_with_location_produces_age_and_location_rules(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432'], 'valid' => true],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, supportsLocation: true);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-        $this->assertEquals('AGE', $rules[0]['varname']);
-        $this->assertEquals('Location', $rules[1]['varcat']);
-        $this->assertEquals(['S01014432'], $rules[1]['secondary_modifier']);
-        $this->assertEquals('', $rules[1]['value']);
-    }
-
-    public function test_age_filter_with_multiple_locations_passes_all_as_secondary_modifier(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432', 'S01014433'], 'valid' => true],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, supportsLocation: true);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-        $this->assertEquals(['S01014432', 'S01014433'], $rules[1]['secondary_modifier']);
-    }
-
-    public function test_age_filter_with_geo_radius_produces_geo_radius_rule(): void
-    {
-        $input = [
-            'id' => 'root',
             'rules' => [
                 [
-                    'id' => 'r1',
-                    'value' => [0, 120],
-                    'location' => ['lat' => 51.5074, 'lon' => -0.1278, 'radius' => 5000],
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'exclude' => false,
                     'valid' => true,
                 ],
             ],
+            'valid' => true,
         ];
 
-        $result = $this->bunnyContext->translate($input, supportsLocation: true);
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
 
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(2, $rules);
-
-        $locationRule = $rules[1];
-        $this->assertEquals('OMOP', $locationRule['varname']);
-        $this->assertEquals('Location', $locationRule['varcat']);
-        $this->assertEquals('GEO_RADIUS', $locationRule['type']);
-        $this->assertEquals('=', $locationRule['oper']);
-        $this->assertEquals('51.5074|-0.1278|5000', $locationRule['value']);
-        $this->assertArrayNotHasKey('secondary_modifier', $locationRule);
-    }
-
-    public function test_geo_radius_value_encodes_lat_lon_radius_as_pipe_delimited(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                [
-                    'id' => 'r1',
-                    'value' => [20, 65],
-                    'location' => ['lat' => 53.4808, 'lon' => -2.2426, 'radius' => 10000],
-                    'valid' => true,
-                ],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, supportsLocation: true);
-
-        $locationRule = $result['groups'][0]['rules'][1];
-        $this->assertEquals('53.4808|-2.2426|10000', $locationRule['value']);
-    }
-
-    public function test_location_stripped_when_supports_location_false(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                ['id' => 'r1', 'value' => [0, 120], 'location' => ['S01014432'], 'valid' => true],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, supportsLocation: false);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(1, $rules);
-        $this->assertEquals('AGE', $rules[0]['varname']);
-    }
-
-    public function test_geo_radius_stripped_when_supports_location_false(): void
-    {
-        $input = [
-            'id' => 'root',
-            'rules' => [
-                [
-                    'id' => 'r1',
-                    'value' => [0, 120],
-                    'location' => ['lat' => 51.5074, 'lon' => -0.1278, 'radius' => 5000],
-                    'valid' => true,
-                ],
-            ],
-        ];
-
-        $result = $this->bunnyContext->translate($input, supportsLocation: false);
-
-        $rules = $result['groups'][0]['rules'];
-        $this->assertCount(1, $rules);
-        $this->assertEquals('AGE', $rules[0]['varname']);
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('46236952', $rule['value']);
     }
 
     public function test_application_can_translate_via_manager(): void

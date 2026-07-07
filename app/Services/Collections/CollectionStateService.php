@@ -6,9 +6,15 @@ use App\Exceptions\Errors_1xxx\CollectionPermissionsNotMetException as Collectio
 use App\Models\Collection;
 use App\Models\CustodianHasUser;
 use App\Models\User;
+use App\Services\Notifications\SlackNotifier;
 
 class CollectionStateService
 {
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
+
+
     /**
      * Determines if the incoming Collection can be transitions to $state by $user
      * based upon user roles assigned.
@@ -52,6 +58,13 @@ class CollectionStateService
             throw new CollectionException($state);
         }
 
-        return $collection->transitionTo($state);
+        $wasDraft = $collection->isInState(Collection::STATUS_DRAFT);
+        $result = $collection->transitionTo($state);
+
+        if ($wasDraft && strtolower($state) === Collection::STATUS_PENDING) {
+            $this->slackNotifier->collectionActivationRequested($collection, $user);
+        }
+
+        return $result;
     }
 }

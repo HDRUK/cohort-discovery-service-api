@@ -32,6 +32,11 @@ else
     php artisan migrate --force
 fi
 
+# Run pending deployment steps (run-once, forward-only data fixes/seeding).
+# Must run after migrations so the deployment_steps table and schema exist.
+echo "Running deployment steps..."
+php artisan deploy:run
+
 if [ -n "${OCTANE_WORKERS:-}" ]; then
     base_command="$base_command --workers=${OCTANE_WORKERS}"
 fi

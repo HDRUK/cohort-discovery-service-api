@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
 use App\Models\Collection;
+use App\Services\Notifications\SlackNotifier;
 use Hdruk\LaravelModelStates\Models\State;
 use Carbon\Carbon;
 use App\Enums\TaskType;
@@ -13,6 +14,10 @@ use Log;
 class CollectionNoActivityMonitor implements ApiCommand
 {
     private string $tag = 'CollectionNoActivityMonitor';
+
+    public function __construct(private SlackNotifier $slackNotifier)
+    {
+    }
 
     public function rules(): array
     {
@@ -44,6 +49,7 @@ class CollectionNoActivityMonitor implements ApiCommand
                 if ($this->isNonActive($stamp)) {
                     $this->logNoActivity($c->id);
                     $this->setCollectionSuspended($c);
+                    $this->slackNotifier->collectionSuspended($c);
                 } else {
                     $this->logActivity($c->id);
                 }

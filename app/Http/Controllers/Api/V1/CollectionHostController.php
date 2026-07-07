@@ -62,12 +62,20 @@ class CollectionHostController extends Controller
 
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
-        $custodian = Custodian::where('pid', $custodianPid)->first();
-        $custodianId = $custodian->id;
+        try {
+            $custodian = Custodian::where('pid', $custodianPid)->first();
+            $custodianId = $custodian->id;
 
-        return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)
-                ->with(['collections','custodian'])
-                ->get());
+            return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)
+                    ->with(['collections','custodian'])
+                    ->applySorting()
+                    ->get());
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@indexByCustodian - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getTraceAsString().')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**

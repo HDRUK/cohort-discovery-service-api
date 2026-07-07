@@ -7,68 +7,24 @@ on:
       - "release/*"
 
 jobs:
-  setup-preprod:
+  setup:
     runs-on: ubuntu-latest
     environment: preprod
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
     steps:
-      - name: Generate GitHub App token
-        id: generate-deployment-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
-
       - uses: actions/checkout@v6
-
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }} "
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
           echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
-
-  setup-prod:
-    runs-on: ubuntu-latest
-    environment: prod
-    outputs:
-      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
-    steps:
-      - name: Generate GitHub App token
-        id: generate-deployment-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
-
-      - uses: actions/checkout@v6
-
-      - id: args
-        run: |
-          ARGS=""
-          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }} "
-          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
-
-  build-preprod:
-    needs: setup-preprod
-    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
-    with:
-      environment: preprod
-      docker_build_args: ${{ needs.setup-preprod.outputs.docker_build_args }}
-      chart_path: chart/soursd-api/Chart.yaml
-    secrets: inherit
 
   build-prod:
-    needs: setup-prod
+    needs: setup
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
       environment: prod
-      docker_build_args: ${{ needs.setup-prod.outputs.docker_build_args }}
+      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
       chart_path: chart/soursd-api/Chart.yaml
     secrets: inherit

@@ -6,53 +6,96 @@ on:
     branches:
       - dev
 
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment
+        required: true
+        default: dev-standalone
+        type: choice
+        options:
+          - dev-standalone
+
 jobs:
-  setup:
+  setup-standalone:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: dev-standalone
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
-
     steps:
-      - name: Generate GitHub App token
-        id: generate-deployment-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: HDRUK
-          repositories: |
-            ${{ github.event.repository.name }}
-
       - id: args
         run: |
           ARGS=""
-          ARGS+="--build-arg GH_TOKEN=${{ steps.generate-deployment-token.outputs.token }}"
-          echo "docker_build_args=${ARGS}" | tr -d '\n' >> "$GITHUB_OUTPUT"
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: setup
+  build-standalone:
+    needs: setup-standalone
     uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
     with:
       chart_path: chart/cohort-api/Chart.yaml
-      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
-      environment: dev-integrated
+      environment: dev-standalone
+      docker_build_args: ${{ needs.setup-standalone.outputs.docker_build_args }}
     secrets: inherit
 
-  deploy-integrated:
-    needs: build
-    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
-    with:
-      env: dev-integrated
-      chart_path: chart/cohort-api/Chart.yaml
-      git_ref: dev
-    secrets: inherit
-
-  deploy-stadalone:
-    needs: build
+  deploy-standalone:
+    needs: build-standalone
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
       env: dev-standalone
       chart_path: chart/cohort-api/Chart.yaml
       git_ref: dev
     secrets: inherit
+
+  setup-integrated:
+    runs-on: ubuntu-latest
+    environment: dev-integrated
+    outputs:
+      docker_build_args: ${{ steps.args.outputs.docker_build_args }}
+    steps:
+      - id: args
+        run: |
+          ARGS=""
+          ARGS+="--secret id=github_token,env=GITHUB_TOKEN "
+          echo "docker_build_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+  build-integrated:
+    needs: setup-integrated
+    uses: HDRUK/github-actions-templates/.github/workflows/docker-build.yaml@main
+    with:
+      chart_path: chart/cohort-api/Chart.yaml
+<<<<<<< HEAD
+      docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
+      environment: ${{ github.event_name == 'push' && 'dev-integrated' || 'dev-standalone' }}
+
+    secrets: inherit
+
+  deploy-integrated:
+    if: github.event_name == 'push'
+    needs: build
+=======
+      environment: dev-integrated
+      docker_build_args: ${{ needs.setup-integrated.outputs.docker_build_args }}
+    secrets: inherit
+
+  deploy-integrated:
+    needs: build-integrated
+>>>>>>> 9be008a (new deployment branch)
+    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
+    with:
+      env: dev-integrated
+      chart_path: chart/cohort-api/Chart.yaml
+      git_ref: dev
+    secrets: inherit
+<<<<<<< HEAD
+
+  deploy-standalone:
+    needs: build
+    uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
+    with:
+      env: dev-standalone
+      chart_path: chart/cohort-api/Chart.yaml
+      git_ref: ${{ github.ref_name }}
+    secrets: inherit
+=======
+>>>>>>> 9be008a (new deployment branch)
