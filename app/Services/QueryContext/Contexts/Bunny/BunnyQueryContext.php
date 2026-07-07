@@ -11,12 +11,15 @@ class BunnyQueryContext implements QueryContextInterface
     private bool $useDeathObservation = false;
 
     private bool $supportsLocation = false;
-
     private const BUNNY_NUM_LOWER_SENTINEL = -1_000_000_000;
     private const BUNNY_NUM_UPPER_SENTINEL = 1_000_000_000;
 
-    public function translate(array $definition, bool $flattenNestedGroups = true): array
-    {
+    public function translate(
+        array $definition,
+        bool $flattenNestedGroups = true,
+        bool $useDeathObservation = false,
+        bool $supportsLocation = false
+    ): array {
         $this->useDeathObservation = $useDeathObservation;
         $this->supportsLocation = true;//$supportsLocation;
         // Convert to groupwise form for easier parsing of nodes per group.
