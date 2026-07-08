@@ -51,6 +51,10 @@ jobs:
     secrets: inherit
 
   deploy-standalone:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      contains(github.event.head_commit.message, '[deploy-standalone]'))
     needs: build
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
