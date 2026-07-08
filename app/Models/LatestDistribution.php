@@ -36,7 +36,6 @@ class LatestDistribution extends Model
 
     protected static $filterableColumns = [
         'domain_id',
-        'concept_id',
     ];
 
     public function collection(): BelongsTo

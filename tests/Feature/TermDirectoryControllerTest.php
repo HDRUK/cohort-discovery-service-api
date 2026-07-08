@@ -111,6 +111,15 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertEquals(0, $response->json('data.total'));
     }
 
+    public function test_text_search_term_sent_as_concept_id_still_returns_name_matches(): void
+    {
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?concept_name=hypertension&concept_id=hypertension');
+
+        $response->assertOk();
+        $this->assertEquals(2, $response->json('data.total'));
+    }
+
     public function test_unauthenticated_request_returns_401(): void
     {
         $response = $this->getJson(self::BASE_URL);
