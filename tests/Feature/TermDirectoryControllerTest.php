@@ -17,6 +17,7 @@ class TermDirectoryControllerTest extends TestCase
     // which is ran by the RefreshDatabaseLite trait on test setup.
     private const CONCEPT_ID_A = 1075886;
     private const CONCEPT_ID_B = 1075887;
+    private const CONCEPT_ID_GENDER = 8507;
 
     private User $user;
 
@@ -140,6 +141,39 @@ class TermDirectoryControllerTest extends TestCase
 
         $response->assertOk();
         $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_domain_id_in_filter_returns_rows_from_any_listed_domain(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Gender',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id__in=Gender,Condition');
+
+        $response->assertOk();
+        $this->assertEquals(3, $response->json('data.total'));
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id__in=Gender,Race,Ethnicity');
+
+        $response->assertOk();
+        $this->assertEquals(1, $response->json('data.total'));
+        $this->assertEquals('Gender', $response->json('data.data.0.domain_id'));
     }
 
     public function test_response_shape_has_expected_fields(): void
