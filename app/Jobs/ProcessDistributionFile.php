@@ -256,6 +256,11 @@ class ProcessDistributionFile implements ShouldQueue
             Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
             RefreshDistributionConceptsView::dispatch();
 
+            if ($file->file_name === 'code.distribution') {
+                Log::info('[' . $this->tag . '] Refreshing latest_distributions view');
+                RefreshLatestDistributionsView::dispatch();
+            }
+
             $file->markDone($rowsSeen);
 
             Log::info('[' . $this->tag . '] finished', [

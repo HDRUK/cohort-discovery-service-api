@@ -8,6 +8,9 @@ use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
 {
+    private const BUNNY_NUM_LOWER_SENTINEL = -1_000_000_000;
+    private const BUNNY_NUM_UPPER_SENTINEL = 1_000_000_000;
+
     public function translate(array $definition, bool $flattenNestedGroups = true): array
     {
         // Convert to groupwise form for easier parsing of nodes per group.
@@ -42,6 +45,16 @@ class BunnyQueryContext implements QueryContextInterface
 
         if (!$flattenNestedGroups) {
             // Equally, if we want to skip the flattening step, then we can just return as-is with modified outer layer.
+            // We do need to ensure that the inner layer contains the "rules_oper" key, and not just bare rules,
+            // so we can add it if it's missing.
+            foreach ($groupwiseForm['rules'] as &$child) {
+                if (!$this->hasOperator($child)) {
+                    $child = [
+                        "rules_oper" => 'AND',
+                        "rules" => [$child]
+                    ];
+                }
+            }
             return [
                 "groups_oper" => $groupwiseForm['rules_oper'] ?? 'AND',
                 "groups" => $groupwiseForm['rules'] ?? [],
@@ -413,6 +426,7 @@ class BunnyQueryContext implements QueryContextInterface
         $isExcluded = (bool) ($child['exclude'] ?? false);
         $timeConstraint = $child['timeConstraint'] ?? [null, null];
         $ageConstraint = $child['ageConstraint'] ?? [null, null];
+        $measurementValue = $child['valueAsNumber'] ?? null;
 
         $category = $concept['category'] ?? 'UNKNOWN';
 
@@ -420,12 +434,28 @@ class BunnyQueryContext implements QueryContextInterface
             $category = 'Person';
         }
 
+        $conceptId = (string) ($concept['concept_id'] ?? '');
+
+        if ($measurementValue !== null && count($measurementValue) === 2) {
+            [$lower, $upper] = $measurementValue;
+
+            if ($lower !== null || $upper !== null) {
+                return [
+                    'varname' => 'OMOP=' . $conceptId,
+                    'varcat'  => 'Measurement',
+                    'type'    => 'NUM',
+                    'oper'    => $isExcluded ? '!=' : '=',
+                    'value'   => ($lower ?? self::BUNNY_NUM_LOWER_SENTINEL) . '|' . ($upper ?? self::BUNNY_NUM_UPPER_SENTINEL),
+                ];
+            }
+        }
+
         $rule = [
             'varname' => 'OMOP',
             'varcat'  => $category,
             'type'    => 'TEXT',
             'oper'    => $isExcluded ? '!=' : '=',
-            'value'   => (string) ($concept['concept_id'] ?? ''),
+            'value'   => $conceptId,
         ];
 
         // note: bunny cannot handle both time and age constraints

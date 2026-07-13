@@ -127,20 +127,6 @@ class RuleBuilderService
                 continue;
             }
 
-            usort($candidates, function ($a, $b) use ($preferNonSynthetic) {
-                if ($preferNonSynthetic) {
-                    $aSynthetic = $a['attributes']['all_synthetic'] ?? 0;
-                    $bSynthetic = $b['attributes']['all_synthetic'] ?? 0;
-
-                    if ($aSynthetic !== $bSynthetic) {
-                        return $aSynthetic <=> $bSynthetic;
-                    }
-                }
-
-                return ($b['attributes']['match_score'] ?? 0)
-                    <=> ($a['attributes']['match_score'] ?? 0);
-            });
-
             $primary = $candidates[0];
             $children = [];
             $alts = array_slice($candidates, 1);
@@ -154,6 +140,7 @@ class RuleBuilderService
                 'ncollections' => $primary['attributes']['ncollections'] ?? 0,
                 'all_synthetic' => $primary['attributes']['all_synthetic'] ?? 0,
                 'match_score' => $primary['attributes']['match_score'] ?? 0,
+                'collection_score' => $primary['attributes']['collection_score'] ?? 0,
                 'tokens' => $primary['attributes']['tokens'] ?? [],
                 'phrase_tokens' => $primary['attributes']['phrase_tokens'] ?? [],
                 'alternatives' => array_map(function ($ent) {
@@ -215,7 +202,8 @@ class RuleBuilderService
     public function parseToRules(
         string $query,
         bool $ignoreSynthetic = false,
-        bool $preferNonSynthetic = true
+        bool $preferNonSynthetic = true,
+        array $collectionIds = []
     ): array {
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
@@ -229,7 +217,7 @@ class RuleBuilderService
 
         $this->applyConstraints($query, $constraints, $warnings);
 
-        $this->loadNlpEntities($query);
+        $this->loadNlpEntities($query, collectionIds: $collectionIds);
         $this->mergeNlpWarnings($warnings);
         $this->applyNlpAgeConstraints($constraints, $warnings);
         $this->applyNlpTimeConstraints($constraints, $warnings);

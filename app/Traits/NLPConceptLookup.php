@@ -14,13 +14,13 @@ trait NLPConceptLookup
     protected array $nlpRootTimeConstraints = [];
     protected array $nlpWarnings = [];
 
-    protected function loadNlpEntities(string $query, float $threshold = 80): void
+    protected function loadNlpEntities(string $query, float $threshold = 80, array $collectionIds = []): void
     {
         \Log::info('Calling NLP Extractor with: "'.$query.'"');
 
         $nlp = App::make(\App\Services\NLP\NLPConceptExtractor::class);
 
-        $payload = $nlp->extract($query, $threshold);
+        $payload = $nlp->extract($query, $threshold, collectionIds: $collectionIds);
         \Log::info(json_encode(collect($payload)));
 
         $entities = $payload['entities'] ?? $payload;
