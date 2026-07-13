@@ -16,7 +16,6 @@ class OmopControllerTest extends TestCase
         Http::preventStrayRequests();
     }
 
-    public function test_separator_variants_match_hyphenated_concept_name(): void
     private function nlpUrl(): string
     {
         return config('services.nlp.base_uri') . '/concepts/search';
