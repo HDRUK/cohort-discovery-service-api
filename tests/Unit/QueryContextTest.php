@@ -765,6 +765,56 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955322', $result['groups'][1]['rules'][0]['value']);
     }
 
+    public function test_and_with_exclusion_group_avoids_distribution(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'      => 'r1',
+                    'exclude' => true,
+                    'rule'    => [
+                        'concept' => [
+                            ['concept_id' => 37311061, 'category' => 'Condition'],
+                            ['concept_id' => 605554,   'category' => 'Condition'],
+                        ],
+                    ],
+                    'valid'   => true,
+                ],
+                ['id' => 'op', 'combinator' => 'and'],
+                [
+                    'id'      => 'r2',
+                    'exclude' => false,
+                    'rule'    => [
+                        'concept' => ['concept_id' => 3955322, 'category' => 'Drug'],
+                    ],
+                    'valid'   => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // NOT(C1 OR C2) AND D - the excluded OR-group must survive the shallow
+        // (non-distributed) path with each rule still carrying oper "!=".
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
+
+        $exclusionGroup = $result['groups'][0];
+        $this->assertEquals('OR', $exclusionGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $exclusionGroup['rules']);
+        $this->assertEquals('!=', $exclusionGroup['rules'][0]['oper']);
+        $this->assertEquals('37311061', $exclusionGroup['rules'][0]['value']);
+        $this->assertEquals('!=', $exclusionGroup['rules'][1]['oper']);
+        $this->assertEquals('605554', $exclusionGroup['rules'][1]['value']);
+
+        $inclusionGroup = $result['groups'][1];
+        $this->assertEquals('AND', $inclusionGroup['rules_oper'] ?? null);
+        $this->assertCount(1, $inclusionGroup['rules']);
+        $this->assertEquals('=', $inclusionGroup['rules'][0]['oper']);
+        $this->assertEquals('3955322', $inclusionGroup['rules'][0]['value']);
+    }
+
     public function test_measurement_concept_with_value_range_encodes_as_num_rule(): void
     {
         $input = [
