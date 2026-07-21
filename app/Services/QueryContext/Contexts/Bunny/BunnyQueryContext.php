@@ -43,6 +43,18 @@ class BunnyQueryContext implements QueryContextInterface
                 ];
         }
 
+        // An AND combining groups that are each flat (no group nested inside a group)
+        // maps directly onto BUNNY's Cohort>Group>Rule shape - one group per child,
+        // each keeping its own operator - with no Cartesian distribution required.
+        // Only fall through to the full flattening below when a child genuinely has
+        // a group nested inside it (real 3-level nesting BUNNY cannot represent).
+        if (($groupwiseForm['rules_oper'] ?? 'AND') === 'AND') {
+            $shallow = $this->tryShallowAndGroups($groupwiseForm);
+            if ($shallow !== null) {
+                return $shallow;
+            }
+        }
+
         if (!$flattenNestedGroups) {
             // Equally, if we want to skip the flattening step, then we can just return as-is with modified outer layer.
             // We do need to ensure that the inner layer contains the "rules_oper" key, and not just bare rules,
@@ -63,6 +75,52 @@ class BunnyQueryContext implements QueryContextInterface
 
         // Now we know it's not in that form, collapse to "standard form".
         return $this->flattenToStandardForm($groupwiseForm, 0);
+    }
+
+    /**
+     * Attempts to represent a top-level AND node directly as BUNNY groups, without
+     * the boolean-algebra distribution in flattenToStandardForm(). Returns null if
+     * any child has a group nested inside it, since that genuinely needs distribution
+     * to fit BUNNY's 2-level Cohort>Group>Rule format.
+     */
+    private function tryShallowAndGroups(array $groupwiseForm): ?array
+    {
+        $bareRules = [];
+        $groups = [];
+
+        foreach ($groupwiseForm['rules'] as $child) {
+            if (!$this->hasOperator($child)) {
+                $bareRules[] = $child;
+                continue;
+            }
+
+            foreach ($child['rules'] as $grandchild) {
+                if ($this->hasOperator($grandchild)) {
+                    // Genuine nesting (a group inside this group) - can't be
+                    // expressed as a single flat group, so bail out entirely.
+                    return null;
+                }
+            }
+
+            if ($child['rules_oper'] === 'AND') {
+                // Same operator as the parent AND - merge in directly (associativity)
+                // rather than giving it its own group.
+                $bareRules = array_merge($bareRules, $child['rules']);
+            } else {
+                $groups[] = $child;
+            }
+        }
+
+        if ($bareRules) {
+            $groups[] = ['rules_oper' => 'AND', 'rules' => $bareRules];
+        }
+
+        return [
+            // groups_oper is irrelevant with a single group, so default to 'OR'
+            // to match the existing single-group convention elsewhere.
+            'groups_oper' => count($groups) > 1 ? 'AND' : 'OR',
+            'groups' => $groups,
+        ];
     }
 
     private function convertGroup(array $node, string $groupOperator): array

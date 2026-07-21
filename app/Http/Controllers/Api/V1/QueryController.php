@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Query;
 use App\Services\Activity\ActivityLogger;
+use App\Services\QueryContext\QueryContextManager;
+use App\Services\QueryContext\QueryContextType;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -377,6 +380,58 @@ class QueryController extends Controller
                 json_encode($input).' (exception: '.$e->getMessage().')');
 
             return $this->ErrorResponse();
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/queries/translate/bunny",
+     *     summary="Translate a raw query definition into the BUNNY cohort query format, without submitting it",
+     *     tags={"Queries"},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"definition"},
+     *
+     *             @OA\Property(
+     *                 property="definition",
+     *                 type="array",
+     *                 description="Structured query definition (same shape as Query::definition)",
+     *
+     *                 @OA\Items(type="object")
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=200, description="Translated BUNNY cohort query"),
+     *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=500, description="Server error")
+     * )
+     */
+    public function translateBunny(Request $request, QueryContextManager $contextManager): JsonResponse
+    {
+        $validated = $request->validate([
+            'definition' => 'required|array',
+        ]);
+
+        try {
+            $translated = $contextManager->handle(
+                $validated['definition'],
+                QueryContextType::Bunny,
+                Feature::active('flatten-nested-groups')
+            );
+
+            return $this->OKResponse([
+                'ngroups' => count($translated['groups']),
+                'translated' => $translated
+                ]);
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@translateBunny - failed: '.json_encode($validated).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 

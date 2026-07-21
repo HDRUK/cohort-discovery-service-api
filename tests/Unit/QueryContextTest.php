@@ -480,21 +480,31 @@ class QueryContextTest extends TestCase
 
     public function test_application_can_translate_bunny_query(): void
     {
+        // AND( OR(Moderna, Pfizer), AstraZeneca-excluded, CloseContact ) maps
+        // directly onto "groups_oper: AND" with one OR-group and one AND-group -
+        // no Cartesian distribution needed since neither group nests a group.
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
-        $this->assertArrayHasKey('groups_oper', $result);
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
 
         $firstGroup = $result['groups'][0];
         $this->assertIsArray($firstGroup['rules']);
-        $this->assertCount(3, $firstGroup['rules']);
-        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $firstGroup['rules']);
+        $this->assertEquals('OR', $firstGroup['rules_oper'] ?? null);
 
         $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('3955320', $firstRule['value'] ?? null);
         $secondRule = $firstGroup['rules'][1] ?? null;
-        $this->assertEquals('3955322', $secondRule['value'] ?? null);
+        $this->assertEquals('3955321', $secondRule['value'] ?? null);
+
+        $secondGroup = $result['groups'][1];
+        $this->assertEquals('AND', $secondGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $secondGroup['rules']);
+        $this->assertEquals('3955322', $secondGroup['rules'][0]['value'] ?? null);
+        $this->assertEquals('3959231', $secondGroup['rules'][1]['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_query_alt(): void
@@ -704,7 +714,7 @@ class QueryContextTest extends TestCase
         $this->assertEquals('Observation', $result['groups'][2]['rules'][0]['varcat']);
     }
 
-    public function test_multi_concept_rule_anded_with_single_concept_distributes(): void
+    public function test_multi_concept_rule_anded_with_single_concept_avoids_distribution(): void
     {
         $input = [
             'id'    => 'root',
@@ -734,14 +744,18 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
-        // (C1 OR C2) AND D  →  (C1 AND D) OR (C2 AND D)
-        $this->assertEquals('OR', $result['groups_oper']);
+        // (C1 OR C2) AND D maps directly onto "groups_oper: AND" with an
+        // OR-group for the concept alternatives and an AND-group for D - no
+        // need to distribute D across each alternative.
+        $this->assertEquals('AND', $result['groups_oper']);
         $this->assertCount(2, $result['groups']);
-        $this->assertCount(2, $result['groups'][0]['rules']); // C1 + D
-        $this->assertCount(2, $result['groups'][1]['rules']); // C2 + D
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(2, $result['groups'][0]['rules']); // C1, C2
         $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
-        $this->assertEquals('3955322', $result['groups'][0]['rules'][1]['value']);
-        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
+        $this->assertEquals('605554', $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('AND', $result['groups'][1]['rules_oper'] ?? null);
+        $this->assertCount(1, $result['groups'][1]['rules']); // D
+        $this->assertEquals('3955322', $result['groups'][1]['rules'][0]['value']);
     }
 
     public function test_measurement_concept_with_value_range_encodes_as_num_rule(): void
