@@ -384,4 +384,19 @@ class QueryControllerTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_translation_for_an_unsupported_context(): void
+    {
+        $this->enableMiddleware();
+        $this->disableObservers();
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL.'/translate/not-a-real-context', [
+                'definition' => ['id' => 'root', 'rules' => []],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['context']]);
+    }
 }
