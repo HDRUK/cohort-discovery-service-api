@@ -43,16 +43,18 @@ class BunnyQueryContext implements QueryContextInterface
                 ];
         }
 
-        // An AND combining groups that are each flat (no group nested inside a group)
+        // A node combining groups that are each flat (no group nested inside a group)
         // maps directly onto BUNNY's Cohort>Group>Rule shape - one group per child,
         // each keeping its own operator - with no Cartesian distribution required.
-        // Only fall through to the full flattening below when a child genuinely has
-        // a group nested inside it (real 3-level nesting BUNNY cannot represent).
-        if (($groupwiseForm['rules_oper'] ?? 'AND') === 'AND') {
-            $shallow = $this->tryShallowAndGroups($groupwiseForm);
-            if ($shallow !== null) {
-                return $shallow;
-            }
+        // This holds regardless of whether the top operator is AND or OR: an OR
+        // never needs to multiply (it only concatenates), and an AND only needs
+        // to multiply when combining multiple already-distributed alternatives,
+        // which can't happen if every child is flat. Only fall through to the full
+        // flattening below when a child genuinely has a group nested inside it
+        // (real 3-level nesting BUNNY cannot represent).
+        $shallow = $this->tryShallowGroups($groupwiseForm);
+        if ($shallow !== null) {
+            return $shallow;
         }
 
         if (!$flattenNestedGroups) {
@@ -78,13 +80,14 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
     /**
-     * Attempts to represent a top-level AND node directly as BUNNY groups, without
-     * the boolean-algebra distribution in flattenToStandardForm(). Returns null if
-     * any child has a group nested inside it, since that genuinely needs distribution
+     * Attempts to represent a top-level node directly as BUNNY groups, without the
+     * boolean-algebra distribution in flattenToStandardForm(). Returns null if any
+     * child has a group nested inside it, since that genuinely needs distribution
      * to fit BUNNY's 2-level Cohort>Group>Rule format.
      */
-    private function tryShallowAndGroups(array $groupwiseForm): ?array
+    private function tryShallowGroups(array $groupwiseForm): ?array
     {
+        $topOperator = $groupwiseForm['rules_oper'] ?? 'AND';
         $bareRules = [];
         $groups = [];
 
@@ -102,8 +105,8 @@ class BunnyQueryContext implements QueryContextInterface
                 }
             }
 
-            if ($child['rules_oper'] === 'AND') {
-                // Same operator as the parent AND - merge in directly (associativity)
+            if ($child['rules_oper'] === $topOperator) {
+                // Same operator as the parent - merge in directly (associativity)
                 // rather than giving it its own group.
                 $bareRules = array_merge($bareRules, $child['rules']);
             } else {
@@ -112,13 +115,13 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         if ($bareRules) {
-            $groups[] = ['rules_oper' => 'AND', 'rules' => $bareRules];
+            $groups[] = ['rules_oper' => $topOperator, 'rules' => $bareRules];
         }
 
         return [
             // groups_oper is irrelevant with a single group, so default to 'OR'
             // to match the existing single-group convention elsewhere.
-            'groups_oper' => count($groups) > 1 ? 'AND' : 'OR',
+            'groups_oper' => count($groups) > 1 ? $topOperator : 'OR',
             'groups' => $groups,
         ];
     }

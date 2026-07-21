@@ -683,11 +683,14 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
+        // A single multi-concept OR rule with nothing else to combine with
+        // stays as one OR-group of 3 rules, rather than 3 separate groups.
         $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(3, $result['groups']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(3, $result['groups'][0]['rules']);
 
-        foreach ($result['groups'] as $group) {
-            $rule = $group['rules'][0];
+        foreach ($result['groups'][0]['rules'] as $rule) {
             $this->assertArrayHasKey('time', $rule, 'Each expanded concept rule must carry the age constraint');
             $this->assertEquals('10|:AGE:Y', $rule['time']);
         }
@@ -705,13 +708,17 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
+        // A single multi-concept OR rule with nothing else to combine with
+        // stays as one OR-group of 3 rules, rather than 3 separate groups.
         $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(3, $result['groups']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(3, $result['groups'][0]['rules']);
         $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
         $this->assertEquals('Condition', $result['groups'][0]['rules'][0]['varcat']);
-        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
-        $this->assertEquals('37311060', $result['groups'][2]['rules'][0]['value']);
-        $this->assertEquals('Observation', $result['groups'][2]['rules'][0]['varcat']);
+        $this->assertEquals('605554', $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('37311060', $result['groups'][0]['rules'][2]['value']);
+        $this->assertEquals('Observation', $result['groups'][0]['rules'][2]['varcat']);
     }
 
     public function test_multi_concept_rule_anded_with_single_concept_avoids_distribution(): void
