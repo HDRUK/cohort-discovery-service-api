@@ -119,6 +119,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::delete('/v1/query/{id}', [QueryController::class, 'destroy'])->whereNumber('id');
     Route::delete('/v1/query/{pid}', [QueryController::class, 'destroy'])->whereUuid('pid');
     Route::post('/v1/queries/delete/bulk', [QueryController::class, 'destroyBulk']);
+    Route::post('/v1/queries/translate/{context}', [QueryController::class, 'translate']);
     Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);

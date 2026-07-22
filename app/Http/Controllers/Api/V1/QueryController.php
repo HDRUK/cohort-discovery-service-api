@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Query;
 use App\Services\Activity\ActivityLogger;
+use App\Services\QueryContext\QueryContextManager;
+use App\Services\QueryContext\QueryContextType;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -377,6 +380,75 @@ class QueryController extends Controller
                 json_encode($input).' (exception: '.$e->getMessage().')');
 
             return $this->ErrorResponse();
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/queries/translate/{context}",
+     *     summary="Translate a raw query definition into a specific query context format, without submitting it",
+     *     tags={"Queries"},
+     *
+     *     @OA\Parameter(
+     *         name="context",
+     *         in="path",
+     *         description="Query context slug",
+     *         required=true,
+     *
+     *         @OA\Schema(type="string", enum={"bunny", "beacon"}, example="bunny")
+     *     ),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"definition"},
+     *
+     *             @OA\Property(
+     *                 property="definition",
+     *                 type="array",
+     *                 description="Structured query definition (same shape as Query::definition)",
+     *
+     *                 @OA\Items(type="object")
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=200, description="Translated query context"),
+     *     @OA\Response(response=422, description="Validation error, or unsupported context"),
+     *     @OA\Response(response=500, description="Server error")
+     * )
+     */
+    public function translate(Request $request, QueryContextManager $contextManager, string $context): JsonResponse
+    {
+        $contextType = QueryContextType::tryFrom($context);
+        if (! $contextType) {
+            return $this->ValidationErrorResponse([
+                'context' => [sprintf(
+                    'Unsupported query context "%s". Supported: %s',
+                    $context,
+                    implode(', ', array_column(QueryContextType::cases(), 'value'))
+                )],
+            ]);
+        }
+
+        $validated = $request->validate([
+            'definition' => 'required|array',
+        ]);
+
+        try {
+            $translated = $contextManager->handle(
+                $validated['definition'],
+                $contextType,
+                Feature::active('flatten-nested-groups')
+            );
+
+            return $this->OKResponse($translated);
+        } catch (\Throwable $e) {
+            \Log::error('QueryController@translate/'.$context.' - failed: '.json_encode($validated).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
