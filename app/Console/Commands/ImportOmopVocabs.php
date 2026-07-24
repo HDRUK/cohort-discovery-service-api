@@ -136,19 +136,38 @@ DESC;
         // This is a massive drain on memory and performance for large files
         // configure system for large imports.
         $conn->disableQueryLog();
-        ini_set('memory_limit', '8G'); // Yes, really!
+        // Big imports need lots of memory. Some hosts won't let us raise the limit,
+        // so if that happens just warn and keep going.
+        if (@ini_set('memory_limit', '8G') === false) {
+            $this->warn('   - Could not raise memory_limit to 8G (host restriction); using '.ini_get('memory_limit'));
+        }
         gc_enable();
-        $conn->getPdo()->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE'");
-        $conn->getPdo()->exec('SET SESSION max_error_count = 1000');
+
+        // Try to tune the session for a large import. Some database users (e.g. on
+        // Cloud SQL) aren't allowed to change these, so skip any that get rejected
+        // instead of stopping the whole import.
+        foreach ([
+            "SET sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE'",
+            'SET SESSION max_error_count = 1000',
+        ] as $tuning) {
+            try {
+                $conn->getPdo()->exec($tuning);
+            } catch (\PDOException $e) {
+                $this->warn('   - Skipped session tuning "'.$tuning.'": '.$e->getMessage());
+            }
+        }
 
         $file = addslashes($file);
 
+        // Athena files are plain tab-separated, but some concept names contain a
+        // literal " character. If we tell MySQL that " wraps a field, it reads past
+        // tabs and line breaks looking for a matching " and quietly loses whole
+        // chunks of rows. So we don't treat " (or \) as anything special here —
+        // every character is read as-is, and only tabs and line breaks split the data.
         $sql = <<<SQL
 LOAD DATA LOCAL INFILE '$file'
 INTO TABLE `$table`
-FIELDS TERMINATED BY '\t'
-OPTIONALLY ENCLOSED BY '"'
-ESCAPED BY '"'
+FIELDS TERMINATED BY '\t' ESCAPED BY ''
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES;
 SQL;
@@ -158,6 +177,12 @@ SQL;
         $warnCount = $conn->getPdo()->query('SHOW COUNT(*) WARNINGS')->fetchColumn();
         if ($warnCount > 0) {
             $this->warn("   - Completed with $warnCount warnings");
+            // Show the first few warnings so problems are easy to spot. This has to
+            // run before anything else on the connection or the warnings get cleared.
+            $warnings = $conn->getPdo()->query('SHOW WARNINGS')->fetchAll(\PDO::FETCH_ASSOC);
+            foreach (array_slice($warnings, 0, 20) as $w) {
+                $this->line("     · {$w['Level']} [{$w['Code']}] {$w['Message']}");
+            }
         }
         $elapsed = round(microtime(true) - $start, 2);
 
@@ -180,12 +205,15 @@ SQL;
             return;
         }
 
-        $headers = fgetcsv($handle, 0, "\t");
+        // Same reason as bulkLoad(): don't treat " as a field wrapper, or names
+        // containing a " get misread, rows end up the wrong length, and the check
+        // below quietly skips them. Passing "\0" turns that behaviour off.
+        $headers = fgetcsv($handle, 0, "\t", "\0", "\0");
         $batch = [];
         $inserted = 0;
         $batchSize = 5000;
 
-        while (($row = fgetcsv($handle, 0, "\t")) !== false) {
+        while (($row = fgetcsv($handle, 0, "\t", "\0", "\0")) !== false) {
             if (count($row) !== count($headers)) {
                 // Skipping malformed line
                 continue;
