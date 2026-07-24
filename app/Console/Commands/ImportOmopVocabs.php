@@ -136,19 +136,24 @@ DESC;
         // This is a massive drain on memory and performance for large files
         // configure system for large imports.
         $conn->disableQueryLog();
-        ini_set('memory_limit', '8G'); // Yes, really!
+        //ini_set('memory_limit', '8G'); // Yes, really!
         gc_enable();
-        $conn->getPdo()->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE'");
-        $conn->getPdo()->exec('SET SESSION max_error_count = 1000');
+        //$conn->getPdo()->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE'");
+        //$conn->getPdo()->exec('SET SESSION max_error_count = 1000');
 
         $file = addslashes($file);
 
+        // Athena vocabulary files are raw tab-separated with NO quote-enclosure,
+        // yet concept_name values legitimately contain literal " characters.
+        // Using OPTIONALLY ENCLOSED BY '"' makes MySQL treat any field starting
+        // with " as an enclosed field and consume tabs/newlines until a balancing
+        // quote, silently swallowing whole spans of rows. Load every byte literally
+        // except the tab delimiter and newline terminator (ESCAPED BY '' disables
+        // escape processing so literal \ and " pass through unchanged).
         $sql = <<<SQL
 LOAD DATA LOCAL INFILE '$file'
 INTO TABLE `$table`
-FIELDS TERMINATED BY '\t'
-OPTIONALLY ENCLOSED BY '"'
-ESCAPED BY '"'
+FIELDS TERMINATED BY '\t' ESCAPED BY ''
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES;
 SQL;
@@ -158,6 +163,11 @@ SQL;
         $warnCount = $conn->getPdo()->query('SHOW COUNT(*) WARNINGS')->fetchColumn();
         if ($warnCount > 0) {
             $this->warn("   - Completed with $warnCount warnings");
+            // SHOW WARNINGS must run before any other statement on the connection.
+            $warnings = $conn->getPdo()->query('SHOW WARNINGS')->fetchAll(\PDO::FETCH_ASSOC);
+            foreach (array_slice($warnings, 0, 20) as $w) {
+                $this->line("     · {$w['Level']} [{$w['Code']}] {$w['Message']}");
+            }
         }
         $elapsed = round(microtime(true) - $start, 2);
 
@@ -180,12 +190,16 @@ SQL;
             return;
         }
 
-        $headers = fgetcsv($handle, 0, "\t");
+        // Disable enclosure/escape ("\0" never appears in vocab text) so literal "
+        // characters in concept_name are not misparsed the way LOAD DATA was — see
+        // bulkLoad(). Otherwise a runaway enclosure merges lines and the column-count
+        // check below silently skips the affected rows.
+        $headers = fgetcsv($handle, 0, "\t", "\0", "\0");
         $batch = [];
         $inserted = 0;
         $batchSize = 5000;
 
-        while (($row = fgetcsv($handle, 0, "\t")) !== false) {
+        while (($row = fgetcsv($handle, 0, "\t", "\0", "\0")) !== false) {
             if (count($row) !== count($headers)) {
                 // Skipping malformed line
                 continue;
