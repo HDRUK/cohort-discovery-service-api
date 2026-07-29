@@ -16,11 +16,12 @@ class ImportOmopVocabs extends Command
      * @var string
      */
     protected $signature = 'app:import-omop-vocabs
-        {path : Path to Athena vobabulary files}
-        {--truncate : Truncate existing vocabulary tables before import (default: true)}
+        {path : Path to Athena vocabulary files}
+        {--truncate : Truncate existing vocabulary tables before import}
         {--bulk : Use LOAD DATA INFILE for large tables (faster)}
         {--create-schema : Create OMOP vocabulary schema if it does not exist}
-        {--clean-file : Clean input files before import (fix malformed CSVs) - THIS IS VERY SLOW! YOU SHOULD GRAB A TEA!}';
+        {--clean-file : Clean input files before import (fix malformed CSVs) - THIS IS VERY SLOW! YOU SHOULD GRAB A TEA!}
+        {--table= : Only import this specific table (e.g. CONCEPT_SYNONYM)}';
 
     /**
      * The console command description.
@@ -65,10 +66,17 @@ DESC;
         $path = rtrim($this->argument('path'), '/');
         $useBulk = $this->option('bulk');
         /** @var string|null $shouldTruncate */
-        $shouldTruncate = $this->option('truncate') ?: true;
-        /** @var string|null $shouldTruncate */
+        $shouldTruncate = $this->option('truncate') ?: false;
+        /** @var string|null $shouldClean */
         $shouldClean = $this->option('clean-file') ?: false;
         $tmpFile = '';
+
+        $tableFilter = $this->option('table') ? strtoupper($this->option('table')) : null;
+
+        if ($tableFilter && ! in_array($tableFilter, $this->vocabFiles)) {
+            $this->error("Unknown table: {$tableFilter}. Valid tables: ".implode(', ', $this->vocabFiles));
+            return;
+        }
 
         if ($this->option('create-schema')) {
             $this->createSchema();
@@ -87,7 +95,9 @@ DESC;
 
         $conn = DB::connection('omop');
 
-        foreach ($this->vocabFiles as $tableName) {
+        $targets = $tableFilter ? [$tableFilter] : $this->vocabFiles;
+
+        foreach ($targets as $tableName) {
             if (! $files->has($tableName)) {
                 $this->warn('Skipping '.$tableName.': file not found in directory');
 

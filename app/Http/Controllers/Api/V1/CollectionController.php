@@ -131,53 +131,13 @@ class CollectionController extends Controller
      */
     public function indexForUser(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
     {
-        $user = User::with('custodians.collections')->find(Auth::id());
-
-        $userWorkgroupsSubquery = $user
-            ->workgroups()
-            ->select('workgroups.id');
-
-        $userCustodianIdsSubquery = $user
-            ->custodians()
-            ->select('custodians.id');
-
-        $isAdmin = $user->roles()->where('name', 'admin')->exists();
-
-        $collections = $user->custodians()
-               ->with('collections')
-               ->get()
-               ->flatMap(fn (Custodian $c) => $c->collections)
-               ->unique('id')
-               ->values();
-
         $collections = Collection::with([
             'demographics',
             'custodian.network',
             'modelState.state',
             'latestMetadata',
         ])
-            ->when(
-                !$isAdmin,
-                fn ($query) => $query->where(
-                    fn ($q) =>
-                        $q->where(
-                            fn ($qq) =>
-                                $qq->whereHas(
-                                    'workgroups',
-                                    fn ($wq) => $wq->whereIn(
-                                        'workgroups.id',
-                                        $userWorkgroupsSubquery
-                                    )
-                                )
-                                ->whereRelation(
-                                    'modelState.state',
-                                    'states.slug',
-                                    Collection::STATUS_ACTIVE
-                                )
-                        )
-                        ->orWhereIn('custodian_id', $userCustodianIdsSubquery)
-                )
-            )
+            ->visibleToUser(User::find(Auth::id()))
             ->searchViaRequest()
             ->filterViaRequest()
             ->applySorting()

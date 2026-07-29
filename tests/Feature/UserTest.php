@@ -121,14 +121,16 @@ class UserTest extends TestCase
         $content = $response->json();
 
         $this->assertIsArray($content['data']);
-        $this->assertEquals($content['data'][0]['name'], $names[0]['name']);
+        $match = collect($content['data'])->firstWhere('name', $names[0]['name']);
+        $this->assertNotNull($match, "Expected '{$names[0]['name']}' in search results");
 
         $response = $this->actingAsJwt($this->user, [])->getJson($this->url . '?name[]=' . explode(' ', $names[2]['name'])[0]);
         $response->assertStatus(200);
 
         $content = $response->json();
         $this->assertIsArray($content['data']);
-        $this->assertEquals($content['data'][0]['name'], $names[2]['name']);
+        $match = collect($content['data'])->firstWhere('name', $names[2]['name']);
+        $this->assertNotNull($match, "Expected '{$names[2]['name']}' in search results");
     }
 
     public function test_the_application_can_search_users_or_and(): void

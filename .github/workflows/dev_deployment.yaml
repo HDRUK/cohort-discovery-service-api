@@ -6,6 +6,16 @@ on:
     branches:
       - dev
 
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment
+        required: true
+        default: dev-standalone
+        type: choice
+        options:
+          - dev-standalone
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -26,10 +36,12 @@ jobs:
     with:
       chart_path: chart/cohort-api/Chart.yaml
       docker_build_args: ${{ needs.setup.outputs.docker_build_args }}
-      environment: dev-integrated
+      environment: ${{ github.event_name == 'push' && 'dev-integrated' || 'dev-standalone' }}
+
     secrets: inherit
 
   deploy-integrated:
+    if: github.event_name == 'push'
     needs: build
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
@@ -38,11 +50,15 @@ jobs:
       git_ref: dev
     secrets: inherit
 
-  deploy-stadalone:
+  deploy-standalone:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      contains(github.event.head_commit.message, '[deploy-standalone]'))
     needs: build
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:
       env: dev-standalone
       chart_path: chart/cohort-api/Chart.yaml
-      git_ref: dev
+      git_ref: ${{ github.ref_name }}
     secrets: inherit

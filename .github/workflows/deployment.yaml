@@ -18,6 +18,14 @@ on:
         default: ''
 
 jobs:
+  cloud-db-backup:
+    if: ${{ github.event.inputs.env == 'prod' }}
+    uses: HDRUK/github-actions-templates/.github/workflows/cloud-db-backup.yaml@main
+    with:
+      env: ${{ github.event.inputs.env }}
+      tag_version: ${{ github.event.inputs.tag_version }}
+    secrets: inherit
+
   deploy:
     uses: HDRUK/github-actions-templates/.github/workflows/deploy-release.yml@main
     with:

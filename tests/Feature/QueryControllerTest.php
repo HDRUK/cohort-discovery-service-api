@@ -331,4 +331,72 @@ class QueryControllerTest extends TestCase
             $this->assertTrue($query->deleted_at !== null);
         }
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_translate_a_query_definition_into_bunny_format_without_submitting(): void
+    {
+        $this->enableMiddleware();
+        $this->disableObservers();
+
+        $definition = [
+            'id' => 'a3f696208-11a8-4daf-86be-ce158b53606c',
+            'rules' => [
+                [
+                    'id' => '3f696208-11a8-4daf-86be-ce158b53606c',
+                    'exclude' => false,
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 3955320,
+                            'description' => 'Moderna - SARS-CoV-2 (COVID-19) vaccine',
+                            'category' => 'Drug',
+                            'children' => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL.'/translate/bunny', [
+                'definition' => $definition,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'groups_oper',
+                    'groups',
+                ],
+            ]);
+
+        $this->assertDatabaseCount(Query::class, 0);
+        $this->assertDatabaseCount(Task::class, 0);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_bunny_translation_without_a_definition(): void
+    {
+        $this->enableMiddleware();
+        $this->disableObservers();
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL.'/translate/bunny', []);
+
+        $response->assertStatus(422);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_translation_for_an_unsupported_context(): void
+    {
+        $this->enableMiddleware();
+        $this->disableObservers();
+
+        $response = $this->actingAsJwt($this->user)
+            ->postJson(self::BASE_URL.'/translate/not-a-real-context', [
+                'definition' => ['id' => 'root', 'rules' => []],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['context']]);
+    }
 }

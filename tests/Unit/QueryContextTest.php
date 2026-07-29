@@ -480,21 +480,31 @@ class QueryContextTest extends TestCase
 
     public function test_application_can_translate_bunny_query(): void
     {
+        // AND( OR(Moderna, Pfizer), AstraZeneca-excluded, CloseContact ) maps
+        // directly onto "groups_oper: AND" with one OR-group and one AND-group -
+        // no Cartesian distribution needed since neither group nests a group.
         $result = $this->bunnyContext->translate(self::INPUT_QUERY);
         $this->assertIsArray($result);
         $this->assertArrayHasKey('groups', $result);
-        $this->assertArrayHasKey('groups_oper', $result);
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
 
         $firstGroup = $result['groups'][0];
         $this->assertIsArray($firstGroup['rules']);
-        $this->assertCount(3, $firstGroup['rules']);
-        $this->assertEquals('AND', $firstGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $firstGroup['rules']);
+        $this->assertEquals('OR', $firstGroup['rules_oper'] ?? null);
 
         $firstRule = $firstGroup['rules'][0] ?? null;
         $this->assertEquals('OMOP', $firstRule['varname'] ?? null);
         $this->assertEquals('3955320', $firstRule['value'] ?? null);
         $secondRule = $firstGroup['rules'][1] ?? null;
-        $this->assertEquals('3955322', $secondRule['value'] ?? null);
+        $this->assertEquals('3955321', $secondRule['value'] ?? null);
+
+        $secondGroup = $result['groups'][1];
+        $this->assertEquals('AND', $secondGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $secondGroup['rules']);
+        $this->assertEquals('3955322', $secondGroup['rules'][0]['value'] ?? null);
+        $this->assertEquals('3959231', $secondGroup['rules'][1]['value'] ?? null);
     }
 
     public function test_application_can_translate_bunny_query_alt(): void
@@ -673,11 +683,14 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
+        // A single multi-concept OR rule with nothing else to combine with
+        // stays as one OR-group of 3 rules, rather than 3 separate groups.
         $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(3, $result['groups']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(3, $result['groups'][0]['rules']);
 
-        foreach ($result['groups'] as $group) {
-            $rule = $group['rules'][0];
+        foreach ($result['groups'][0]['rules'] as $rule) {
             $this->assertArrayHasKey('time', $rule, 'Each expanded concept rule must carry the age constraint');
             $this->assertEquals('10|:AGE:Y', $rule['time']);
         }
@@ -695,16 +708,20 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
+        // A single multi-concept OR rule with nothing else to combine with
+        // stays as one OR-group of 3 rules, rather than 3 separate groups.
         $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(3, $result['groups']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(3, $result['groups'][0]['rules']);
         $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
         $this->assertEquals('Condition', $result['groups'][0]['rules'][0]['varcat']);
-        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
-        $this->assertEquals('37311060', $result['groups'][2]['rules'][0]['value']);
-        $this->assertEquals('Observation', $result['groups'][2]['rules'][0]['varcat']);
+        $this->assertEquals('605554', $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('37311060', $result['groups'][0]['rules'][2]['value']);
+        $this->assertEquals('Observation', $result['groups'][0]['rules'][2]['varcat']);
     }
 
-    public function test_multi_concept_rule_anded_with_single_concept_distributes(): void
+    public function test_multi_concept_rule_anded_with_single_concept_avoids_distribution(): void
     {
         $input = [
             'id'    => 'root',
@@ -734,14 +751,182 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
-        // (C1 OR C2) AND D  →  (C1 AND D) OR (C2 AND D)
-        $this->assertEquals('OR', $result['groups_oper']);
+        // (C1 OR C2) AND D maps directly onto "groups_oper: AND" with an
+        // OR-group for the concept alternatives and an AND-group for D - no
+        // need to distribute D across each alternative.
+        $this->assertEquals('AND', $result['groups_oper']);
         $this->assertCount(2, $result['groups']);
-        $this->assertCount(2, $result['groups'][0]['rules']); // C1 + D
-        $this->assertCount(2, $result['groups'][1]['rules']); // C2 + D
+        $this->assertEquals('OR', $result['groups'][0]['rules_oper'] ?? null);
+        $this->assertCount(2, $result['groups'][0]['rules']); // C1, C2
         $this->assertEquals('37311061', $result['groups'][0]['rules'][0]['value']);
-        $this->assertEquals('3955322', $result['groups'][0]['rules'][1]['value']);
-        $this->assertEquals('605554', $result['groups'][1]['rules'][0]['value']);
+        $this->assertEquals('605554', $result['groups'][0]['rules'][1]['value']);
+        $this->assertEquals('AND', $result['groups'][1]['rules_oper'] ?? null);
+        $this->assertCount(1, $result['groups'][1]['rules']); // D
+        $this->assertEquals('3955322', $result['groups'][1]['rules'][0]['value']);
+    }
+
+    public function test_and_with_exclusion_group_avoids_distribution(): void
+    {
+        $input = [
+            'id'    => 'root',
+            'rules' => [
+                [
+                    'id'      => 'r1',
+                    'exclude' => true,
+                    'rule'    => [
+                        'concept' => [
+                            ['concept_id' => 37311061, 'category' => 'Condition'],
+                            ['concept_id' => 605554,   'category' => 'Condition'],
+                        ],
+                    ],
+                    'valid'   => true,
+                ],
+                ['id' => 'op', 'combinator' => 'and'],
+                [
+                    'id'      => 'r2',
+                    'exclude' => false,
+                    'rule'    => [
+                        'concept' => ['concept_id' => 3955322, 'category' => 'Drug'],
+                    ],
+                    'valid'   => true,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // NOT(C1 OR C2) AND D - the excluded OR-group must survive the shallow
+        // (non-distributed) path with each rule still carrying oper "!=".
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(2, $result['groups']);
+
+        $exclusionGroup = $result['groups'][0];
+        $this->assertEquals('OR', $exclusionGroup['rules_oper'] ?? null);
+        $this->assertCount(2, $exclusionGroup['rules']);
+        $this->assertEquals('!=', $exclusionGroup['rules'][0]['oper']);
+        $this->assertEquals('37311061', $exclusionGroup['rules'][0]['value']);
+        $this->assertEquals('!=', $exclusionGroup['rules'][1]['oper']);
+        $this->assertEquals('605554', $exclusionGroup['rules'][1]['value']);
+
+        $inclusionGroup = $result['groups'][1];
+        $this->assertEquals('AND', $inclusionGroup['rules_oper'] ?? null);
+        $this->assertCount(1, $inclusionGroup['rules']);
+        $this->assertEquals('=', $inclusionGroup['rules'][0]['oper']);
+        $this->assertEquals('3955322', $inclusionGroup['rules'][0]['value']);
+    }
+
+    public function test_measurement_concept_with_value_range_encodes_as_num_rule(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'description' => 'Body weight',
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [1.0, 3.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('Measurement', $rule['varcat']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('1|3', $rule['value']);
+    }
+
+    public function test_measurement_concept_with_only_lower_bound(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [5.5, null],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('5.5|1000000000', $rule['value']);
+    }
+
+    public function test_measurement_concept_with_only_upper_bound(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [null, 10.0],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP=46236952', $rule['varname']);
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('-1000000000|10', $rule['value']);
+    }
+
+    public function test_measurement_concept_without_value_range_encodes_as_text_rule(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 46236952,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('46236952', $rule['value']);
     }
 
     public function test_application_can_translate_via_manager(): void

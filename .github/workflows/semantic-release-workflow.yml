@@ -9,7 +9,7 @@ jobs:
   semantic:
     uses: HDRUK/github-actions-templates/.github/workflows/semantic.yaml@main
     with:
-      chart_path: chart/soursd-web/Chart.yaml
+      chart_path: chart/cohort-api/Chart.yaml
     secrets: inherit
 
   setup:
