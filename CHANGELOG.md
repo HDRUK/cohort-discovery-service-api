@@ -1,3 +1,27 @@
+## [1.12.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.11.0...v1.12.0) (2026-07-29)
+
+### ✨ Features
+
+* **DP-900:** slack webhook alerts (#260) ([3229366](https://github.com/HDRUK/cohort-discovery-service-api/commit/3229366980f4858cdf01d149a840cfbf3dd5f9ae)), closes [DP-900](undefinedDP-900)
+* **DP-910:** add term directory endpoint (search, filter, sort concepts) (#273) ([05bda7c](https://github.com/HDRUK/cohort-discovery-service-api/commit/05bda7cd6f65b35bc51f39795c50f6f55bc6dcae)), closes [DP-910](undefinedDP-910) [endpoint](undefineddpoint)
+* **DP-913:** Enabling value as number filtering  (#274) ([a05abbf](https://github.com/HDRUK/cohort-discovery-service-api/commit/a05abbff763d050dc9ad0cf79cb972bdc154aca9)), closes [DP-913](undefinedDP-913)
+* **DP-921:** notify when collection automatically comes back online (#267) ([5febc1c](https://github.com/HDRUK/cohort-discovery-service-api/commit/5febc1c55e053b3fc2c34e81c6f0eee9ee2d0c58)), closes [DP-921](undefinedDP-921)
+* **DP-928:** Moving search concept to the NLP service (#277) ([aa9f1ba](https://github.com/HDRUK/cohort-discovery-service-api/commit/aa9f1ba72289b11fd1221ac861dfe973838809bf)), closes [DP-928](undefinedDP-928)
+* **DP-929:** Pass collection IDs and flags to NLP service endpoints (#283) ([d6e153e](https://github.com/HDRUK/cohort-discovery-service-api/commit/d6e153e76f0edf71247eef3f68c4fdd9203337af)), closes [DP-929](undefinedDP-929) [endpoints](undefineddpoints)
+* **DP-929:** Update to handle collections for the query parser (#284) ([624eeae](https://github.com/HDRUK/cohort-discovery-service-api/commit/624eeae4b05c605f7fd6ac73d0e86853738ca123)), closes [DP-929](undefinedDP-929)
+* **DP-931:** Implementation of migration-esq system for commands when using automated deployments (#270) ([af2f1e1](https://github.com/HDRUK/cohort-discovery-service-api/commit/af2f1e171e94c5a82cec030090c18200cc430ac3)), closes [DP-931](undefinedDP-931)
+
+### 🐛 Bug Fixes
+
+* **DP-0000:** Commit composer.lock to repo (#279) ([cee9c8f](https://github.com/HDRUK/cohort-discovery-service-api/commit/cee9c8f847f0bc8640b9257eea9264b38c4bc7bc)), closes [DP-0000](undefinedDP-0000)
+* **DP-929:** Update import command (#282) ([f1a93b5](https://github.com/HDRUK/cohort-discovery-service-api/commit/f1a93b59b753a4d6cf0db330a5b7be87136b8eec)), closes [DP-929](undefinedDP-929)
+* **DP-932:** added additional pipeline for standalone deployment (#285) ([cdc1366](https://github.com/HDRUK/cohort-discovery-service-api/commit/cdc13669bf2fbcd6c08d23889df32b80baa13d3d)), closes [DP-932](undefinedDP-932)
+* **DP-932:** updated dev pipeline to run standalone when tag has been added (#289) ([10e0cde](https://github.com/HDRUK/cohort-discovery-service-api/commit/10e0cdee7bebfa2114c84f7e22663cdde29ba4ad)), closes [DP-932](undefinedDP-932)
+* **DP-936:** fix random ci failures (#280) ([952b846](https://github.com/HDRUK/cohort-discovery-service-api/commit/952b846f44a410450e896577b818f9a90fa52241))
+* **DP-947:** fix search not matching by term name (#288) ([e7790b1](https://github.com/HDRUK/cohort-discovery-service-api/commit/e7790b1498d5c0204151ef536516252e0476a35c))
+* **DP-952:** Fix for over zealous flattening of groups (#294) ([fb568e9](https://github.com/HDRUK/cohort-discovery-service-api/commit/fb568e9761f4234679df2275687f2fbb62af7542))
+* **GAT-9139:** added condition to take cloud-db backup before the release (#292) ([a2a4e6c](https://github.com/HDRUK/cohort-discovery-service-api/commit/a2a4e6cbf5fe8e0b8582cce918ee3bbca4f42c09)), closes [GAT-9139](undefinedGAT-9139)
+
 ## [1.11.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.10.0...v1.11.0) (2026-06-12)
 
 ### ✨ Features
