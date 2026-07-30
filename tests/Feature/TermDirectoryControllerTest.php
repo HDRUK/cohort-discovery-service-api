@@ -192,6 +192,10 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertArrayHasKey('concept_id', $item);
         $this->assertArrayHasKey('concept_name', $item);
         $this->assertArrayHasKey('domain_id', $item);
+        $this->assertArrayHasKey('central_domain_id', $item);
+        $this->assertArrayHasKey('reported_domains', $item);
+        $this->assertIsArray($item['reported_domains']);
+        $this->assertArrayHasKey('domain_mismatch', $item);
         $this->assertArrayHasKey('count', $item);
         $this->assertArrayHasKey('ncollections', $item);
     }
