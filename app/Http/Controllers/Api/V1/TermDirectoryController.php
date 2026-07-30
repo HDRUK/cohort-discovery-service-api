@@ -83,10 +83,13 @@ class TermDirectoryController extends Controller
                     'concept_id',
                     'concept_name',
                     'domain_id',
+                    'central_domain_id',
+                    DB::raw('GROUP_CONCAT(DISTINCT reported_domain_id ORDER BY reported_domain_id) AS reported_domains'),
+                    DB::raw('MAX(domain_mismatch) AS domain_mismatch'),
                     DB::raw('SUM(`count`) AS count'),
                     DB::raw('COUNT(DISTINCT collection_id) AS ncollections'),
                 ])
-                ->groupBy('concept_id', 'concept_name', 'domain_id')
+                ->groupBy('concept_id', 'concept_name', 'domain_id', 'central_domain_id')
                 ->applySorting('count', 'desc')
                 ->paginate($perPage);
 

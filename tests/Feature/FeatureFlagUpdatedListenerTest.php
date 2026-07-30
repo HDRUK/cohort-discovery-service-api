@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Queue;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
-class RefreshDistributionsOnDomainSourceChangeTest extends TestCase
+class FeatureFlagUpdatedListenerTest extends TestCase
 {
     public function test_toggling_the_domain_source_flag_dispatches_a_view_refresh(): void
     {

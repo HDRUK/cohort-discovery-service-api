@@ -5,7 +5,7 @@ namespace App\Providers;
 use App\Models\Collection;
 use App\Models\Task;
 use App\Models\User;
-use App\Listeners\RefreshDistributionsOnDomainSourceChange;
+use App\Listeners\FeatureFlagUpdatedListener;
 use App\Observers\CollectionObserver;
 use App\Observers\TaskObserver;
 use Carbon\CarbonInterval;
@@ -62,8 +62,8 @@ class AppServiceProvider extends ServiceProvider
         //use null scope by default
         Feature::resolveScopeUsing(fn ($driver) => null);
 
-        // Rebuild the latest_distributions view when the domain-source flag changes.
-        Event::listen(FeatureUpdatedForAllScopes::class, RefreshDistributionsOnDomainSourceChange::class);
+        // React to feature-flag changes (see FeatureFlagUpdatedListener for the switch).
+        Event::listen(FeatureUpdatedForAllScopes::class, FeatureFlagUpdatedListener::class);
 
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
