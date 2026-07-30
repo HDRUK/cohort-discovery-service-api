@@ -91,12 +91,13 @@ class TermDirectoryController extends Controller
             $visibleCollectionIds = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
 
             $requestedPids = $request->input('collection_pid', []);
-            if (!empty($requestedPids)) {
-                $requestedIds = Collection::whereIn('pid', (array) $requestedPids)->pluck('id');
-                $visibleCollectionIds = $visibleCollectionIds->intersect($requestedIds)->values();
-            }
 
             $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
+                ->when($requestedPids, function ($query, $requestedPids) {
+                    $query->whereHas('collection', function ($q) use ($requestedPids) {
+                        $q->whereIn('pid', (array) $requestedPids);
+                    });
+                })
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->select([
