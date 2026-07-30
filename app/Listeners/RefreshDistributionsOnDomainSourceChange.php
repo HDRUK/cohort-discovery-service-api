@@ -15,7 +15,7 @@ class RefreshDistributionsOnDomainSourceChange
 {
     public function handle(FeatureUpdatedForAllScopes $event): void
     {
-        if ($event->feature !== RefreshLatestDistributionsView::DOMAIN_SOURCE_FEATURE) {
+        if ($event->feature !== 'distribution-use-central-domain') {
             return;
         }
 

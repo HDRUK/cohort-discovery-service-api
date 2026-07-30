@@ -13,7 +13,7 @@ class RefreshDistributionsOnDomainSourceChangeTest extends TestCase
     {
         Queue::fake();
 
-        Feature::activateForEveryone(RefreshLatestDistributionsView::DOMAIN_SOURCE_FEATURE);
+        Feature::activateForEveryone('distribution-use-central-domain');
 
         Queue::assertPushed(RefreshLatestDistributionsView::class);
     }
@@ -22,7 +22,7 @@ class RefreshDistributionsOnDomainSourceChangeTest extends TestCase
     {
         Queue::fake();
 
-        Feature::deactivateForEveryone(RefreshLatestDistributionsView::DOMAIN_SOURCE_FEATURE);
+        Feature::deactivateForEveryone('distribution-use-central-domain');
 
         Queue::assertPushed(RefreshLatestDistributionsView::class);
     }

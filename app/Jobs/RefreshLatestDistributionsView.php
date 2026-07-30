@@ -13,11 +13,6 @@ class RefreshLatestDistributionsView implements ShouldQueue
 {
     use Queueable;
 
-    // Pennant flag selecting the effective `domain_id` source: off = reported
-    // (custodian) domain, on = central OMOP domain. Changing it triggers a view
-    // rebuild via App\Listeners\RefreshDistributionsOnDomainSourceChange.
-    public const DOMAIN_SOURCE_FEATURE = 'distribution-use-central-domain';
-
     // The distributions and concept tables live in separate databases which may
     // use different utf8mb4 collations, so the reported-vs-central comparison is
     // forced onto a common collation to avoid an "illegal mix of collations" error.
@@ -81,7 +76,7 @@ class RefreshLatestDistributionsView implements ShouldQueue
         // The effective `domain_id` (what the app filters/displays on) is sourced
         // from the custodian-reported category by default, or the central OMOP
         // vocabulary when the flag is on. Both are always stored for drift telemetry.
-        $domainSourceExpr = Feature::active(self::DOMAIN_SOURCE_FEATURE)
+        $domainSourceExpr = Feature::active('distribution-use-central-domain')
             ? 'c.domain_id'   // central OMOP vocabulary
             : 'd.category';   // custodian-reported / origin (default)
 
