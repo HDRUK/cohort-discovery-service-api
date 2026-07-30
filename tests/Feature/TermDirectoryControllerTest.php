@@ -167,4 +167,81 @@ class TermDirectoryControllerTest extends TestCase
         $response->assertOk();
         $this->assertEquals(0, $response->json('data.total'));
     }
+
+    public function test_collection_pid_filter_restricts_results(): void
+    {
+        $second = Collection::factory()->create();
+        $task = Task::factory()->create(['collection_id' => $second->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'task_id'       => $task->id,
+            'collection_id' => $second->id,
+            'path'          => 'test/path',
+            'file_name'     => 'code.distribution',
+            'status'        => 'done',
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $second->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_A,
+            'count'          => 7,
+            'name'           => 'CONCEPT_A',
+            'category'       => 'Condition',
+            'description'    => 'Concept A description',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $rows = collect($response->json('data.data'))->keyBy('concept_id');
+        $this->assertEquals(17, $rows[self::CONCEPT_ID_A]['count']);
+        $this->assertEquals(2, $rows[self::CONCEPT_ID_A]['ncollections']);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?collection_pid[]=' . $second->pid);
+
+        $response->assertOk();
+        $this->assertEquals(1, $response->json('data.total'));
+        $this->assertEquals(self::CONCEPT_ID_A, $response->json('data.data.0.concept_id'));
+        $this->assertEquals(7, $response->json('data.data.0.count'));
+        $this->assertEquals(1, $response->json('data.data.0.ncollections'));
+    }
+
+    public function test_collection_pid_filter_combines_with_domain_filter(): void
+    {
+        $collection = Collection::firstOrFail();
+        $url = self::BASE_URL . '?collection_pid[]=' . $collection->pid;
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson($url . '&domain_id=Condition');
+
+        $response->assertOk();
+        $this->assertEquals(2, $response->json('data.total'));
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson($url . '&domain_id=Observation');
+
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_collection_pid_of_invisible_collection_is_ignored(): void
+    {
+        $collection = Collection::firstOrFail();
+
+        $basicUser = User::factory()->create();
+
+        $response = $this->actingAsJwt($basicUser)
+            ->getJson(self::BASE_URL . '?collection_pid[]=' . $collection->pid);
+
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
 }
