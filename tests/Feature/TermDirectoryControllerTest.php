@@ -263,6 +263,67 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertEquals(0, $response->json('data.total'));
     }
 
+    public function test_null_or_zero_concept_ids_are_excluded_from_the_view(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // concept_id 0 is the OMOP "No matching concept" placeholder and exists in
+        // the vocabulary, so without an explicit guard it would join into the view.
+        DB::connection('omop')->table('concept')->insert([
+            'concept_id'       => 0,
+            'concept_name'     => 'No matching concept',
+            'domain_id'        => 'Metadata',
+            'vocabulary_id'    => 'None',
+            'concept_class_id' => 'Undefined',
+            'standard_concept' => null,
+            'concept_code'     => 'No matching concept',
+            'valid_start_date' => '1970-01-01',
+            'valid_end_date'   => '2099-12-31',
+            'invalid_reason'   => null,
+        ]);
+
+        try {
+            DB::table('distributions')->insert([
+                [
+                    'collection_id'  => $collection->id,
+                    'result_file_id' => $resultFileId,
+                    'concept_id'     => 0,
+                    'count'          => 7,
+                    'name'           => '0',
+                    'category'       => 'Condition',
+                    'description'    => 'zero concept',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ],
+                [
+                    'collection_id'  => $collection->id,
+                    'result_file_id' => $resultFileId,
+                    'concept_id'     => null,
+                    'count'          => 9,
+                    'name'           => 'NULLCONCEPT',
+                    'category'       => 'Condition',
+                    'description'    => 'null concept',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ],
+            ]);
+
+            RefreshLatestDistributionsView::dispatchSync();
+
+            $this->assertFalse(
+                DB::table('latest_distributions')->where('concept_id', 0)->exists(),
+                'concept_id 0 should be excluded from latest_distributions'
+            );
+            $this->assertFalse(
+                DB::table('latest_distributions')->whereNull('concept_id')->exists(),
+                'null concept_id should be excluded from latest_distributions'
+            );
+        } finally {
+            DB::connection('omop')->table('concept')->where('concept_id', 0)->delete();
+        }
+    }
+
     public function test_non_admin_without_collection_access_sees_no_results(): void
     {
         $basicUser = User::factory()->create();
