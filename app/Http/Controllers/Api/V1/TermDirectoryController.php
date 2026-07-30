@@ -42,7 +42,7 @@ class TermDirectoryController extends Controller
      *         name="domain_id",
      *         in="query",
      *         required=false,
-     *         description="Filter by OMOP domain",
+     *         description="Filter by the effective OMOP domain (collection-reported by default)",
      *         @OA\Schema(type="string", example="Condition")
      *     ),
      *     @OA\Parameter(

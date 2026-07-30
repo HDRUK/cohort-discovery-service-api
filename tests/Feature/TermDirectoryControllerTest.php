@@ -7,6 +7,7 @@ use App\Models\Collection;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
 class TermDirectoryControllerTest extends TestCase
@@ -77,6 +78,10 @@ class TermDirectoryControllerTest extends TestCase
                 'updated_at'     => now(),
             ],
         ]);
+
+        // Default to the reported/origin domain so tests are isolated from any
+        // flag state persisted by another test.
+        Feature::deactivate('distribution-use-central-domain');
 
         // Build the latest_distributions view from the data we just inserted.
         RefreshLatestDistributionsView::dispatchSync();
@@ -189,6 +194,73 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertArrayHasKey('domain_id', $item);
         $this->assertArrayHasKey('count', $item);
         $this->assertArrayHasKey('ncollections', $item);
+    }
+
+    public function test_domain_defaults_to_reported_category_over_central(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // Concept 8507's central OMOP domain is 'Gender', but this custodian
+        // reported it under 'Observation'. By default we trust the reported domain.
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Observation',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Observation');
+        $response->assertOk();
+        $ids = array_column($response->json('data.data'), 'concept_id');
+        $this->assertContains(self::CONCEPT_ID_GENDER, $ids);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Gender');
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_flag_switches_domain_to_central(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Observation',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        // With the flag on, the concept surfaces under its central domain
+        // (Gender), not the reported one (Observation).
+        Feature::activate('distribution-use-central-domain');
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Gender');
+        $response->assertOk();
+        $ids = array_column($response->json('data.data'), 'concept_id');
+        $this->assertContains(self::CONCEPT_ID_GENDER, $ids);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Observation');
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
     }
 
     public function test_non_admin_without_collection_access_sees_no_results(): void

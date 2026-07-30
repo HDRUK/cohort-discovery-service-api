@@ -20,6 +20,7 @@ class LatestDistribution extends Model
     protected $casts = [
         'count' => 'integer',
         'ncollections' => 'integer',
+        'domain_mismatch' => 'boolean',
     ];
 
     protected static $searchableColumns = [
