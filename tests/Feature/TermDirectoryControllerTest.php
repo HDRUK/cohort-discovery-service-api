@@ -7,6 +7,7 @@ use App\Models\Collection;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
 class TermDirectoryControllerTest extends TestCase
@@ -77,6 +78,10 @@ class TermDirectoryControllerTest extends TestCase
                 'updated_at'     => now(),
             ],
         ]);
+
+        // Default to the reported/origin domain so tests are isolated from any
+        // flag state persisted by another test.
+        Feature::deactivate('distribution-use-central-domain');
 
         // Build the latest_distributions view from the data we just inserted.
         RefreshLatestDistributionsView::dispatchSync();
@@ -187,8 +192,140 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertArrayHasKey('concept_id', $item);
         $this->assertArrayHasKey('concept_name', $item);
         $this->assertArrayHasKey('domain_id', $item);
+        $this->assertArrayHasKey('central_domain_id', $item);
+        $this->assertArrayHasKey('reported_domains', $item);
+        $this->assertIsArray($item['reported_domains']);
+        $this->assertArrayHasKey('domain_mismatch', $item);
         $this->assertArrayHasKey('count', $item);
         $this->assertArrayHasKey('ncollections', $item);
+    }
+
+    public function test_domain_defaults_to_reported_category_over_central(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // Concept 8507's central OMOP domain is 'Gender', but this custodian
+        // reported it under 'Observation'. By default we trust the reported domain.
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Observation',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Observation');
+        $response->assertOk();
+        $ids = array_column($response->json('data.data'), 'concept_id');
+        $this->assertContains(self::CONCEPT_ID_GENDER, $ids);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Gender');
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_flag_switches_domain_to_central(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Observation',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        // With the flag on, the concept surfaces under its central domain
+        // (Gender), not the reported one (Observation).
+        Feature::activate('distribution-use-central-domain');
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Gender');
+        $response->assertOk();
+        $ids = array_column($response->json('data.data'), 'concept_id');
+        $this->assertContains(self::CONCEPT_ID_GENDER, $ids);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?domain_id=Observation');
+        $response->assertOk();
+        $this->assertEquals(0, $response->json('data.total'));
+    }
+
+    public function test_null_or_zero_concept_ids_are_excluded_from_the_view(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // concept_id 0 is the OMOP "No matching concept" placeholder and exists in
+        // the vocabulary, so without an explicit guard it would join into the view.
+        DB::connection('omop')->table('concept')->insert([
+            'concept_id'       => 0,
+            'concept_name'     => 'No matching concept',
+            'domain_id'        => 'Metadata',
+            'vocabulary_id'    => 'None',
+            'concept_class_id' => 'Undefined',
+            'standard_concept' => null,
+            'concept_code'     => 'No matching concept',
+            'valid_start_date' => '1970-01-01',
+            'valid_end_date'   => '2099-12-31',
+            'invalid_reason'   => null,
+        ]);
+
+        try {
+            DB::table('distributions')->insert([
+                [
+                    'collection_id'  => $collection->id,
+                    'result_file_id' => $resultFileId,
+                    'concept_id'     => 0,
+                    'count'          => 7,
+                    'name'           => '0',
+                    'category'       => 'Condition',
+                    'description'    => 'zero concept',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ],
+                [
+                    'collection_id'  => $collection->id,
+                    'result_file_id' => $resultFileId,
+                    'concept_id'     => null,
+                    'count'          => 9,
+                    'name'           => 'NULLCONCEPT',
+                    'category'       => 'Condition',
+                    'description'    => 'null concept',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ],
+            ]);
+
+            RefreshLatestDistributionsView::dispatchSync();
+
+            $this->assertFalse(
+                DB::table('latest_distributions')->where('concept_id', 0)->exists(),
+                'concept_id 0 should be excluded from latest_distributions'
+            );
+            $this->assertFalse(
+                DB::table('latest_distributions')->whereNull('concept_id')->exists(),
+                'null concept_id should be excluded from latest_distributions'
+            );
+        } finally {
+            DB::connection('omop')->table('concept')->where('concept_id', 0)->delete();
+        }
     }
 
     public function test_non_admin_without_collection_access_sees_no_results(): void

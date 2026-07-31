@@ -7,10 +7,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Laravel\Pennant\Feature;
 
 class RefreshLatestDistributionsView implements ShouldQueue
 {
     use Queueable;
+
+    // The distributions and concept tables live in separate databases which may
+    // use different utf8mb4 collations, so the reported-vs-central comparison is
+    // forced onto a common collation to avoid an "illegal mix of collations" error.
+    private const COMPARE_COLLATION = 'utf8mb4_unicode_ci';
 
     private string $viewName = '';
 
@@ -67,6 +73,15 @@ class RefreshLatestDistributionsView implements ShouldQueue
             ]);
         }
 
+        // The effective `domain_id` (what the app filters/displays on) is sourced
+        // from the custodian-reported category by default, or the central OMOP
+        // vocabulary when the flag is on. Both are always stored for drift telemetry.
+        $domainSourceExpr = Feature::active('distribution-use-central-domain')
+            ? 'c.domain_id'   // central OMOP vocabulary
+            : 'd.category';   // custodian-reported / origin (default)
+
+        $collation = self::COMPARE_COLLATION;
+
         DB::statement("
             CREATE OR REPLACE VIEW {$this->viewName} AS
             SELECT
@@ -77,11 +92,16 @@ class RefreshLatestDistributionsView implements ShouldQueue
                 d.concept_id,
                 d.count,
                 c.concept_name,
-                c.domain_id
+                d.category AS reported_domain_id,
+                c.domain_id AS central_domain_id,
+                (d.category COLLATE {$collation} <> c.domain_id COLLATE {$collation}) AS domain_mismatch,
+                {$domainSourceExpr} AS domain_id
             FROM {$this->distributionTable} d
             INNER JOIN {$this->conceptTable} c
                 ON d.concept_id = c.concept_id
-            WHERE {$whereClause}
+            WHERE ({$whereClause})
+                AND d.concept_id IS NOT NULL
+                AND d.concept_id <> 0
         ");
 
         $afterCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->viewName}")->count ?? 0;

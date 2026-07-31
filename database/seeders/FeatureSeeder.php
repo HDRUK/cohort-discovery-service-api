@@ -26,6 +26,7 @@ class FeatureSeeder extends Seeder
         'integrated-sync-custodians-every-request' => true,
         'admin-more-collection-details' => true,
         'query-builder-use-value-as-number' => false,
+        'distribution-use-central-domain' => false,
     ];
 
     /**
