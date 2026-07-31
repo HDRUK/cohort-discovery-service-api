@@ -46,6 +46,20 @@ class TermDirectoryController extends Controller
      *         @OA\Schema(type="string", example="Condition")
      *     ),
      *     @OA\Parameter(
+     *         name="domain_id__in",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by any of several OMOP domains (comma-separated)",
+     *         @OA\Schema(type="string", example="Gender,Race,Ethnicity")
+     *     ),
+     *     @OA\Parameter(
+     *         name="collection_pid[]",
+     *         in="query",
+     *         required=false,
+     *         description="Only include concepts from these collections (public pids). Pids outside the user's visible collections are ignored.",
+     *         @OA\Schema(type="array", @OA\Items(type="string", example="9a8b7c6d-0000-0000-0000-000000000000"))
+     *     ),
+     *     @OA\Parameter(
      *         name="sort",
      *         in="query",
      *         required=false,
@@ -76,7 +90,14 @@ class TermDirectoryController extends Controller
 
             $visibleCollectionIds = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
 
+            $requestedPids = $request->input('collection_pid', []);
+
             $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
+                ->when($requestedPids, function ($query, $requestedPids) {
+                    $query->whereHas('collection', function ($q) use ($requestedPids) {
+                        $q->whereIn('pid', (array) $requestedPids);
+                    });
+                })
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->select([
