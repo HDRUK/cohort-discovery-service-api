@@ -53,5 +53,6 @@ return [
         'http_timeout_seconds' => env('OIDC_HTTP_TIMEOUT_SECONDS', 10),
         'connect_timeout_seconds' => env('OIDC_CONNECT_TIMEOUT_SECONDS', 3),
         'clock_skew_seconds' => env('OIDC_CLOCK_SKEW_SECONDS', 60),
+        'workgroups_claim' => env('OIDC_WORKGROUPS_CLAIM', 'eduperson_entitlement'),
     ],
 ];

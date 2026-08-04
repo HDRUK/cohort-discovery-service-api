@@ -394,6 +394,13 @@ class OIDCTokenValidator
         return max(0, (int)config('services.oidc.clock_skew_seconds', self::DEFAULT_CLOCK_SKEW_SECONDS));
     }
 
+    private function workgroupsClaimName(): string
+    {
+        $claimName = trim((string)config('services.oidc.workgroups_claim', 'eduperson_entitlement'));
+
+        return $claimName !== '' ? $claimName : 'eduperson_entitlement';
+    }
+
     private function assertUrlBelongsToIssuer(string $url, string $context): void
     {
         $issuer = $this->configuredIssuer();
@@ -525,8 +532,10 @@ class OIDCTokenValidator
      */
     private function resolveEdupersonEntitlement(array $userInfo, array $claims): ?array
     {
-        $raw = $userInfo['eduperson_entitlement']
-            ?? $claims['eduperson_entitlement']
+        $claimName = $this->workgroupsClaimName();
+
+        $raw = $userInfo[$claimName]
+            ?? $claims[$claimName]
             ?? null;
 
         if ($raw === null) {
