@@ -14,7 +14,11 @@ class LatestDistribution extends Model
     use Filter;
     use Search;
 
-    protected $table = 'latest_distributions';
+    // Now reads the materialised snapshot table (refilled by RefreshLatestDistributionsView),
+    // not the `latest_distributions` VIEW. The view is exposed via LatestDistributionView.
+    // keeping both the table and view for now as backup and prod speed tests
+    // - the materialised table is much faster
+    protected $table = 'latest_distributions_materialised';
 
     public $timestamps = false;
 
@@ -30,9 +34,9 @@ class LatestDistribution extends Model
     ];
 
     protected static $sortableColumns = [
+        'count',
         'concept_id',
         'concept_name',
-        'count',
         'ncollections',
     ];
 

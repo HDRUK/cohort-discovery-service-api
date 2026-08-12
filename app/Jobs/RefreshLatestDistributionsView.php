@@ -24,14 +24,40 @@ class RefreshLatestDistributionsView implements ShouldQueue
 
     private string $conceptTable = '';
 
+    private string $matTable = '';
+
+    // The staging tables used by the atomic swap in materialiseFromView, derived once
+    // here because $matTable is already back-tick quoted and can't take a suffix.
+    private string $matTableNew = '';
+
+    private string $matTableOld = '';
+
+    private string $mysqlDb = '';
+
+    // Bare table name; the only place the literal lives. Qualified/suffixed names are
+    // derived from it (see $matTable and the staging tables above).
+    private string $matTableName = 'latest_distributions_materialised';
+
     public function __construct()
     {
-        $mysqlDb = config('database.connections.mysql.database');
-        $omopDb  = config('database.connections.omop.database');
+        $this->mysqlDb = config('database.connections.mysql.database');
+        $omopDb        = config('database.connections.omop.database');
 
-        $this->viewName          = "`{$mysqlDb}`.`latest_distributions`";
-        $this->distributionTable = "`{$mysqlDb}`.`distributions`";
-        $this->conceptTable      = "`{$omopDb}`.`concept`";
+        $this->viewName          = $this->qualified('latest_distributions');
+        $this->distributionTable = $this->qualified('distributions');
+        $this->conceptTable      = $this->qualified('concept', $omopDb);
+        $this->matTable          = $this->qualified($this->matTableName);
+        $this->matTableNew       = $this->qualified($this->matTableName.'_new');
+        $this->matTableOld       = $this->qualified($this->matTableName.'_old');
+    }
+
+    /**
+     * Back-tick quote a `database`.`table` identifier. Defaults to the primary
+     * (mysql) database. The only place the quoting/prefix pattern lives.
+     */
+    private function qualified(string $table, ?string $database = null): string
+    {
+        return sprintf('`%s`.`%s`', $database ?? $this->mysqlDb, $table);
     }
 
     public function handle(): void
@@ -109,5 +135,71 @@ class RefreshLatestDistributionsView implements ShouldQueue
             'view'  => $this->viewName,
             'count' => $afterCount,
         ]);
+
+        $this->materialiseFromView();
+    }
+
+    /**
+     * Snapshot the freshly-rebuilt view into the materialised table so reads hit
+     * pre-joined, indexed rows instead of re-running the cross-database join.
+     *
+     * Builds a staging copy then atomically RENAMEs it into place, so readers never
+     * observe a partially-filled or empty table mid-refresh. The job only runs when the
+     * underlying data has changed, so we always rebuild.
+     */
+    private function materialiseFromView(): void
+    {
+        $new = $this->matTableNew;
+        $old = $this->matTableOld;
+        $columns = $this->columnList();
+
+        try {
+            DB::statement("DROP TABLE IF EXISTS {$new}");
+            DB::statement("CREATE TABLE {$new} LIKE {$this->matTable}");
+
+            DB::statement("
+                INSERT INTO {$new} ({$columns})
+                SELECT {$columns}
+                FROM {$this->viewName}
+            ");
+
+            DB::statement("DROP TABLE IF EXISTS {$old}");
+            DB::statement("RENAME TABLE {$this->matTable} TO {$old}, {$new} TO {$this->matTable}");
+            DB::statement("DROP TABLE IF EXISTS {$old}");
+
+            $matCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->matTable}")->count ?? 0;
+            Log::info('latest_distributions_materialised table refilled', [
+                'table' => $this->matTable,
+                'count' => $matCount,
+            ]);
+        } catch (\Throwable $e) {
+            // Leave the previous table in place on failure; clean up the staging copy.
+            DB::statement("DROP TABLE IF EXISTS {$new}");
+            Log::error('latest_distributions_materialised refill failed', [
+                'table' => $this->matTable,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * The view's projection, mirrored by the materialised table. Single source for
+     * the refill INSERT/SELECT, so the two never drift.
+     *
+     * @return list<string>
+     */
+    private function columns(): array
+    {
+        return [
+            'id', 'collection_id', 'task_id', 'result_file_id', 'concept_id', '`count`',
+            'concept_name', 'reported_domain_id', 'central_domain_id', 'domain_mismatch', 'domain_id',
+        ];
+    }
+
+    private function columnList(): string
+    {
+        return implode(', ', $this->columns());
     }
 }
