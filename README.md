@@ -27,12 +27,14 @@ REDIS_PASSWORD=
 REDIS_PORT=6379
 ```
 
-### Integration mode
+### Open-source mode
 
-There are two running modes to choose from:
+While there are two running modes to choose from, it's important to note that "integrated" is used explicitly by HDRUK's Health Data Gateway. When 
+forking/cloning and deploying yourself, you should make sure to use "standalone" and configure an OIDC provider or fall-back to username/password
+credentials:
 
 ```
-APP_OPERATION_MODE="integrated" # or "standalone"
+APP_OPERATION_MODE="standalone"
 ```
 
 This is documented further down
@@ -211,11 +213,101 @@ For more information [follow the instructions here](https://hutch.health/bunny/c
 
 # Standalone Integration
 
-... to be completed ...
+In standalone mode the Cohort-Discovery-Service API is its own identity authority. Users live in the
+local `users` table, log in with email + password via `POST /api/auth/login`, and receive an RS256 JWT
+signed with the Passport keys.
+
+```
+APP_OPERATION_MODE="standalone"
+STANDALONE_JWT_TTL_MINUTES=120 # how long a login lives before the user has to go around again
+```
+
+You'll need Passport keys in place (`php artisan passport:keys` if you don't have them already) and the
+`CohortDiscoveryService` personal access client, which the seeders (`StandaloneDemoSeeder` / `TestingSeeder`) take
+care of for you. No keys, no tokens - it's that kind of relationship.
+
+## OIDC Single Sign-On (optional)
+
+Once deployed you can also hand the front door over to an external identity provider - anything that
+speaks OIDC will do (Keycloak, Entra ID, Google, your institution's finest). Password login carries on
+working alongside it; SSO is an additional way in, not a replacement.
+
+A word of warning before you start: SSO is *standalone-only*. In integrated mode the Health Data Gateway *is* the
+identity provider, so these endpoints politely 404 and pretend they don't exist.
+
+### Configuration
+
+Add the following to your `.env`:
+
+```
+SSO_ENABLED=true
+SSO_FRONTEND_CALLBACK_URL="http://localhost:3000/auth/sso/callback"                   # or wherever your client deployment lives
+SSO_FRONTEND_ERROR_URL="http://localhost:3000/auth/sso/error"                         # where failed logins get sent
+
+SSO_DEFAULT_ENABLED=true
+SSO_DEFAULT_LABEL="Single Sign-On"                                                    # what the FE shows on the button
+SSO_DEFAULT_ISSUER="http://localhost:8080/realms/cohort-discovery-service"            # your IdP's issuer, exactly as it appears in its tokens
+SSO_DEFAULT_CLIENT_ID=<client id you registered with the IdP>
+SSO_DEFAULT_CLIENT_SECRET=<client secret to go with it>
+SSO_DEFAULT_SCOPES="openid profile email"
+```
+
+The `DEFAULT` in the variable names refers to the provider slug (`default`), which appears in the URLs
+below. Additional providers can be added under `config/sso.php` per deployment - each gets its own slug.
+
+There are also some optional dials, all with sensible defaults, if you feel the need to fine tune:
+
+```
+SSO_DEFAULT_DISCOVERY_URL=      # defaults to {issuer}/.well-known/openid-configuration
+SSO_DEFAULT_REDIRECT_URI=       # defaults to {app url}/api/auth/sso/default/callback
+SSO_TXN_TTL_SECONDS=600         # how long a login attempt can idle between redirect and callback
+SSO_HANDOFF_CODE_TTL_SECONDS=60 # how long the FE has to exchange its one-time code
+SSO_ID_TOKEN_LEEWAY_SECONDS=30  # clock-skew forgiveness when validating id_tokens
+```
+
+### Register the callback with your IdP
+
+Your IdP needs to know where to send people back to. Register:
+
+```
+http://localhost:8100/api/auth/sso/default/callback # or wherever you are running your instance of the cohort-discovery-service-api
+```
+
+Make sure the IdP actually releases the `email` claim (it's in the default scopes, but some enterprise
+setups withhold it) - without an email we can neither link nor create an account, and the login will fail.
+
+### OIDC Flow
+
+1. FE asks `GET /api/auth/sso/providers` for what's on offer and renders a button per provider
+2. The browser navigates to `GET /api/auth/sso/default/redirect` and is bounced to the IdP
+3. The IdP bounces back to our callback; we validate the id_token (signature, issuer, audience,
+   nonce and expiry), find or create the user, mint the same
+   RS256 JWT a password login would get, and bounce the browser to `SSO_FRONTEND_CALLBACK_URL`
+   with a single-use `?code=`
+4. The FE swaps that code at `POST /api/auth/sso/exchange` (`{"code": "..."}`) for the actual
+   `access_token` - so the token itself never rides in a URL
+
+First-time visitors are created on the spot with the `DEFAULT` workgroup and the `user` role
+(controllable via the `sso-ensure-defaults-on-jit` feature flag). Returning visitors are matched by
+their provider identity. If someone arrives whose email matches an existing account, we only link the
+two when the IdP swears the email is verified - anything less smells like an account takeover, and we
+send it to the error URL instead.
+
+### Trying it locally
+
+A disposable Keycloak is the quickest way to confirm the flow:
+
+```
+docker run -p 8080:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak start-dev
+```
+
+Create a realm, a confidential client with the callback URL above, a test user with a verified email,
+point the `SSO_DEFAULT_*` vars at it, and visit `http://localhost:8100/api/auth/sso/default/redirect`
+in a browser.
 
 # Gateway Integration
 
-To use DAPHNE with the HDR UK Gateway, follow the next steps to setup this as an integration
+To use Cohort Discovery Service with the HDR UK Gateway, follow the next steps to setup this as an integration
 
 Add the following to your .env for the gateway-api:
 

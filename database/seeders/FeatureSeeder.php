@@ -25,6 +25,10 @@ class FeatureSeeder extends Seeder
         'integrated-sync-roles-every-request' => true,
         'integrated-sync-custodians-every-request' => true,
         'admin-more-collection-details' => true,
+        // This decides whether a brand new SSO user gets any permissions
+        // at the moment we create them, or arrives with none until an
+        // admin steps in.
+        'sso-ensure-defaults-on-jit' => true,
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
     ];

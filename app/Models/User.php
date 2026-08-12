@@ -8,6 +8,7 @@ use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\Contracts\OAuthenticatable;
@@ -142,6 +143,11 @@ class User extends Authenticatable implements OAuthenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function identities(): HasMany
+    {
+        return $this->hasMany(UserIdentity::class);
     }
 
     public function workgroups(): BelongsToMany
