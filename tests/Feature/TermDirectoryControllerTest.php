@@ -448,4 +448,87 @@ class TermDirectoryControllerTest extends TestCase
         $response->assertOk();
         $this->assertEquals(0, $response->json('data.total'));
     }
+
+    public function test_refresh_creates_both_the_view_and_the_materialised_table(): void
+    {
+        // setUp() already ran RefreshLatestDistributionsView::dispatchSync().
+        $this->assertSame('VIEW', $this->objectType('latest_distributions'));
+        $this->assertSame('BASE TABLE', $this->objectType('latest_distributions_materialised'));
+
+        $viewRows = DB::table('latest_distributions')->count();
+        $matRows = DB::table('latest_distributions_materialised')->count();
+
+        $this->assertGreaterThan(0, $viewRows, 'the view should be populated after a refresh');
+        $this->assertSame($viewRows, $matRows, 'the materialised table should mirror the view row count');
+
+        // The two seeded concepts appear with identical summed counts in both objects.
+        foreach ([self::CONCEPT_ID_A => 10, self::CONCEPT_ID_B => 50] as $conceptId => $expected) {
+            $this->assertSame(
+                $expected,
+                (int) DB::table('latest_distributions')->where('concept_id', $conceptId)->sum('count')
+            );
+            $this->assertSame(
+                $expected,
+                (int) DB::table('latest_distributions_materialised')->where('concept_id', $conceptId)->sum('count')
+            );
+        }
+    }
+
+    public function test_refresh_updates_both_the_view_and_the_materialised_table(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // The new concept is absent from both objects before the refresh.
+        $this->assertFalse(
+            DB::table('latest_distributions')->where('concept_id', self::CONCEPT_ID_GENDER)->exists()
+        );
+        $this->assertFalse(
+            DB::table('latest_distributions_materialised')->where('concept_id', self::CONCEPT_ID_GENDER)->exists()
+        );
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Gender',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        // The refresh rebuilds the view AND refills the materialised snapshot, so the
+        // new concept surfaces in both with matching counts.
+        $this->assertSame(
+            5,
+            (int) DB::table('latest_distributions')->where('concept_id', self::CONCEPT_ID_GENDER)->sum('count')
+        );
+        $this->assertSame(
+            5,
+            (int) DB::table('latest_distributions_materialised')->where('concept_id', self::CONCEPT_ID_GENDER)->sum('count')
+        );
+
+        $this->assertSame(
+            DB::table('latest_distributions')->count(),
+            DB::table('latest_distributions_materialised')->count(),
+            'the materialised table should stay in lockstep with the view after a refresh'
+        );
+    }
+
+    /**
+     * MySQL object type for a name in the current database: 'VIEW' or 'BASE TABLE'.
+     */
+    private function objectType(string $name): ?string
+    {
+        $row = DB::selectOne(
+            'SELECT TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            [$name]
+        );
+
+        return $row->TABLE_TYPE ?? null;
+    }
 }
