@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Omop\Concept;
+use App\Models\Traits\SortManager;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -12,9 +13,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class LatestDistribution extends Model
 {
     use Filter;
-    use Search;
+    // Our own SortManager owns applySorting (shared-repo candidate); the vendor
+    // Search trait still provides searchViaRequest.
+    use Search, SortManager {
+        SortManager::scopeApplySorting insteadof Search;
+    }
 
-    protected $table = 'latest_distributions';
+    // Reads the materialised snapshot table (refilled by RefreshLatestDistributionsView),
+    // not the `latest_distributions` VIEW. The view is exposed via LatestDistributionView.
+    protected $table = 'latest_distributions_materialised';
 
     public $timestamps = false;
 
@@ -29,10 +36,12 @@ class LatestDistribution extends Model
         'concept_name',
     ];
 
+    // First entry is the default sort (SortManager falls back to it, descending) —
+    // count first keeps the Term Directory defaulting to most-common-concepts-first.
     protected static $sortableColumns = [
+        'count',
         'concept_id',
         'concept_name',
-        'count',
         'ncollections',
     ];
 

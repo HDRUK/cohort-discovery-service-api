@@ -233,6 +233,39 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertEquals(0, $response->json('data.total'));
     }
 
+    public function test_domain_mismatch_and_reported_domains_are_surfaced(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        // Concept 8507's central OMOP domain is 'Gender', but this custodian reported
+        // it under 'Observation' — a drift the endpoint should surface.
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 5,
+            'name'           => '8507',
+            'category'       => 'Observation',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+        $response->assertOk();
+
+        $row = collect($response->json('data.data'))
+            ->firstWhere('concept_id', self::CONCEPT_ID_GENDER);
+
+        $this->assertNotNull($row, 'expected the mismatched concept in the results');
+        $this->assertTrue($row['domain_mismatch']);
+        $this->assertEquals('Gender', $row['central_domain_id']);
+        $this->assertContains('Observation', $row['reported_domains']);
+    }
+
     public function test_flag_switches_domain_to_central(): void
     {
         $collection = Collection::first();

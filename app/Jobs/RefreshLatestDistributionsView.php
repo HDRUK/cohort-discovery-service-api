@@ -24,14 +24,32 @@ class RefreshLatestDistributionsView implements ShouldQueue
 
     private string $conceptTable = '';
 
+    private string $matTable = '';
+
+    private string $mysqlDb = '';
+
+    // Bare table name; the only place the literal lives. Qualified/suffixed names are
+    // derived from it (see $matTable and the staging swap in materialiseFromView).
+    private string $matTableName = 'latest_distributions_materialised';
+
     public function __construct()
     {
-        $mysqlDb = config('database.connections.mysql.database');
-        $omopDb  = config('database.connections.omop.database');
+        $this->mysqlDb = config('database.connections.mysql.database');
+        $omopDb        = config('database.connections.omop.database');
 
-        $this->viewName          = "`{$mysqlDb}`.`latest_distributions`";
-        $this->distributionTable = "`{$mysqlDb}`.`distributions`";
-        $this->conceptTable      = "`{$omopDb}`.`concept`";
+        $this->viewName          = $this->qualified('latest_distributions');
+        $this->distributionTable = $this->qualified('distributions');
+        $this->conceptTable      = $this->qualified('concept', $omopDb);
+        $this->matTable          = $this->qualified($this->matTableName);
+    }
+
+    /**
+     * Back-tick quote a `database`.`table` identifier. Defaults to the primary
+     * (mysql) database. The only place the quoting/prefix pattern lives.
+     */
+    private function qualified(string $table, ?string $database = null): string
+    {
+        return sprintf('`%s`.`%s`', $database ?? $this->mysqlDb, $table);
     }
 
     public function handle(): void
@@ -109,5 +127,128 @@ class RefreshLatestDistributionsView implements ShouldQueue
             'view'  => $this->viewName,
             'count' => $afterCount,
         ]);
+
+        $this->materialiseFromView();
+    }
+
+    /**
+     * Snapshot the freshly-rebuilt view into the materialised table so reads hit
+     * pre-joined, indexed rows instead of re-running the cross-database join.
+     *
+     * Builds a staging copy then atomically RENAMEs it into place, so readers never
+     * observe a partially-filled or empty table mid-refresh.
+     */
+    private function materialiseFromView(): void
+    {
+        if ($this->matTableMatchesView()) {
+            Log::info('latest_distributions_materialised already matches the view; skipping refill', [
+                'table' => $this->matTable,
+            ]);
+
+            return;
+        }
+
+        $new = $this->qualified("{$this->matTableName}_new");
+        $old = $this->qualified("{$this->matTableName}_old");
+        $columns = $this->columnList();
+
+        try {
+            DB::statement("DROP TABLE IF EXISTS {$new}");
+            DB::statement("CREATE TABLE {$new} LIKE {$this->matTable}");
+
+            DB::statement("
+                INSERT INTO {$new} ({$columns})
+                SELECT {$columns}
+                FROM {$this->viewName}
+            ");
+
+            DB::statement("DROP TABLE IF EXISTS {$old}");
+            DB::statement("RENAME TABLE {$this->matTable} TO {$old}, {$new} TO {$this->matTable}");
+            DB::statement("DROP TABLE IF EXISTS {$old}");
+
+            $matCount = DB::selectOne("SELECT COUNT(*) AS count FROM {$this->matTable}")->count ?? 0;
+            Log::info('latest_distributions_materialised table refilled', [
+                'table' => $this->matTable,
+                'count' => $matCount,
+            ]);
+        } catch (\Throwable $e) {
+            // Leave the previous table in place on failure; clean up the staging copy.
+            DB::statement("DROP TABLE IF EXISTS {$new}");
+            Log::error('latest_distributions_materialised refill failed', [
+                'table' => $this->matTable,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * True when the materialised table is already an exact snapshot of the view, so
+     * the refill can be skipped.
+     *
+     * Compares a content signature (row count + order-independent BIT_XOR of a
+     * per-row CRC) of both objects. Content-based, so it is immune to reused row ids
+     * across rebuilds and catches concept-table changes; `id` is unique per row, so
+     * the XOR never cancels distinct rows.
+     */
+    private function matTableMatchesView(): bool
+    {
+        $signature = function (string $source): ?object {
+            return DB::selectOne("
+                SELECT
+                    COUNT(*) AS n,
+                    COALESCE(BIT_XOR(CRC32({$this->checksumExpr()})), 0) AS chk
+                FROM {$source}
+            ");
+        };
+
+        try {
+            $view = $signature($this->viewName);
+            $mat  = $signature($this->matTable);
+        } catch (\Throwable $e) {
+            // Missing/unreadable object (e.g. first run) -> not a match, so rebuild.
+            return false;
+        }
+
+        return $view !== null
+            && $mat !== null
+            && (int) $view->n === (int) $mat->n
+            && (string) $view->chk === (string) $mat->chk;
+    }
+
+    /**
+     * The view's projection, mirrored by the materialised table. Single source for
+     * the refill INSERT/SELECT and the content signature, so the two never drift.
+     *
+     * @return list<string>
+     */
+    private function columns(): array
+    {
+        return [
+            'id', 'collection_id', 'task_id', 'result_file_id', 'concept_id', '`count`',
+            'concept_name', 'reported_domain_id', 'central_domain_id', 'domain_mismatch', 'domain_id',
+        ];
+    }
+
+    private function columnList(): string
+    {
+        return implode(', ', $this->columns());
+    }
+
+    /**
+     * Per-row string used for the content signature. Every column is forced to a
+     * single charset first: the view mixes the app DB and the OMOP DB, which may use
+     * different utf8mb4 collations, and CONCAT_WS across them would otherwise raise
+     * an "illegal mix of collations" error.
+     */
+    private function checksumExpr(): string
+    {
+        $parts = array_map(
+            fn (string $column): string => "CONVERT({$column} USING utf8mb4)",
+            $this->columns()
+        );
+
+        return "CONCAT_WS('|', " . implode(', ', $parts) . ')';
     }
 }
