@@ -30,6 +30,7 @@ class FeatureSeeder extends Seeder
         'access-banner' => false,
         'query-builder-use-location' => false,
         'query-builder-use-death' => false,
+        'query-builder-use-demographic-rule' => false,
     ];
 
     /**
