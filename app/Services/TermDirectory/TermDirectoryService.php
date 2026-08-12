@@ -59,7 +59,6 @@ class TermDirectoryService
         $pageRows = $base()
             ->select($selectA)
             ->groupBy($groupKeys)
-            // Default to most-common-concepts-first when no `sort` is requested.
             ->applySorting('count', 'desc')
             ->forPage($page, $perPage)
             ->get();

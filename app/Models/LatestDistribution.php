@@ -12,12 +12,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class LatestDistribution extends Model
 {
     use Filter;
-    // Search provides both searchViaRequest and applySorting; callers pass the default
-    // sort explicitly (see TermDirectoryService).
     use Search;
 
-    // Reads the materialised snapshot table (refilled by RefreshLatestDistributionsView),
+    // Now reads the materialised snapshot table (refilled by RefreshLatestDistributionsView),
     // not the `latest_distributions` VIEW. The view is exposed via LatestDistributionView.
+    // keeping both the table and view for now as backup and prod speed tests
+    // - the materialised table is much faster
     protected $table = 'latest_distributions_materialised';
 
     public $timestamps = false;
@@ -33,8 +33,6 @@ class LatestDistribution extends Model
         'concept_name',
     ];
 
-    // Whitelist of columns a `sort=field:direction` request may target. The default
-    // (count, descending) is applied by the caller — see TermDirectoryService.
     protected static $sortableColumns = [
         'count',
         'concept_id',
