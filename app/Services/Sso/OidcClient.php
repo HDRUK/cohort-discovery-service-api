@@ -151,7 +151,7 @@ class OidcClient
         }
 
         if (isset($claims['azp']) && $claims['azp'] !== $provider->clientId) {
-            throw new IdTokenValidationException('id_token authorized party mismatch');
+            throw new IdTokenValidationException('id_token authorised party mismatch');
         }
 
         if (! isset($claims['nonce']) || ! hash_equals($expectedNonce, (string) $claims['nonce'])) {
