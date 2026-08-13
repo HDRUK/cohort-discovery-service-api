@@ -15,9 +15,6 @@ enum MissingDataTable: string
 
     public function reason(): string
     {
-        return match ($this) {
-            self::Location => 'Location data table missing',
-            self::Death => 'Death data table missing',
-        };
+        return $this->value . ' data table missing';
     }
 }
