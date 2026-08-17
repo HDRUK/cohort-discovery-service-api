@@ -27,12 +27,9 @@ class FeatureSeeder extends Seeder
         'admin-more-collection-details' => true,
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
-<<<<<<< HEAD
         'access-banner' => false,
-=======
         'query-builder-use-location' => false,
         'query-builder-use-death' => false,
->>>>>>> 1058b79 (feat(DP-1026): add location/death collection flags and FE feature flags)
     ];
 
     /**
