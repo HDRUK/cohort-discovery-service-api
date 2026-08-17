@@ -27,6 +27,7 @@ class FeatureSeeder extends Seeder
         'admin-more-collection-details' => true,
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
+        'access-banner' => false,
     ];
 
     /**
@@ -36,8 +37,8 @@ class FeatureSeeder extends Seeder
     {
         foreach ($this->features as $name => $active) {
             $exists = \DB::table('features')
-             ->where('name', $name)
-             ->exists();
+                ->where('name', $name)
+                ->exists();
 
             if ($exists) {
                 continue;
