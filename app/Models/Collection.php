@@ -106,6 +106,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'updated_at',
         'workgroup_ids',
         'is_synthetic',
+        'location_enabled',
+        'death_enabled',
     ];
 
     protected $casts = [
@@ -114,6 +116,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'updated_at' => 'datetime',
         'last_active' => 'datetime',
         'is_synthetic' => 'boolean',
+        'location_enabled' => 'boolean',
+        'death_enabled' => 'boolean',
     ];
 
     protected static array $searchableColumns = [
@@ -184,6 +188,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'custodian_id' => 'required|integer|exists:custodians,id',
                 'status' => 'required|boolean',
                 'is_synthetic' => 'sometimes|boolean',
+                'location_enabled' => 'sometimes|boolean',
+                'death_enabled' => 'sometimes|boolean',
             ],
             'update' => [
                 'id' => 'required|integer|exists:collections,id',
@@ -197,6 +203,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'state' => 'sometimes|string',
                 'host_id' => 'sometimes|integer|exists:collection_hosts,id',
                 'is_synthetic' => 'sometimes|boolean',
+                'location_enabled' => 'sometimes|boolean',
+                'death_enabled' => 'sometimes|boolean',
             ],
             'destroy' => [
                 'id' => 'required|integer|exists:collections,id',

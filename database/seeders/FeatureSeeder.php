@@ -28,6 +28,8 @@ class FeatureSeeder extends Seeder
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
         'access-banner' => false,
+        'query-builder-use-location' => false,
+        'query-builder-use-death' => false,
     ];
 
     /**
