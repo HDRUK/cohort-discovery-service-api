@@ -16,6 +16,21 @@ class BunnyQueryContext implements QueryContextInterface
         // Convert to groupwise form for easier parsing of nodes per group.
         $groupwiseForm = $this->convertToGroupwiseForm($definition);
 
+        $clinical = $this->translateClinical($groupwiseForm, $flattenNestedGroups);
+
+        // Demographics (age band, sex, race) live alongside the clinical rules
+        // and constrain the whole cohort. They are absent from the groupwise
+        // form above, so fold them in here as a global AND.
+        $demographicGroups = $this->buildDemographicGroups($definition['demographics'] ?? []);
+        if (empty($demographicGroups)) {
+            return $clinical;
+        }
+
+        return $this->applyDemographics($groupwiseForm, $clinical, $demographicGroups);
+    }
+
+    private function translateClinical(array $groupwiseForm, bool $flattenNestedGroups): array
+    {
         // Check for the special case where it's only a single group of ANDs -
         // in this case we can skip the flattening step and just convert to "standard form" (OR-of-ANDs) directly
         $specialForm = true;
@@ -77,6 +92,136 @@ class BunnyQueryContext implements QueryContextInterface
 
         // Now we know it's not in that form, collapse to "standard form".
         return $this->flattenToStandardForm($groupwiseForm, 0);
+    }
+
+    /**
+     * Build BUNNY groups from the demographics block. Each returned group is a
+     * self-contained constraint that must hold for the whole cohort:
+     * - age  -> a single AGE NUM rule (a group of one)
+     * - sex  -> the selected gender concepts OR-ed together
+     * - race -> the selected race concepts OR-ed together
+     *
+     * Empty / unconstrained sections yield no group.
+     *
+     * @return array<int, array{rules_oper: string, rules: array}>
+     */
+    private function buildDemographicGroups(array $demographics): array
+    {
+        $groups = [];
+
+        $age = $demographics['age'] ?? null;
+        if (
+            is_array($age)
+            && count($age) === 2
+            && is_numeric($age[0])
+            && is_numeric($age[1])
+            && ! $this->isOpenAgeBand($age)
+        ) {
+            $groups[] = [
+                'rules_oper' => 'AND',
+                'rules' => [$this->makeLeafAgeFilter(['value' => $age])],
+            ];
+        }
+
+        foreach (['sex', 'race'] as $key) {
+            $rules = [];
+            foreach ($demographics[$key] ?? [] as $concept) {
+                $conceptId = $concept['concept_id'] ?? null;
+                if ($conceptId === null || $conceptId === '') {
+                    continue;
+                }
+                $rules[] = $this->makeDemographicPersonRule((string) $conceptId);
+            }
+
+            if (! empty($rules)) {
+                $groups[] = [
+                    // Several selected values are alternatives (OR); a single one
+                    // is trivially AND, matching the single-rule group convention.
+                    'rules_oper' => count($rules) > 1 ? 'OR' : 'AND',
+                    'rules' => $rules,
+                ];
+            }
+        }
+
+        return $groups;
+    }
+
+    /**
+     * An age band covering the full [0, 120] range is no constraint at all, so
+     * it should not emit a rule.
+     */
+    private function isOpenAgeBand(array $age): bool
+    {
+        return (int) $age[0] <= 0 && (int) $age[1] >= 120;
+    }
+
+    private function makeDemographicPersonRule(string $conceptId): array
+    {
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Person',
+            'type'    => 'TEXT',
+            'oper'    => '=',
+            'value'   => $conceptId,
+        ];
+    }
+
+    /**
+     * AND the demographic groups onto the translated clinical cohort.
+     *
+     * BUNNY's shape is 2-level (Cohort > Group > Rule) with a single groups
+     * operator, so `(clinical) AND (demographics)` can be expressed directly by
+     * appending the demographic groups whenever the clinical part is a single
+     * group (or empty), or is already AND-combined. A genuine multi-way OR of
+     * clinical groups has no room for a further AND level, so it must be
+     * distributed into standard OR-of-ANDs form first.
+     */
+    private function applyDemographics(array $groupwiseForm, array $clinical, array $demographicGroups): array
+    {
+        $groups = $clinical['groups'] ?? [];
+        $operator = $clinical['groups_oper'] ?? 'OR';
+
+        if (count($groups) <= 1 || $operator === 'AND') {
+            return [
+                'groups_oper' => 'AND',
+                'groups' => array_merge($groups, $demographicGroups),
+            ];
+        }
+
+        // (G1 OR G2 ...) AND demo -> distribute. Recompute the clinical part in
+        // strict OR-of-ANDs form so combineStandardsWithAnd can multiply it out.
+        $combined = $this->flattenToStandardForm($groupwiseForm, 1);
+        foreach ($demographicGroups as $demographicGroup) {
+            $combined = $this->combineStandardsWithAnd($combined, $this->groupToStandard($demographicGroup));
+        }
+
+        return [
+            'groups_oper' => 'OR',
+            'groups' => $combined['rules'],
+        ];
+    }
+
+    /**
+     * Lift a single BUNNY group into standard OR-of-ANDs form so it can be
+     * AND-combined via combineStandardsWithAnd(). An OR group becomes one AND
+     * alternative per rule; an AND group becomes a single AND alternative.
+     */
+    private function groupToStandard(array $group): array
+    {
+        if (($group['rules_oper'] ?? 'AND') === 'OR') {
+            return [
+                'rules_oper' => 'OR',
+                'rules' => array_map(
+                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    $group['rules']
+                ),
+            ];
+        }
+
+        return [
+            'rules_oper' => 'OR',
+            'rules' => [['rules_oper' => 'AND', 'rules' => $group['rules']]],
+        ];
     }
 
     /**

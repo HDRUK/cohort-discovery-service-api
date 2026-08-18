@@ -126,17 +126,8 @@ class QueryParserTest extends TestCase
     {
         return [
             'entities' => [
-                // "FEMALE" span: a fuzzy-noise candidate plus the real gender concept.
-                [
-                    'text' => 'FEMALE',
-                    'label' => 'Condition',
-                    'attributes' => [
-                        'concept_id' => 40481087,
-                        'concept_name' => 'Female genital tract problem',
-                        'domain_id' => 'Condition',
-                        'match_score' => 900,
-                    ],
-                ],
+                // "FEMALE" span: the real gender concept ranks above a
+                // fuzzy-noise sibling candidate.
                 [
                     'text' => 'FEMALE',
                     'label' => 'Gender',
@@ -144,6 +135,16 @@ class QueryParserTest extends TestCase
                         'concept_id' => 8532,
                         'concept_name' => 'FEMALE',
                         'domain_id' => 'Gender',
+                        'match_score' => 900,
+                    ],
+                ],
+                [
+                    'text' => 'FEMALE',
+                    'label' => 'Condition',
+                    'attributes' => [
+                        'concept_id' => 40481087,
+                        'concept_name' => 'Female genital tract problem',
+                        'domain_id' => 'Condition',
                         'match_score' => 500,
                     ],
                 ],
@@ -199,7 +200,7 @@ class QueryParserTest extends TestCase
         ], $parsed['demographics']);
     }
 
-    public function test_demographics_requests_high_max_matches_when_flag_active(): void
+    public function test_demographics_use_default_max_matches_when_flag_active(): void
     {
         Feature::for(null)->activate('query-builder-use-demographic-rule');
 
@@ -207,7 +208,8 @@ class QueryParserTest extends TestCase
 
         $this->postJson(self::BASE_URL, ['query' => 'women under 65 with ca125'])->assertOk();
 
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=100'));
+        // The gender concept now ranks high, so no elevated max_matches is needed.
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
     }
 
     public function test_gender_span_and_age_stripped_from_rules_when_flag_active(): void

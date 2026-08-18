@@ -12,9 +12,6 @@ use Generator;
  * entities with gender concepts mixed in (as ordinary fuzzy matches), plus a
  * separate age_constraints list. This service trawls those for the demographic
  * signal so the API can surface it as a dedicated block.
- *
- * NB: the gender concept ranks low in the fuzzy results, so the caller must
- * request a high max_matches from /extract for it to be present at all.
  */
 class DemographicsBuilder
 {

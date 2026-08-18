@@ -22,12 +22,6 @@ class RuleBuilderService
     use NLPConceptLookup;
     use RuleBuilder;
 
-    /**
-     * When the demographic rule is enabled we request a high max_matches so the
-     * low-ranking OMOP gender concept is present in the /extract results.
-     */
-    private const DEMOGRAPHIC_MAX_MATCHES = 100;
-
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
@@ -233,7 +227,6 @@ class RuleBuilderService
         $this->loadNlpEntities(
             $query,
             collectionIds: $collectionIds,
-            maxMatches: $buildDemographics ? self::DEMOGRAPHIC_MAX_MATCHES : 10
         );
         $this->mergeNlpWarnings($warnings);
 
