@@ -130,7 +130,7 @@ class BunnyQueryContext implements QueryContextInterface
                 if ($conceptId === null || $conceptId === '') {
                     continue;
                 }
-                $rules[] = $this->makeDemographicPersonRule((string) $conceptId);
+                $rules[] = $this->makeConceptRule((string) $conceptId, 'Person');
             }
 
             if (! empty($rules)) {
@@ -156,13 +156,13 @@ class BunnyQueryContext implements QueryContextInterface
             && (int) $age[1] >= config('system.demographic_age_max');
     }
 
-    private function makeDemographicPersonRule(string $conceptId): array
+    private function makeConceptRule(string $conceptId, string $category, bool $isExcluded = false): array
     {
         return [
             'varname' => 'OMOP',
-            'varcat'  => 'Person',
+            'varcat'  => $category,
             'type'    => 'TEXT',
-            'oper'    => '=',
+            'oper'    => $isExcluded ? '!=' : '=',
             'value'   => $conceptId,
         ];
     }
@@ -657,13 +657,7 @@ class BunnyQueryContext implements QueryContextInterface
             }
         }
 
-        $rule = [
-            'varname' => 'OMOP',
-            'varcat'  => $category,
-            'type'    => 'TEXT',
-            'oper'    => $isExcluded ? '!=' : '=',
-            'value'   => $conceptId,
-        ];
+        $rule = $this->makeConceptRule($conceptId, $category, $isExcluded);
 
         // note: bunny cannot handle both time and age constraints
         // - try time constraint then fallback to age constraint
