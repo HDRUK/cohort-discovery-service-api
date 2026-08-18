@@ -147,12 +147,13 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
     /**
-     * An age band covering the full [0, 120] range is no constraint at all, so
-     * it should not emit a rule.
+     * An age band covering the full configured demographic age range is no
+     * constraint at all, so it should not emit a rule.
      */
     private function isOpenAgeBand(array $age): bool
     {
-        return (int) $age[0] <= 0 && (int) $age[1] >= 120;
+        return (int) $age[0] <= config('system.demographic_age_min')
+            && (int) $age[1] >= config('system.demographic_age_max');
     }
 
     private function makeDemographicPersonRule(string $conceptId): array

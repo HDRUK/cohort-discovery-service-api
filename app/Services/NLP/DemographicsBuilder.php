@@ -23,10 +23,6 @@ class DemographicsBuilder
     */
     private const GENDER_CONCEPTS = [8507 => 'Male', 8532 => 'Female'];
 
-    private const AGE_MIN = 0;
-
-    private const AGE_MAX = 120;
-
     public function build(array $extract): array
     {
         return [
@@ -121,12 +117,16 @@ class DemographicsBuilder
 
     /**
      * Collapse query-scope age constraints into a single [lo, hi] band, taking
-     * the tightest bound on each side and clamping to [AGE_MIN, AGE_MAX].
+     * the tightest bound on each side and clamping to the configured
+     * demographic age range.
      *
      * @return array{0: int, 1: int}
      */
     private function collapseAge(array $constraints): array
     {
+        $ageMin = config('system.demographic_age_min');
+        $ageMax = config('system.demographic_age_max');
+
         $constraints = array_filter(
             $constraints,
             fn ($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
@@ -135,9 +135,9 @@ class DemographicsBuilder
         $mins = array_filter(array_column($constraints, 'min'), fn ($v) => $v !== null);
         $maxs = array_filter(array_column($constraints, 'max'), fn ($v) => $v !== null);
 
-        $lo = $mins ? max($mins) : self::AGE_MIN;
-        $hi = $maxs ? min($maxs) : self::AGE_MAX;
+        $lo = $mins ? max($mins) : $ageMin;
+        $hi = $maxs ? min($maxs) : $ageMax;
 
-        return [max(self::AGE_MIN, (int) $lo), min(self::AGE_MAX, (int) $hi)];
+        return [max($ageMin, (int) $lo), min($ageMax, (int) $hi)];
     }
 }
