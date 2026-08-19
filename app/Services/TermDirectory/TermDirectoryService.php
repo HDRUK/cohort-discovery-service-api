@@ -96,12 +96,20 @@ class TermDirectoryService
     }
 
     /**
+     * The collection ids the current user can see, with no further narrowing.
+     */
+    private function visibleCollectionIds(): SupportCollection
+    {
+        return Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
+    }
+
+    /**
      * The user's visible collections, optionally narrowed to requested public pids.
      * Pids outside the visible set are dropped so they can never widen access.
      */
     private function resolveCollectionIds(Request $request): SupportCollection
     {
-        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
+        $visible = $this->visibleCollectionIds();
 
         $requestedPids = (array) $request->input('collection_pid', []);
         if (empty($requestedPids)) {
@@ -111,6 +119,34 @@ class TermDirectoryService
         $requested = Collection::whereIn('pid', $requestedPids)->pluck('id');
 
         return $visible->intersect($requested)->values();
+    }
+
+    /**
+     * Concept options (concept_id, concept_name, domain_id) reported by the
+     * collections the current user can see, restricted to the given OMOP
+     * domains. Backs dynamic demographic pick-lists (Gender, Race) instead of
+     * a hardcoded concept map.
+     *
+     * @param  list<string>  $domainIds
+     * @param  list<int>  $collectionIds  optional further narrowing; empty
+     *         means "every collection visible to the user". Never widens
+     *         visibility beyond what the user can see.
+     */
+    public function conceptOptionsForDomains(array $domainIds, array $collectionIds = []): SupportCollection
+    {
+        $visible = $this->visibleCollectionIds();
+        $scoped = empty($collectionIds) ? $visible : $visible->intersect($collectionIds)->values();
+
+        if ($scoped->isEmpty() || empty($domainIds)) {
+            return collect();
+        }
+
+        return LatestDistribution::query()
+            ->select(['concept_id', 'concept_name', 'domain_id'])
+            ->whereIn('collection_id', $scoped)
+            ->whereIn('domain_id', $domainIds)
+            ->distinct()
+            ->get();
     }
 
     /**

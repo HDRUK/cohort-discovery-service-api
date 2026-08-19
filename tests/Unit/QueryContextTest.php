@@ -985,6 +985,35 @@ class QueryContextTest extends TestCase
         $this->assertEquals('8532', $sexGroup['rules'][1]['value']);
     }
 
+    public function test_demographics_race_values_are_or_combined(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [
+                    ['concept_id' => 8515, 'name' => 'Asian', 'category' => 'Race'],
+                    ['concept_id' => 8527, 'name' => 'White', 'category' => 'Race'],
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // Full [0, 120] age band is unconstrained, so only the race group remains.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $raceGroup = $result['groups'][0];
+        $this->assertEquals('OR', $raceGroup['rules_oper']);
+        $this->assertCount(2, $raceGroup['rules']);
+        $this->assertEquals('Person', $raceGroup['rules'][0]['varcat']);
+        $this->assertEquals('8515', $raceGroup['rules'][0]['value']);
+        $this->assertEquals('8527', $raceGroup['rules'][1]['value']);
+    }
+
     public function test_demographics_are_anded_onto_single_clinical_group(): void
     {
         $input = [

@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RefreshLatestDistributionsView;
+use App\Models\Collection;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -36,6 +40,62 @@ class QueryParserTest extends TestCase
     private function parsedResult(\Illuminate\Testing\TestResponse $response): array
     {
         return json_decode($response->json('data'), true);
+    }
+
+    /**
+     * Seeds a Gender (8532/Female) and Race (8527/White) distribution behind
+     * an admin user, so DemographicsBuilder (which now sources its concept
+     * options from TermDirectoryService) recognizes them. Enables middleware
+     * so the seeded user's Auth::id() is actually populated for the request.
+     */
+    private function seedDemographicDistributions(): User
+    {
+        $this->enableMiddleware();
+
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+
+        $collection = Collection::factory()->create();
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'task_id'       => $task->id,
+            'collection_id' => $collection->id,
+            'path'          => 'test/path',
+            'file_name'     => 'code.distribution',
+            'status'        => 'done',
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        DB::table('distributions')->insert([
+            [
+                'collection_id'  => $collection->id,
+                'result_file_id' => $resultFileId,
+                'concept_id'     => 8532,
+                'count'          => 10,
+                'name'           => 'Female',
+                'category'       => 'Gender',
+                'description'    => 'Female',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ],
+            [
+                'collection_id'  => $collection->id,
+                'result_file_id' => $resultFileId,
+                'concept_id'     => 8527,
+                'count'          => 10,
+                'name'           => 'White',
+                'category'       => 'Race',
+                'description'    => 'White',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ],
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        return $user;
     }
 
     public function test_true(): void
@@ -118,9 +178,10 @@ class QueryParserTest extends TestCase
     }
 
     /**
-     * An /extract response for "women under 65 with ca125": the gender concept
-     * (8532) sits among fuzzy noise on the "FEMALE" span, and age is a
-     * query-scope constraint.
+     * An /extract response for "white women under 65 with ca125": the gender
+     * concept (8532) sits among fuzzy noise on the "FEMALE" span, a race
+     * concept (8527) matches the "white" span, and age is a query-scope
+     * constraint.
      */
     private function demographicNlpResponse(): array
     {
@@ -146,6 +207,17 @@ class QueryParserTest extends TestCase
                         'concept_name' => 'Female genital tract problem',
                         'domain_id' => 'Condition',
                         'match_score' => 500,
+                    ],
+                ],
+                // "white" span: the race concept.
+                [
+                    'text' => 'white',
+                    'label' => 'Race',
+                    'attributes' => [
+                        'concept_id' => 8527,
+                        'concept_name' => 'WHITE',
+                        'domain_id' => 'Race',
+                        'match_score' => 900,
                     ],
                 ],
                 // Clinical span.
@@ -183,11 +255,14 @@ class QueryParserTest extends TestCase
 
     public function test_demographics_block_built_when_flag_active(): void
     {
+        $user = $this->seedDemographicDistributions();
         Feature::for(null)->activate('query-builder-use-demographic-rule');
 
         Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->demographicNlpResponse(), 200)]);
 
-        $response = $this->postJson(self::BASE_URL, ['query' => 'women under 65 with ca125'])->assertOk();
+        $response = $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, ['query' => 'white women under 65 with ca125'])
+            ->assertOk();
 
         $parsed = $this->parsedResult($response);
 
@@ -196,17 +271,22 @@ class QueryParserTest extends TestCase
             'sex' => [
                 ['concept_id' => 8532, 'name' => 'Female', 'category' => 'Gender'],
             ],
-            'race' => [],
+            'race' => [
+                ['concept_id' => 8527, 'name' => 'White', 'category' => 'Race'],
+            ],
         ], $parsed['demographics']);
     }
 
     public function test_demographics_use_default_max_matches_when_flag_active(): void
     {
+        $user = $this->seedDemographicDistributions();
         Feature::for(null)->activate('query-builder-use-demographic-rule');
 
         Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->demographicNlpResponse(), 200)]);
 
-        $this->postJson(self::BASE_URL, ['query' => 'women under 65 with ca125'])->assertOk();
+        $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, ['query' => 'white women under 65 with ca125'])
+            ->assertOk();
 
         // The gender concept now ranks high, so no elevated max_matches is needed.
         Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
@@ -214,11 +294,14 @@ class QueryParserTest extends TestCase
 
     public function test_gender_span_and_age_stripped_from_rules_when_flag_active(): void
     {
+        $user = $this->seedDemographicDistributions();
         Feature::for(null)->activate('query-builder-use-demographic-rule');
 
         Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->demographicNlpResponse(), 200)]);
 
-        $response = $this->postJson(self::BASE_URL, ['query' => 'women under 65 with ca125'])->assertOk();
+        $response = $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, ['query' => 'white women under 65 with ca125'])
+            ->assertOk();
 
         $parsed = $this->parsedResult($response);
         $encoded = json_encode($parsed['rules']);
@@ -229,6 +312,27 @@ class QueryParserTest extends TestCase
 
         // Query-scope age lives in demographics, not as an inline age-filter node in rules.
         $this->assertStringNotContainsString('"value":[0,65]', $encoded);
+
+        // The genuine clinical concept survives.
+        $this->assertStringContainsString('44811969', $encoded);
+    }
+
+    public function test_race_span_stripped_from_rules_when_flag_active(): void
+    {
+        $user = $this->seedDemographicDistributions();
+        Feature::for(null)->activate('query-builder-use-demographic-rule');
+
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($this->demographicNlpResponse(), 200)]);
+
+        $response = $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, ['query' => 'white women under 65 with ca125'])
+            ->assertOk();
+
+        $parsed = $this->parsedResult($response);
+        $encoded = json_encode($parsed['rules']);
+
+        // The race span must not appear as a clinical rule.
+        $this->assertStringNotContainsString('8527', $encoded);
 
         // The genuine clinical concept survives.
         $this->assertStringContainsString('44811969', $encoded);
