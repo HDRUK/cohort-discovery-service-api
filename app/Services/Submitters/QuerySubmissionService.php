@@ -2,12 +2,15 @@
 
 namespace App\Services\Submitters;
 
+use App\Enums\MissingDataTable;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use App\Support\QueryDefinitionInspector;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Support\Str;
+use Laravel\Pennant\Feature;
 
 class QuerySubmissionService
 {
@@ -17,6 +20,8 @@ class QuerySubmissionService
         protected Query $queryModel,
         protected Collection $collectionModel,
         protected Task $taskModel,
+        protected TaskFailureRecorder $taskFailureRecorder,
+        protected QueryDefinitionInspector $inspector,
     ) {
     }
 
@@ -45,11 +50,26 @@ class QuerySubmissionService
                     ->when(! empty($data['collection_filter']), function ($q) use ($data) {
                         $q->whereIn('pid', $data['collection_filter']);
                     })
-                    ->select(['id', 'type'])
+                    ->select(['id', 'type', 'location_enabled', 'death_enabled'])
                     ->get();
 
+                // Determine, once, whether this query targets the location/death
+                // tables, and whether each is enabled globally via feature flag.
+                $categories = $this->inspector->categoriesUsed($data['definition']);
+                $usesLocation = in_array(MissingDataTable::Location->value, $categories, true);
+                $usesDeath = in_array(MissingDataTable::Death->value, $categories, true);
+                $locationFeatureOn = Feature::active('query-builder-use-location');
+                $deathFeatureOn = Feature::active('query-builder-use-death');
+
                 // Create tasks
-                $tasks = $collections->map(function ($collection) use ($query, $data) {
+                $tasks = $collections->map(function ($collection) use (
+                    $query,
+                    $data,
+                    $usesLocation,
+                    $usesDeath,
+                    $locationFeatureOn,
+                    $deathFeatureOn
+                ) {
                     $task = Task::create([
                         'pid' => Str::uuid(),
                         'query_id' => $query->id,
@@ -57,6 +77,20 @@ class QuerySubmissionService
                         'created_at' => Carbon::now(),
                         'task_type' => $data['task_type'],
                     ]);
+
+                    // Block the task for this collection when it queries a table
+                    // that is disabled globally (feature off) or missing for this
+                    // collection (flag off) - failing it with a clear reason.
+                    $reasons = [];
+                    if ($usesLocation && (! $locationFeatureOn || ! $collection->location_enabled)) {
+                        $reasons[] = MissingDataTable::Location->reason();
+                    }
+                    if ($usesDeath && (! $deathFeatureOn || ! $collection->death_enabled)) {
+                        $reasons[] = MissingDataTable::Death->reason();
+                    }
+                    if (! empty($reasons)) {
+                        $this->taskFailureRecorder->failWithReasons($task, $reasons);
+                    }
 
                     // Offload side effects (job dispatching) to observers - TODO
                     return $task;

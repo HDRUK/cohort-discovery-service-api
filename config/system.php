@@ -59,5 +59,17 @@ return [
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
     'default_child_age_max' => (int)env('DEFAULT_CHILD_AGE_MAX', 17),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Demographic age band bounds
+    |--------------------------------------------------------------------------
+    | The full range of a person's age, used to clamp the demographics age
+    | band extracted from NLP and to detect when an age band is unconstrained
+    | (i.e. covers the whole range, so no BUNNY rule needs to be emitted).
+    |
+    */
+    'demographic_age_min' => (int)env('DEMOGRAPHIC_AGE_MIN', 0),
+    'demographic_age_max' => (int)env('DEMOGRAPHIC_AGE_MAX', 120),
+
     'distribution_batch_file_size' => (int)env('DISTRIBUTION_BATCH_FILE_SIZE', 500),
 ];

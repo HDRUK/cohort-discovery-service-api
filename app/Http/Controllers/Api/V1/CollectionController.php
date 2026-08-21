@@ -16,6 +16,7 @@ use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionStateService;
 use App\Services\Collections\ProcessLatestCollectionMetadataService;
 use App\Services\QueryContext\QueryContextType;
+use App\Services\VocabularyDrift\VocabularyDriftService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -591,6 +592,58 @@ class CollectionController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/collections/{pid}/vocab-drift",
+     *     summary="Vocabulary-drift report for a collection",
+     *     description="Per-collection summary and list of concepts whose custodian-reported domain disagrees with the current central OMOP classification. A high mismatch rate indicates a stale vocabulary at the custodian.",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="pid",
+     *         in="path",
+     *         description="Public pid of the collection",
+     *         required=true,
+     *         @OA\Schema(type="string", example="col_abc123")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Drift summary (total_concepts, mismatched_concepts, mismatch_rate) plus the list of mismatched concepts"
+     *     ),
+     *     @OA\Response(response=404, description="Collection not found")
+     * )
+     */
+    public function getCollectionVocabDrift(
+        Request $request,
+        string $pid,
+        VocabularyDriftService $driftService,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
+        try {
+            $collection = Collection::where('pid', $pid)->first();
+            if (!$collection) {
+                return $this->NotFoundResponse();
+            }
+
+            $report = $driftService->report($collection->id);
+
+            $activityLogger->viewed('collections', $collection, [
+                'result' => [
+                    'total_concepts' => $report['total_concepts'],
+                    'mismatched_concepts' => $report['mismatched_concepts'],
+                ],
+            ]);
+
+            return $this->OKResponse($report);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@getCollectionVocabDrift - failed: '.
+                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/custodians/{custodianPid}/collections",
      *     summary="Get collections for a specific custodian",
      *     tags={"Collections"},
@@ -697,6 +750,8 @@ class CollectionController extends Controller
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
                 'is_synthetic' => ['sometimes', 'boolean'],
+                'location_enabled' => ['sometimes', 'boolean'],
+                'death_enabled' => ['sometimes', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -711,6 +766,8 @@ class CollectionController extends Controller
                 'type' => $validated['type'],
                 'custodian_id' => $custodian->id,
                 'is_synthetic' => $validated['is_synthetic'] ?? false,
+                'location_enabled' => $validated['location_enabled'] ?? false,
+                'death_enabled' => $validated['death_enabled'] ?? false,
             ]);
 
             $collection->host()->sync([$validated['host_id']]);

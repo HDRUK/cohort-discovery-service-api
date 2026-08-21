@@ -15,6 +15,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     environment: prod
+    needs: semantic
     outputs:
       docker_build_args: ${{ steps.args.outputs.docker_build_args }}
     steps:

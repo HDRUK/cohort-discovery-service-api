@@ -26,6 +26,11 @@ class FeatureSeeder extends Seeder
         'integrated-sync-custodians-every-request' => true,
         'admin-more-collection-details' => true,
         'query-builder-use-value-as-number' => false,
+        'distribution-use-central-domain' => false,
+        'access-banner' => false,
+        'query-builder-use-location' => false,
+        'query-builder-use-death' => false,
+        'query-builder-use-demographic-rule' => false,
     ];
 
     /**
@@ -35,8 +40,8 @@ class FeatureSeeder extends Seeder
     {
         foreach ($this->features as $name => $active) {
             $exists = \DB::table('features')
-             ->where('name', $name)
-             ->exists();
+                ->where('name', $name)
+                ->exists();
 
             if ($exists) {
                 continue;

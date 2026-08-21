@@ -1,0 +1,442 @@
+<?php
+
+namespace Tests\Unit\Services\Authentication;
+
+use App\Models\User;
+use App\Models\Workgroup;
+use App\Services\Authentication\OIDCTokenValidator;
+use Firebase\JWT\JWT;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Psr7\Response;
+use Mockery;
+use Tests\TestCase;
+
+class OIDCTokenValidatorTest extends TestCase
+{
+    public function test_it_returns_existing_user_by_oidc_sub_only(): void
+    {
+        $initialCount = User::count();
+
+        $user = User::factory()->create([
+            'oidc_sub' => 'oidc-sub-1',
+            'email' => 'existing@example.com',
+        ]);
+
+        $validator = $this->makeValidator(
+            tokenClaims: [
+                'sub' => 'oidc-sub-1',
+                'email' => 'changed@example.com',
+                'name' => 'Updated Name',
+            ],
+            userInfoPayload: [
+                'sub' => 'oidc-sub-1',
+                'email' => 'changed@example.com',
+                'name' => 'Updated Name',
+            ],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertSame($user->id, $result['user']->id);
+        $this->assertSame($initialCount + 1, User::count());
+    }
+
+    public function test_it_does_not_match_existing_user_by_email_when_sub_differs(): void
+    {
+        $initialCount = User::count();
+
+        $existingUser = User::factory()->create([
+            'oidc_sub' => null,
+            'email' => 'shared@example.com',
+        ]);
+
+        $validator = $this->makeValidator(
+            tokenClaims: [
+                'sub' => 'oidc-sub-2',
+                'email' => 'shared@example.com',
+                'name' => 'OIDC Person',
+            ],
+            userInfoPayload: [
+                'sub' => 'oidc-sub-2',
+                'email' => 'shared@example.com',
+                'name' => 'OIDC Person',
+            ],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertNotSame($existingUser->id, $result['user']->id);
+        $this->assertSame('oidc-sub-2', $result['user']->oidc_sub);
+        $this->assertStringEndsWith('@oidc.local', $result['user']->email);
+        $this->assertSame($initialCount + 2, User::count());
+    }
+
+    public function test_it_provisions_and_persists_new_user_for_unknown_sub(): void
+    {
+        $validator = $this->makeValidator(
+            tokenClaims: [
+                'sub' => 'oidc-sub-3',
+                'preferred_username' => 'oidc-user',
+                'email_verified' => true,
+            ],
+            userInfoPayload: [
+                'sub' => 'oidc-sub-3',
+                'preferred_username' => 'oidc-user',
+                'email_verified' => true,
+            ],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertSame('oidc-sub-3', $result['user']->oidc_sub);
+        $this->assertSame('oidc-user', $result['user']->name);
+        $this->assertStringEndsWith('@oidc.local', $result['user']->email);
+        $this->assertNotNull($result['user']->email_verified_at);
+        $this->assertDatabaseHas('users', [
+            'id' => $result['user']->id,
+            'oidc_sub' => 'oidc-sub-3',
+        ]);
+    }
+
+    public function test_it_throws_when_userinfo_sub_does_not_match_token_sub(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OIDC userinfo sub does not match token sub');
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'token-sub'],
+            userInfoPayload: ['sub' => 'userinfo-sub'],
+        );
+
+        $validator->validateWithClaims($this->lastToken);
+    }
+
+    public function test_it_resolves_user_from_token_sub_when_userinfo_lacks_sub(): void
+    {
+        $user = User::factory()->create([
+            'oidc_sub' => 'token-sub',
+        ]);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => 'token-sub'],
+            userInfoPayload: ['name' => 'No Sub User'],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertSame($user->id, $result['user']->id);
+    }
+
+    public function test_it_throws_when_oidc_is_enabled_without_an_audience(): void
+    {
+        $originalConfig = config('services.oidc');
+        config([
+            'services.oidc.enabled' => true,
+            'services.oidc.audience' => '',
+        ]);
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('OIDC_AUDIENCE must be set when OIDC is enabled');
+
+            new OIDCTokenValidator();
+        } finally {
+            config(['services.oidc' => $originalConfig]);
+        }
+    }
+
+    public function test_it_throws_when_token_audience_does_not_match_configured_audience(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('OIDC audience claim mismatch');
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['aud' => 'wrong-audience'],
+            userInfoPayload: ['sub' => 'oidc-sub-aud'],
+        );
+
+        $validator->validateWithClaims($this->lastToken);
+    }
+
+    public function test_it_rejects_tokens_signed_with_symmetric_algorithms(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('does not contain any allowed signature algorithms');
+
+        $result = $this->makeHmacValidator(
+            tokenClaims: ['sub' => 'oidc-sub-hs256'],
+            userInfoPayload: ['sub' => 'oidc-sub-hs256'],
+        );
+
+        $result['validator']->validateWithClaims($result['token']);
+    }
+
+    public function test_it_preserves_workgroups_when_entitlement_claim_is_absent(): void
+    {
+        $sub = 'oidc-sub-wg1-' . uniqid();
+        $user = User::factory()->create([
+            'oidc_sub' => $sub,
+        ]);
+        $workgroup = Workgroup::create([
+            'name' => 'Existing Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:existing:' . $sub,
+        ]);
+        $user->workgroups()->attach($workgroup);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => $sub],
+            userInfoPayload: ['sub' => $sub],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertTrue($result['user']->workgroups->contains($workgroup));
+    }
+
+    public function test_it_clears_workgroups_when_entitlement_claim_is_present_but_empty(): void
+    {
+        $sub = 'oidc-sub-wg2-' . uniqid();
+        $user = User::factory()->create([
+            'oidc_sub' => $sub,
+        ]);
+        $workgroup = Workgroup::create([
+            'name' => 'Existing Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:existing:' . $sub,
+        ]);
+        $user->workgroups()->attach($workgroup);
+
+        $validator = $this->makeValidator(
+            tokenClaims: [
+                'sub' => $sub,
+                'eduperson_entitlement' => [],
+            ],
+            userInfoPayload: ['sub' => $sub],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertCount(0, $result['user']->workgroups);
+    }
+
+    public function test_it_syncs_workgroups_from_eduperson_entitlement_claim(): void
+    {
+        $sub = 'oidc-sub-wg3-' . uniqid();
+        $user = User::factory()->create([
+            'oidc_sub' => $sub,
+        ]);
+        $matched = Workgroup::create([
+            'name' => 'Matched Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:matched:' . $sub,
+        ]);
+        $unmatched = Workgroup::create([
+            'name' => 'Unmatched Workgroup',
+            'active' => true,
+            'claim_value' => 'urn:wg:unmatched:' . $sub,
+        ]);
+        $user->workgroups()->attach($unmatched);
+
+        $validator = $this->makeValidator(
+            tokenClaims: ['sub' => $sub],
+            userInfoPayload: [
+                'sub' => $sub,
+                'eduperson_entitlement' => ['urn:wg:matched:' . $sub],
+            ],
+        );
+
+        $result = $validator->validateWithClaims($this->lastToken);
+
+        $this->assertCount(1, $result['user']->workgroups);
+        $this->assertTrue($result['user']->workgroups->contains($matched));
+        $this->assertFalse($result['user']->workgroups->contains($unmatched));
+    }
+
+    private string $lastToken = '';
+
+    /** @var array{private: string, n: string, e: string}|null */
+    private static ?array $rsaKeyPair = null;
+
+    /**
+     * @return array{private: string, n: string, e: string}
+     */
+    private function rsaKeyPair(): array
+    {
+        if (self::$rsaKeyPair === null) {
+            $privateKey = openssl_pkey_new([
+                'private_key_bits' => 2048,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            ]);
+
+            if ($privateKey === false) {
+                throw new \RuntimeException('Unable to generate RSA key pair for OIDC test');
+            }
+
+            $exported = openssl_pkey_export($privateKey, $privatePem);
+            if (! $exported) {
+                throw new \RuntimeException('Unable to export RSA private key for OIDC test');
+            }
+
+            $details = openssl_pkey_get_details($privateKey);
+            if ($details === false) {
+                throw new \RuntimeException('Unable to read RSA key details for OIDC test');
+            }
+
+            self::$rsaKeyPair = [
+                'private' => $privatePem,
+                'n' => $this->base64UrlEncode($details['rsa']['n']),
+                'e' => $this->base64UrlEncode($details['rsa']['e']),
+            ];
+        }
+
+        return self::$rsaKeyPair;
+    }
+
+    /**
+     * @param  array<string, mixed>  $tokenClaims
+     * @param  array<string, mixed>  $userInfoPayload
+     */
+    private function makeValidator(array $tokenClaims, array $userInfoPayload): OIDCTokenValidator
+    {
+        $issuer = 'https://issuer-'.uniqid('', true).'.example.com';
+        $jwksUri = $issuer.'/jwks';
+        $userinfoEndpoint = $issuer.'/userinfo';
+        $keyPair = $this->rsaKeyPair();
+
+        config([
+            'services.oidc.issuer' => $issuer,
+            'services.oidc.audience' => 'cohort-api',
+            'services.oidc.userinfo_endpoint' => '',
+            'services.oidc.clock_skew_seconds' => 60,
+            'services.oidc.discovery_cache_ttl_seconds' => 1,
+            'services.oidc.jwks_cache_ttl_seconds' => 1,
+        ]);
+
+        $claims = array_replace([
+            'iss' => $issuer,
+            'aud' => 'cohort-api',
+            'sub' => 'default-sub',
+            'iat' => time() - 30,
+            'exp' => time() + 3600,
+        ], $tokenClaims);
+
+        $this->lastToken = JWT::encode($claims, $keyPair['private'], 'RS256', 'test-kid');
+
+        $jwks = [
+            'keys' => [[
+                'kty' => 'RSA',
+                'kid' => 'test-kid',
+                'alg' => 'RS256',
+                'use' => 'sig',
+                'n' => $keyPair['n'],
+                'e' => $keyPair['e'],
+            ]],
+        ];
+
+        $discoveryPayload = [
+            'jwks_uri' => $jwksUri,
+            'userinfo_endpoint' => $userinfoEndpoint,
+        ];
+
+        $httpClient = Mockery::mock(ClientInterface::class);
+        $httpClient->shouldReceive('request')->andReturnUsing(function (string $method, string $uri, array $options = []) use ($issuer, $jwksUri, $userinfoEndpoint, $discoveryPayload, $jwks, $userInfoPayload) {
+            $this->assertSame('GET', $method);
+
+            if ($uri === rtrim($issuer, '/').'/.well-known/openid-configuration') {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($discoveryPayload));
+            }
+
+            if ($uri === $jwksUri) {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($jwks));
+            }
+
+            if ($uri === $userinfoEndpoint) {
+                $this->assertSame('Bearer '.$this->lastToken, $options['headers']['Authorization'] ?? null);
+
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($userInfoPayload));
+            }
+
+            $this->fail('Unexpected request URI: '.$uri);
+        });
+
+        return new OIDCTokenValidator($httpClient);
+    }
+
+    /**
+     * @param  array<string, mixed>  $tokenClaims
+     * @param  array<string, mixed>  $userInfoPayload
+     * @return array{validator: OIDCTokenValidator, token: string}
+     */
+    private function makeHmacValidator(array $tokenClaims, array $userInfoPayload): array
+    {
+        $issuer = 'https://issuer-'.uniqid('', true).'.example.com';
+        $jwksUri = $issuer.'/jwks';
+        $userinfoEndpoint = $issuer.'/userinfo';
+        $secret = 'oidc-test-shared-secret';
+
+        config([
+            'services.oidc.issuer' => $issuer,
+            'services.oidc.audience' => 'cohort-api',
+            'services.oidc.userinfo_endpoint' => '',
+            'services.oidc.clock_skew_seconds' => 60,
+            'services.oidc.discovery_cache_ttl_seconds' => 1,
+            'services.oidc.jwks_cache_ttl_seconds' => 1,
+        ]);
+
+        $claims = array_replace([
+            'iss' => $issuer,
+            'aud' => 'cohort-api',
+            'sub' => 'default-sub',
+            'iat' => time() - 30,
+            'exp' => time() + 3600,
+        ], $tokenClaims);
+
+        $token = JWT::encode($claims, $secret, 'HS256', 'test-kid');
+
+        $jwks = [
+            'keys' => [[
+                'kty' => 'oct',
+                'kid' => 'test-kid',
+                'alg' => 'HS256',
+                'k' => $this->base64UrlEncode($secret),
+            ]],
+        ];
+
+        $discoveryPayload = [
+            'jwks_uri' => $jwksUri,
+            'userinfo_endpoint' => $userinfoEndpoint,
+        ];
+
+        $httpClient = Mockery::mock(ClientInterface::class);
+        $httpClient->shouldReceive('request')->andReturnUsing(function (string $method, string $uri, array $options = []) use ($issuer, $jwksUri, $userinfoEndpoint, $discoveryPayload, $jwks, $userInfoPayload, $token) {
+            $this->assertSame('GET', $method);
+
+            if ($uri === rtrim($issuer, '/').'/.well-known/openid-configuration') {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($discoveryPayload));
+            }
+
+            if ($uri === $jwksUri) {
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($jwks));
+            }
+
+            if ($uri === $userinfoEndpoint) {
+                $this->assertSame('Bearer '.$token, $options['headers']['Authorization'] ?? null);
+
+                return new Response(200, ['Content-Type' => 'application/json'], json_encode($userInfoPayload));
+            }
+
+            $this->fail('Unexpected request URI: '.$uri);
+        });
+
+        return [
+            'validator' => new OIDCTokenValidator($httpClient),
+            'token' => $token,
+        ];
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+}

@@ -492,6 +492,72 @@
                 }
             }
         },
+        "/api/v1/collections/{pid}/details": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Get additional details about a collection by PID",
+                "operationId": "35b9efb46c93ca2c03aae405f8a21aaa",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Collection PID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "abc-def"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Collection found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Collection"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{pid}/vocab-drift": {
+            "get": {
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "Vocabulary-drift report for a collection",
+                "description": "Per-collection summary and list of concepts whose custodian-reported domain disagrees with the current central OMOP classification. A high mismatch rate indicates a stale vocabulary at the custodian.",
+                "operationId": "982fdd3d0eba4b0d2f8445244b1f332c",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Public pid of the collection",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "col_abc123"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Drift summary (total_concepts, mismatched_concepts, mismatch_rate) plus the list of mismatched concepts"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    }
+                }
+            }
+        },
         "/api/v1/custodians/{custodianPid}/collections": {
             "get": {
                 "tags": [
@@ -661,27 +727,30 @@
                     {
                         "name": "status",
                         "in": "path",
-                        "description": "Status name (case-insensitive)",
+                        "description": "Collection state slug (case-insensitive), for example active or suspended",
                         "required": true,
                         "schema": {
                             "type": "string",
                             "example": "active"
                         }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of results per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated collections matching the status",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Collection"
-                                    }
-                                }
-                            }
-                        }
+                        "description": "Paginated collections matching the status"
+                    },
+                    "422": {
+                        "description": "Invalid status supplied"
                     }
                 }
             }
@@ -1809,6 +1878,64 @@
                 }
             }
         },
+        "/api/v1/queries/translate/{context}": {
+            "post": {
+                "tags": [
+                    "Queries"
+                ],
+                "summary": "Translate a raw query definition into a specific query context format, without submitting it",
+                "operationId": "56e8758501e6a3db9d52d04819bcc242",
+                "parameters": [
+                    {
+                        "name": "context",
+                        "in": "path",
+                        "description": "Query context slug",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "bunny",
+                                "beacon"
+                            ],
+                            "example": "bunny"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "definition"
+                                ],
+                                "properties": {
+                                    "definition": {
+                                        "description": "Structured query definition (same shape as Query::definition)",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Translated query context"
+                    },
+                    "422": {
+                        "description": "Validation error, or unsupported context"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
         "/api/v1/queries/{pid}/download": {
             "get": {
                 "tags": [
@@ -1923,18 +2050,48 @@
                 }
             }
         },
-        "/api/v1/tasks/{taskPid}": {
+        "/api/v1/admin/tasks": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "List all tasks for admin users",
+                "operationId": "2ff23b61565c0dc777c9fca07a0d6d18",
+                "responses": {
+                    "200": {
+                        "description": "List of tasks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Task"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/api/v1/task/{pid}": {
             "get": {
                 "tags": [
                     "Tasks"
                 ],
                 "summary": "Get a single task by public pid",
-                "operationId": "84a716eb3c8d6d869836384774b48e76",
+                "operationId": "80ab44d428045cea25e05dcfbaec9f7a",
                 "parameters": [
                     {
-                        "name": "taskPid",
+                        "name": "pid",
                         "in": "path",
-                        "description": "Public task pid (uuid)",
+                        "description": "Public task pid",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -1962,13 +2119,13 @@
                 }
             }
         },
-        "/api/v1/tasks/next/{collectionPid}": {
+        "/api/v1/task/nextjob/{collectionPid}": {
             "get": {
                 "tags": [
                     "Tasks"
                 ],
                 "summary": "Retrieve the next job for a collection from the queue (Bunny worker)",
-                "operationId": "43384360f353922a85338bc3fe164761",
+                "operationId": "36c99adacfb507deb6d513e11b17ded3",
                 "parameters": [
                     {
                         "name": "collectionPid",
@@ -2030,18 +2187,18 @@
                 }
             }
         },
-        "/api/v1/tasks/{taskPid}/collections/{collectionPid}/result": {
+        "/api/v1/task/result/{taskPid}/{collectionPid}": {
             "post": {
                 "tags": [
                     "Tasks"
                 ],
                 "summary": "Receive task result payload from worker",
-                "operationId": "0f663eb2cd52808e093bc74faabcfebc",
+                "operationId": "ac87682c04382cfb79d17881b8b7c16c",
                 "parameters": [
                     {
                         "name": "taskPid",
                         "in": "path",
-                        "description": "Task public pid (uuid)",
+                        "description": "Task public pid",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -2070,8 +2227,14 @@
                                 ],
                                 "properties": {
                                     "status": {
+                                        "description": "Use 'ok' for successful results. Use 'error' or 'failed' for failed results.",
                                         "type": "string",
-                                        "example": "COMPLETED"
+                                        "enum": [
+                                            "ok",
+                                            "error",
+                                            "failed"
+                                        ],
+                                        "example": "ok"
                                     },
                                     "message": {
                                         "type": "string",
@@ -2145,6 +2308,139 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/task/re-run/{pid}": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Clone and re-run a task",
+                "operationId": "128c2448aee303e57cb93dc33e72942b",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Task public pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cloned task",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Task"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/api/v1/task/status/{pid}": {
+            "get": {
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get worker task status",
+                "operationId": "0229068b9896ecaeaa65e10acecee93c",
+                "parameters": [
+                    {
+                        "name": "pid",
+                        "in": "path",
+                        "description": "Task public pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "tsk_abc123"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task status response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/term-directory": {
+            "get": {
+                "tags": [
+                    "TermDirectory"
+                ],
+                "summary": "List OMOP concepts (searchable, filterable, sortable, paginated)",
+                "operationId": "5ad0b98b33f6b435753a41d2cf542cc1",
+                "parameters": [
+                    {
+                        "name": "concept_name",
+                        "in": "query",
+                        "description": "Search by concept id or name",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "diabetes"
+                        }
+                    },
+                    {
+                        "name": "domain_id",
+                        "in": "query",
+                        "description": "Filter by the effective OMOP domain (collection-reported by default)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Condition"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "e.g. count:desc",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "count:desc"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of concepts"
                     }
                 }
             }
@@ -3247,43 +3543,8 @@
             },
             "DistributionConcept": {
                 "title": "DistributionConcept",
-                "description": "A denormalised representation of a concept within a distribution; used for exporting and reporting distribution concepts.",
+                "description": "A concept-level aggregated representation of distribution data across collections. For each concept, the latest distribution per collection is used, then counts are summed across collections.",
                 "properties": {
-                    "distribution_id": {
-                        "description": "FK to the distribution",
-                        "type": "integer",
-                        "example": 1,
-                        "nullable": true
-                    },
-                    "collection_id": {
-                        "description": "FK to the collection",
-                        "type": "integer",
-                        "example": 10,
-                        "nullable": true
-                    },
-                    "task_id": {
-                        "description": "FK to the task",
-                        "type": "integer",
-                        "example": 22,
-                        "nullable": true
-                    },
-                    "distribution_name": {
-                        "description": "Name of the distribution",
-                        "type": "string",
-                        "example": "SEX",
-                        "nullable": true
-                    },
-                    "category": {
-                        "description": "Category of the distribution",
-                        "type": "string",
-                        "example": "DEMOGRAPHICS",
-                        "nullable": true
-                    },
-                    "description": {
-                        "type": "string",
-                        "example": "Sex distribution for cohort",
-                        "nullable": true
-                    },
                     "concept_id": {
                         "description": "OMOP concept identifier",
                         "type": "integer",
@@ -3291,6 +3552,12 @@
                         "nullable": true
                     },
                     "concept_name": {
+                        "type": "string",
+                        "example": "Type 2 diabetes mellitus",
+                        "nullable": true
+                    },
+                    "description": {
+                        "description": "Description used for search/display",
                         "type": "string",
                         "example": "Type 2 diabetes mellitus",
                         "nullable": true
@@ -3305,7 +3572,7 @@
                         "example": "SNOMED",
                         "nullable": true
                     },
-                    "concept_class_id": {
+                    "concept_class": {
                         "type": "string",
                         "example": "Clinical Finding",
                         "nullable": true
@@ -3322,57 +3589,15 @@
                         "nullable": true
                     },
                     "count": {
-                        "description": "Count of matching records",
+                        "description": "Sum of the latest distribution counts across collections for this concept",
                         "type": "integer",
                         "example": 100,
                         "nullable": true
                     },
-                    "q1": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 1.23,
-                        "nullable": true
-                    },
-                    "q3": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 4.56,
-                        "nullable": true
-                    },
-                    "min": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 0.5,
-                        "nullable": true
-                    },
-                    "max": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 99.9,
-                        "nullable": true
-                    },
-                    "mean": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 12.34,
-                        "nullable": true
-                    },
-                    "median": {
-                        "type": "number",
-                        "format": "float",
-                        "example": 10.5,
-                        "nullable": true
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2025-08-06T12:34:56Z",
-                        "nullable": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2025-08-06T12:34:56Z",
+                    "ncollections": {
+                        "description": "Number of collections contributing to this concept",
+                        "type": "integer",
+                        "example": 12,
                         "nullable": true
                     }
                 },
@@ -4098,6 +4323,10 @@
         {
             "name": "Tasks",
             "description": "Endpoints for managing and retrieving background processing tasks"
+        },
+        {
+            "name": "TermDirectory",
+            "description": "Lists OMOP concept availability across the federation, backing the Term Directory page."
         },
         {
             "name": "Users",

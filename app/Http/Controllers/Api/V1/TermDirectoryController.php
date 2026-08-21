@@ -3,17 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Collection;
-use App\Models\LatestDistribution;
-use App\Models\User;
 use App\Services\Activity\ActivityLogger;
+use App\Services\TermDirectory\TermDirectoryService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -42,8 +38,22 @@ class TermDirectoryController extends Controller
      *         name="domain_id",
      *         in="query",
      *         required=false,
-     *         description="Filter by OMOP domain",
+     *         description="Filter by the effective OMOP domain (collection-reported by default)",
      *         @OA\Schema(type="string", example="Condition")
+     *     ),
+     *     @OA\Parameter(
+     *         name="domain_id__in",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by any of several OMOP domains (comma-separated)",
+     *         @OA\Schema(type="string", example="Gender,Race,Ethnicity")
+     *     ),
+     *     @OA\Parameter(
+     *         name="collection_pid[]",
+     *         in="query",
+     *         required=false,
+     *         description="Only include concepts from these collections (public pids). Pids outside the user's visible collections are ignored.",
+     *         @OA\Schema(type="array", @OA\Items(type="string", example="9a8b7c6d-0000-0000-0000-000000000000"))
      *     ),
      *     @OA\Parameter(
      *         name="sort",
@@ -69,32 +79,14 @@ class TermDirectoryController extends Controller
      *      description="Paginated list of concepts")
      * )
      */
-    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger, TermDirectoryService $termDirectory): JsonResponse
     {
         try {
-            $perPage = $this->resolvePerPage();
-
-            $visibleCollectionIds = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
-
-            $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
-                ->searchViaRequest()
-                ->filterViaRequest()
-                ->select([
-                    'concept_id',
-                    'concept_name',
-                    'domain_id',
-                    DB::raw('SUM(`count`) AS count'),
-                    DB::raw('COUNT(DISTINCT collection_id) AS ncollections'),
-                ])
-                ->groupBy('concept_id', 'concept_name', 'domain_id')
-                ->applySorting('count', 'desc')
-                ->paginate($perPage);
+            $concepts = $termDirectory->search($request, $this->resolvePerPage());
 
             $activityLogger->viewed('term_directory', null, [
                 'filters' => $request->query(),
-                'result' => [
-                    'total' => $concepts->total(),
-                ],
+                'result' => ['total' => $concepts->total()],
             ]);
 
             return $this->OKResponse($concepts);
