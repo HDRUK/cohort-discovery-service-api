@@ -56,8 +56,7 @@ class QuerySubmissionService
                 // Determine, once, whether this query targets the location/death
                 // tables, and whether each is enabled globally via feature flag.
                 $categories = $this->inspector->categoriesUsed($data['definition']);
-                $usesLocation = in_array(MissingDataTable::Location->value, $categories, true)
-                    || $this->inspector->usesDemographicLocation($data['definition']);
+                $usesLocation = in_array(MissingDataTable::Location->value, $categories, true);
                 $usesDeath = in_array(MissingDataTable::Death->value, $categories, true);
                 $locationFeatureOn = Feature::active('query-builder-use-location');
                 $deathFeatureOn = Feature::active('query-builder-use-death');
