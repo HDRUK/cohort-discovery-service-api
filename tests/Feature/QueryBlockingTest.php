@@ -112,6 +112,58 @@ class QueryBlockingTest extends TestCase
         );
     }
 
+    public function test_demographic_location_query_fails_collection_missing_location(): void
+    {
+        Feature::activate('query-builder-use-location');
+        Feature::activate('query-builder-use-death');
+
+        $enabled = $this->makeCollection(['location_enabled' => true]);
+        $disabled = $this->makeCollection(['location_enabled' => false]);
+
+        // No clinical Location concept - the location lives only in the
+        // demographics block as a geo-radius filter.
+        $definition = [
+            'rules' => [$this->leafNode('Drug')],
+            'demographics' => ['location' => ['lat' => 51.5, 'lon' => -0.12, 'radius' => 5000]],
+        ];
+
+        $this->submit($definition, [$enabled, $disabled]);
+
+        $enabledTask = Task::where('collection_id', $enabled->id)->first();
+        $disabledTask = Task::where('collection_id', $disabled->id)->first();
+
+        $this->assertNull($enabledTask->failed_at);
+        $this->assertDatabaseMissing('results', ['task_id' => $enabledTask->id]);
+
+        $this->assertNotNull($disabledTask->failed_at);
+        $this->assertSame(
+            'Location data table missing',
+            Result::where('task_id', $disabledTask->id)->value('message')
+        );
+    }
+
+    public function test_legacy_region_code_location_shape_is_not_blocked(): void
+    {
+        Feature::activate('query-builder-use-location');
+        Feature::activate('query-builder-use-death');
+
+        // Legacy region-code array shape emits no GEO_RADIUS rule, so it does
+        // not require the location table and must not be blocked.
+        $collection = $this->makeCollection(['location_enabled' => false]);
+
+        $definition = [
+            'rules' => [$this->leafNode('Drug')],
+            'demographics' => ['location' => ['E12000007', 'E12000008']],
+        ];
+
+        $this->submit($definition, [$collection]);
+
+        $task = Task::where('collection_id', $collection->id)->first();
+
+        $this->assertNull($task->failed_at);
+        $this->assertDatabaseMissing('results', ['task_id' => $task->id]);
+    }
+
     public function test_query_without_location_or_death_is_not_blocked(): void
     {
         Feature::activate('query-builder-use-location');
