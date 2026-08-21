@@ -32,14 +32,7 @@ class QueryDefinitionInspector
      */
     public function usesDemographicLocation(array $definition): bool
     {
-        $location = $definition['demographics']['location'] ?? null;
-        if (! is_array($location)) {
-            return false;
-        }
-
-        return is_numeric($location['lat'] ?? null)
-            && is_numeric($location['lon'] ?? null)
-            && is_numeric($location['radius'] ?? null);
+        return GeoRadiusLocation::isValid($definition['demographics']['location'] ?? null);
     }
 
     /**
