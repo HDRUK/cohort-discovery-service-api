@@ -97,9 +97,9 @@ class BunnyQueryContext implements QueryContextInterface
     /**
      * Build BUNNY groups from the demographics block. Each returned group is a
      * self-contained constraint that must hold for the whole cohort:
-     * - age  -> a single AGE NUM rule (a group of one)
-     * - sex  -> the selected gender concepts OR-ed together
-     * - race -> the selected race concepts OR-ed together
+     * - age & location -> always single rules, folded together into one AND group
+     * - sex  -> the selected gender concepts OR-ed together (own group)
+     * - race -> the selected race concepts OR-ed together (own group)
      *
      * Empty / unconstrained sections yield no group.
      *
@@ -109,6 +109,10 @@ class BunnyQueryContext implements QueryContextInterface
     {
         $groups = [];
 
+        // AGE and LOCATION are always single rules (never an OR of alternatives),
+        // so they share one AND group rather than each getting a group of its own.
+        $singleRules = [];
+
         $age = $demographics['age'] ?? null;
         if (
             is_array($age)
@@ -117,9 +121,18 @@ class BunnyQueryContext implements QueryContextInterface
             && is_numeric($age[1])
             && ! $this->isOpenAgeBand($age)
         ) {
+            $singleRules[] = $this->makeLeafAgeFilter(['value' => $age]);
+        }
+
+        $locationRule = $this->makeGeoRadiusRule($demographics['location'] ?? null);
+        if ($locationRule !== null) {
+            $singleRules[] = $locationRule;
+        }
+
+        if (! empty($singleRules)) {
             $groups[] = [
                 'rules_oper' => 'AND',
-                'rules' => [$this->makeLeafAgeFilter(['value' => $age])],
+                'rules' => $singleRules,
             ];
         }
 
@@ -144,6 +157,35 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
         return $groups;
+    }
+
+    /**
+     * Build a BUNNY GEO_RADIUS rule from a demographics `location` object of the
+     * shape {lat, lon, radius} (radius in metres). BUNNY matches patients whose
+     * recorded coordinates fall within the radius of the given point. Any other
+     * shape (null, or the legacy region-code array) yields no rule here.
+     */
+    private function makeGeoRadiusRule(mixed $location): ?array
+    {
+        if (! is_array($location)) {
+            return null;
+        }
+
+        $lat = $location['lat'] ?? null;
+        $lon = $location['lon'] ?? null;
+        $radius = $location['radius'] ?? null;
+
+        if (! is_numeric($lat) || ! is_numeric($lon) || ! is_numeric($radius)) {
+            return null;
+        }
+
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Location',
+            'type'    => 'GEO_RADIUS',
+            'oper'    => '=',
+            'value'   => $lat.'|'.$lon.'|'.$radius,
+        ];
     }
 
     /**

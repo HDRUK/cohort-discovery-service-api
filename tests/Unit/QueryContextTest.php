@@ -1109,6 +1109,136 @@ class QueryContextTest extends TestCase
         $this->assertEquals('3955321', $result['groups'][1]['rules'][0]['value']);
     }
 
+    public function test_demographics_location_produces_geo_radius_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'location' => [
+                    'lat' => 55.860670278069755,
+                    'lon' => -3.127398764782377,
+                    'radius' => 50000,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // Full [0, 120] age band is unconstrained, so only the location group remains.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $locationGroup = $result['groups'][0];
+        $this->assertEquals('AND', $locationGroup['rules_oper']);
+        $this->assertCount(1, $locationGroup['rules']);
+
+        $rule = $locationGroup['rules'][0];
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('Location', $rule['varcat']);
+        $this->assertEquals('GEO_RADIUS', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('55.86067027807|-3.1273987647824|50000', $rule['value']);
+    }
+
+    public function test_demographics_location_anded_onto_clinical_group(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 3955320,
+                            'category' => 'Drug',
+                            'children' => [],
+                        ],
+                    ],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'location' => [
+                    'lat' => 51.5074,
+                    'lon' => -0.1278,
+                    'radius' => 5000,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('AND', $result['groups_oper']);
+        // clinical group + location group
+        $this->assertCount(2, $result['groups']);
+
+        $locationRule = $result['groups'][1]['rules'][0];
+        $this->assertEquals('GEO_RADIUS', $locationRule['type']);
+        $this->assertEquals('51.5074|-0.1278|5000', $locationRule['value']);
+    }
+
+    public function test_demographics_location_ignored_when_not_geo_object(): void
+    {
+        // The legacy region-code array shape must not emit a GEO_RADIUS rule.
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'location' => ['S01014432', 'S01014433'],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // No clinical rules, unconstrained age, no valid location -> nothing.
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(0, $result['groups']);
+    }
+
+    public function test_demographics_age_and_location_share_one_group(): void
+    {
+        // AGE and LOCATION are both single rules, so they fold into one AND group
+        // rather than emitting a group each.
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [18, 65],
+                'sex' => [],
+                'race' => [],
+                'location' => [
+                    'lat' => 51.5074,
+                    'lon' => -0.1278,
+                    'radius' => 5000,
+                ],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $group = $result['groups'][0];
+        $this->assertEquals('AND', $group['rules_oper']);
+        $this->assertCount(2, $group['rules']);
+
+        $this->assertEquals('AGE', $group['rules'][0]['varname']);
+        $this->assertEquals('18|65', $group['rules'][0]['value']);
+        $this->assertEquals('GEO_RADIUS', $group['rules'][1]['type']);
+        $this->assertEquals('51.5074|-0.1278|5000', $group['rules'][1]['value']);
+    }
+
     public function test_application_can_translate_via_manager(): void
     {
         // Bunny query via manager
