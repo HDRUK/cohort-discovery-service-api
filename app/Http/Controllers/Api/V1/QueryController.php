@@ -639,7 +639,7 @@ class QueryController extends Controller
                 'query_pid' => $query->pid,
                 'collection_pid' => $collection->pid,
                 'destination_url' => $collection->url,
-            ], anonymous: true);
+            ], anonymous: Feature::active('dataset-click-through-anonymous-logging'));
 
             return $this->OKResponse(null);
         } catch (AuthorizationException $e) {
