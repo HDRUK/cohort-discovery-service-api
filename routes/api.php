@@ -121,6 +121,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/queries/delete/bulk', [QueryController::class, 'destroyBulk']);
     Route::post('/v1/queries/translate/{context}', [QueryController::class, 'translate']);
     Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
+    Route::post('/v1/queries/{pid}/click-through', [QueryController::class, 'clickThrough'])->whereUuid('pid');
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
