@@ -15,6 +15,7 @@ final readonly class OidcProviderConfig
         public string $clientSecret,
         public array $scopes,
         public string $redirectUri,
+        public ClaimMappingConfig $claimMapping,
     ) {
     }
 
@@ -46,6 +47,7 @@ final readonly class OidcProviderConfig
             clientSecret: $config['client_secret'],
             scopes: preg_split('/[\s,]+/', $config['scopes'] ?? 'openid profile email', -1, PREG_SPLIT_NO_EMPTY),
             redirectUri: $config['redirect_uri'] ?: url("/api/auth/sso/{$slug}/callback"),
+            claimMapping: ClaimMappingConfig::fromArray($config['claim_mapping'] ?? []),
         );
     }
 

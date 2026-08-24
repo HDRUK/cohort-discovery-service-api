@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Exceptions\Sso\SsoLinkingException;
 use App\Models\User;
 use App\Models\UserIdentity;
+use App\Models\Workgroup;
 use App\Services\Sso\OidcAuthResult;
 use App\Services\Sso\OidcProviderConfig;
 use App\Services\Sso\SsoUserResolver;
@@ -138,5 +139,192 @@ class SsoUserResolverTest extends TestCase
 
         $this->assertNotSame($first->id, $second->id);
         $this->assertSame(2, UserIdentity::count());
+    }
+
+    private function withClaimMapping(array $mapping): OidcProviderConfig
+    {
+        config(['sso.providers.mapped' => FakeIdp::providerConfig([
+            'claim_mapping' => array_merge([
+                'enabled' => true,
+                'authority' => 'local',
+                'workgroups_claim' => 'eduperson_entitlement',
+                'roles_claim' => null,
+                'role_map' => [],
+            ], $mapping),
+        ])]);
+
+        return OidcProviderConfig::fromConfig('mapped');
+    }
+
+    public function test_claim_mapping_is_off_by_default(): void
+    {
+        Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $user = $this->resolver->resolve($this->provider, $this->authResult([
+            'email' => 'nomap@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $this->assertFalse($user->workgroups()->where('name', 'MAPPED-WG')->exists());
+    }
+
+    public function test_claim_mapping_assigns_workgroups_from_entitlements(): void
+    {
+        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $user = $this->resolver->resolve($this->withClaimMapping([]), $this->authResult([
+            'email' => 'mapped@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped', 'urn:wg:unknown'],
+        ]));
+
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $wg->id)->exists());
+    }
+
+    public function test_local_authority_never_removes_a_locally_assigned_workgroup(): void
+    {
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $provider = $this->withClaimMapping(['authority' => 'local']);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'sticky@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        // an admin adds a workgroup by hand after first login
+        $user->workgroups()->syncWithoutDetaching([$local->id]);
+
+        // ...and the user logs in again with the IdP still silent about it
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'sticky@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $local->id)->exists());
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
+    }
+
+    public function test_idp_authority_removes_workgroups_the_claim_omits(): void
+    {
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $provider = $this->withClaimMapping(['authority' => 'idp']);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'strict@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $user->workgroups()->syncWithoutDetaching([$local->id]);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'strict@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $this->assertFalse($user->workgroups()->where('workgroups.id', $local->id)->exists());
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
+    }
+
+    public function test_absent_claim_leaves_workgroups_untouched_even_under_idp_authority(): void
+    {
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $provider = $this->withClaimMapping(['authority' => 'idp']);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'quiet@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        // IdP stops releasing the claim entirely - that is silence, not "none"
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'quiet@example.com',
+            'email_verified' => true,
+        ]));
+
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
+    }
+
+    public function test_present_but_empty_claim_clears_workgroups_under_idp_authority(): void
+    {
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $provider = $this->withClaimMapping(['authority' => 'idp']);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'emptied@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'emptied@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => [],
+        ]));
+
+        $this->assertFalse($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
+    }
+
+    public function test_entitlements_encoded_as_a_json_string_are_understood(): void
+    {
+        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+
+        $user = $this->resolver->resolve($this->withClaimMapping([]), $this->authResult([
+            'email' => 'jsonclaim@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => '["urn:wg:mapped"]',
+        ]));
+
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $wg->id)->exists());
+    }
+
+    public function test_roles_are_mapped_only_via_an_explicit_role_map(): void
+    {
+        $provider = $this->withClaimMapping([
+            'roles_claim' => 'groups',
+            'role_map' => ['urn:group:cohort-admins' => 'admin'],
+        ]);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'rolemapped@example.com',
+            'email_verified' => true,
+            'groups' => ['urn:group:cohort-admins', 'urn:group:unmapped'],
+        ]));
+
+        $this->assertTrue($user->fresh()->hasRole('admin'));
+    }
+
+    public function test_unknown_authority_value_falls_back_to_local(): void
+    {
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
+
+        $provider = $this->withClaimMapping(['authority' => 'nonsense']);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'typo@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => [],
+        ]));
+
+        $user->workgroups()->syncWithoutDetaching([$local->id]);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'typo@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => [],
+        ]));
+
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $local->id)->exists());
     }
 }

@@ -69,7 +69,6 @@ class User extends Authenticatable implements OAuthenticatable
         'email',
         'external_id',
         'password',
-        'oidc_sub',
     ];
 
     /**

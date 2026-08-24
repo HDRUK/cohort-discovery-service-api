@@ -41,6 +41,16 @@ class OidcDiscoveryService
             }
         }
 
+        // The discovery document is fetched over the network, so treat every
+        // URL in it as attacker-controlled until proven otherwise: a hostile
+        // or compromised one could otherwise point jwks_uri at an internal
+        // address and have us fetch it, or at a host whose keys it controls
+        foreach (['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'userinfo_endpoint'] as $endpoint) {
+            if (! empty($metadata[$endpoint])) {
+                $this->assertUrlBelongsToIssuer($provider, (string) $metadata[$endpoint], $endpoint);
+            }
+        }
+
         return $metadata;
     }
 
@@ -77,5 +87,53 @@ class OidcDiscoveryService
     {
         Cache::forget(self::DISCOVERY_CACHE_PREFIX.$provider->slug);
         Cache::forget(self::JWKS_CACHE_PREFIX.$provider->slug);
+    }
+
+    /**
+     * Require a discovered URL to live on the same origin as the issuer.
+     *
+     * Scheme, host and port must all match. Ported from the OIDC resource
+     * server that this replaced, where it landed as a fix for exactly this
+     * class of SSRF.
+     */
+    private function assertUrlBelongsToIssuer(OidcProviderConfig $provider, string $url, string $context): void
+    {
+        $urlParts = parse_url($url);
+        $issuerParts = parse_url($provider->issuer);
+
+        if (! is_array($urlParts) || ! is_array($issuerParts)) {
+            throw new ProviderNotConfiguredException(
+                "Discovery document for [{$provider->slug}] has an invalid [{$context}] URL"
+            );
+        }
+
+        $urlScheme = strtolower($urlParts['scheme'] ?? '');
+        $issuerScheme = strtolower($issuerParts['scheme'] ?? '');
+        $urlHost = strtolower($urlParts['host'] ?? '');
+        $issuerHost = strtolower($issuerParts['host'] ?? '');
+
+        if ($urlScheme === '' || $urlHost === '' || $issuerScheme === '' || $issuerHost === '') {
+            throw new ProviderNotConfiguredException(
+                "Discovery document for [{$provider->slug}] has an invalid [{$context}] URL"
+            );
+        }
+
+        $urlPort = $urlParts['port'] ?? $this->defaultPortForScheme($urlScheme);
+        $issuerPort = $issuerParts['port'] ?? $this->defaultPortForScheme($issuerScheme);
+
+        if ($urlScheme !== $issuerScheme || $urlHost !== $issuerHost || $urlPort !== $issuerPort) {
+            throw new ProviderNotConfiguredException(
+                "Discovery document [{$context}] for [{$provider->slug}] does not belong to the configured issuer"
+            );
+        }
+    }
+
+    private function defaultPortForScheme(string $scheme): ?int
+    {
+        return match ($scheme) {
+            'http' => 80,
+            'https' => 443,
+            default => null,
+        };
     }
 }

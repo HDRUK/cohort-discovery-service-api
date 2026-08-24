@@ -20,6 +20,11 @@ use Laravel\Pennant\Feature;
  */
 class SsoUserResolver
 {
+    public function __construct(
+        private readonly ClaimMapper $claimMapper,
+    ) {
+    }
+
     public function resolve(OidcProviderConfig $provider, OidcAuthResult $result): User
     {
         return DB::transaction(function () use ($provider, $result) {
@@ -34,6 +39,8 @@ class SsoUserResolver
                 if ($result->name && $user->name !== $result->name) {
                     $user->update(['name' => $result->name]);
                 }
+
+                $this->claimMapper->apply($user, $provider, $result);
 
                 return $user;
             }
@@ -54,6 +61,7 @@ class SsoUserResolver
                 }
 
                 $this->createIdentity($existing, $provider, $result);
+                $this->claimMapper->apply($existing, $provider, $result);
 
                 return $existing;
             }
@@ -69,6 +77,7 @@ class SsoUserResolver
 
             $this->createIdentity($user, $provider, $result);
             $this->applyLocalDefaults($user);
+            $this->claimMapper->apply($user, $provider, $result);
 
             return $user;
         });

@@ -2026,6 +2026,185 @@
                 }
             }
         },
+        "/api/auth/sso/providers": {
+            "get": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "List enabled SSO providers",
+                "operationId": "c2c46c66290d6f8eeb737104625e035b",
+                "responses": {
+                    "200": {
+                        "description": "Enabled providers with their login redirect URLs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "slug": {
+                                                        "type": "string",
+                                                        "example": "default"
+                                                    },
+                                                    "label": {
+                                                        "type": "string",
+                                                        "example": "Single Sign-On"
+                                                    },
+                                                    "redirect_url": {
+                                                        "type": "string",
+                                                        "example": "https://api.example.com/api/auth/sso/default/redirect"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "SSO disabled or integrated mode"
+                    }
+                }
+            }
+        },
+        "/api/auth/sso/{provider}/redirect": {
+            "get": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "Begin an SSO login (browser navigation, 302 to the IdP)",
+                "operationId": "3d221d2c82dab4e30c9710248926c672",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "default"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the identity provider"
+                    },
+                    "404": {
+                        "description": "Unknown or disabled provider"
+                    }
+                }
+            }
+        },
+        "/api/auth/sso/{provider}/callback": {
+            "get": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "OIDC redirect URI (browser navigation, 302 back to the frontend)",
+                "operationId": "9e58afe35b32c4554a5aeca08fe75405",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "default"
+                        }
+                    },
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the frontend with a one-time handoff code, or to the error URL"
+                    },
+                    "404": {
+                        "description": "Unknown or disabled provider"
+                    }
+                }
+            }
+        },
+        "/api/auth/sso/exchange": {
+            "post": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "Exchange a one-time handoff code for an access token",
+                "operationId": "a93d2745b0973e47da6c2448ade50281",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "example": "9f86d081884c7d65..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "authenticated"
+                                                },
+                                                "access_token": {
+                                                    "type": "string"
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid, expired, or already-used code"
+                    }
+                }
+            }
+        },
         "/api/v1/tasks": {
             "get": {
                 "tags": [
@@ -2407,6 +2586,29 @@
                         "schema": {
                             "type": "string",
                             "example": "Condition"
+                        }
+                    },
+                    {
+                        "name": "domain_id__in",
+                        "in": "query",
+                        "description": "Filter by any of several OMOP domains (comma-separated)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Gender,Race,Ethnicity"
+                        }
+                    },
+                    {
+                        "name": "collection_pid[]",
+                        "in": "query",
+                        "description": "Only include concepts from these collections (public pids). Pids outside the user's visible collections are ignored.",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "9a8b7c6d-0000-0000-0000-000000000000"
+                            }
                         }
                     },
                     {
@@ -4319,6 +4521,10 @@
         {
             "name": "Query Parsing",
             "description": "Endpoints for parsing natural language queries into structured rules"
+        },
+        {
+            "name": "SSO",
+            "description": "External OIDC single sign-on (standalone mode only)"
         },
         {
             "name": "Tasks",

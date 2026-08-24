@@ -29,15 +29,23 @@ REDIS_PORT=6379
 
 ### Open-source mode
 
-While there are two running modes to choose from, it's important to note that "integrated" is used explicitly by HDRUK's Health Data Gateway. When 
-forking/cloning and deploying yourself, you should make sure to use "standalone" and configure an OIDC provider or fall-back to username/password
-credentials:
+There are two running modes, and only one of them is for you.
+
+**`integrated` is used exclusively by HDR UK's Health Data Gateway.** It exists to share tokens with
+the Gateway, which acts as the identity provider - it is not a general-purpose SSO mechanism, and it
+will not work with a third-party identity provider.
+
+When forking, cloning or deploying this yourself, use `standalone` and either configure an OIDC
+provider or fall back to username/password credentials:
 
 ```
 APP_OPERATION_MODE="standalone"
 ```
 
-This is documented further down
+An unrecognised value refuses to boot rather than quietly defaulting.
+
+Full detail in [`docs/auth/`](docs/auth/README.md) - start with
+[Operation modes](docs/auth/operation-modes.md).
 
 ### Other
 
@@ -292,6 +300,28 @@ First-time visitors are created on the spot with the `DEFAULT` workgroup and the
 their provider identity. If someone arrives whose email matches an existing account, we only link the
 two when the IdP swears the email is verified - anything less smells like an account takeover, and we
 send it to the error URL instead.
+
+### Claim mapping (optional)
+
+By default the local database is the authority on roles and workgroups, and the IdP only proves
+identity. If your IdP already manages group membership, it can drive workgroups and roles instead:
+
+```
+SSO_DEFAULT_CLAIM_MAPPING_ENABLED=true
+SSO_DEFAULT_WORKGROUPS_CLAIM="eduperson_entitlement"
+SSO_DEFAULT_CLAIM_AUTHORITY="local"   # "local" only adds; "idp" also removes
+```
+
+Claim values are matched against the `claim_value` column on `workgroups`. Under `local` an
+admin's manual assignment survives the user's next login; under `idp` the claim is the whole truth
+and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
+string never becomes a Daphne role by accident.
+
+See [Standalone OIDC setup](docs/auth/standalone-oidc-setup.md) for worked Keycloak, Entra ID and
+Google examples, multiple providers, and a troubleshooting table.
+
+> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed. See
+> [Migrating to standalone OIDC](docs/auth/migrating-to-system-a.md).
 
 ### Trying it locally
 
