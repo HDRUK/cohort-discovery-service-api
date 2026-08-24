@@ -13,6 +13,7 @@ trait NLPConceptLookup
     protected array $nlpRootAgeConstraints = [];
     protected array $nlpRootTimeConstraints = [];
     protected array $nlpWarnings = [];
+    protected ?array $nlpPayload = null;
 
     protected function loadNlpEntities(string $query, float $threshold = 80, array $collectionIds = []): void
     {
@@ -22,6 +23,8 @@ trait NLPConceptLookup
 
         $payload = $nlp->extract($query, $threshold, collectionIds: $collectionIds);
         \Log::info(json_encode(collect($payload)));
+
+        $this->nlpPayload = $payload;
 
         $entities = $payload['entities'] ?? $payload;
         $this->nlpGroups = $payload['groups'] ?? [];

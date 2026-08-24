@@ -7,6 +7,7 @@ use App\Traits\RuleBuilder;
 use App\Services\NLP\Constraints\ConstraintAccumulator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Laravel\Pennant\Feature;
 
 /**
  * RuleBuilderService parses a natural language query string into a structured array of rules.
@@ -23,6 +24,10 @@ class RuleBuilderService
 
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
+
+    public function __construct(private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder())
+    {
+    }
 
     private function normaliseImplicitOrScope(string $query): string
     {
@@ -209,6 +214,8 @@ class RuleBuilderService
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
 
+        $buildDemographics = Feature::active('query-builder-use-demographic-rule');
+
         $query = $this->normaliseEitherOrScope($query);
         $query = $this->normaliseImplicitOrScope($query);
 
@@ -217,8 +224,19 @@ class RuleBuilderService
 
         $this->applyConstraints($query, $constraints, $warnings);
 
-        $this->loadNlpEntities($query, collectionIds: $collectionIds);
+        $this->loadNlpEntities(
+            $query,
+            collectionIds: $collectionIds,
+        );
         $this->mergeNlpWarnings($warnings);
+
+        $demographics = null;
+        if ($buildDemographics) {
+            $payload = $this->nlpPayload ?? [];
+            $demographics = $this->demographicsBuilder->build($payload);
+            $this->stripDemographicSpans($this->demographicsBuilder->genderTextSpans($payload));
+        }
+
         $this->applyNlpAgeConstraints($constraints, $warnings);
         $this->applyNlpTimeConstraints($constraints, $warnings);
 
@@ -274,6 +292,10 @@ class RuleBuilderService
         if ($this->hasEntityAgeConstraints) {
             $constraintPayload['ageConstraint'] = [null, null];
             $warnings = $this->removeAgeWarnings($warnings);
+        } elseif ($buildDemographics) {
+            // Query-scope age is surfaced in the demographics block, not as an
+            // inline rule node.
+            $constraintPayload['ageConstraint'] = [null, null];
         } elseif ($ageConstraint !== [null, null]) {
             $ageFilter = $this->makeAgeFilterNode($ageConstraint);
             $constraintPayload['ageConstraint'] = [null, null];
@@ -319,13 +341,71 @@ class RuleBuilderService
             $warnings = $this->removeTimeWarnings($warnings);
         }
 
-        return [
+        $result = [
             'id' => Str::uuid()->toString(),
             'rules' => $rules,
             'constraints' => $constraintPayload,
             'warnings' => array_values(array_unique($warnings)),
             'valid' => true,
         ];
+
+        if ($buildDemographics) {
+            $result['demographics'] = $demographics;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Drop demographic (gender) text spans from the clinical rule inputs so
+     * they are not treated as conditions. The whole span is removed — the rest
+     * of a gender span's fuzzy candidates are noise around the gender concept.
+     *
+     * @param  array<string, true>  $spans  lowercased text spans to remove
+     */
+    private function stripDemographicSpans(array $spans): void
+    {
+        if (empty($spans)) {
+            return;
+        }
+
+        $keep = fn (array $entity) => ! isset($spans[strtolower(trim($entity['text'] ?? ''))]);
+
+        // nlpEntities is keyed by the lowercased entity text.
+        $this->nlpEntities = array_filter(
+            $this->nlpEntities ?? [],
+            fn ($candidates, $text) => ! isset($spans[$text]),
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        $this->nlpGroups = $this->filterGroupEntities($this->nlpGroups ?? [], $keep);
+
+        $this->nlpRootGroups = array_map(function ($rootGroup) use ($keep) {
+            $rootGroup['entities'] = array_values(array_filter($rootGroup['entities'] ?? [], $keep));
+            $rootGroup['groups'] = $this->filterGroupEntities($rootGroup['groups'] ?? [], $keep);
+
+            return $rootGroup;
+        }, $this->nlpRootGroups);
+    }
+
+    /**
+     * @param  array<int, array>  $groups
+     * @param  callable(array): bool  $keep
+     * @return array<int, array>
+     */
+    private function filterGroupEntities(array $groups, callable $keep): array
+    {
+        $result = [];
+
+        foreach ($groups as $group) {
+            $group['entities'] = array_values(array_filter($group['entities'] ?? [], $keep));
+
+            if (! empty($group['entities'])) {
+                $result[] = $group;
+            }
+        }
+
+        return $result;
     }
 
     private function applyConstraints(string $query, ConstraintAccumulator $constraints, array &$warnings): void

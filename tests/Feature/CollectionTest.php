@@ -971,6 +971,122 @@ class CollectionTest extends TestCase
 
 
 
+    public function test_store_by_custodian_persists_location_and_death_flags(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->postJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid), [
+                'name' => 'Cohort With Death And Location',
+                'description' => 'A collection that exposes both tables',
+                'url' => 'https://example.org/collections/dp1026',
+                'type' => QueryContextType::Bunny->value,
+                'host_id' => $host->id,
+                'location_enabled' => true,
+                'death_enabled' => true,
+            ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.location_enabled', true);
+        $response->assertJsonPath('data.death_enabled', true);
+
+        $this->assertDatabaseHas('collections', [
+            'id' => $response->json('data.id'),
+            'location_enabled' => true,
+            'death_enabled' => true,
+        ]);
+    }
+
+    public function test_store_by_custodian_defaults_location_and_death_flags_to_false(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->postJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid), [
+                'name' => 'Cohort Without Flags',
+                'description' => 'A collection created without the new flags',
+                'url' => 'https://example.org/collections/dp1026-default',
+                'type' => QueryContextType::Bunny->value,
+                'host_id' => $host->id,
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('collections', [
+            'id' => $response->json('data.id'),
+            'location_enabled' => false,
+            'death_enabled' => false,
+        ]);
+    }
+
+    public function test_it_can_update_location_and_death_flags(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+            'location_enabled' => false,
+            'death_enabled' => false,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL . '/' . $collection->id, [
+                'host_id' => $host->id,
+                'location_enabled' => true,
+                'death_enabled' => true,
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.location_enabled', true);
+        $response->assertJsonPath('data.death_enabled', true);
+
+        $this->assertDatabaseHas('collections', [
+            'id' => $collection->id,
+            'location_enabled' => true,
+            'death_enabled' => true,
+        ]);
+    }
+
+    public function test_non_owner_cannot_update_collection(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+        $collection = Collection::factory()->create([
+            'custodian_id' => $custodian->id,
+            'location_enabled' => false,
+            'death_enabled' => false,
+        ]);
+
+        // A user who is neither an admin nor attached to the collection's custodian.
+        $outsider = User::factory()->create();
+
+        $response = $this->actingAsJwt($outsider, [])
+            ->putJson(self::BASE_URL . '/' . $collection->id, [
+                'host_id' => $host->id,
+                'location_enabled' => true,
+                'death_enabled' => true,
+            ]);
+
+        $response->assertStatus(403);
+
+        // The collection must be unchanged.
+        $this->assertDatabaseHas('collections', [
+            'id' => $collection->id,
+            'location_enabled' => false,
+            'death_enabled' => false,
+        ]);
+    }
+
     private function makeCollectionWithState(array $attrs, string $state): Collection
     {
         $collection = Collection::factory()->create($attrs);

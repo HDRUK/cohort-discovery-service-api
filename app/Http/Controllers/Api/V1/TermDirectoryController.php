@@ -3,17 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Collection;
-use App\Models\LatestDistribution;
-use App\Models\User;
 use App\Services\Activity\ActivityLogger;
+use App\Services\TermDirectory\TermDirectoryService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -83,42 +79,14 @@ class TermDirectoryController extends Controller
      *      description="Paginated list of concepts")
      * )
      */
-    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
+    public function index(Request $request, ActivityLogger $activityLogger, TermDirectoryService $termDirectory): JsonResponse
     {
         try {
-            $perPage = $this->resolvePerPage();
-
-            $visibleCollectionIds = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
-
-            $requestedPids = $request->input('collection_pid', []);
-
-            $concepts = LatestDistribution::whereIn('collection_id', $visibleCollectionIds)
-                ->when($requestedPids, function ($query, $requestedPids) {
-                    $query->whereHas('collection', function ($q) use ($requestedPids) {
-                        $q->whereIn('pid', (array) $requestedPids);
-                    });
-                })
-                ->searchViaRequest()
-                ->filterViaRequest()
-                ->select([
-                    'concept_id',
-                    'concept_name',
-                    'domain_id',
-                    'central_domain_id',
-                    DB::raw('GROUP_CONCAT(DISTINCT reported_domain_id ORDER BY reported_domain_id) AS reported_domains'),
-                    DB::raw('MAX(domain_mismatch) AS domain_mismatch'),
-                    DB::raw('SUM(`count`) AS count'),
-                    DB::raw('COUNT(DISTINCT collection_id) AS ncollections'),
-                ])
-                ->groupBy('concept_id', 'concept_name', 'domain_id', 'central_domain_id')
-                ->applySorting('count', 'desc')
-                ->paginate($perPage);
+            $concepts = $termDirectory->search($request, $this->resolvePerPage());
 
             $activityLogger->viewed('term_directory', null, [
                 'filters' => $request->query(),
-                'result' => [
-                    'total' => $concepts->total(),
-                ],
+                'result' => ['total' => $concepts->total()],
             ]);
 
             return $this->OKResponse($concepts);

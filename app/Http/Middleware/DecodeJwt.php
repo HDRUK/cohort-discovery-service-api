@@ -32,6 +32,7 @@ class DecodeJwt
         private readonly RoleSyncerService $roleSyncer,
         private readonly CustodianSyncerService $custodianSyncer,
         private readonly UserInfoSyncerService $userInfoSyncer,
+        private readonly ValidateOidcToken $validateOidcToken,
     ) {
     }
 
@@ -41,6 +42,10 @@ class DecodeJwt
         $startMicrotime = microtime(true);
 
         try {
+            if (config('services.oidc.enabled', false)) {
+                return $this->validateOidcToken->handle($request, $next);
+            }
+
             if (! $token) {
                 return response()->json(['error' => 'No token'], 401);
             }

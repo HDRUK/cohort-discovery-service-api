@@ -7,6 +7,8 @@ use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Services\Submitters\QuerySubmissionService;
+use App\Services\Submitters\TaskFailureRecorder;
+use App\Support\QueryDefinitionInspector;
 use DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -42,6 +44,8 @@ class QuerySubmissionServiceTest extends TestCase
             new Query(),
             new Collection(),
             new Task(),
+            new TaskFailureRecorder(),
+            new QueryDefinitionInspector(),
         );
 
         // Run
@@ -69,6 +73,8 @@ class QuerySubmissionServiceTest extends TestCase
             new Query(),
             new Collection(),
             new Task(),
+            new TaskFailureRecorder(),
+            new QueryDefinitionInspector(),
         );
         $result = $service->handle($data, 1);
 

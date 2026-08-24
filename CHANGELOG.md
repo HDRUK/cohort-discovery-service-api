@@ -1,3 +1,22 @@
+## [1.13.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.12.0...v1.13.0) (2026-08-21)
+
+### ✨ Features
+
+* **DP-1018:** add feature flag for SDE access banner (#309) ([2a21d57](https://github.com/HDRUK/cohort-discovery-service-api/commit/2a21d57d5dbe0bad467a368c692fa714898b7392)), closes [DP-1018](undefinedDP-1018)
+* **DP-1026:** add location/death collection flags and FE feature flags (#304) ([5fbc99e](https://github.com/HDRUK/cohort-discovery-service-api/commit/5fbc99ecf2b686b65904fc3ba0ceb58206be53d6)), closes [DP-1026](undefinedDP-1026)
+* **DP-1027:** add failure-reason machinery for missing location/death tables (#305) ([f515b62](https://github.com/HDRUK/cohort-discovery-service-api/commit/f515b6223b196a4baa50555ff82adf68057976db)), closes [DP-1027](undefinedDP-1027)
+* **DP-1029:** block queries on collections missing death/location tables (#306) ([05a8f44](https://github.com/HDRUK/cohort-discovery-service-api/commit/05a8f44ee235e2f51e70591d885fa034f2869661)), closes [DP-1029](undefinedDP-1029)
+* **DP-1034:** Implement building a demographic block for the query rules rules (#310) ([daee3dc](https://github.com/HDRUK/cohort-discovery-service-api/commit/daee3dcbefd13dfcc616eb28274e9fea84db4376)), closes [DP-1034](undefinedDP-1034)
+* **DP-857:** add query-builder-use-demographic-rule feature flag (#308) ([7e64581](https://github.com/HDRUK/cohort-discovery-service-api/commit/7e6458193bafe7236e62867dcbfef0f0c243100c)), closes [DP-857](undefinedDP-857)
+* **DP-905:** resolve pids and restrict term directory results (#293) ([4ebeb16](https://github.com/HDRUK/cohort-discovery-service-api/commit/4ebeb16e861fe0025f53be3c249a351070dc82f3))
+* **DP-934:** add OIDC support by allowing the API to act as a recource server (#213) ([837c08f](https://github.com/HDRUK/cohort-discovery-service-api/commit/837c08fbe6fedd21b465d73f4acfabe69210284b)), closes [DP-934](undefinedDP-934)
+* **DP-986:** OMOP Vocab drift checks  (#301) ([c80f088](https://github.com/HDRUK/cohort-discovery-service-api/commit/c80f0887fdf0d35b6e5c3f596b260fe501880820)), closes [DP-986](undefinedDP-986)
+
+### 🐛 Bug Fixes
+
+* **DP-1030:** Term Directory optimisation (#302) ([c75ca97](https://github.com/HDRUK/cohort-discovery-service-api/commit/c75ca970ade323d094381badcd934433be05d9c1)), closes [DP-1030](undefinedDP-1030)
+* **DP-970:** Solved! the mystery of the disappearing concepts (#298) ([178f329](https://github.com/HDRUK/cohort-discovery-service-api/commit/178f3290aa7a808d02e303a946c3d433ae299ab0)), closes [DP-970](undefinedDP-970)
+
 ## [1.12.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.11.0...v1.12.0) (2026-07-29)
 
 ### ✨ Features

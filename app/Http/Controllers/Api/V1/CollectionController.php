@@ -750,6 +750,8 @@ class CollectionController extends Controller
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
                 'is_synthetic' => ['sometimes', 'boolean'],
+                'location_enabled' => ['sometimes', 'boolean'],
+                'death_enabled' => ['sometimes', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -764,6 +766,8 @@ class CollectionController extends Controller
                 'type' => $validated['type'],
                 'custodian_id' => $custodian->id,
                 'is_synthetic' => $validated['is_synthetic'] ?? false,
+                'location_enabled' => $validated['location_enabled'] ?? false,
+                'death_enabled' => $validated['death_enabled'] ?? false,
             ]);
 
             $collection->host()->sync([$validated['host_id']]);

@@ -43,4 +43,16 @@ return [
         'base_uri' => env('COHORT_DISCOVER_NLP_SERVICE_BASE_URI'),
     ],
 
+    'oidc' => [
+        'enabled' => env('OIDC_ENABLED', false),
+        'issuer' => env('OIDC_ISSUER_URL'),
+        'audience' => env('OIDC_AUDIENCE'),
+        'userinfo_endpoint' => env('OIDC_USERINFO_ENDPOINT'),
+        'discovery_cache_ttl_seconds' => env('OIDC_DISCOVERY_CACHE_TTL_SECONDS', 300),
+        'jwks_cache_ttl_seconds' => env('OIDC_JWKS_CACHE_TTL_SECONDS', 300),
+        'http_timeout_seconds' => env('OIDC_HTTP_TIMEOUT_SECONDS', 10),
+        'connect_timeout_seconds' => env('OIDC_CONNECT_TIMEOUT_SECONDS', 3),
+        'clock_skew_seconds' => env('OIDC_CLOCK_SKEW_SECONDS', 60),
+        'workgroups_claim' => env('OIDC_WORKGROUPS_CLAIM', 'eduperson_entitlement'),
+    ],
 ];
