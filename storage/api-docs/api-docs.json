@@ -5,6 +5,74 @@
         "version": "1.0.0"
     },
     "paths": {
+        "/api/v1/clicks": {
+            "post": {
+                "tags": [
+                    "Clicks"
+                ],
+                "summary": "Record a user action (click) on a subject",
+                "description": "Generic click/action tracker. The frontend names the subject by type\n     *         and id-or-pid and supplies a free-form action label; the backend records an\n     *         activity-log entry. By default the entry is attributed to the authenticated user;\n     *         the 'click-tracking-anonymous' feature flag switches all entries to anonymous.\n     *         Any authenticated caller may record a click on any existing subject - there is no\n     *         ownership check.",
+                "operationId": "f81a8f36563528545f8cb207cd2bb23f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subject_type",
+                                    "subject_id",
+                                    "action"
+                                ],
+                                "properties": {
+                                    "subject_type": {
+                                        "description": "Name of the App\\Models model, e.g. task, collection, query (resolved as App\\Models\\{StudlyName})",
+                                        "type": "string",
+                                        "example": "task"
+                                    },
+                                    "subject_id": {
+                                        "description": "Integer id or UUID pid of the subject",
+                                        "type": "string",
+                                        "example": "42"
+                                    },
+                                    "action": {
+                                        "description": "snake_case action label, max 64 chars",
+                                        "type": "string",
+                                        "example": "clicked_collection_link"
+                                    },
+                                    "description": {
+                                        "description": "Optional free-form note, max 500 chars",
+                                        "type": "string",
+                                        "example": "User followed the collection link on the results page",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Click logged (or ignored as a duplicate)"
+                    },
+                    "403": {
+                        "description": "Request did not originate from an allowed browser origin"
+                    },
+                    "404": {
+                        "description": "Subject not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    },
+                    "500": {
+                        "description": "Unexpected error"
+                    }
+                }
+            }
+        },
         "/api/v1/collection-configs": {
             "get": {
                 "tags": [
@@ -2410,6 +2478,29 @@
                         }
                     },
                     {
+                        "name": "domain_id__in",
+                        "in": "query",
+                        "description": "Filter by any of several OMOP domains (comma-separated)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Gender,Race,Ethnicity"
+                        }
+                    },
+                    {
+                        "name": "collection_pid[]",
+                        "in": "query",
+                        "description": "Only include concepts from these collections (public pids). Pids outside the user's visible collections are ignored.",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "9a8b7c6d-0000-0000-0000-000000000000"
+                            }
+                        }
+                    },
+                    {
                         "name": "sort",
                         "in": "query",
                         "description": "e.g. count:desc",
@@ -4335,6 +4426,10 @@
         {
             "name": "Workgroups",
             "description": "API Endpoints for managing workgroups"
+        },
+        {
+            "name": "Clicks",
+            "description": "Clicks"
         },
         {
             "name": "CollectionConfig",

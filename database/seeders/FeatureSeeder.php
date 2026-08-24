@@ -31,7 +31,7 @@ class FeatureSeeder extends Seeder
         'query-builder-use-location' => false,
         'query-builder-use-death' => false,
         'query-builder-use-demographic-rule' => false,
-        'dataset-click-through-anonymous-logging' => true,
+        'click-tracking-anonymous' => false,
     ];
 
     /**

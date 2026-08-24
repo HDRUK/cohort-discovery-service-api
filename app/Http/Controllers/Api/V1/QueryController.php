@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\TaskType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
-use App\Models\Collection;
 use App\Models\Query;
 use App\Services\Activity\ActivityLogger;
 use App\Services\QueryContext\QueryContextManager;
@@ -18,7 +17,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -168,11 +166,7 @@ class QueryController extends Controller
                         ->applySorting();
                 },
             ])
-                ->when(
-                    ctype_digit($key),
-                    fn($q) => $q->where('id', $key),
-                    fn($q) => $q->where('pid', $key)
-                )
+                ->whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('view', $query);
@@ -273,11 +267,7 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::when(
-                ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
-            )
+            $query = Query::whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('update', $query);
@@ -335,11 +325,7 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::when(
-                ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
-            )
+            $query = Query::whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('delete', $query);
@@ -542,11 +528,8 @@ class QueryController extends Controller
         $data = [];
 
         try {
-            $query = Query::with('tasks.collection')->when(
-                ctype_digit($key),
-                fn($q) => $q->where('id', $key),
-                fn($q) => $q->where('pid', $key)
-            )
+            $query = Query::with('tasks.collection')
+                ->whereIdOrPid($key)
                 ->first();
 
             $data['name'] = $query->name .= ' - ReRun (' . now()->format('Y-m-d H:i:s') . ')';
@@ -570,87 +553,6 @@ class QueryController extends Controller
                 json_encode($validated) . ' and duplicate: ' . json_encode($query) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
-        }
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/api/v1/queries/{pid}/click-through",
-     *     summary="Record that a user followed a dataset link from a query's results",
-     *     description="Logs an anonymous click-through event against the query pid.
-     *         No user is recorded on the entry - see the DP-946 DPIA note.",
-     *     tags={"Queries"},
-     *
-     *     @OA\Parameter(
-     *         name="pid",
-     *         in="path",
-     *         required=true,
-     *         description="Query pid",
-     *
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *
-     *     @OA\RequestBody(
-     *         required=true,
-     *
-     *         @OA\JsonContent(
-     *             type="object",
-     *             required={"collection_pid"},
-     *
-     *             @OA\Property(property="collection_pid", type="string", example="col_abc123")
-     *         )
-     *     ),
-     *
-     *     @OA\Response(response=200, description="Click-through logged"),
-     *     @OA\Response(response=403, description="Query does not belong to this user"),
-     *     @OA\Response(response=404, description="Query not found, or collection is not part of the query"),
-     *     @OA\Response(response=422, description="Validation error")
-     * )
-     */
-    public function clickThrough(
-        Request $request,
-        ActivityLogger $activityLogger,
-        string $pid
-    ): JsonResponse {
-        // Outside the try: a ValidationException must reach Laravel's handler
-        // as a 422 rather than being swallowed by the catch-all below.
-        $validated = $request->validate([
-            'collection_pid' => 'required|string',
-        ]);
-
-        try {
-            $query = Query::where('pid', $pid)->firstOrFail();
-
-            // Guard 1: the query must be the caller's own (QueryPolicy::access also lets admins through).
-            $this->authorize('view', $query);
-
-            // Guard 2: collection_pid comes from the browser and can be edited, so only accept
-            // one that genuinely has a Task for this query. Otherwise the click counts are forgeable.
-            $collection = Collection::whereHas(
-                'tasks',
-                fn($q) => $q->where('query_id', $query->id)
-            )->where('pid', $validated['collection_pid'])->first();
-
-            if (! $collection) {
-                return $this->NotFoundResponse();
-            }
-
-            $activityLogger->custom('queries', 'clicked_through', $collection, [
-                'query_pid' => $query->pid,
-                'collection_pid' => $collection->pid,
-                'destination_url' => $collection->url,
-            ], anonymous: Feature::active('dataset-click-through-anonymous-logging'));
-
-            return $this->OKResponse(null);
-        } catch (AuthorizationException $e) {
-            return $this->ForbiddenResponse();
-        } catch (ModelNotFoundException $e) {
-            return $this->NotFoundResponse();
-        } catch (\Throwable $e) {
-            \Log::error('QueryController@clickThrough/' . $pid . ' - failed' .
-                ' (exception: ' . $e->getMessage() . ')');
-
-            return $this->ErrorResponse();
         }
     }
 }
