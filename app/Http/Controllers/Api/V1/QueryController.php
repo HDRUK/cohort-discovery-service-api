@@ -103,8 +103,8 @@ class QueryController extends Controller
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@index - failed: '.
-                json_encode($request->all()).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@index - failed: ' .
+                json_encode($request->all()) . ' (exception: ' . $e->getMessage() . ')');
             return $this->ErrorResponse($e->getMessage());
         }
     }
@@ -166,11 +166,7 @@ class QueryController extends Controller
                         ->applySorting();
                 },
             ])
-                ->when(
-                    ctype_digit($key),
-                    fn ($q) => $q->where('id', $key),
-                    fn ($q) => $q->where('pid', $key)
-                )
+                ->whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('view', $query);
@@ -181,7 +177,7 @@ class QueryController extends Controller
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@show - failed: '.json_encode($validated));
+            \Log::error('QueryController@show - failed: ' . json_encode($validated));
 
             return $this->ErrorResponse($e->getMessage());
         }
@@ -231,7 +227,7 @@ class QueryController extends Controller
 
             return $this->CreatedResponse($result);
         } catch (\Throwable $e) {
-            \Log::error('QueryController@store - failed: '.json_encode($validated));
+            \Log::error('QueryController@store - failed: ' . json_encode($validated));
 
             return $this->ErrorResponse($e->getMessage());
         }
@@ -271,11 +267,7 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
+            $query = Query::whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('update', $query);
@@ -298,9 +290,9 @@ class QueryController extends Controller
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@update - failed: '.
-                json_encode($validated).' (exception: '.
-                $e->getMessage().')');
+            \Log::error('QueryController@update - failed: ' .
+                json_encode($validated) . ' (exception: ' .
+                $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
         }
@@ -333,11 +325,7 @@ class QueryController extends Controller
         $validated = $request->validated();
 
         try {
-            $query = Query::when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
+            $query = Query::whereIdOrPid($key)
                 ->firstOrFail();
 
             $this->authorize('delete', $query);
@@ -352,8 +340,8 @@ class QueryController extends Controller
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@destroy/'.$validated['id'].' - failed: '.
-                json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@destroy/' . $validated['id'] . ' - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
         }
@@ -374,10 +362,9 @@ class QueryController extends Controller
             ]);
 
             return $this->OKResponse([]);
-
         } catch (\Throwable $e) {
-            \Log::error('QueryController@destroyBulk - failed: '.
-                json_encode($input).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@destroyBulk - failed: ' .
+                json_encode($input) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->ErrorResponse();
         }
@@ -446,7 +433,7 @@ class QueryController extends Controller
 
             return $this->OKResponse($translated);
         } catch (\Throwable $e) {
-            \Log::error('QueryController@translate/'.$context.' - failed: '.json_encode($validated).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@translate/' . $context . ' - failed: ' . json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->ErrorResponse($e->getMessage());
         }
@@ -524,8 +511,8 @@ class QueryController extends Controller
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
-            \Log::error('QueryController@download/'.$format.' - failed'.
-                ' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@download/' . $format . ' - failed' .
+                ' (exception: ' . $e->getMessage() . ')');
 
             return $this->ErrorResponse();
         }
@@ -541,14 +528,11 @@ class QueryController extends Controller
         $data = [];
 
         try {
-            $query = Query::with('tasks.collection')->when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
+            $query = Query::with('tasks.collection')
+                ->whereIdOrPid($key)
                 ->first();
 
-            $data['name'] = $query->name .= ' - ReRun ('.now()->format('Y-m-d H:i:s').')';
+            $data['name'] = $query->name .= ' - ReRun (' . now()->format('Y-m-d H:i:s') . ')';
             $data['task_type'] = TaskType::A;
             $data['definition'] = $query->definition;
             $data['collection_filter'] = $query->tasks->pluck('collection.pid')->toArray();
@@ -565,8 +549,8 @@ class QueryController extends Controller
 
             return $this->OKResponse($result);
         } catch (\Throwable $e) {
-            \Log::error('QueryController@duplicateAndReRun/'.$validated['key'].' - failed: '.
-                json_encode($validated).' and duplicate: '.json_encode($query).' (exception: '.$e->getMessage().')');
+            \Log::error('QueryController@duplicateAndReRun/' . $validated['key'] . ' - failed: ' .
+                json_encode($validated) . ' and duplicate: ' . json_encode($query) . ' (exception: ' . $e->getMessage() . ')');
 
             return $this->NotFoundResponse();
         }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TaskType;
+use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,9 +43,10 @@ use Illuminate\Support\Str;
  */
 class Task extends Model
 {
-    use HasFactory;
-    use Search;
     use Filter;
+    use HasFactory;
+    use ResolvesByIdOrPid;
+    use Search;
 
     public $timestamps = false;
 
