@@ -44,6 +44,15 @@
                                         "type": "string",
                                         "example": "User followed the collection link on the results page",
                                         "nullable": true
+                                    },
+                                    "properties": {
+                                        "description": "Optional arbitrary JSON merged into the activity-log properties column, max 2000 bytes encoded. A 'subject_type' key is always overwritten by the resolved type.",
+                                        "type": "object",
+                                        "example": {
+                                            "origin": "results_table",
+                                            "position": 3
+                                        },
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -53,10 +62,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Click logged (or ignored as a duplicate)"
-                    },
-                    "403": {
-                        "description": "Request did not originate from an allowed browser origin"
+                        "description": "Click logged"
                     },
                     "404": {
                         "description": "Subject not found"

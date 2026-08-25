@@ -14,7 +14,6 @@ class IdOrUuid implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        // Cast: a JSON numeric id arrives as an int, which ctype_digit reads as a codepoint.
         $value = is_scalar($value) ? (string) $value : '';
 
         $isIntegerId = ctype_digit($value);

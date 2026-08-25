@@ -70,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('click-tracking', function (Request $request) {
-            return Limit::perMinute(config('clicks.rate_limit', 60))
+            return Limit::perMinute(config('api.click_rate_limit'))
                 ->by($request->user()?->id ?: $request->ip());
         });
     }

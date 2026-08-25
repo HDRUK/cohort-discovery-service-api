@@ -87,9 +87,6 @@ class ActivityLogger
         $activity = activity($logName)
             ->event($event);
 
-        // Spatie stamps the authenticated user onto the activity as soon as it is
-        // built (ActivityLogger::getActivity), so an anonymous entry has to unset
-        // the causer explicitly - simply not calling causedBy() is not enough.
         if ($anonymous) {
             $activity->causedByAnonymous();
         } else {

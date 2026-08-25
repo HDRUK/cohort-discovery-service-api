@@ -28,16 +28,13 @@ class ClickControllerTest extends TestCase
 
         config()->set('pennant.default', 'database');
 
-        // The RateLimiter singleton is resolved at boot bound to the DB cache
-        // store, whose counters do not persist across requests in the test
-        // harness (production uses Redis, where throttling works). Rebind it to
-        // the array store and re-register the named limiter for deterministic
-        // rate-limit assertions.
+        // The boot-time RateLimiter is bound to the DB cache store, whose counters
+        // do not persist across requests here. Rebind to the array store.
         $this->app->instance(
             CacheRateLimiter::class,
             new CacheRateLimiter(Cache::store('array'))
         );
-        RateLimiter::for('click-tracking', fn (Request $r) => Limit::perMinute(config('clicks.rate_limit', 60))
+        RateLimiter::for('click-tracking', fn (Request $r) => Limit::perMinute(config('api.click_rate_limit'))
             ->by($r->user()?->id ?: $r->ip()));
 
         // decode.jwt must set Auth::user() so attributed clicks record a causer.
@@ -52,7 +49,6 @@ class ClickControllerTest extends TestCase
         DB::table('features')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Reset the throttle counters between tests.
         Cache::flush();
 
         $this->user = User::factory()->create();
@@ -114,7 +110,6 @@ class ClickControllerTest extends TestCase
             'action' => 'clicked_collection_link',
         ])->assertOk();
 
-        // The pid resolves to the same row - subject_id is the integer id.
         $this->assertDatabaseHas('activity_log', [
             'subject_type' => Task::class,
             'subject_id' => $task->id,
@@ -139,7 +134,6 @@ class ClickControllerTest extends TestCase
         $loggedTaskId = DB::table('activity_log')->where('log_name', 'clicks')->value('subject_id');
         $logged = Task::find($loggedTaskId);
 
-        // From the task subject alone we recover both the query and the collection.
         $this->assertSame($query->id, $logged->submittedQuery->id);
         $this->assertSame($collection->id, $logged->collection->id);
     }
@@ -197,7 +191,6 @@ class ClickControllerTest extends TestCase
             'properties' => ['subject_type' => 'spoofed'],
         ])->assertOk();
 
-        // The resolved type is merged last, so it always wins.
         $this->assertDatabaseHas('activity_log', ['properties->subject_type' => 'task']);
     }
 
@@ -227,8 +220,6 @@ class ClickControllerTest extends TestCase
 
     public function test_subject_type_that_is_not_a_model_returns_not_found(): void
     {
-        // 'banana' -> App\Models\Banana does not exist, so the is_subclass_of
-        // guard returns 404 (there is no allowlist - any real model is accepted).
         $this->postClick([
             'subject_type' => 'banana',
             'subject_id' => 1,
@@ -238,7 +229,6 @@ class ClickControllerTest extends TestCase
 
     public function test_subject_type_with_illegal_characters_is_rejected(): void
     {
-        // Namespace separators / digits must never reach the class-name builder.
         $this->postClick([
             'subject_type' => 'Task\\..\\User',
             'subject_id' => 1,
@@ -288,7 +278,6 @@ class ClickControllerTest extends TestCase
             'collection_id' => $collection->id,
         ]);
 
-        // $this->user is a different user and there is no ownership check.
         $this->postClick([
             'subject_type' => 'task',
             'subject_id' => $task->id,
@@ -303,15 +292,12 @@ class ClickControllerTest extends TestCase
 
     public function test_it_rate_limits_excessive_clicks(): void
     {
-        config()->set('clicks.rate_limit', 3);
+        config()->set('api.click_rate_limit', 3);
 
         $task = $this->makeTask();
 
-        // Fire well past the limit. The first click succeeds and a 429 must
-        // appear once the per-minute limit is exceeded. (We assert that
-        // throttling engages rather than the exact boundary - the array cache
-        // store lags the counter by one; production uses Redis where it is
-        // precise.)
+        // Loose assertion: the array store lags the counter by one, so we check
+        // that throttling engages rather than the exact boundary.
         $statuses = [];
         for ($i = 0; $i < 12; $i++) {
             $statuses[] = $this->postClick($this->clickPayload($task, 'action_'.$i))->status();
@@ -325,8 +311,6 @@ class ClickControllerTest extends TestCase
     {
         $task = $this->makeTask();
 
-        // A Next.js Server Action proxies the call, so there is no Origin or
-        // Sec-Fetch-* header - only the bearer JWT. That must be enough.
         $this->postClick($this->clickPayload($task, 'clicked_collection_link'))->assertOk();
     }
 
