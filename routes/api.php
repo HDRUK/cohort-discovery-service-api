@@ -124,7 +124,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
 
     Route::post('/v1/clicks', [ClickController::class, 'store'])
-        ->middleware(['browser.origin', 'throttle:click-tracking']);
+        ->middleware(['throttle:click-tracking']);
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);

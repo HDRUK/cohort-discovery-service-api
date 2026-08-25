@@ -19,7 +19,6 @@ use Tests\TestCase;
 class ClickControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/clicks';
-    private const ORIGIN = 'http://localhost:3000';
 
     private User $user;
 
@@ -28,10 +27,6 @@ class ClickControllerTest extends TestCase
         parent::setUp();
 
         config()->set('pennant.default', 'database');
-        config()->set('clicks.allowed_origins', [self::ORIGIN]);
-        // Use the in-memory cache so dedup behaves deterministically within a
-        // test (the DB cache store does not increment reliably in the harness).
-        config()->set('cache.default', 'array');
 
         // The RateLimiter singleton is resolved at boot bound to the DB cache
         // store, whose counters do not persist across requests in the test
@@ -57,7 +52,7 @@ class ClickControllerTest extends TestCase
         DB::table('features')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Reset dedup + throttle cache between tests.
+        // Reset the throttle counters between tests.
         Cache::flush();
 
         $this->user = User::factory()->create();
@@ -165,6 +160,71 @@ class ClickControllerTest extends TestCase
         ]);
     }
 
+    public function test_caller_supplied_properties_are_stored_as_json(): void
+    {
+        $task = $this->makeTask();
+
+        $this->postClick([
+            'subject_type' => 'task',
+            'subject_id' => $task->id,
+            'action' => 'clicked_collection_link',
+            'properties' => [
+                'origin' => 'results_table',
+                'position' => 3,
+                'nested' => ['a' => true, 'b' => [1, 2]],
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('activity_log', [
+            'properties->origin' => 'results_table',
+            'properties->position' => 3,
+            'properties->nested->a' => true,
+            'properties->subject_type' => 'task',
+        ]);
+
+        $stored = json_decode(DB::table('activity_log')->value('properties'), true);
+        $this->assertSame([1, 2], $stored['nested']['b']);
+    }
+
+    public function test_caller_cannot_clobber_subject_type_in_properties(): void
+    {
+        $task = $this->makeTask();
+
+        $this->postClick([
+            'subject_type' => 'task',
+            'subject_id' => $task->id,
+            'action' => 'clicked_collection_link',
+            'properties' => ['subject_type' => 'spoofed'],
+        ])->assertOk();
+
+        // The resolved type is merged last, so it always wins.
+        $this->assertDatabaseHas('activity_log', ['properties->subject_type' => 'task']);
+    }
+
+    public function test_oversized_properties_are_rejected(): void
+    {
+        $task = $this->makeTask();
+
+        $this->postClick([
+            'subject_type' => 'task',
+            'subject_id' => $task->id,
+            'action' => 'clicked_collection_link',
+            'properties' => ['blob' => str_repeat('x', 2001)],
+        ])->assertStatus(422);
+    }
+
+    public function test_non_array_properties_are_rejected(): void
+    {
+        $task = $this->makeTask();
+
+        $this->postClick([
+            'subject_type' => 'task',
+            'subject_id' => $task->id,
+            'action' => 'clicked_collection_link',
+            'properties' => 'not-an-object',
+        ])->assertStatus(422);
+    }
+
     public function test_subject_type_that_is_not_a_model_returns_not_found(): void
     {
         // 'banana' -> App\Models\Banana does not exist, so the is_subclass_of
@@ -241,33 +301,17 @@ class ClickControllerTest extends TestCase
         ]);
     }
 
-    public function test_duplicate_clicks_are_deduplicated(): void
-    {
-        $task = $this->makeTask();
-
-        $payload = [
-            'subject_type' => 'task',
-            'subject_id' => $task->id,
-            'action' => 'clicked_collection_link',
-        ];
-
-        $this->postClick($payload)->assertOk();
-        $this->postClick($payload)->assertOk();
-
-        $this->assertDatabaseCount('activity_log', 1);
-    }
-
     public function test_it_rate_limits_excessive_clicks(): void
     {
         config()->set('clicks.rate_limit', 3);
 
         $task = $this->makeTask();
 
-        // Fire well past the limit, varying the action so dedup never swallows a
-        // request. The first click succeeds and a 429 must appear once the
-        // per-minute limit is exceeded. (We assert that throttling engages rather
-        // than the exact boundary - the array cache store lags the counter by one;
-        // production uses Redis where it is precise.)
+        // Fire well past the limit. The first click succeeds and a 429 must
+        // appear once the per-minute limit is exceeded. (We assert that
+        // throttling engages rather than the exact boundary - the array cache
+        // store lags the counter by one; production uses Redis where it is
+        // precise.)
         $statuses = [];
         for ($i = 0; $i < 12; $i++) {
             $statuses[] = $this->postClick($this->clickPayload($task, 'action_'.$i))->status();
@@ -277,33 +321,12 @@ class ClickControllerTest extends TestCase
         $this->assertContains(429, $statuses);
     }
 
-    public function test_request_without_allowed_origin_is_forbidden(): void
+    public function test_it_accepts_a_server_to_server_call_without_browser_headers(): void
     {
         $task = $this->makeTask();
 
-        // No Origin / Sec-Fetch headers - the browser gate rejects it.
-        $this->actingAsJwt($this->user)
-            ->postJson(self::BASE_URL, $this->clickPayload($task, 'clicked_collection_link'))
-            ->assertForbidden();
-    }
-
-    public function test_request_from_disallowed_origin_is_forbidden(): void
-    {
-        $task = $this->makeTask();
-
-        $this->actingAsJwt($this->user)
-            ->withHeaders([
-                'Origin' => 'https://evil.example',
-                'Sec-Fetch-Site' => 'cross-site',
-            ])
-            ->postJson(self::BASE_URL, $this->clickPayload($task, 'clicked_collection_link'))
-            ->assertForbidden();
-    }
-
-    public function test_request_from_allowed_browser_origin_is_accepted(): void
-    {
-        $task = $this->makeTask();
-
+        // A Next.js Server Action proxies the call, so there is no Origin or
+        // Sec-Fetch-* header - only the bearer JWT. That must be enough.
         $this->postClick($this->clickPayload($task, 'clicked_collection_link'))->assertOk();
     }
 
@@ -336,10 +359,6 @@ class ClickControllerTest extends TestCase
     private function postClick(array $payload)
     {
         return $this->actingAsJwt($this->user)
-            ->withHeaders([
-                'Origin' => self::ORIGIN,
-                'Sec-Fetch-Site' => 'cross-site',
-            ])
             ->postJson(self::BASE_URL, $payload);
     }
 }
