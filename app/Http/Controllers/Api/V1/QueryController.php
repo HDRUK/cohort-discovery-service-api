@@ -81,6 +81,7 @@ class QueryController extends Controller
                 ->with([
                     'tasks.collection.custodian.network',
                     'tasks.result',
+                    'tasks.latestRun',
                 ])
                 ->where('user_id', Auth::id())
                 ->whereHas('tasks', function ($query) {
