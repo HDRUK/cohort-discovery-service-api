@@ -233,8 +233,10 @@ class RuleBuilderService
         $demographics = null;
         if ($buildDemographics) {
             $payload = $this->nlpPayload ?? [];
-            $demographics = $this->demographicsBuilder->build($payload);
-            $this->stripDemographicSpans($this->demographicsBuilder->genderTextSpans($payload));
+            $demographics = $this->demographicsBuilder->build($payload, $collectionIds);
+            $this->stripDemographicSpans(
+                $this->demographicsBuilder->demographicTextSpans($payload, $collectionIds, ['Gender', 'Race'])
+            );
         }
 
         $this->applyNlpAgeConstraints($constraints, $warnings);
@@ -357,9 +359,10 @@ class RuleBuilderService
     }
 
     /**
-     * Drop demographic (gender) text spans from the clinical rule inputs so
-     * they are not treated as conditions. The whole span is removed — the rest
-     * of a gender span's fuzzy candidates are noise around the gender concept.
+     * Drop demographic (gender/race) text spans from the clinical rule inputs
+     * so they are not treated as conditions. The whole span is removed — the
+     * rest of a demographic span's fuzzy candidates are noise around the
+     * demographic concept.
      *
      * @param  array<string, true>  $spans  lowercased text spans to remove
      */
