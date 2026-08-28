@@ -61,7 +61,7 @@ class QueryBlockingTest extends TestCase
         $this->assertNotNull($disabledTask->failed_at);
         $this->assertNotNull($disabledTask->completed_at);
         $this->assertSame(
-            'Location data table missing',
+            'Location data not yet available',
             Result::where('task_id', $disabledTask->id)->value('message')
         );
     }
@@ -82,7 +82,7 @@ class QueryBlockingTest extends TestCase
             $task = Task::where('collection_id', $collection->id)->first();
             $this->assertNotNull($task->failed_at);
             $this->assertSame(
-                'Death data table missing',
+                'Death-record data not yet available',
                 Result::where('task_id', $task->id)->value('message')
             );
         }
@@ -107,7 +107,7 @@ class QueryBlockingTest extends TestCase
 
         $this->assertNotNull($task->failed_at);
         $this->assertSame(
-            'Location data table missing; Death data table missing',
+            'Location data not yet available; Death-record data not yet available',
             Result::where('task_id', $task->id)->value('message')
         );
     }
@@ -137,7 +137,7 @@ class QueryBlockingTest extends TestCase
 
         $this->assertNotNull($disabledTask->failed_at);
         $this->assertSame(
-            'Location data table missing',
+            'Location data not yet available',
             Result::where('task_id', $disabledTask->id)->value('message')
         );
     }
