@@ -10,9 +10,12 @@ use Firebase\JWT\Key;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Support\SystemClock;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Lcobucci\JWT\Validation\Constraint\LooseValidAt;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use App\Services\TokenSync\RoleSyncerService;
 use App\Services\TokenSync\CustodianSyncerService;
@@ -97,8 +100,20 @@ class DecodeJwt
                     $publicKey
                 );
 
-                /** @var \Lcobucci\JWT\UnencryptedToken $jwt */
-                $jwt = $jwtConfig->parser()->parse($token);
+                try {
+                    /** @var \Lcobucci\JWT\UnencryptedToken $jwt */
+                    $jwt = $jwtConfig->parser()->parse($token);
+
+                    // Parsing only proves it LOOKS like a JWT - the signature
+                    // and expiry checks prove it's one of ours and still warm
+                    $jwtConfig->validator()->assert(
+                        $jwt,
+                        new SignedWith(new Sha256(), $publicKey),
+                        new LooseValidAt(new SystemClock(), new \DateInterval('PT30S'))
+                    );
+                } catch (\Exception $e) {
+                    return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
+                }
 
                 $jwtUser = $jwt->claims()->get('user');
                 if (! $jwtUser) {

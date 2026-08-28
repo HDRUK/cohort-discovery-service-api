@@ -28,11 +28,11 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('v1/user', [UserController::class, 'getMe']);
 });
 
-Route::post('/v1/applications', [ApplicationController::class, 'store']);
-
 // turning off cbac:admin
 // - permissions to be fixed in DP-354
 Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
+    Route::post('/v1/applications', [ApplicationController::class, 'store']);
+
     Route::get('/v1/users', [UserController::class, 'index']);
     Route::get('/v1/users/{id}', [UserController::class, 'show']);
     Route::post('/v1/users/{id}/workgroup', [UserController::class, 'addToWorkgroup']);
@@ -191,10 +191,20 @@ Route::prefix('auth')->group(function () {
     Route::post('/logout', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'logout']);
 });
 
+// External OIDC single sign-on (standalone mode only; 404 otherwise).
+// State/nonce/PKCE live in cache, so no session middleware is needed.
+Route::prefix('auth/sso')->controller(\App\Http\Controllers\Api\V1\SsoController::class)->group(function () {
+    Route::get('/providers', 'providers');
+    Route::get('/{provider}/redirect', 'redirect')->middleware('throttle:polling');
+    Route::get('/{provider}/callback', 'callback')->middleware('throttle:polling');
+    Route::post('/exchange', 'exchange')->middleware('throttle:polling');
+});
+
 Route::get('/status', function (Request $request) {
     return response()->json([
         'message' => 'alive',
     ], 200);
 });
 
-Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch']);
+Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch'])
+    ->middleware(['throttle:polling', CollectionHostBasicAuth::class]);

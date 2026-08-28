@@ -89,7 +89,7 @@ class StandaloneDemoSeeder extends Seeder
                 'owner_type' => null,
                 'owner_id' => null,
                 'secret' => Str::random(40),
-                'name' => 'ProjectDaphne',
+                'name' => 'CohortDiscoveryService',
                 'provider' => 'users',
                 'redirect_uris' => [],
                 'grant_types' => ['personal_access'],
