@@ -4,6 +4,7 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
+use App\Support\GeoRadiusLocation;
 use Carbon\Carbon;
 
 class BunnyQueryContext implements QueryContextInterface
@@ -167,15 +168,7 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function makeGeoRadiusRule(mixed $location): ?array
     {
-        if (! is_array($location)) {
-            return null;
-        }
-
-        $lat = $location['lat'] ?? null;
-        $lon = $location['lon'] ?? null;
-        $radius = $location['radius'] ?? null;
-
-        if (! is_numeric($lat) || ! is_numeric($lon) || ! is_numeric($radius)) {
+        if (! GeoRadiusLocation::isValid($location)) {
             return null;
         }
 
@@ -184,7 +177,7 @@ class BunnyQueryContext implements QueryContextInterface
             'varcat'  => 'Location',
             'type'    => 'GEO_RADIUS',
             'oper'    => '=',
-            'value'   => $lat.'|'.$lon.'|'.$radius,
+            'value'   => $location['lat'].'|'.$location['lon'].'|'.$location['radius'],
         ];
     }
 
