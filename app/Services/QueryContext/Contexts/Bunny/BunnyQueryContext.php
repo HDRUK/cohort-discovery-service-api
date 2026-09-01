@@ -5,11 +5,19 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
+use Psr\Log\LoggerInterface;
 
 class BunnyQueryContext implements QueryContextInterface
 {
     private const BUNNY_NUM_LOWER_SENTINEL = -1_000_000_000;
     private const BUNNY_NUM_UPPER_SENTINEL = 1_000_000_000;
+
+    private $logger;
+
+    public function __construct(LoggerInterface $logger = null)
+    {
+        $this->logger = $logger;
+    }
 
     public function translate(array $definition, bool $flattenNestedGroups = true): array
     {
@@ -50,12 +58,12 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 "groups_oper" => 'OR',
                 "groups" => [
-                        [
-                            "rules_oper" => 'AND',
-                            "rules" => $rules
-                        ]
+                    [
+                        "rules_oper" => 'AND',
+                        "rules" => $rules
                     ]
-                ];
+                ]
+            ];
         }
 
         // A node combining groups that are each flat (no group nested inside a group)
@@ -97,7 +105,7 @@ class BunnyQueryContext implements QueryContextInterface
     /**
      * Build BUNNY groups from the demographics block. Each returned group is a
      * self-contained constraint that must hold for the whole cohort:
-     * - age & location -> always single rules, folded together into one AND group
+     * - age, location, death -> always single rules, folded together into one AND group
      * - sex  -> the selected gender concepts OR-ed together (own group)
      * - race -> the selected race concepts OR-ed together (own group)
      *
@@ -107,9 +115,13 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function buildDemographicGroups(array $demographics): array
     {
+        if ($this->logger !== null) {
+            $this->logger->info("testing" . json_encode($demographics) ?: '[]');
+        }
+
         $groups = [];
 
-        // AGE and LOCATION are always single rules (never an OR of alternatives),
+        // AGE, LOCATION, and DEATH are always single rules (never an OR of alternatives),
         // so they share one AND group rather than each getting a group of its own.
         $singleRules = [];
 
@@ -129,11 +141,20 @@ class BunnyQueryContext implements QueryContextInterface
             $singleRules[] = $locationRule;
         }
 
+        $deathRule = $this->makeDeathRule($demographics['death'] ?? null);
+        if ($deathRule !== null) {
+            $singleRules[] = $deathRule;
+        }
+
         if (! empty($singleRules)) {
             $groups[] = [
                 'rules_oper' => 'AND',
                 'rules' => $singleRules,
             ];
+        }
+
+        if ($this->logger !== null) {
+            $this->logger->info("testing2" . json_encode($singleRules) ?: '[]');
         }
 
         foreach (['sex', 'race'] as $key) {
@@ -184,8 +205,41 @@ class BunnyQueryContext implements QueryContextInterface
             'varcat'  => 'Location',
             'type'    => 'GEO_RADIUS',
             'oper'    => '=',
-            'value'   => $lat.'|'.$lon.'|'.$radius,
+            'value'   => $lat . '|' . $lon . '|' . $radius,
         ];
+    }
+
+    /**
+     * TBA
+     */
+    private function makeDeathRule(mixed $death): ?array
+    {
+        if (! is_string($death)) {
+            return null;
+        }
+
+
+        if ($death === 'Unknown/Alive') {
+            return [
+                'varname' => 'OMOP',
+                'varcat'  => 'Death',
+                'type'    => 'TEXT',
+                'oper'    => '!=',
+                'value'   => "",
+            ];
+        }
+
+        if ($death === 'Death recorded') {
+            return [
+                'varname' => 'OMOP',
+                'varcat'  => 'Death',
+                'type'    => 'TEXT',
+                'oper'    => '=',
+                'value'   => '',
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -255,7 +309,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -464,7 +518,7 @@ class BunnyQueryContext implements QueryContextInterface
      *       ],
      *    ],
      * ]
-    **/
+     **/
     private function convertToGroupwiseForm(array $node): array
     {
         $groupOperator = $this->groupOperator($node);
@@ -661,7 +715,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
@@ -729,7 +783,7 @@ class BunnyQueryContext implements QueryContextInterface
             'varcat' => 'Person',
             'type' => 'NUM',
             'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
+            'value' => $values[0] . '|' . $values[1],
         ];
         return $rule;
     }
@@ -767,7 +821,7 @@ class BunnyQueryContext implements QueryContextInterface
         if (is_null($lower) && is_null($upper)) {
             return null;
         }
-        return $lower !== null ? $lower.'|:AGE:Y' : '|'.$upper.':AGE:Y';
+        return $lower !== null ? $lower . '|:AGE:Y' : '|' . $upper . ':AGE:Y';
     }
 
     public function encodeBunnyTimeConstraint(
