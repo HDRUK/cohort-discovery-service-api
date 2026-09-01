@@ -115,9 +115,8 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function buildDemographicGroups(array $demographics): array
     {
-        if ($this->logger !== null) {
-            $this->logger->info("testing" . json_encode($demographics) ?: '[]');
-        }
+
+        $this->logger->info("Log demographics: " . json_encode($demographics));
 
         $groups = [];
 
@@ -153,9 +152,7 @@ class BunnyQueryContext implements QueryContextInterface
             ];
         }
 
-        if ($this->logger !== null) {
-            $this->logger->info("testing2" . json_encode($singleRules) ?: '[]');
-        }
+        $this->logger->info("Log single rules: " . json_encode($singleRules));
 
         foreach (['sex', 'race'] as $key) {
             $rules = [];
