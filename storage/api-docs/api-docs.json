@@ -971,6 +971,216 @@
                 }
             }
         },
+        "/api/v1/collections/{id}/health": {
+            "get": {
+                "tags": [
+                    "Collection Health"
+                ],
+                "summary": "Binned ping history for a collection host",
+                "description": "Collection hosts prove they are alive by polling for work. This endpoint\n     *         returns how many polls ('pings') arrived per bin, split by task type - 'a' for cohort\n     *         query jobs, 'b' for distributions jobs - plus a derived summary per task type.\n     *\n     *         Every bin carries an average pings-per-minute rate as well as the raw sum, so the\n     *         numbers mean the same thing at every bin width: 'per_minute' is the series to chart,\n     *         and the bin is a resolution control rather than a scale change. The final bin of a\n     *         range is in progress, so it is divided by the minutes elapsed so far rather than by\n     *         the full bin width.\n     *\n     *         The series is zero-filled across every bin in the range, so a silent host shows as\n     *         a run of zeros rather than as missing entries.\n     *\n     *         Two ways to pick the range. 'window' is a duration back from now and returns exactly\n     *         that many bins ending at the current, partial bin - so window=1h with minute bins is\n     *         60 bins. 'from'/'to' is an explicit span and returns every bin from the one containing\n     *         'from' to the one containing 'to', both inclusive. 'from' wins if both are supplied.\n     *\n     *         Requests whose bin and range would produce more than COLLECTION_HEALTH_MAX_BINS bins\n     *         are rejected with a 422 rather than served.",
+                "operationId": "2d099fa70dfa7f0f5e072eb1b997a093",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Collection integer id or UUID pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "c9f0f895-fb98-4ebd-9b1e-0f2a0b9a3f11"
+                        }
+                    },
+                    {
+                        "name": "bin",
+                        "in": "query",
+                        "description": "Bin width. Either a named unit - minute, hour, day, week, month - or a\n     *             positive multiple of m, h, d or w for a custom width, such as 10m, 6h, 2d or 4w.\n     *             Custom widths are aligned to an absolute grid, so a 10m bin always starts at :00,\n     *             :10, :20 and so on. Months have no multiple form. Defaults to minute.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "minute",
+                            "example": "10m"
+                        }
+                    },
+                    {
+                        "name": "window",
+                        "in": "query",
+                        "description": "Duration back from now: a positive integer followed by m, h, d or w. Defaults to 1h. Ignored when 'from' is supplied.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "1h",
+                            "example": "24h"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start of an explicit range (ISO-8601). Overrides 'window'.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-08-30T00:00:00Z"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End of an explicit range (ISO-8601). Defaults to now.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-09-01T00:00:00Z"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Binned ping history",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "collection_id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "bin": {
+                                                    "type": "string",
+                                                    "example": "minute"
+                                                },
+                                                "from": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T09:01:00Z"
+                                                },
+                                                "to": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:01:00Z"
+                                                },
+                                                "summary": {
+                                                    "description": "Keyed by task type, 'a' and 'b'",
+                                                    "properties": {
+                                                        "a": {
+                                                            "properties": {
+                                                                "last_ping_at": {
+                                                                    "type": "string",
+                                                                    "format": "date-time",
+                                                                    "example": "2026-09-01T09:59:41Z",
+                                                                    "nullable": true
+                                                                },
+                                                                "pings": {
+                                                                    "type": "integer",
+                                                                    "example": 706
+                                                                },
+                                                                "per_minute": {
+                                                                    "description": "Minute-weighted average pings per minute across the whole range: pings / minutes. Null only when no minute of the range has elapsed.",
+                                                                    "type": "number",
+                                                                    "format": "float",
+                                                                    "example": 11.767,
+                                                                    "nullable": true
+                                                                },
+                                                                "minutes": {
+                                                                    "description": "Total elapsed minutes covered by the range",
+                                                                    "type": "integer",
+                                                                    "example": 60
+                                                                },
+                                                                "silent_minutes": {
+                                                                    "description": "Minutes within the range that had zero pings",
+                                                                    "type": "integer",
+                                                                    "example": 3
+                                                                },
+                                                                "bins": {
+                                                                    "type": "integer",
+                                                                    "example": 60
+                                                                },
+                                                                "empty_bins": {
+                                                                    "type": "integer",
+                                                                    "example": 1
+                                                                },
+                                                                "longest_gap_bins": {
+                                                                    "type": "integer",
+                                                                    "example": 1
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "series": {
+                                                    "description": "Keyed by task type, 'a' and 'b'. Chart 'per_minute' - it is the same\n     *                         quantity at every bin width, so changing the bin re-shapes the line without\n     *                         re-scaling the axis. 'n' is the raw sum for that bin.",
+                                                    "properties": {
+                                                        "a": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "properties": {
+                                                                    "bin": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": "2026-09-01T09:59:00Z"
+                                                                    },
+                                                                    "n": {
+                                                                        "description": "Pings summed across the bin",
+                                                                        "type": "integer",
+                                                                        "example": 706
+                                                                    },
+                                                                    "minutes": {
+                                                                        "description": "Elapsed minutes this bin covers. Equals the bin width except for the final, in-progress bin, and is 0 for a bin wholly in the future.",
+                                                                        "type": "integer",
+                                                                        "example": 60
+                                                                    },
+                                                                    "silent_minutes": {
+                                                                        "description": "Minutes within the bin that had zero pings - the gap signal that stays meaningful at coarse bin widths",
+                                                                        "type": "integer",
+                                                                        "example": 3
+                                                                    },
+                                                                    "per_minute": {
+                                                                        "description": "n / minutes, rounded to 3dp. Null when minutes is 0.",
+                                                                        "type": "number",
+                                                                        "format": "float",
+                                                                        "example": 11.767,
+                                                                        "nullable": true
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not an admin, and not attached to the collection's custodian"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    },
+                    "422": {
+                        "description": "Validation error, or the bin and range would produce too many bins"
+                    },
+                    "500": {
+                        "description": "Unexpected error"
+                    }
+                }
+            }
+        },
         "/api/v1/collection-hosts": {
             "get": {
                 "tags": [
@@ -1127,6 +1337,414 @@
                     },
                     "404": {
                         "description": "Collection host not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/collections/{id}/task-history": {
+            "get": {
+                "tags": [
+                    "Collection Task History"
+                ],
+                "summary": "Task execution history for a collection",
+                "description": "What actually ran against this collection over a time range, and how it went.\n     *         One entry per task, newest first, each carrying every attempt made at it - the worker\n     *         that claimed it, when, and how long the attempt took.\n     *\n     *         Alongside the page is a summary computed over the whole range rather than the page, so\n     *         the totals do not change as you page through. It covers outcome counts, retry counts and\n     *         the distribution of run durations, including p50 and p95 - the tail is what makes a\n     *         collection feel slow, and one long outlier barely moves the mean.\n     *\n     *         Two ways to pick the range. 'window' is a duration back from now and defaults to 1d.\n     *         'from'/'to' is an explicit span, inclusive at both ends; 'from' overrides 'window'.\n     *\n     *         Task status is derived from the task's own timestamps: 'succeeded', 'failed',\n     *         'in_flight' (claimed, no result yet) or 'pending' (queued, never claimed). Filtering by\n     *         status or task type narrows the page and the summary together.\n     *\n     *         Restricted to admins and to users attached to the collection's custodian.",
+                "operationId": "1a2ac10901493a746b90221753374c3b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Collection integer id or UUID pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "c9f0f895-fb98-4ebd-9b1e-0f2a0b9a3f11"
+                        }
+                    },
+                    {
+                        "name": "window",
+                        "in": "query",
+                        "description": "Duration back from now: a positive integer followed by m, h, d or w. Defaults to 1d. Ignored when 'from' is supplied.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "1d",
+                            "example": "7d"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start of an explicit range (ISO-8601), inclusive. Overrides 'window'.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-08-30T00:00:00Z"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End of an explicit range (ISO-8601), inclusive. Defaults to now.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-09-01T00:00:00Z"
+                        }
+                    },
+                    {
+                        "name": "task_type",
+                        "in": "query",
+                        "description": "Restrict to one task type - 'a' for cohort query jobs, 'b' for distributions jobs",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "a",
+                                "b"
+                            ],
+                            "example": "a"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Restrict to one derived task status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "succeeded",
+                                "failed",
+                                "in_flight",
+                                "pending"
+                            ],
+                            "example": "failed"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Tasks per page, capped at 100",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task history for the range",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "collection_id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "from": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:01:00Z"
+                                                },
+                                                "to": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-02T10:01:00Z"
+                                                },
+                                                "summary": {
+                                                    "description": "Computed across the whole range, not just the page",
+                                                    "properties": {
+                                                        "tasks": {
+                                                            "type": "integer",
+                                                            "example": 42
+                                                        },
+                                                        "succeeded": {
+                                                            "type": "integer",
+                                                            "example": 38
+                                                        },
+                                                        "failed": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "in_flight": {
+                                                            "description": "Claimed by a host, no result yet",
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "pending": {
+                                                            "description": "Queued, never claimed",
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        },
+                                                        "task_types": {
+                                                            "description": "Task count keyed by task type",
+                                                            "properties": {
+                                                                "a": {
+                                                                    "type": "integer",
+                                                                    "example": 40
+                                                                },
+                                                                "b": {
+                                                                    "type": "integer",
+                                                                    "example": 2
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "attempts": {
+                                                            "properties": {
+                                                                "total": {
+                                                                    "description": "Attempts made across every task in the range",
+                                                                    "type": "integer",
+                                                                    "example": 47
+                                                                },
+                                                                "retried_tasks": {
+                                                                    "description": "Tasks that took more than one attempt",
+                                                                    "type": "integer",
+                                                                    "example": 4
+                                                                },
+                                                                "max": {
+                                                                    "type": "integer",
+                                                                    "example": 3
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "duration_ms": {
+                                                            "description": "Distribution of reported run durations. Every field but runs_measured is null when nothing in the range reported one.",
+                                                            "properties": {
+                                                                "runs_measured": {
+                                                                    "description": "Runs that reported a duration - fewer than the attempts made, because a timed-out attempt never reports one",
+                                                                    "type": "integer",
+                                                                    "example": 45
+                                                                },
+                                                                "min": {
+                                                                    "type": "integer",
+                                                                    "example": 120,
+                                                                    "nullable": true
+                                                                },
+                                                                "avg": {
+                                                                    "type": "integer",
+                                                                    "example": 1150,
+                                                                    "nullable": true
+                                                                },
+                                                                "p50": {
+                                                                    "type": "integer",
+                                                                    "example": 900,
+                                                                    "nullable": true
+                                                                },
+                                                                "p95": {
+                                                                    "type": "integer",
+                                                                    "example": 4200,
+                                                                    "nullable": true
+                                                                },
+                                                                "max": {
+                                                                    "type": "integer",
+                                                                    "example": 8800,
+                                                                    "nullable": true
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "tasks": {
+                                                    "description": "Paginated tasks, newest first",
+                                                    "properties": {
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 25
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 42
+                                                        },
+                                                        "data": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "properties": {
+                                                                    "pid": {
+                                                                        "type": "string",
+                                                                        "example": "c9f0f895-fb98-4ebd-9b1e-0f2a0b9a3f11"
+                                                                    },
+                                                                    "task_type": {
+                                                                        "type": "string",
+                                                                        "example": "a"
+                                                                    },
+                                                                    "status": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "succeeded",
+                                                                            "failed",
+                                                                            "in_flight",
+                                                                            "pending"
+                                                                        ],
+                                                                        "example": "succeeded"
+                                                                    },
+                                                                    "attempts": {
+                                                                        "type": "integer",
+                                                                        "example": 2
+                                                                    },
+                                                                    "created_at": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": "2026-09-02T09:58:00Z"
+                                                                    },
+                                                                    "attempted_at": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": "2026-09-02T09:58:04Z",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "completed_at": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": "2026-09-02T09:58:06Z",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "failed_at": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": null,
+                                                                        "nullable": true
+                                                                    },
+                                                                    "queued_for_ms": {
+                                                                        "description": "Created until first claimed - queue latency rather than execution time",
+                                                                        "type": "integer",
+                                                                        "example": 4000,
+                                                                        "nullable": true
+                                                                    },
+                                                                    "duration_ms": {
+                                                                        "description": "Duration of the attempt that settled the task",
+                                                                        "type": "integer",
+                                                                        "example": 1900,
+                                                                        "nullable": true
+                                                                    },
+                                                                    "total_duration_ms": {
+                                                                        "description": "Duration summed across every attempt",
+                                                                        "type": "integer",
+                                                                        "example": 3400,
+                                                                        "nullable": true
+                                                                    },
+                                                                    "query": {
+                                                                        "description": "The query this task ran. Null if the query has since been deleted.",
+                                                                        "properties": {
+                                                                            "pid": {
+                                                                                "type": "string",
+                                                                                "example": "a1b2c3d4-1111-2222-3333-444455556666"
+                                                                            },
+                                                                            "name": {
+                                                                                "type": "string",
+                                                                                "example": "T2D over 60",
+                                                                                "nullable": true
+                                                                            },
+                                                                            "query_type": {
+                                                                                "type": "string",
+                                                                                "example": "cohort",
+                                                                                "nullable": true
+                                                                            }
+                                                                        },
+                                                                        "type": "object",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "runs": {
+                                                                        "description": "Every attempt, oldest first",
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "properties": {
+                                                                                "attempt": {
+                                                                                    "type": "integer",
+                                                                                    "example": 1
+                                                                                },
+                                                                                "worker_id": {
+                                                                                    "type": "string",
+                                                                                    "example": "10.0.0.14",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "claimed_at": {
+                                                                                    "type": "string",
+                                                                                    "format": "date-time",
+                                                                                    "example": "2026-09-02T09:58:04Z",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "started_at": {
+                                                                                    "type": "string",
+                                                                                    "format": "date-time",
+                                                                                    "example": "2026-09-02T09:58:04Z",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "finished_at": {
+                                                                                    "type": "string",
+                                                                                    "format": "date-time",
+                                                                                    "example": "2026-09-02T09:58:06Z",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "duration_ms": {
+                                                                                    "type": "integer",
+                                                                                    "example": 1900,
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "result_status": {
+                                                                                    "description": "Null for an attempt that never reported, such as one timed out by task cleanup",
+                                                                                    "type": "string",
+                                                                                    "example": "ok",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "error_class": {
+                                                                                    "type": "string",
+                                                                                    "example": "Timeout",
+                                                                                    "nullable": true
+                                                                                },
+                                                                                "error_message": {
+                                                                                    "type": "string",
+                                                                                    "example": "No result received within 300 seconds.",
+                                                                                    "nullable": true
+                                                                                }
+                                                                            },
+                                                                            "type": "object"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not an admin, and not attached to the collection's custodian"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Unexpected error"
                     }
                 }
             }
@@ -3323,6 +3941,57 @@
                 },
                 "type": "object"
             },
+            "CollectionPingBucket": {
+                "title": "CollectionPingBucket",
+                "description": "Count of collection host polls (pings) within a single minute, per task type",
+                "required": [
+                    "collection_id",
+                    "task_type",
+                    "bucket_minute",
+                    "n"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "collection_id": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "task_type": {
+                        "description": "Task type polled for",
+                        "type": "string",
+                        "enum": [
+                            "a",
+                            "b"
+                        ],
+                        "example": "a"
+                    },
+                    "bucket_minute": {
+                        "description": "Start of the minute this row counts (UTC)",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-09-01T09:59:00Z"
+                    },
+                    "n": {
+                        "description": "Number of pings received in the minute",
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "first_ping_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-09-01T09:59:02Z"
+                    },
+                    "last_ping_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-09-01T09:59:57Z"
+                    }
+                },
+                "type": "object"
+            },
             "ConceptSet": {
                 "title": "ConceptSet",
                 "description": "A user-defined set of concepts (used for query building / cohort definitions).",
@@ -4394,8 +5063,16 @@
             "description": "API Endpoints for managing Collections"
         },
         {
+            "name": "Collection Health",
+            "description": "Liveness telemetry for collection hosts, derived from their task polling"
+        },
+        {
             "name": "CollectionHosts",
             "description": "API Endpoints for managing collection hosts"
+        },
+        {
+            "name": "Collection Task History",
+            "description": "Execution history of the tasks queued against a collection"
         },
         {
             "name": "ConceptSets",

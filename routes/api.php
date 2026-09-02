@@ -5,7 +5,9 @@ use App\Http\Controllers\Api\V1\ClickController;
 use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\CollectionController;
+use App\Http\Controllers\Api\V1\CollectionHealthController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
+use App\Http\Controllers\Api\V1\CollectionTaskHistoryController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CustodianNetworkController;
@@ -148,6 +150,8 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::get('/v1/collections/{pid}/details', [CollectionController::class, 'getCollectionDetails']);
     Route::get('/v1/collections/{pid}/concepts', [CollectionController::class, 'getCollectionConcepts']);
     Route::get('/v1/collections/{pid}/vocab-drift', [CollectionController::class, 'getCollectionVocabDrift']);
+    Route::get('/v1/collections/{id}/health', [CollectionHealthController::class, 'show']);
+    Route::get('/v1/collections/{id}/task-history', [CollectionTaskHistoryController::class, 'index']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
 
     Route::post('/v1/collection/{pid}/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun'])->whereUuid('pid');

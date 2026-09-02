@@ -12,6 +12,7 @@ use App\Models\ResultFile;
 use App\Models\Task;
 use App\Models\TaskRun;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Collections\CollectionPingRecorder;
 use App\Services\QueryContext\QueryContextManager;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -221,7 +222,8 @@ class TaskController extends Controller
         Request $request,
         string $collectionId,
         QueryContextManager $contextManager,
-        ActivityLogger $activityLogger
+        ActivityLogger $activityLogger,
+        CollectionPingRecorder $pingRecorder
     ): JsonResponse|Response {
         // note - it'd be better if BUNNY could give us a worker ID in the headers
         // - also could give us some information like the BUNNY version it is using (git sha?)
@@ -247,6 +249,7 @@ class TaskController extends Controller
         // Always log activity, regardless of if jobs exist
         $wasSuspended = $taskType === TaskType::A && $collection->isInState(Collection::STATUS_SUSPENDED);
         Collection::logActivity($collection, $taskType);
+        $pingRecorder->record($collection->id, $taskType);
         if ($wasSuspended) {
             $collection->setState(Collection::STATUS_ACTIVE);
             $this->slackNotifier->collectionBackOnline($collection);
