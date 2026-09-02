@@ -6,6 +6,7 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 use Psr\Log\LoggerInterface;
+use App\Enums\DeathStatus;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -207,7 +208,7 @@ class BunnyQueryContext implements QueryContextInterface
     }
 
     /**
-     * TBA
+     * Build a BUNNY rule from the demographics `death` value
      */
     private function makeDeathRule(mixed $death): ?array
     {
@@ -216,17 +217,17 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
 
-        if ($death === 'Unknown/Alive') {
+        if ($death === DeathStatus::UNKNOWN_OR_ALIVE) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
                 'type'    => 'TEXT',
                 'oper'    => '!=',
-                'value'   => "",
+                'value'   => '',
             ];
         }
 
-        if ($death === 'Death recorded') {
+        if ($death === DeathStatus::DEATH_RECORDED) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
