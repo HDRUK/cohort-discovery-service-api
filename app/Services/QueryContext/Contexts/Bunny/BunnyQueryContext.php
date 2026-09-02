@@ -212,12 +212,15 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function makeDeathRule(mixed $death): ?array
     {
+
+        $this->logger->info("Log DeathStatus enum: " . json_encode(DeathStatus::UNKNOWN_OR_ALIVE));
+
         if (! is_string($death)) {
             return null;
         }
 
 
-        if ($death === DeathStatus::UNKNOWN_OR_ALIVE) {
+        if ($death === DeathStatus::UNKNOWN_OR_ALIVE->value) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
@@ -227,7 +230,7 @@ class BunnyQueryContext implements QueryContextInterface
             ];
         }
 
-        if ($death === DeathStatus::DEATH_RECORDED) {
+        if ($death === DeathStatus::DEATH_RECORDED->value) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
