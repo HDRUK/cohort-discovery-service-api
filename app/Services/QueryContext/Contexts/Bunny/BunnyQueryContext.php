@@ -5,20 +5,12 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
-use Psr\Log\LoggerInterface;
 use App\Enums\DeathStatus;
 
 class BunnyQueryContext implements QueryContextInterface
 {
     private const BUNNY_NUM_LOWER_SENTINEL = -1_000_000_000;
     private const BUNNY_NUM_UPPER_SENTINEL = 1_000_000_000;
-
-    private $logger;
-
-    public function __construct(LoggerInterface $logger = null)
-    {
-        $this->logger = $logger;
-    }
 
     public function translate(array $definition, bool $flattenNestedGroups = true): array
     {
@@ -117,8 +109,6 @@ class BunnyQueryContext implements QueryContextInterface
     private function buildDemographicGroups(array $demographics): array
     {
 
-        $this->logger->info("Log demographics: " . json_encode($demographics));
-
         $groups = [];
 
         // AGE, LOCATION, and DEATH are always single rules (never an OR of alternatives),
@@ -152,8 +142,6 @@ class BunnyQueryContext implements QueryContextInterface
                 'rules' => $singleRules,
             ];
         }
-
-        $this->logger->info("Log single rules: " . json_encode($singleRules));
 
         foreach (['sex', 'race'] as $key) {
             $rules = [];
@@ -212,8 +200,6 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function makeDeathRule(mixed $death): ?array
     {
-
-        $this->logger->info("Log DeathStatus enum: " . json_encode(DeathStatus::UNKNOWN_OR_ALIVE));
 
         if (! is_string($death)) {
             return null;
@@ -310,7 +296,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -716,7 +702,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
