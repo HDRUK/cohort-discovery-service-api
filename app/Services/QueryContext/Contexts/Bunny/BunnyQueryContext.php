@@ -310,7 +310,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -716,7 +716,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
