@@ -38,7 +38,7 @@ use Illuminate\Support\Str;
  * )
  *
  * @property int $id
- * @property \App\Models\Query $submittedQuery
+ * @property ?\App\Models\Query $submittedQuery Null when the query has been soft-deleted
  * @property \App\Models\Collection $collection
  */
 class Task extends Model
@@ -104,6 +104,9 @@ class Task extends Model
         return $this->hasMany(ResultFile::class);
     }
 
+    /**
+     * @return HasMany<TaskRun, $this>
+     */
     public function runs(): HasMany
     {
         return $this->hasMany(TaskRun::class);

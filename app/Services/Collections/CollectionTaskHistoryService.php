@@ -116,21 +116,23 @@ class CollectionTaskHistoryService
 
         return [
             'pid' => $task->pid,
-            'task_type' => $task->task_type?->value,
+            'task_type' => $task->task_type->value,
             'status' => $this->taskStatus($task),
             'attempts' => (int) $task->attempts,
-            'created_at' => $task->created_at?->toIso8601ZuluString(),
+            'created_at' => $task->created_at->toIso8601ZuluString(),
             'attempted_at' => $task->attempted_at?->toIso8601ZuluString(),
             'completed_at' => $task->completed_at?->toIso8601ZuluString(),
             'failed_at' => $task->failed_at?->toIso8601ZuluString(),
             // How long the work sat before a host took it - queue latency rather
             // than execution time, and the number that moves when a host is down.
-            'queued_for_ms' => $task->created_at && $firstClaim
+            'queued_for_ms' => $firstClaim
                 ? max(0, (int) $task->created_at->diffInMilliseconds($firstClaim))
                 : null,
             // The attempt that settled the task. Null while a run is still open, or
             // when it was timed out without ever reporting.
-            'duration_ms' => $lastRun?->duration_ms !== null ? (int) $lastRun->duration_ms : null,
+            'duration_ms' => $lastRun !== null && $lastRun->duration_ms !== null
+                ? (int) $lastRun->duration_ms
+                : null,
             // Time spent across every attempt, so a task retried twice is not
             // reported as being as cheap as its final run.
             'total_duration_ms' => $measured->isEmpty() ? null : (int) $measured->sum('duration_ms'),
