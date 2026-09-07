@@ -5,13 +5,6 @@ namespace App\Enums;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
-/**
- * Bin granularity for the collection health endpoint.
- *
- * Ping counters are stored per minute; every coarser bin is a truncation of that,
- * computed in SQL. Each case owns its truncation, its step and its floor so the
- * three stay in step with each other.
- */
 enum HealthBin: string
 {
     case Minute = 'minute';
@@ -20,12 +13,6 @@ enum HealthBin: string
     case Week = 'week';
     case Month = 'month';
 
-    /**
-     * SQL truncation of `bucket_minute` down to this bin's start.
-     *
-     * `Week` uses a Monday-start date rather than YEARWEEK() so the bin label is a
-     * real timestamp the caller can chart, not an opaque "202635".
-     */
     public function sqlExpression(): string
     {
         return match ($this) {
@@ -37,24 +24,17 @@ enum HealthBin: string
         };
     }
 
-    /**
-     * Start of the bin containing $moment. Must agree with sqlExpression().
-     */
     public function floor(Carbon $moment): Carbon
     {
         return match ($this) {
             self::Minute => $moment->copy()->startOfMinute(),
             self::Hour => $moment->copy()->startOfHour(),
             self::Day => $moment->copy()->startOfDay(),
-            // Monday-start, matching MySQL's WEEKDAY() in sqlExpression().
             self::Week => $moment->copy()->startOfWeek(CarbonInterface::MONDAY),
             self::Month => $moment->copy()->startOfMonth(),
         };
     }
 
-    /**
-     * Start of the bin after the one beginning at $binStart.
-     */
     public function next(Carbon $binStart): Carbon
     {
         return match ($this) {
@@ -66,10 +46,6 @@ enum HealthBin: string
         };
     }
 
-    /**
-     * Number of bins spanned by $first..$last inclusive. Approximate for the
-     * variable-width cases, which is fine - it only feeds the size guardrail.
-     */
     public function countBetween(Carbon $first, Carbon $last): int
     {
         $diff = match ($this) {

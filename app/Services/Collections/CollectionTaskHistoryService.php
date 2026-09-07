@@ -10,35 +10,13 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Execution history for one collection: the tasks queued against it over a time
- * range, every attempt made at each, and how long those attempts took.
- *
- * Two reads of the same range. The page is Eloquent, because a task with its runs
- * is exactly the relationship Eloquent is good at. The summary is raw SQL, because
- * it has to describe the whole range rather than the page - loading every task to
- * total them in PHP would defeat the point of paginating.
- */
 class CollectionTaskHistoryService
 {
     public const DEFAULT_WINDOW = '1d';
 
-    /**
-     * Task-level outcomes, derived from the task's own timestamps rather than from
-     * task_runs.result_status - a run timed out by TaskCleanupJob never gets a
-     * result_status, so the task columns are the only complete signal.
-     */
     public const STATUSES = ['succeeded', 'failed', 'in_flight', 'pending'];
 
     /**
-     * Turn the request's window/from/to into a concrete range.
-     *
-     * Both ends are inclusive: this is a browsing endpoint, so `to=now` should
-     * return the task that was just queued rather than narrowly miss it.
-     *
-     * Throws ValidationException so callers can invoke this alongside
-     * $request->validate() and get a 422 rather than a 500.
-     *
      * @return array{from: Carbon, to: Carbon}
      *
      * @throws ValidationException
@@ -93,13 +71,9 @@ class CollectionTaskHistoryService
                 fn ($query, $status) => $query->whereRaw($this->statusPredicate($status, ''))
             )
             ->with([
-                // id is needed for the belongsTo to resolve; a soft-deleted query
-                // leaves the relation null, which presentTask allows for.
                 'submittedQuery:id,pid,name,query_type',
                 'runs' => fn ($query) => $query->orderBy('attempt'),
             ])
-            // created_at is second-granular and a burst can share one second, so the
-            // id tiebreaker is what stops rows shifting between pages.
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -123,18 +97,12 @@ class CollectionTaskHistoryService
             'attempted_at' => $task->attempted_at?->toIso8601ZuluString(),
             'completed_at' => $task->completed_at?->toIso8601ZuluString(),
             'failed_at' => $task->failed_at?->toIso8601ZuluString(),
-            // How long the work sat before a host took it - queue latency rather
-            // than execution time, and the number that moves when a host is down.
             'queued_for_ms' => $firstClaim
                 ? max(0, (int) $task->created_at->diffInMilliseconds($firstClaim))
                 : null,
-            // The attempt that settled the task. Null while a run is still open, or
-            // when it was timed out without ever reporting.
             'duration_ms' => $lastRun !== null && $lastRun->duration_ms !== null
                 ? (int) $lastRun->duration_ms
                 : null,
-            // Time spent across every attempt, so a task retried twice is not
-            // reported as being as cheap as its final run.
             'total_duration_ms' => $measured->isEmpty() ? null : (int) $measured->sum('duration_ms'),
             'query' => $task->submittedQuery ? [
                 'pid' => $task->submittedQuery->pid,
@@ -157,7 +125,6 @@ class CollectionTaskHistoryService
 
     private function taskStatus(Task $task): string
     {
-        // failed_at is checked first because a failure sets completed_at too.
         return match (true) {
             $task->failed_at !== null => 'failed',
             $task->completed_at !== null => 'succeeded',
@@ -166,13 +133,6 @@ class CollectionTaskHistoryService
         };
     }
 
-    /**
-     * The one definition of each status, in SQL, shared by the paginated list and
-     * both summary aggregates so a filtered page and its summary cannot disagree.
-     *
-     * $prefix qualifies the columns for the joined duration query. Statuses reach
-     * here only after Rule::in validation, so nothing user-supplied is interpolated.
-     */
     private function statusPredicate(string $status, string $prefix): string
     {
         return match ($status) {
@@ -208,8 +168,6 @@ class CollectionTaskHistoryService
             $statusSelects[] = 'SUM(('.$this->statusPredicate($status, '').")) AS {$status}";
         }
 
-        // Driven off the enum so a new task type shows up here rather than being
-        // silently absent from the breakdown.
         $typeSelects = [];
         foreach (TaskType::cases() as $taskType) {
             $typeSelects[] = "SUM(task_type = '{$taskType->value}') AS type_{$taskType->value}";
@@ -249,13 +207,6 @@ class CollectionTaskHistoryService
     }
 
     /**
-     * Run-duration distribution across the range.
-     *
-     * Percentiles use CUME_DIST rather than an average alone: a collection host's
-     * tail is what makes a query feel slow, and one 40-second outlier barely moves
-     * the mean. MySQL has no percentile aggregate, so the nearest-rank value is
-     * picked as the smallest duration whose cumulative distribution reaches p.
-     *
      * @param  array{from: Carbon, to: Carbon}  $range
      * @param  array{task_type?: string|null, status?: string|null}  $filters
      */
@@ -283,8 +234,6 @@ class CollectionTaskHistoryService
         );
 
         return [
-            // Runs that reported a duration - fewer than the attempts made, because
-            // an abandoned or timed-out attempt never reports one.
             'runs_measured' => (int) $row->runs_measured,
             'min' => $row->min_ms !== null ? (int) $row->min_ms : null,
             'avg' => $row->avg_ms !== null ? (int) $row->avg_ms : null,
@@ -295,9 +244,6 @@ class CollectionTaskHistoryService
     }
 
     /**
-     * The shared WHERE fragment for the summary aggregates, so they select over
-     * exactly the rows the paginated list does.
-     *
      * @param  array{from: Carbon, to: Carbon}  $range
      * @param  array{task_type?: string|null, status?: string|null}  $filters
      * @return array{0: string, 1: array<int, mixed>}

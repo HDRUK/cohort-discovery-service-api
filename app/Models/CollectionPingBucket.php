@@ -25,7 +25,6 @@ class CollectionPingBucket extends Model
 {
     public $table = 'collection_ping_buckets';
 
-    // first_ping_at / last_ping_at already carry the time information.
     public $timestamps = false;
 
     protected $fillable = [

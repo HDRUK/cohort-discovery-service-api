@@ -9,31 +9,11 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Reads the per-minute ping counters written by CollectionPingRecorder and
- * aggregates them into a binned series plus a derived health summary.
- *
- * Minute rows are the base resolution; coarser bins are truncations computed in
- * SQL, so there is no rollup table to keep in step.
- */
 class CollectionHealthService
 {
     public const DEFAULT_WINDOW = '1h';
 
     /**
-     * Turn the request's bin/window/from/to into a concrete list of bin starts.
-     *
-     * Two range modes, each taking the reading that is natural for how it is asked:
-     *
-     *  - window (default): the last N bins ending at the current, partial bin. So
-     *    `?window=1h` with minute bins is 60 bins, not 61 - the bin containing
-     *    `from` is excluded because the window is a duration, not a span.
-     *  - from/to: every bin from the one containing `from` to the one containing
-     *    `to`, both inclusive, because an explicit span means what it says.
-     *
-     * Throws ValidationException so callers can invoke this alongside
-     * $request->validate() and get a 422 rather than a 500.
-     *
      * @return array{bin: HealthBinWidth, bins: array<int, Carbon>, from: Carbon, to_exclusive: Carbon}
      *
      * @throws ValidationException
@@ -58,8 +38,6 @@ class CollectionHealthService
         } else {
             $windowStart = TimeWindow::subtract($last, $params['window'] ?? self::DEFAULT_WINDOW);
 
-            // First bin boundary strictly after the window start, so a whole-numbered
-            // window yields exactly that many bins.
             $first = $bin->floor($windowStart);
             if ($first->lessThanOrEqualTo($windowStart)) {
                 $first = $bin->next($first);
@@ -95,8 +73,6 @@ class CollectionHealthService
     }
 
     /**
-     * Binned ping series and summary for one collection, both task types.
-     *
      * @param  array{bin: HealthBinWidth, bins: array<int, Carbon>, from: Carbon, to_exclusive: Carbon}  $window
      */
     public function health(int $collectionId, array $window): array
@@ -106,8 +82,6 @@ class CollectionHealthService
         $series = [];
         $summary = [];
 
-        // Captured once so every bin in the response - and both task types - is
-        // measured against the same instant.
         $now = Carbon::now();
 
         foreach (TaskType::cases() as $taskType) {
@@ -130,17 +104,10 @@ class CollectionHealthService
     }
 
     /**
-     * One grouped query for both task types.
-     *
-     * COUNT(*) is minutes-with-pings, not pings: a bucket row only exists for a
-     * minute that had at least one, so counting rows within the group gives the
-     * silent-minute count for free at any bin width.
-     *
-     * @return array<string, array<string, object>> [task_type][bin start 'Y-m-d H:i:s'] => row
+     * @return array<string, array<string, object>>
      */
     private function aggregate(int $collectionId, HealthBinWidth $bin, Carbon $from, Carbon $toExclusive): array
     {
-        // The truncation comes from the resolved bin width, never from request input.
         $expression = $bin->sqlExpression();
 
         $rows = DB::select(
@@ -167,17 +134,6 @@ class CollectionHealthService
     }
 
     /**
-     * Zero-fill the series across every bin, normalise each bin to a per-minute
-     * rate, then derive the summary from it.
-     *
-     * The zero-filling is the point: a gap is only visible if the empty bins are
-     * present in the response.
-     *
-     * `per_minute` rather than the raw sum is what makes the series comparable
-     * across bin widths - the same host at the same cadence reads the same at
-     * `minute`, `10m` or `hour`, so changing the bin re-shapes the line without
-     * re-scaling the axis.
-     *
      * @param  array<string, object>  $rows
      * @param  array<int, Carbon>  $bins
      * @return array{0: array<int, array{bin: string, n: int, minutes: int, silent_minutes: int, per_minute: float|null}>, 1: array<string, mixed>}
@@ -200,9 +156,6 @@ class CollectionHealthService
 
             $binMinutes = $this->coveredMinutes($binStart, $bin, $now);
 
-            // A bucket row exists only for a minute that had a ping, so anything
-            // else inside the covered part of the bin was silence. The max guards
-            // clock skew landing a bucket in the not-yet-elapsed part of the bin.
             $binSilentMinutes = max(0, $binMinutes - (int) ($row->minutes_with_pings ?? 0));
 
             $series[] = [
@@ -238,8 +191,6 @@ class CollectionHealthService
             [
                 'last_ping_at' => $lastPingAt?->toIso8601ZuluString(),
                 'pings' => $pings,
-                // Minute-weighted over the range, not the mean of the bin rates, so
-                // a half-finished final bin cannot skew it.
                 'per_minute' => $minutes > 0 ? round($pings / $minutes, 3) : null,
                 'minutes' => $minutes,
                 'silent_minutes' => $silentMinutes,
@@ -250,18 +201,6 @@ class CollectionHealthService
         ];
     }
 
-    /**
-     * Minutes of this bin that have actually elapsed - the denominator for its
-     * per-minute rate.
-     *
-     * The final bin of a range is always in progress, so dividing it by the
-     * nominal width would drag a healthy host's last point toward zero and read
-     * as an outage. Dividing by the elapsed part keeps the line flat.
-     *
-     * Rounded up with a floor of one because storage is minute-granular: a bin ten
-     * seconds old has exactly one minute bucket in play, so `n / 1` is the honest
-     * rate, there is no divide-by-zero, and no spike from a fractional divisor.
-     */
     private function coveredMinutes(Carbon $binStart, HealthBinWidth $bin, Carbon $now): int
     {
         $nominal = $bin->minutesIn($binStart);
@@ -270,8 +209,6 @@ class CollectionHealthService
             return $nominal;
         }
 
-        // Entirely in the future - only reachable via a from/to range past now.
-        // No data can exist here, which is not the same fact as silence.
         if ($binStart->greaterThanOrEqualTo($now)) {
             return 0;
         }

@@ -21,12 +21,8 @@ class CollectionHealthControllerTest extends TestCase
     {
         parent::setUp();
 
-        // decode.jwt must run so the policy has a user to authorise.
         $this->enableMiddleware();
 
-        // There is no per-test transaction (see RefreshDatabaseLite), so clear the
-        // table this class owns. custodian_has_users is deliberately left alone -
-        // it is shared seeded state, and fresh factory users have no link anyway.
         DB::table('collection_ping_buckets')->truncate();
 
         $this->adminUser = User::factory()->create();
@@ -37,8 +33,6 @@ class CollectionHealthControllerTest extends TestCase
 
     public function tearDown(): void
     {
-        // Only some tests pin the clock, but leaking a fake now into the next test
-        // would be silent and confusing.
         Carbon::setTestNow();
 
         parent::tearDown();
@@ -51,10 +45,6 @@ class CollectionHealthControllerTest extends TestCase
         return $query === [] ? $url : $url.'?'.http_build_query($query);
     }
 
-    /**
-     * Insert a minute bucket directly - the recorder is exercised separately in
-     * TaskControllerTest, so these tests only care about the read path.
-     */
     private function bucket(Carbon $minute, TaskType $taskType, int $n): void
     {
         $start = $minute->copy()->startOfMinute();
@@ -83,7 +73,6 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertCount(60, $data['series']['a']);
         $this->assertCount(60, $data['series']['b']);
 
-        // The last bin is the current, partial minute.
         $this->assertSame(3, $data['series']['a'][59]['n']);
         $this->assertSame(0, $data['series']['a'][58]['n']);
 
@@ -92,7 +81,6 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertSame(59, $data['summary']['a']['empty_bins']);
         $this->assertNotNull($data['summary']['a']['last_ping_at']);
 
-        // Task type B was never polled.
         $this->assertSame(0, $data['summary']['b']['pings']);
         $this->assertSame(60, $data['summary']['b']['empty_bins']);
         $this->assertSame(60, $data['summary']['b']['longest_gap_bins']);
@@ -105,7 +93,6 @@ class CollectionHealthControllerTest extends TestCase
         $now = Carbon::now();
         $thisHour = $now->copy()->startOfHour();
 
-        // Two minutes inside the current hour, plus one in the previous hour.
         $this->bucket($thisHour->copy()->addMinutes(2), TaskType::A, 5);
         $this->bucket($thisHour->copy()->addMinutes(7), TaskType::A, 7);
         $this->bucket($thisHour->copy()->subMinutes(10), TaskType::A, 4);
@@ -134,9 +121,7 @@ class CollectionHealthControllerTest extends TestCase
         $response->assertOk();
         $series = $response->json('data.series.a');
 
-        // A minute bin is one minute wide, so the rate is the count.
         $this->assertSame(1, $series[59]['minutes']);
-        // Whole rates serialise without a fractional part, so compare by value.
         $this->assertEquals(3, $series[59]['per_minute']);
         $this->assertSame(0, $series[59]['silent_minutes']);
 
@@ -150,7 +135,6 @@ class CollectionHealthControllerTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_normalises_a_complete_hour_bin_to_a_per_minute_rate()
     {
-        // A whole hour in the past, so nothing about this bin is in progress.
         $hour = Carbon::now()->subHour()->startOfHour();
 
         $this->bucket($hour->copy()->addMinutes(2), TaskType::A, 5);
@@ -168,15 +152,9 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertSame(12, $point['n']);
         $this->assertSame(60, $point['minutes']);
         $this->assertSame(0.2, $point['per_minute']);
-        // Two of the sixty minutes had a ping.
         $this->assertSame(58, $point['silent_minutes']);
     }
 
-    /**
-     * The whole point of the rate: the same host over the same range reads the same
-     * at every resolution, so the bin control re-shapes the line without rescaling
-     * the axis.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_reports_the_same_rate_at_every_bin_width()
     {
@@ -205,17 +183,11 @@ class CollectionHealthControllerTest extends TestCase
         }
     }
 
-    /**
-     * The last bin of any range is in progress. Dividing it by the nominal width
-     * would drag a healthy host's final point toward zero - here to 1.0/min instead
-     * of the 10.0/min it is actually polling at.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_divides_the_in_progress_bin_by_the_minutes_elapsed_so_far()
     {
         Carbon::setTestNow('2026-09-02 10:05:30');
 
-        // 10 pings a minute for the five and a half minutes the hour bin has existed.
         foreach (range(0, 5) as $minute) {
             $this->bucket(Carbon::parse('2026-09-02 10:00:00')->addMinutes($minute), TaskType::A, 10);
         }
@@ -232,14 +204,9 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertSame(0, $point['silent_minutes']);
     }
 
-    /**
-     * At coarse widths `empty_bins` cannot see a gap shorter than the bin, so
-     * silent_minutes is the signal that survives the bin choice.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_counts_silent_minutes_inside_a_wide_bin()
     {
-        // Hour starts are on the ten-minute grid, and this one is complete.
         $slot = Carbon::now()->subHour()->startOfHour();
 
         foreach ([0, 3, 7] as $minute) {
@@ -259,15 +226,9 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertSame(10, $point['minutes']);
         $this->assertSame(0.6, $point['per_minute']);
         $this->assertSame(7, $point['silent_minutes']);
-        // The bin is not empty, so the bin-relative gap counters see nothing.
         $this->assertSame(0, $response->json('data.summary.a.empty_bins'));
     }
 
-    /**
-     * "No data can exist yet" is a different fact from "the host was silent", so a
-     * future bin reports a null rate rather than a zero one, and contributes nothing
-     * to the range average.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_reports_a_null_rate_for_bins_wholly_in_the_future()
     {
@@ -294,7 +255,6 @@ class CollectionHealthControllerTest extends TestCase
     {
         Carbon::setTestNow('2026-09-02 10:05:30');
 
-        // A complete hour at 1/min, then six minutes at 10/min.
         foreach (range(0, 5) as $step) {
             $this->bucket(Carbon::parse('2026-09-02 09:00:00')->addMinutes($step * 10), TaskType::A, 10);
             $this->bucket(Carbon::parse('2026-09-02 10:00:00')->addMinutes($step), TaskType::A, 10);
@@ -310,31 +270,22 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertEquals(1, $series[0]['per_minute']);
         $this->assertEquals(10, $series[1]['per_minute']);
 
-        // 120 pings over 66 elapsed minutes, not the 5.5 that averaging the two bin
-        // rates would give.
         $this->assertSame(120, $summary['pings']);
         $this->assertSame(66, $summary['minutes']);
         $this->assertSame(1.818, $summary['per_minute']);
     }
 
-    /**
-     * Custom widths snap to an absolute grid rather than to the requested `from`,
-     * so overlapping requests agree on bin boundaries. The counts also prove the
-     * grid SQL and the PHP floor land on the same instants.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_bins_at_a_custom_ten_minute_width()
     {
         $anchor = Carbon::now()->startOfHour();
 
-        // Two buckets in the :00 bin, one in the :10 bin.
         $this->bucket($anchor->copy()->addMinutes(2), TaskType::A, 3);
         $this->bucket($anchor->copy()->addMinutes(9), TaskType::A, 4);
         $this->bucket($anchor->copy()->addMinutes(11), TaskType::A, 5);
 
         $response = $this->actingAsJwt($this->adminUser)->getJson($this->url($this->collection, [
             'bin' => '10m',
-            // Deliberately off-grid at both ends.
             'from' => $anchor->copy()->addMinutes(5)->toIso8601ZuluString(),
             'to' => $anchor->copy()->addMinutes(12)->toIso8601ZuluString(),
         ]));
@@ -381,10 +332,6 @@ class CollectionHealthControllerTest extends TestCase
         $this->assertCount(24, $response->json('data.series.a'));
     }
 
-    /**
-     * Multi-week bins grid off the Monday before the epoch, so they keep the
-     * Monday-start convention of single-week bins.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_lines_up_sql_and_php_boundaries_for_multi_week_bins()
     {
@@ -407,12 +354,6 @@ class CollectionHealthControllerTest extends TestCase
         }
     }
 
-    /**
-     * The SQL truncation in HealthBin::sqlExpression() and the PHP boundary in
-     * HealthBin::floor() have to agree, or rows land in a bin the zero-fill never
-     * generated and the series silently reads as all zeros. Week and month are the
-     * two where they are least obviously the same expression.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_lines_up_sql_and_php_boundaries_for_week_bins()
     {
@@ -470,7 +411,6 @@ class CollectionHealthControllerTest extends TestCase
 
         $response->assertOk();
 
-        // An explicit span is inclusive at both ends: 3 hour bins, not 24.
         $this->assertCount(3, $response->json('data.series.a'));
     }
 
@@ -479,8 +419,6 @@ class CollectionHealthControllerTest extends TestCase
     {
         $now = Carbon::now()->startOfMinute();
 
-        // Bins are now-6m .. now inclusive (7 bins). Pings at -6, -5, -1 and 0
-        // leave a run of three empty bins at -4, -3, -2.
         foreach ([6, 5, 1, 0] as $minutesAgo) {
             $this->bucket($now->copy()->subMinutes($minutesAgo), TaskType::A, 2);
         }
@@ -533,10 +471,6 @@ class CollectionHealthControllerTest extends TestCase
             ->assertJsonValidationErrors('bin');
     }
 
-    /**
-     * Months are the one variable-width unit, so there is no multiple form - and a
-     * zero or negative multiple is not a width at all.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_rejects_bin_widths_it_cannot_express_in_minutes()
     {

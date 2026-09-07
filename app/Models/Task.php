@@ -38,7 +38,7 @@ use Illuminate\Support\Str;
  * )
  *
  * @property int $id
- * @property ?\App\Models\Query $submittedQuery Null when the query has been soft-deleted
+ * @property ?\App\Models\Query $submittedQuery
  * @property \App\Models\Collection $collection
  */
 class Task extends Model

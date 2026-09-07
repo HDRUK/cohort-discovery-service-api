@@ -185,9 +185,6 @@ class CollectionTaskHistoryController extends Controller
         ActivityLogger $activityLogger,
         CollectionTaskHistoryService $history
     ): JsonResponse {
-        // Both of these must stay outside the try, or the catch-all below turns a
-        // 422 into a 500. resolveRange throws ValidationException for the same
-        // reason $request->validate() does - a malformed window, or from after to.
         $validated = $request->validate([
             'window' => ['sometimes', 'string', 'max:16'],
             'from' => ['sometimes', 'date'],

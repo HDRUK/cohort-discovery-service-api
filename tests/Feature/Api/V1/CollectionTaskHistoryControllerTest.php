@@ -25,15 +25,11 @@ class CollectionTaskHistoryControllerTest extends TestCase
     {
         parent::setUp();
 
-        // decode.jwt must run so the policy has a user to authorise.
         $this->enableMiddleware();
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole('admin');
 
-        // Nothing is truncated here - there is no per-test transaction (see
-        // RefreshDatabaseLite) and the seeders own the tasks table. A fresh
-        // collection cannot have seeded tasks, so scoping by it is enough.
         $this->collection = Collection::factory()->bunny()->create();
         $this->query = Query::factory()->create();
     }
@@ -78,7 +74,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         return $task;
     }
 
-    /** A task that ran once, cleanly, in $durationMs. */
     private function succeededTask(int $durationMs, array $attributes = []): Task
     {
         $createdAt = $attributes['created_at'] ?? Carbon::now();
@@ -106,7 +101,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $data = $response->json('data');
 
         $this->assertSame($this->collection->id, $data['collection_id']);
-        // The default window is one day back from now.
         $this->assertSame(
             Carbon::parse($data['to'])->subDay()->toIso8601ZuluString(),
             $data['from']
@@ -142,7 +136,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $this->assertSame(1, $response->json('data.tasks.total'));
         $this->assertSame((string) $inside->pid, $response->json('data.tasks.data.0.pid'));
 
-        // A wider window reaches the older one.
         $response = $this->actingAsJwt($this->adminUser)->getJson($this->url(['window' => '7d']));
 
         $response->assertOk();
@@ -155,7 +148,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $createdAt = Carbon::now()->subDays(5)->startOfSecond();
         $task = $this->succeededTask(400, ['created_at' => $createdAt]);
 
-        // Both ends land exactly on the task, which an inclusive range must include.
         $response = $this->actingAsJwt($this->adminUser)->getJson($this->url([
             'from' => $createdAt->toIso8601ZuluString(),
             'to' => $createdAt->toIso8601ZuluString(),
@@ -229,18 +221,14 @@ class CollectionTaskHistoryControllerTest extends TestCase
 
         $this->assertSame((string) $task->pid, $item['pid']);
         $this->assertSame(2, $item['attempts']);
-        // Runs are oldest first, so the shape reads as a retry history.
         $this->assertCount(2, $item['runs']);
         $this->assertSame([1, 2], array_column($item['runs'], 'attempt'));
         $this->assertSame('failed', $item['runs'][0]['result_status']);
         $this->assertSame('WorkerResultError', $item['runs'][0]['error_class']);
         $this->assertSame('datasource unreachable', $item['runs'][0]['error_message']);
 
-        // The settling attempt, not the first one.
         $this->assertSame(2000, $item['duration_ms']);
-        // Both attempts, so a retried task is not reported as cheap as its last run.
         $this->assertSame(3000, $item['total_duration_ms']);
-        // Created until first claimed.
         $this->assertSame(4000, $item['queued_for_ms']);
 
         $attempts = $response->json('data.summary.attempts');
@@ -256,7 +244,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
 
         $this->succeededTask(100);
 
-        // A failure sets completed_at as well as failed_at, so failed has to win.
         $this->task([
             'attempted_at' => $now,
             'completed_at' => $now,
@@ -264,10 +251,8 @@ class CollectionTaskHistoryControllerTest extends TestCase
             'attempts' => 1,
         ]);
 
-        // Claimed, no result yet.
         $this->task(['attempted_at' => $now, 'attempts' => 1]);
 
-        // Queued, never claimed.
         $this->task();
 
         $response = $this->actingAsJwt($this->adminUser)->getJson($this->url(['per_page' => 100]));
@@ -286,10 +271,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $this->assertSame(['failed', 'in_flight', 'pending', 'succeeded'], $statuses);
     }
 
-    /**
-     * TaskCleanupJob records a timed-out attempt with an error_class but no
-     * result_status and no duration, so neither can be assumed present.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_handles_a_run_that_never_reported_a_status_or_duration()
     {
@@ -319,7 +300,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $this->assertNull($item['runs'][0]['result_status']);
         $this->assertSame('Timeout', $item['runs'][0]['error_class']);
 
-        // The attempt happened, but there is no duration to describe.
         $this->assertSame(1, $response->json('data.summary.attempts.total'));
         $this->assertSame(0, $response->json('data.summary.duration_ms.runs_measured'));
         $this->assertNull($response->json('data.summary.duration_ms.p95'));
@@ -341,16 +321,10 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $this->assertSame(100, $durations['min']);
         $this->assertSame(5000, $durations['max']);
         $this->assertSame(1200, $durations['avg']);
-        // Nearest-rank: the smallest duration whose cumulative share reaches p.
         $this->assertSame(300, $durations['p50']);
-        // The outlier the mean barely notices is exactly what p95 is for.
         $this->assertSame(5000, $durations['p95']);
     }
 
-    /**
-     * The summary describes the range, so it must not shrink to the page - that is
-     * the whole reason it is computed in SQL rather than from the loaded models.
-     */
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_summarises_the_whole_range_not_just_the_page()
     {
@@ -393,7 +367,6 @@ class CollectionTaskHistoryControllerTest extends TestCase
         $this->assertSame(1, $response->json('data.tasks.total'));
         $this->assertSame((string) $failed->pid, $response->json('data.tasks.data.0.pid'));
 
-        // The summary narrows with it, rather than describing the unfiltered range.
         $this->assertSame(1, $response->json('data.summary.tasks'));
         $this->assertSame(1, $response->json('data.summary.failed'));
         $this->assertSame(0, $response->json('data.summary.succeeded'));

@@ -136,12 +136,7 @@ class CollectionHealthController extends Controller
         ActivityLogger $activityLogger,
         CollectionHealthService $health
     ): JsonResponse {
-        // Both of these must stay outside the try, or the catch-all below turns a
-        // 422 into a 500. resolveWindow throws ValidationException for the same
-        // reason $request->validate() does - bad range, or too many bins.
         $validated = $request->validate([
-            // Shape only - HealthBinWidth::parse owns the vocabulary and throws the
-            // same ValidationException for anything it cannot resolve.
             'bin' => ['sometimes', 'string', 'max:16'],
             'window' => ['sometimes', 'string', 'max:16'],
             'from' => ['sometimes', 'date'],

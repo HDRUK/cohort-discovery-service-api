@@ -912,8 +912,6 @@ class TaskControllerTest extends TestCase
         $collection = Collection::factory()->bunny()->create();
 
         $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
-        // Observers are enabled here, so CollectionObserver has already seeded two
-        // type-B tasks - this poll gets handed one rather than a 204.
         $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}.b")->assertOk();
 
         $buckets = DB::table('collection_ping_buckets')
@@ -939,7 +937,6 @@ class TaskControllerTest extends TestCase
 
         $this->assertCount(1, $buckets);
         $this->assertSame(3, (int) $buckets[0]->n);
-        // first_ping_at is pinned to the first ping in the minute; last_ping_at moves.
         $this->assertSame($first->first_ping_at, $buckets[0]->first_ping_at);
     }
 
