@@ -5,14 +5,6 @@ namespace App\Support;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Parsing for the `window` query parameter shared by the collection telemetry
- * endpoints - a duration back from a given moment, written as a positive integer
- * followed by a unit.
- *
- * Lives here rather than on either service so the endpoints cannot drift apart on
- * what a window is, or on the message they reject a bad one with.
- */
 class TimeWindow
 {
     /**

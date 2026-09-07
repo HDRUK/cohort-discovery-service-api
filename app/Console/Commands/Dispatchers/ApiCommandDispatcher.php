@@ -11,7 +11,6 @@ class ApiCommandDispatcher
         'distributions-collector' => \App\Console\Commands\DistributionsCollector::class,
         'collection-no-activity-monitor' => \App\Console\Commands\CollectionNoActivityMonitor::class,
         'task-cleanup-job' => \App\Console\Commands\TaskCleanup::class,
-        'prune-collection-ping-buckets' => \App\Console\Commands\PruneCollectionPingBuckets::class,
     ];
 
     public function run(string $command, array $input)

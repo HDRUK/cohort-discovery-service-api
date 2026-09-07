@@ -56,19 +56,6 @@ return [
 
     'collection_inactivity_minutes' => env('COLLECTION_INACTIVITY_MINUTES', 30),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Collection ping health
-    |--------------------------------------------------------------------------
-    | Retention for the per-minute ping counters in `collection_ping_buckets`,
-    | swept by PruneCollectionPingBucketsJob. Raise it if you need the coarser
-    | `week` / `month` bins on the health endpoint to cover full periods.
-    |
-    | The max-bins ceiling bounds a single health request, so an over-wide range
-    | at a fine bin (e.g. minute bins over 90 days) is rejected, not served.
-    |
-    */
-    'collection_ping_retention_days' => (int)env('COLLECTION_PING_RETENTION_DAYS', 30),
     'collection_health_max_bins' => (int)env('COLLECTION_HEALTH_MAX_BINS', 2000),
 
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),

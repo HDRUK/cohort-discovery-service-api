@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\ValidatableModel;
 use App\Enums\QueryType;
 use App\Enums\TaskType;
+use App\Services\Collections\CollectionPingRecorder;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
@@ -450,6 +451,8 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         if (!$log->wasRecentlyCreated) {
             $log->touch();
         }
+
+        app(CollectionPingRecorder::class)->record($c->id, $type);
     }
 
     public function scopeVisibleToUser(Builder $query, User $user): void
