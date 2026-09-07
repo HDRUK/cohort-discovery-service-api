@@ -5,6 +5,7 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -199,33 +200,26 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function makeDeathRule(mixed $death): ?array
     {
+        $value = $death['value'] ?? null;
 
-        if (! is_object($death)) {
+        if (! is_array($death) || !isset($value)) {
+            return null;
+        }
+
+        $isValid = in_array($value, [0, 1], true);
+        if (!$isValid) {
+            Log::error('Got bad value. Death value must be either 0 or 1');
             return null;
         }
 
 
-        if ($death->value === 0) {
-            return [
-                'varname' => 'OMOP',
-                'varcat'  => 'Death',
-                'type'    => 'TEXT',
-                'oper'    => '!=',
-                'value'   => '',
-            ];
-        }
-
-        if ($death->value === 1) {
-            return [
-                'varname' => 'OMOP',
-                'varcat'  => 'Death',
-                'type'    => 'TEXT',
-                'oper'    => '=',
-                'value'   => '',
-            ];
-        }
-
-        return null;
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Death',
+            'type'    => 'TEXT',
+            'oper'    => $value == 0 ? '!=' : '=',
+            'value'   => '',
+        ];
     }
 
     /**
@@ -295,7 +289,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -701,7 +695,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
