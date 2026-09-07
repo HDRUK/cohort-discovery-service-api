@@ -800,6 +800,8 @@ class TaskControllerTest extends TestCase
 
         \DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Task::truncate();
+        TaskRun::truncate();
+        Result::truncate();
         \DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $queryA = Query::factory()->create();
@@ -891,7 +893,7 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
 
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
 
         $bucket = DB::table('collection_ping_buckets')
             ->where('collection_id', $collection->id)
@@ -911,8 +913,8 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
 
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}.b")->assertOk();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}.b")->assertSuccessful();
 
         $buckets = DB::table('collection_ping_buckets')
             ->where('collection_id', $collection->id)
@@ -927,11 +929,11 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
 
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
         $first = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->first();
 
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
 
         $buckets = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->get();
 
@@ -945,7 +947,7 @@ class TaskControllerTest extends TestCase
     {
         $collection = Collection::factory()->bunny()->create();
 
-        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
 
         $this->assertDatabaseHas('collection_activity_logs', [
             'collection_id' => $collection->id,
