@@ -8,7 +8,6 @@ use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Tests\TestCase;
-use App\Enums\DeathStatus;
 
 class QueryContextTest extends TestCase
 {
@@ -1019,7 +1018,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(3, $result['groups']);
 
         $values = array_map(
-            fn ($group) => $group['rules'][0]['value'],
+            fn($group) => $group['rules'][0]['value'],
             $result['groups']
         );
         $this->assertEquals(['3955320', '18|65', '8507'], $values);
@@ -1071,7 +1070,7 @@ class QueryContextTest extends TestCase
         // (Moderna AND CloseContact) OR (Pfizer AND CloseContact), then AND age.
         // This genuine OR-of-ANDs cannot append a further AND level, so it must
         // distribute the age rule into each of the two AND groups.
-        $andGroup = fn (int $left, int $right) => [
+        $andGroup = fn(int $left, int $right) => [
             'rules' => [
                 ['rule' => ['concept' => ['concept_id' => $left, 'category' => 'Drug', 'children' => []]], 'exclude' => false],
                 ['combinator' => 'and'],
@@ -1262,7 +1261,7 @@ class QueryContextTest extends TestCase
                 'age' => [0, 120],
                 'sex' => [],
                 'race' => [],
-                'death' => DeathStatus::UNKNOWN_OR_ALIVE->value
+                'death' => 0
             ],
         ];
 
@@ -1294,7 +1293,7 @@ class QueryContextTest extends TestCase
                 'sex' => [],
                 'race' => [],
                 'location' => [],
-                'death' => DeathStatus::DEATH_RECORDED->value
+                'death' => 1
             ],
         ];
 

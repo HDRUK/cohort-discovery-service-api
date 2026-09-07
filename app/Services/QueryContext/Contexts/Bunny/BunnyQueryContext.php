@@ -5,7 +5,7 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
-use App\Enums\DeathStatus;
+use Illuminate\Support\Facades\Log;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -201,12 +201,12 @@ class BunnyQueryContext implements QueryContextInterface
     private function makeDeathRule(mixed $death): ?array
     {
 
-        if (! is_string($death)) {
+        if (! is_object($death)) {
             return null;
         }
 
 
-        if ($death === DeathStatus::UNKNOWN_OR_ALIVE->value) {
+        if ($death === 0) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
@@ -216,7 +216,7 @@ class BunnyQueryContext implements QueryContextInterface
             ];
         }
 
-        if ($death === DeathStatus::DEATH_RECORDED->value) {
+        if ($death === 1) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
