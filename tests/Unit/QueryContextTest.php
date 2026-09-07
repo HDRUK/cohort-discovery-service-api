@@ -1018,7 +1018,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(3, $result['groups']);
 
         $values = array_map(
-            fn($group) => $group['rules'][0]['value'],
+            fn ($group) => $group['rules'][0]['value'],
             $result['groups']
         );
         $this->assertEquals(['3955320', '18|65', '8507'], $values);
@@ -1070,7 +1070,7 @@ class QueryContextTest extends TestCase
         // (Moderna AND CloseContact) OR (Pfizer AND CloseContact), then AND age.
         // This genuine OR-of-ANDs cannot append a further AND level, so it must
         // distribute the age rule into each of the two AND groups.
-        $andGroup = fn(int $left, int $right) => [
+        $andGroup = fn (int $left, int $right) => [
             'rules' => [
                 ['rule' => ['concept' => ['concept_id' => $left, 'category' => 'Drug', 'children' => []]], 'exclude' => false],
                 ['combinator' => 'and'],

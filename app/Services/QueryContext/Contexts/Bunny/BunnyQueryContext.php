@@ -5,7 +5,6 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -206,7 +205,7 @@ class BunnyQueryContext implements QueryContextInterface
         }
 
 
-        if ($death === 0) {
+        if ($death->value === 0) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
@@ -216,7 +215,7 @@ class BunnyQueryContext implements QueryContextInterface
             ];
         }
 
-        if ($death === 1) {
+        if ($death->value === 1) {
             return [
                 'varname' => 'OMOP',
                 'varcat'  => 'Death',
@@ -296,7 +295,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -702,7 +701,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
