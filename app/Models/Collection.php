@@ -441,17 +441,6 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             );
     }
 
-    public static function logActivity(Collection $c, TaskType $type): void
-    {
-        $log = CollectionActivityLog::firstOrCreate([
-            'collection_id' => $c->id,
-            'task_type' => $type->value,
-         ]);
-        if (!$log->wasRecentlyCreated) {
-            $log->touch();
-        }
-    }
-
     public function scopeVisibleToUser(Builder $query, User $user): void
     {
         if ($user->roles()->where('name', 'admin')->exists()) {

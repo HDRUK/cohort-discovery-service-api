@@ -14,6 +14,7 @@ use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 use Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -883,6 +884,78 @@ class TaskControllerTest extends TestCase
             fn ($request) =>
             str_contains($request->body(), $collection->name)
         );
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_a_ping_bucket_for_task_type_a_when_polled(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+
+        $bucket = DB::table('collection_ping_buckets')
+            ->where('collection_id', $collection->id)
+            ->first();
+
+        $this->assertNotNull($bucket);
+        $this->assertSame('a', $bucket->task_type);
+        $this->assertSame(1, (int) $bucket->n);
+        $this->assertSame(
+            Carbon::now()->startOfMinute()->toDateTimeString(),
+            Carbon::parse($bucket->bucket_minute)->toDateTimeString()
+        );
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_task_type_b_pings_in_a_separate_bucket(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}.b")->assertOk();
+
+        $buckets = DB::table('collection_ping_buckets')
+            ->where('collection_id', $collection->id)
+            ->pluck('n', 'task_type');
+
+        $this->assertSame(1, (int) $buckets['a']);
+        $this->assertSame(1, (int) $buckets['b']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_increments_one_bucket_for_repeat_polls_in_the_same_minute(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $first = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->first();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+
+        $buckets = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->get();
+
+        $this->assertCount(1, $buckets);
+        $this->assertSame(3, (int) $buckets[0]->n);
+        $this->assertSame($first->first_ping_at, $buckets[0]->first_ping_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_both_the_activity_log_and_the_ping_bucket_for_one_poll(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertNoContent();
+
+        $this->assertDatabaseHas('collection_activity_logs', [
+            'collection_id' => $collection->id,
+            'task_type' => 'a',
+        ]);
+
+        $this->assertDatabaseHas('collection_ping_buckets', [
+            'collection_id' => $collection->id,
+            'task_type' => 'a',
+        ]);
     }
 
 }
