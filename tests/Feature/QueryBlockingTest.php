@@ -142,6 +142,83 @@ class QueryBlockingTest extends TestCase
         );
     }
 
+    public function test_demographic_death_query_fails_collection_missing_death(): void
+    {
+        Feature::activate('query-builder-use-location');
+        Feature::activate('query-builder-use-death');
+
+        $enabled = $this->makeCollection(['death_enabled' => true]);
+        $disabled = $this->makeCollection(['death_enabled' => false]);
+
+        // No clinical Death concept - the death filter lives only in the
+        // demographics block.
+        $definition = [
+            'rules' => [$this->leafNode('Drug')],
+            'demographics' => ['death' => ['label' => 'Recorded', 'value' => 1]],
+        ];
+
+        $this->submit($definition, [$enabled, $disabled]);
+
+        $enabledTask = Task::where('collection_id', $enabled->id)->first();
+        $disabledTask = Task::where('collection_id', $disabled->id)->first();
+
+        $this->assertNull($enabledTask->failed_at);
+        $this->assertDatabaseMissing('results', ['task_id' => $enabledTask->id]);
+
+        $this->assertNotNull($disabledTask->failed_at);
+        $this->assertNotNull($disabledTask->completed_at);
+        $this->assertSame(
+            'Death-record data not yet available',
+            Result::where('task_id', $disabledTask->id)->value('message')
+        );
+    }
+
+    public function test_demographic_death_not_recorded_also_requires_death_table(): void
+    {
+        Feature::activate('query-builder-use-location');
+        Feature::activate('query-builder-use-death');
+
+        // A value of 0 still emits a rule against the death table, so it still
+        // requires the collection to expose it.
+        $collection = $this->makeCollection(['death_enabled' => false]);
+
+        $definition = [
+            'rules' => [$this->leafNode('Drug')],
+            'demographics' => ['death' => ['label' => 'Not recorded', 'value' => 0]],
+        ];
+
+        $this->submit($definition, [$collection]);
+
+        $task = Task::where('collection_id', $collection->id)->first();
+
+        $this->assertNotNull($task->failed_at);
+        $this->assertSame(
+            'Death-record data not yet available',
+            Result::where('task_id', $task->id)->value('message')
+        );
+    }
+
+    public function test_null_demographic_death_is_not_blocked(): void
+    {
+        Feature::activate('query-builder-use-location');
+        Feature::activate('query-builder-use-death');
+
+        // An untouched death filter emits no rule, so it must not block.
+        $collection = $this->makeCollection(['death_enabled' => false]);
+
+        $definition = [
+            'rules' => [$this->leafNode('Drug')],
+            'demographics' => ['death' => null],
+        ];
+
+        $this->submit($definition, [$collection]);
+
+        $task = Task::where('collection_id', $collection->id)->first();
+
+        $this->assertNull($task->failed_at);
+        $this->assertDatabaseMissing('results', ['task_id' => $task->id]);
+    }
+
     public function test_legacy_region_code_location_shape_is_not_blocked(): void
     {
         Feature::activate('query-builder-use-location');
