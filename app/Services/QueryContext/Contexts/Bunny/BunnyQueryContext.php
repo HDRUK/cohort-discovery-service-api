@@ -208,7 +208,7 @@ class BunnyQueryContext implements QueryContextInterface
 
         $isValid = in_array($value, [0, 1], true);
         if (!$isValid) {
-            Log::error('Got bad value. Death value must be either 0 or 1');
+            Log::error('BunnyQueryContext@makeDeathRule - error: Death value must be either 0 or 1, but got ' . $value . ' instead.');
             return null;
         }
 
@@ -217,7 +217,7 @@ class BunnyQueryContext implements QueryContextInterface
             'varname' => 'OMOP',
             'varcat'  => 'Death',
             'type'    => 'TEXT',
-            'oper'    => $value == 0 ? '!=' : '=',
+            'oper'    => $value === 0 ? '!=' : '=',
             'value'   => '',
         ];
     }
