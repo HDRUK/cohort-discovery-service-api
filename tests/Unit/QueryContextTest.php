@@ -7,7 +7,6 @@ use App\Services\QueryContext\Contexts\Bunny\BunnyQueryContext;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class QueryContextTest extends TestCase
@@ -1255,7 +1254,7 @@ class QueryContextTest extends TestCase
         $this->assertArrayHasKey('query', $beaconResult);
     }
 
-    public function test_demographics_death_unknown_or_alive_produces_negated_death_rule(): void
+    public function test_demographics_death_not_recorded_produces_negated_death_rule(): void
     {
         $input = [
             'rules' => [],
@@ -1264,7 +1263,7 @@ class QueryContextTest extends TestCase
                 'age' => [0, 120],
                 'sex' => [],
                 'race' => [],
-                'death' => ['value' => 0, 'label' => "Unknown/Alive"]
+                'death' => ['value' => 0]
             ],
         ];
 
@@ -1296,7 +1295,7 @@ class QueryContextTest extends TestCase
                 'sex' => [],
                 'race' => [],
                 'location' => [],
-                'death' => ['value' => 1, 'label' => "Death recorded"]
+                'death' => ['value' => 1]
             ],
         ];
 
