@@ -23,7 +23,9 @@ class BunnyQueryContext implements QueryContextInterface
         // and constrain the whole cohort. They are absent from the groupwise
         // form above, so fold them in here as a global AND.
         $demographicGroups = $this->buildDemographicGroups($definition['demographics'] ?? []);
+        # []
         if (empty($demographicGroups)) {
+            # 
             return $clinical;
         }
 
@@ -121,7 +123,6 @@ class BunnyQueryContext implements QueryContextInterface
             && count($age) === 2
             && is_numeric($age[0])
             && is_numeric($age[1])
-            && ! $this->isOpenAgeBand($age)
         ) {
             $singleRules[] = $this->makeLeafAgeFilter(['value' => $age]);
         }
@@ -220,16 +221,6 @@ class BunnyQueryContext implements QueryContextInterface
             'oper'    => $value === 0 ? '!=' : '=',
             'value'   => '',
         ];
-    }
-
-    /**
-     * An age band covering the full configured demographic age range is no
-     * constraint at all, so it should not emit a rule.
-     */
-    private function isOpenAgeBand(array $age): bool
-    {
-        return (int) $age[0] <= config('system.demographic_age_min')
-            && (int) $age[1] >= config('system.demographic_age_max');
     }
 
     private function makeConceptRule(string $conceptId, string $category, bool $isExcluded = false): array
