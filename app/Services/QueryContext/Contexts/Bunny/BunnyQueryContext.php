@@ -23,9 +23,7 @@ class BunnyQueryContext implements QueryContextInterface
         // and constrain the whole cohort. They are absent from the groupwise
         // form above, so fold them in here as a global AND.
         $demographicGroups = $this->buildDemographicGroups($definition['demographics'] ?? []);
-        # []
         if (empty($demographicGroups)) {
-            # 
             return $clinical;
         }
 
