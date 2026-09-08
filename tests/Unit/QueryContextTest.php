@@ -7,6 +7,7 @@ use App\Services\QueryContext\Contexts\Bunny\BunnyQueryContext;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class QueryContextTest extends TestCase
@@ -473,7 +474,7 @@ class QueryContextTest extends TestCase
             $this->assertInstanceOf(
                 QueryContextInterface::class,
                 $context,
-                'Context is not an instance of QueryContextInterface: '.get_class($context)
+                'Context is not an instance of QueryContextInterface: ' . get_class($context)
             );
         }
     }
@@ -1018,7 +1019,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(3, $result['groups']);
 
         $values = array_map(
-            fn ($group) => $group['rules'][0]['value'],
+            fn($group) => $group['rules'][0]['value'],
             $result['groups']
         );
         $this->assertEquals(['3955320', '18|65', '8507'], $values);
@@ -1070,7 +1071,7 @@ class QueryContextTest extends TestCase
         // (Moderna AND CloseContact) OR (Pfizer AND CloseContact), then AND age.
         // This genuine OR-of-ANDs cannot append a further AND level, so it must
         // distribute the age rule into each of the two AND groups.
-        $andGroup = fn (int $left, int $right) => [
+        $andGroup = fn(int $left, int $right) => [
             'rules' => [
                 ['rule' => ['concept' => ['concept_id' => $left, 'category' => 'Drug', 'children' => []]], 'exclude' => false],
                 ['combinator' => 'and'],
@@ -1250,5 +1251,87 @@ class QueryContextTest extends TestCase
         $beaconResult = $this->manager->handle(self::INPUT_QUERY, QueryContextType::Beacon);
         $this->assertIsArray($beaconResult);
         $this->assertArrayHasKey('query', $beaconResult);
+    }
+
+    public function test_demographics_death_unknown_or_alive_produces_negated_death_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'death' => ['value' => 0, 'label' => "Unknown/Alive"]
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // Full [0, 120] age band is unconstrained, so only the death group remains.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $deathGroup = $result['groups'][0];
+        $this->assertEquals('AND', $deathGroup['rules_oper']);
+        $this->assertCount(1, $deathGroup['rules']);
+
+        $rule = $deathGroup['rules'][0];
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('Death', $rule['varcat']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('!=', $rule['oper']);
+        $this->assertEquals('', $rule['value']);
+    }
+
+    public function test_demographic_death_recorded_produces_death_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'location' => [],
+                'death' => ['value' => 1, 'label' => "Death recorded"]
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // Full [0, 120] age band is unconstrained, so only the death group remains.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $deathGroup = $result['groups'][0];
+        $this->assertEquals('AND', $deathGroup['rules_oper']);
+        $this->assertCount(1, $deathGroup['rules']);
+
+        $rule = $deathGroup['rules'][0];
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('Death', $rule['varcat']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('', $rule['value']);
+    }
+
+    public function test_demographics_death_ignored_when_unrecognised_value(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'death' => "wrong"
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('OR', $result['groups_oper']);
+        $this->assertCount(0, $result['groups']);
     }
 }
