@@ -1255,7 +1255,7 @@ class QueryContextTest extends TestCase
         $this->assertArrayHasKey('query', $beaconResult);
     }
 
-    public function test_demographics_death_unknown_or_alive_produces_negated_death_rule(): void
+    public function test_demographics_death_not_recorded_produces_negated_death_rule(): void
     {
         $input = [
             'rules' => [],
@@ -1264,7 +1264,7 @@ class QueryContextTest extends TestCase
                 'age' => [0, 120],
                 'sex' => [],
                 'race' => [],
-                'death' => ['value' => 0, 'label' => "Unknown/Alive"]
+                'death' => ['value' => 0, 'label' => "Not recorded"]
             ],
         ];
 
@@ -1296,7 +1296,7 @@ class QueryContextTest extends TestCase
                 'sex' => [],
                 'race' => [],
                 'location' => [],
-                'death' => ['value' => 1, 'label' => "Death recorded"]
+                'death' => ['value' => 1, 'label' => "Recorded"]
             ],
         ];
 
