@@ -7,7 +7,6 @@ use App\Services\QueryContext\Contexts\Bunny\BunnyQueryContext;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class QueryContextTest extends TestCase
@@ -1264,7 +1263,7 @@ class QueryContextTest extends TestCase
                 'age' => [0, 120],
                 'sex' => [],
                 'race' => [],
-                'death' => ['value' => 0, 'label' => "Not recorded"]
+                'death' => ['value' => 0]
             ],
         ];
 
@@ -1296,7 +1295,7 @@ class QueryContextTest extends TestCase
                 'sex' => [],
                 'race' => [],
                 'location' => [],
-                'death' => ['value' => 1, 'label' => "Recorded"]
+                'death' => ['value' => 1]
             ],
         ];
 
