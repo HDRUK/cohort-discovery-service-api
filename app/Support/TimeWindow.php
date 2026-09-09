@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\HealthBin;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -18,13 +19,6 @@ class TimeWindow
             ]);
         }
 
-        $amount = (int) $matches[1];
-
-        return match ($matches[2]) {
-            'm' => $moment->copy()->subMinutes($amount),
-            'h' => $moment->copy()->subHours($amount),
-            'd' => $moment->copy()->subDays($amount),
-            default => $moment->copy()->subWeeks($amount),
-        };
+        return HealthBin::fromSuffix($matches[2])->subtract($moment, (int) $matches[1]);
     }
 }

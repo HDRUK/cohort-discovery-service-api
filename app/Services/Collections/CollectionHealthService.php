@@ -22,7 +22,7 @@ class CollectionHealthService
     {
         $bin = HealthBinWidth::parse($params['bin'] ?? null);
 
-        $to = isset($params['to']) ? Carbon::parse($params['to'])->utc() : Carbon::now();
+        $to = isset($params['to']) ? Carbon::parse($params['to'])->utc() : Carbon::now('UTC');
         $last = $bin->floor($to);
 
         if (isset($params['from'])) {
@@ -82,7 +82,7 @@ class CollectionHealthService
         $series = [];
         $summary = [];
 
-        $now = Carbon::now();
+        $now = Carbon::now('UTC');
 
         foreach (TaskType::cases() as $taskType) {
             [$series[$taskType->value], $summary[$taskType->value]] = $this->buildSeries(
