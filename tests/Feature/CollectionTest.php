@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Models\WorkgroupHasCollection;
+use App\Services\Collections\CollectionPollRecorder;
 use App\Services\QueryContext\QueryContextType;
 use App\Models\CollectionActivityLog;
 use App\Enums\TaskType;
@@ -942,7 +943,7 @@ class CollectionTest extends TestCase
 
         Carbon::setTestNow($originalUpdatedAt->copy()->addMinute());
 
-        Collection::logActivity($collection, TaskType::A);
+        app(CollectionPollRecorder::class)->record($collection, TaskType::A);
 
         $updatedALog = CollectionActivityLog::where([
             'collection_id' => $collection->id,
