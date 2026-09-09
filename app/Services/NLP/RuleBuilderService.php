@@ -8,6 +8,7 @@ use App\Services\NLP\Constraints\ConstraintAccumulator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
+use Illuminate\Support\Facades\Log;
 
 /**
  * RuleBuilderService parses a natural language query string into a structured array of rules.
@@ -25,9 +26,7 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
-    public function __construct(private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder())
-    {
-    }
+    public function __construct(private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder()) {}
 
     private function normaliseImplicitOrScope(string $query): string
     {
@@ -94,7 +93,7 @@ class RuleBuilderService
             if ($ignoreSynthetic) {
                 $candidates = array_values(array_filter(
                     $candidates,
-                    fn ($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
+                    fn($c) => ($c['attributes']['all_synthetic'] ?? 0) === 0
                 ));
 
                 //temporary fix to at least have one blank candidate if we are removing
@@ -233,6 +232,8 @@ class RuleBuilderService
         $demographics = null;
         if ($buildDemographics) {
             $payload = $this->nlpPayload ?? [];
+            Log::info('Payload: ' . json_encode($payload));
+            dump($payload);
             $demographics = $this->demographicsBuilder->build($payload);
             $this->stripDemographicSpans($this->demographicsBuilder->genderTextSpans($payload));
         }
@@ -244,8 +245,8 @@ class RuleBuilderService
             $rootGroups = $this->nlpRootGroups;
             foreach ($rootGroups as $i => $rootGroup) {
                 $this->nlpEntities = collect($rootGroup['entities'] ?? [])
-                    ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
-                    ->map(fn ($g) => $g->values()->all())
+                    ->groupBy(fn($e) => strtolower(trim($e['text'] ?? '')))
+                    ->map(fn($g) => $g->values()->all())
                     ->toArray();
                 $this->nlpGroups = $rootGroup['groups'] ?? [];
 
@@ -296,6 +297,8 @@ class RuleBuilderService
             // Query-scope age is surfaced in the demographics block, not as an
             // inline rule node.
             $constraintPayload['ageConstraint'] = [null, null];
+
+            $constraintPayload['deathConstraint'] = null;
         } elseif ($ageConstraint !== [null, null]) {
             $ageFilter = $this->makeAgeFilterNode($ageConstraint);
             $constraintPayload['ageConstraint'] = [null, null];
@@ -369,12 +372,12 @@ class RuleBuilderService
             return;
         }
 
-        $keep = fn (array $entity) => ! isset($spans[strtolower(trim($entity['text'] ?? ''))]);
+        $keep = fn(array $entity) => ! isset($spans[strtolower(trim($entity['text'] ?? ''))]);
 
         // nlpEntities is keyed by the lowercased entity text.
         $this->nlpEntities = array_filter(
             $this->nlpEntities ?? [],
-            fn ($candidates, $text) => ! isset($spans[$text]),
+            fn($candidates, $text) => ! isset($spans[$text]),
             ARRAY_FILTER_USE_BOTH
         );
 
@@ -410,6 +413,16 @@ class RuleBuilderService
 
     private function applyConstraints(string $query, ConstraintAccumulator $constraints, array &$warnings): void
     {
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // Death test
+        //////////////////////////////////////////////////////////////////////////////////////////
+        if (preg_match('/\b(dead|death|deceased|alive|living)\b/i', $query)) {
+
+            $warnings[] = 'Death status interpretation will be added soon, please use the demographics rule builder for now :)';
+        }
+
+
         //////////////////////////////////////////////////////////////////////////////////////////
         // Ambiguous persons
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -529,8 +542,8 @@ class RuleBuilderService
         $operator = $nlpGroup['operator'] ?? 'and';
 
         $groupedByText = collect($entities)
-            ->groupBy(fn ($e) => strtolower(trim($e['text'] ?? '')))
-            ->map(fn ($group) => $group->values()->all())
+            ->groupBy(fn($e) => strtolower(trim($e['text'] ?? '')))
+            ->map(fn($group) => $group->values()->all())
             ->toArray();
 
         $groupRules = [];
@@ -542,8 +555,7 @@ class RuleBuilderService
 
             usort(
                 $candidates,
-                fn ($a, $b) =>
-                ($b['attributes']['match_score'] ?? 0) <=> ($a['attributes']['match_score'] ?? 0)
+                fn($a, $b) => ($b['attributes']['match_score'] ?? 0) <=> ($a['attributes']['match_score'] ?? 0)
             );
 
             $primary = $candidates[0];
@@ -608,7 +620,7 @@ class RuleBuilderService
     {
         return array_values(array_filter(
             $warnings,
-            fn ($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Age ')
+            fn($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Age ')
         ));
     }
 
@@ -616,7 +628,7 @@ class RuleBuilderService
     {
         return array_values(array_filter(
             $warnings,
-            fn ($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Recorded ')
+            fn($warning) => ! is_string($warning) || ! str_starts_with($warning, 'Recorded ')
         ));
     }
 

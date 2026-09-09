@@ -3,6 +3,7 @@
 namespace App\Services\NLP;
 
 use Generator;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Builds the demographics block (age band, sex, race) from an NLP /extract
@@ -20,15 +21,19 @@ class DemographicsBuilder
      * - this is a placeholder
      * - will likely expand out to a controlled list that gets passed
      * - and/or look up from the latest_distributions table
-    */
+     */
     private const GENDER_CONCEPTS = [8507 => 'Male', 8532 => 'Female'];
 
     public function build(array $extract): array
     {
+
+        Log::info("Extract: ", $extract);
+
         return [
             'age' => $this->collapseAge($extract['age_constraints'] ?? []),
             'sex' => $this->collectSex($extract),
             'race' => [], #to-do
+            'death' => $this->collectDeath($extract['death_constraints'] ?? null),
         ];
     }
 
@@ -129,15 +134,50 @@ class DemographicsBuilder
 
         $constraints = array_filter(
             $constraints,
-            fn ($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
+            fn($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
         );
 
-        $mins = array_filter(array_column($constraints, 'min'), fn ($v) => $v !== null);
-        $maxs = array_filter(array_column($constraints, 'max'), fn ($v) => $v !== null);
+        $mins = array_filter(array_column($constraints, 'min'), fn($v) => $v !== null);
+        $maxs = array_filter(array_column($constraints, 'max'), fn($v) => $v !== null);
 
         $lo = $mins ? max($mins) : $ageMin;
         $hi = $maxs ? min($maxs) : $ageMax;
 
         return [max($ageMin, (int) $lo), min($ageMax, (int) $hi)];
+    }
+
+    /**
+     * @return mixed<int, array{value: int, label: string}>
+     */
+    private function collectDeath(array $extract): mixed
+    {
+
+
+        Log::info('Death extract: ' . json_encode($extract));
+
+        $death = null;
+
+
+        return null
+        // return ['value' => 0, 'label' => 'Not recorded'];
+
+        // foreach ($this->iterEntities($extract) as $entity) {
+        //     if (! $this->isGenderEntity($entity)) {
+        //         continue;
+        //     }
+
+        //     $conceptId = $entity['attributes']['concept_id'];
+        //     if (isset($sex[$conceptId])) {
+        //         continue;
+        //     }
+
+        //     $sex[$conceptId] = [
+        //         'concept_id' => $conceptId,
+        //         'name' => self::GENDER_CONCEPTS[$conceptId],
+        //         'category' => $entity['attributes']['domain_id'] ?? 'Gender',
+        //     ];
+        // }
+
+        // return array_values($sex);
     }
 }
