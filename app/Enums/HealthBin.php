@@ -13,6 +13,17 @@ enum HealthBin: string
     case Week = 'week';
     case Month = 'month';
 
+    public static function fromSuffix(string $suffix): self
+    {
+        return match ($suffix) {
+            'm' => self::Minute,
+            'h' => self::Hour,
+            'd' => self::Day,
+            'w' => self::Week,
+            default => throw new \ValueError("\"{$suffix}\" is not a valid bin suffix - use m, h, d or w."),
+        };
+    }
+
     public function sqlExpression(): string
     {
         return match ($this) {
@@ -43,6 +54,17 @@ enum HealthBin: string
             self::Day => $binStart->copy()->addDay(),
             self::Week => $binStart->copy()->addWeek(),
             self::Month => $binStart->copy()->addMonth(),
+        };
+    }
+
+    public function subtract(Carbon $moment, int $amount): Carbon
+    {
+        return match ($this) {
+            self::Minute => $moment->copy()->subMinutes($amount),
+            self::Hour => $moment->copy()->subHours($amount),
+            self::Day => $moment->copy()->subDays($amount),
+            self::Week => $moment->copy()->subWeeks($amount),
+            self::Month => $moment->copy()->subMonths($amount),
         };
     }
 

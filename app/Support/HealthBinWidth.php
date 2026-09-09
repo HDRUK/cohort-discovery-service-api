@@ -6,7 +6,7 @@ use App\Enums\HealthBin;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
-final class HealthBinWidth
+class HealthBinWidth
 {
     private const EPOCH = '1970-01-01 00:00:00';
 
@@ -38,13 +38,7 @@ final class HealthBinWidth
             ]);
         }
 
-        $unit = match ($matches[2]) {
-            'm' => HealthBin::Minute,
-            'h' => HealthBin::Hour,
-            'd' => HealthBin::Day,
-            'w' => HealthBin::Week,
-        };
-
+        $unit = HealthBin::fromSuffix($matches[2]);
         $every = (int) $matches[1];
 
         return new self($unit, $every, $every === 1 ? $unit->value : $value);
