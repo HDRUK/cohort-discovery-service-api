@@ -58,7 +58,8 @@ class QuerySubmissionService
                 $categories = $this->inspector->categoriesUsed($data['definition']);
                 $usesLocation = in_array(MissingDataTable::Location->value, $categories, true)
                     || $this->inspector->usesDemographicLocation($data['definition']);
-                $usesDeath = in_array(MissingDataTable::Death->value, $categories, true);
+                $usesDeath = in_array(MissingDataTable::Death->value, $categories, true)
+                    || $this->inspector->usesDemographicDeath($data['definition']);
                 $locationFeatureOn = Feature::active('query-builder-use-location');
                 $deathFeatureOn = Feature::active('query-builder-use-death');
 
