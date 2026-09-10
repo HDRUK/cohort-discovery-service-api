@@ -21,6 +21,44 @@ class QueryDefinitionInspector
     }
 
     /**
+     * Whether the demographics block carries a geo-radius location filter, i.e.
+     * a `location` object of the shape {lat, lon, radius} with numeric values.
+     * This mirrors BunnyQueryContext::makeGeoRadiusRule — it is the only
+     * location shape that actually emits a rule against the location table, so
+     * it is the only one that requires the collection to expose that table.
+     * The legacy region-code array shape emits no rule and is ignored here.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    public function usesDemographicLocation(array $definition): bool
+    {
+        $location = $definition['demographics']['location'] ?? null;
+        if (! is_array($location)) {
+            return false;
+        }
+
+        return is_numeric($location['lat'] ?? null)
+            && is_numeric($location['lon'] ?? null)
+            && is_numeric($location['radius'] ?? null);
+    }
+
+    /**
+     * Mirrors BunnyQueryContext::makeDeathRule - only a `value` of 0 or 1 emits
+     * a rule against the death table, so only those require it.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    public function usesDemographicDeath(array $definition): bool
+    {
+        $death = $definition['demographics']['death'] ?? null;
+        if (! is_array($death)) {
+            return false;
+        }
+
+        return in_array($death['value'] ?? null, [0, 1], true);
+    }
+
+    /**
      * @param  array<string, mixed>  $node
      * @param  array<int, string>  $categories
      */
