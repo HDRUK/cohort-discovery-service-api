@@ -1,3 +1,21 @@
+## [1.14.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.13.0...v1.14.0) (2026-09-10)
+
+### ✨ Features
+
+* **DP-1021:** miss latest run in full endpoint (#319) ([83cd27d](https://github.com/HDRUK/cohort-discovery-service-api/commit/83cd27d0693d2e2b5f349406e862317bf203f8c4)), closes [DP-1021](undefinedDP-1021) [endpoint](undefineddpoint)
+* **DP-1068:** geo-radius location filter in demographics block (#313) ([1f349fa](https://github.com/HDRUK/cohort-discovery-service-api/commit/1f349fa626e703c3db093f936f66bb9de023951e)), closes [DP-1068](undefinedDP-1068)
+* **DP-1071:** fixes for location (#317) ([9c4fa39](https://github.com/HDRUK/cohort-discovery-service-api/commit/9c4fa39b82c2edd9da16ed05d0c2a9a5fe94bd04))
+* **DP-1095:** reword missing data table failure reasons (#320) ([2964597](https://github.com/HDRUK/cohort-discovery-service-api/commit/29645979f7e873b527827cef305f0a70708d25c7)), closes [DP-1095](undefinedDP-1095)
+* **DP-1107:** add query-builder-use-race feature flag (#321) ([52e41d9](https://github.com/HDRUK/cohort-discovery-service-api/commit/52e41d918fb6f19abd3d92dadccfe0b29daed5c2)), closes [DP-1107](undefinedDP-1107)
+* **DP-1129:** remove unnecessary labels from Death in tests (#329) ([e2eba53](https://github.com/HDRUK/cohort-discovery-service-api/commit/e2eba5307bcdb53356fd45010718352c5324fa20)), closes [DP-1129](undefinedDP-1129)
+* **DP-891:** Query Translation for Death Filter (#322) ([bf9eff5](https://github.com/HDRUK/cohort-discovery-service-api/commit/bf9eff546fad21f05262e7ac7d8ce47d7cdea353)), closes [DP-891](undefinedDP-891)
+* **DP-946:** Implement a click-through controller  (#318) ([5633ff7](https://github.com/HDRUK/cohort-discovery-service-api/commit/5633ff79a6cc9dbda6ccadb3f69345c6a40d118d)), closes [DP-946](undefinedDP-946)
+
+### 🐛 Bug Fixes
+
+* **DP-1127:** Remove open age band to stop producing bad queries (#327) ([605cb59](https://github.com/HDRUK/cohort-discovery-service-api/commit/605cb595e9b1824f7c0f0ecd0567b96596b2fd78)), closes [DP-1127](undefinedDP-1127)
+* **DP-1131:** block demographic death queries on death-disabled collections (#330) ([48dfe04](https://github.com/HDRUK/cohort-discovery-service-api/commit/48dfe04a14499b2ac7ae7136f44c4317d1c6183d)), closes [DP-1131](undefinedDP-1131)
+
 ## [1.13.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.12.0...v1.13.0) (2026-08-21)
 
 ### ✨ Features
