@@ -6,7 +6,7 @@ use Generator;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Builds the demographics block (age band, sex, race) from an NLP /extract
+ * Builds the demographics block (age band, sex, race, and death) from an NLP /extract
  * response.
  *
  * The NLP service does not build demographics itself — it returns clinical
@@ -147,37 +147,24 @@ class DemographicsBuilder
     }
 
     /**
-     * @return mixed<int, array{value: int, label: string}>
+     * Currently, can either be 0 to represent no death recorded,
+     * 1 to represent death recorded, or null for "any"
+     * 
+     * @return ?array
      */
-    private function collectDeath(array $extract): mixed
+    private function collectDeath(?int $extract): ?array
     {
+        try {
+            if (is_null($extract)) {
+                return null;
+            }
 
+            // Log::info("Death extract: " . json_encode($extract));
 
-        Log::info('Death extract: ' . json_encode($extract));
-
-        $death = null;
-
-
-        return null
-        // return ['value' => 0, 'label' => 'Not recorded'];
-
-        // foreach ($this->iterEntities($extract) as $entity) {
-        //     if (! $this->isGenderEntity($entity)) {
-        //         continue;
-        //     }
-
-        //     $conceptId = $entity['attributes']['concept_id'];
-        //     if (isset($sex[$conceptId])) {
-        //         continue;
-        //     }
-
-        //     $sex[$conceptId] = [
-        //         'concept_id' => $conceptId,
-        //         'name' => self::GENDER_CONCEPTS[$conceptId],
-        //         'category' => $entity['attributes']['domain_id'] ?? 'Gender',
-        //     ];
-        // }
-
-        // return array_values($sex);
+            return ['value' => $extract];
+        } catch (\Exception $e) {
+            Log::error('Error in collectDeath: ' . $e->getMessage());
+            return null;
+        }
     }
 }
