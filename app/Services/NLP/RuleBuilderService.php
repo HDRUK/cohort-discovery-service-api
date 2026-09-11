@@ -232,8 +232,6 @@ class RuleBuilderService
         $demographics = null;
         if ($buildDemographics) {
             $payload = $this->nlpPayload ?? [];
-            Log::info('Payload: ' . json_encode($payload));
-            dump($payload);
             $demographics = $this->demographicsBuilder->build($payload);
             $this->stripDemographicSpans($this->demographicsBuilder->genderTextSpans($payload));
         }
@@ -297,8 +295,6 @@ class RuleBuilderService
             // Query-scope age is surfaced in the demographics block, not as an
             // inline rule node.
             $constraintPayload['ageConstraint'] = [null, null];
-
-            $constraintPayload['deathConstraint'] = null;
         } elseif ($ageConstraint !== [null, null]) {
             $ageFilter = $this->makeAgeFilterNode($ageConstraint);
             $constraintPayload['ageConstraint'] = [null, null];
@@ -413,16 +409,6 @@ class RuleBuilderService
 
     private function applyConstraints(string $query, ConstraintAccumulator $constraints, array &$warnings): void
     {
-
-        //////////////////////////////////////////////////////////////////////////////////////////
-        // Death test
-        //////////////////////////////////////////////////////////////////////////////////////////
-        if (preg_match('/\b(dead|death|deceased|alive|living)\b/i', $query)) {
-
-            $warnings[] = 'Death status interpretation will be added soon, please use the demographics rule builder for now :)';
-        }
-
-
         //////////////////////////////////////////////////////////////////////////////////////////
         // Ambiguous persons
         //////////////////////////////////////////////////////////////////////////////////////////
