@@ -8,7 +8,6 @@ use App\Services\NLP\Constraints\ConstraintAccumulator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
-use Illuminate\Support\Facades\Log;
 
 /**
  * RuleBuilderService parses a natural language query string into a structured array of rules.
