@@ -27,8 +27,6 @@ class DemographicsBuilder
     public function build(array $extract): array
     {
 
-        Log::info("Extract: ", $extract);
-
         return [
             'age' => $this->collapseAge($extract['age_constraints'] ?? []),
             'sex' => $this->collectSex($extract),
@@ -147,8 +145,8 @@ class DemographicsBuilder
     }
 
     /**
-     * Currently, can either be 0 to represent no death recorded,
-     * 1 to represent death recorded, or null for "any"
+     * Currently, can either be 0 to represent no death recorded, or
+     * 1 to represent death recorded, or null for "any" (no filter)
      * 
      * @return ?array
      */
@@ -159,11 +157,9 @@ class DemographicsBuilder
                 return null;
             }
 
-            // Log::info("Death extract: " . json_encode($extract));
-
             return ['value' => $extract];
         } catch (\Exception $e) {
-            Log::error('Error in collectDeath: ' . $e->getMessage());
+            Log::error('DemographicsBuilder@collectDeath: ' . $e->getMessage());
             return null;
         }
     }
