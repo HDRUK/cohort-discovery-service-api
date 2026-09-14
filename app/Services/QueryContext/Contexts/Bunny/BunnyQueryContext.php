@@ -807,7 +807,7 @@ class BunnyQueryContext implements QueryContextInterface
         // - not an 'inbetween' and you'd think would be logical
         // - we have to default to use lower for now
 
-        // TIME axis is inverted vs AGE: a value left of the pipe means "more months ago", so
+        // A value left of the pipe means "more months ago", so
         // $lower (on/after) goes right of the pipe and $upper (on/before) goes left of it.
         [$date, $pattern] = $lower !== null
             ? [
