@@ -154,7 +154,7 @@ class QueryBlockingTest extends TestCase
         // demographics block.
         $definition = [
             'rules' => [$this->leafNode('Drug')],
-            'demographics' => ['death' => ['label' => 'Recorded', 'value' => 1]],
+            'demographics' => ['death' => ['value' => 1]],
         ];
 
         $this->submit($definition, [$enabled, $disabled]);
@@ -184,7 +184,7 @@ class QueryBlockingTest extends TestCase
 
         $definition = [
             'rules' => [$this->leafNode('Drug')],
-            'demographics' => ['death' => ['label' => 'Not recorded', 'value' => 0]],
+            'demographics' => ['death' => ['value' => 0]],
         ];
 
         $this->submit($definition, [$collection]);
