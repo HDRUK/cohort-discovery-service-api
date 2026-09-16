@@ -1,3 +1,13 @@
+## [1.15.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.14.0...v1.15.0) (2026-09-16)
+
+### ✨ Features
+
+* **DP-894:** build death demographics from NLP response (#332) ([eb9b177](https://github.com/HDRUK/cohort-discovery-service-api/commit/eb9b177de4ce2ec5446dee58f7ab6c899d4fb5cc)), closes [DP-894](undefinedDP-894)
+
+### 🐛 Bug Fixes
+
+* **DP-1139:** correct inverted TIME axis in Bunny time constraint encoding (#333) ([32b6238](https://github.com/HDRUK/cohort-discovery-service-api/commit/32b6238f560872cd04469bb1612463321cdb157f)), closes [DP-1139](undefinedDP-1139)
+
 ## [1.14.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.13.0...v1.14.0) (2026-09-10)
 
 ### ✨ Features
