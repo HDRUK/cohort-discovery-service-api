@@ -120,18 +120,15 @@ class TermDirectoryController extends Controller
     ): StreamedResponse | JsonResponse {
         try {
 
-            $allConcepts = [];
             $concepts = $termDirectory->search($request, 100);
             $lastPage = $concepts->lastPage();
-            $data = $concepts->items();
+            $allConcepts = $concepts->items();
 
             if ($lastPage > 1) {
-                for ($pageNum = 2; $pageNum < $lastPage; $pageNum++) {
+                for ($pageNum = 2; $pageNum <= $lastPage; $pageNum++) {
                     $concepts = $termDirectory->search($request->merge(['page' => $pageNum]), 100);
-                    array_merge($allConcepts, $data);
+                    $allConcepts = array_merge($allConcepts, $concepts->items());
                 }
-            } else {
-                array_push($allConcepts, $data);
             }
 
             // need to figure out what type of log to use
@@ -140,10 +137,10 @@ class TermDirectoryController extends Controller
             //     'result' => ['total' => $concepts->total()],
             // ]);
 
-            $allConceptsFirst = $allConcepts[0];
+            // \Log::debug(count($allConcepts));
 
             $response = new StreamedResponse(
-                function () use ($allConceptsFirst) {
+                function () use ($allConcepts) {
                     // Open output stream
                     $handle = fopen('php://output', 'w');
 
@@ -158,7 +155,7 @@ class TermDirectoryController extends Controller
                     // Add CSV headers
                     fputcsv($handle, $headerRow);
                     // add the given number of rows to the file.
-                    foreach ($allConceptsFirst as $concept) {
+                    foreach ($allConcepts as $concept) {
                         $row = [
                             $concept['concept_id'] !== null ? $concept['concept_id'] : '',
                             $concept['concept_name'] !== null ? $concept['concept_name'] : '',
