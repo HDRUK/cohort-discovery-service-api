@@ -4,7 +4,7 @@ run-name:  ${{ github.actor }} triggered deploy to DEV pipeline
 on:
   push:
     branches:
-      - GAT-8645
+      - dev
 
   workflow_dispatch:
     inputs:
