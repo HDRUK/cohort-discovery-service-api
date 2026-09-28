@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
+use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,7 +35,7 @@ class Custodian extends Model implements ValidatableModel
 {
     /** @use HasFactory<\Database\Factories\CustodianFactory> */
     use HasFactory;
-
+    use ResolvesByIdOrPid;
     use Search;
 
     public $table = 'custodians';

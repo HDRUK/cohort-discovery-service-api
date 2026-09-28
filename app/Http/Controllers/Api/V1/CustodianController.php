@@ -101,12 +101,9 @@ class CustodianController extends Controller
             $custodian = Custodian::with([
                 'hosts',
                 'network',
-            ])->when(
-                ctype_digit($key),
-                fn ($q) => $q->where('id', $key),
-                fn ($q) => $q->where('pid', $key)
-            )
-            ->firstOrFail();
+            ])
+                ->whereIdOrPid($key)
+                ->firstOrFail();
 
             $this->authorize('view', $custodian);
 

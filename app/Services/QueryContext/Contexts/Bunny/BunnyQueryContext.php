@@ -5,6 +5,7 @@ namespace App\Services\QueryContext\Contexts\Bunny;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class BunnyQueryContext implements QueryContextInterface
 {
@@ -50,12 +51,12 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 "groups_oper" => 'OR',
                 "groups" => [
-                        [
-                            "rules_oper" => 'AND',
-                            "rules" => $rules
-                        ]
+                    [
+                        "rules_oper" => 'AND',
+                        "rules" => $rules
                     ]
-                ];
+                ]
+            ];
         }
 
         // A node combining groups that are each flat (no group nested inside a group)
@@ -97,7 +98,7 @@ class BunnyQueryContext implements QueryContextInterface
     /**
      * Build BUNNY groups from the demographics block. Each returned group is a
      * self-contained constraint that must hold for the whole cohort:
-     * - age & location -> always single rules, folded together into one AND group
+     * - age, location, death -> always single rules, folded together into one AND group
      * - sex  -> the selected gender concepts OR-ed together (own group)
      * - race -> the selected race concepts OR-ed together (own group)
      *
@@ -107,9 +108,10 @@ class BunnyQueryContext implements QueryContextInterface
      */
     private function buildDemographicGroups(array $demographics): array
     {
+
         $groups = [];
 
-        // AGE and LOCATION are always single rules (never an OR of alternatives),
+        // AGE, LOCATION, and DEATH are always single rules (never an OR of alternatives),
         // so they share one AND group rather than each getting a group of its own.
         $singleRules = [];
 
@@ -119,7 +121,6 @@ class BunnyQueryContext implements QueryContextInterface
             && count($age) === 2
             && is_numeric($age[0])
             && is_numeric($age[1])
-            && ! $this->isOpenAgeBand($age)
         ) {
             $singleRules[] = $this->makeLeafAgeFilter(['value' => $age]);
         }
@@ -127,6 +128,11 @@ class BunnyQueryContext implements QueryContextInterface
         $locationRule = $this->makeGeoRadiusRule($demographics['location'] ?? null);
         if ($locationRule !== null) {
             $singleRules[] = $locationRule;
+        }
+
+        $deathRule = $this->makeDeathRule($demographics['death'] ?? null);
+        if ($deathRule !== null) {
+            $singleRules[] = $deathRule;
         }
 
         if (! empty($singleRules)) {
@@ -184,18 +190,35 @@ class BunnyQueryContext implements QueryContextInterface
             'varcat'  => 'Location',
             'type'    => 'GEO_RADIUS',
             'oper'    => '=',
-            'value'   => $lat.'|'.$lon.'|'.$radius,
+            'value'   => $lat . '|' . $lon . '|' . $radius,
         ];
     }
 
     /**
-     * An age band covering the full configured demographic age range is no
-     * constraint at all, so it should not emit a rule.
+     * Build a BUNNY rule from the demographics `death` value
      */
-    private function isOpenAgeBand(array $age): bool
+    private function makeDeathRule(mixed $death): ?array
     {
-        return (int) $age[0] <= config('system.demographic_age_min')
-            && (int) $age[1] >= config('system.demographic_age_max');
+        $value = $death['value'] ?? null;
+
+        if (! is_array($death) || !isset($value)) {
+            return null;
+        }
+
+        $isValid = in_array($value, [0, 1], true);
+        if (!$isValid) {
+            Log::error('BunnyQueryContext@makeDeathRule - error: Death value must be either 0 or 1, but got ' . $value . ' instead.');
+            return null;
+        }
+
+
+        return [
+            'varname' => 'OMOP',
+            'varcat'  => 'Death',
+            'type'    => 'TEXT',
+            'oper'    => $value === 0 ? '!=' : '=',
+            'value'   => '',
+        ];
     }
 
     private function makeConceptRule(string $conceptId, string $category, bool $isExcluded = false): array
@@ -255,7 +278,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -464,7 +487,7 @@ class BunnyQueryContext implements QueryContextInterface
      *       ],
      *    ],
      * ]
-    **/
+     **/
     private function convertToGroupwiseForm(array $node): array
     {
         $groupOperator = $this->groupOperator($node);
@@ -661,7 +684,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
@@ -729,7 +752,7 @@ class BunnyQueryContext implements QueryContextInterface
             'varcat' => 'Person',
             'type' => 'NUM',
             'oper' => '=',
-            'value' => $values[0].'|'.$values[1],
+            'value' => $values[0] . '|' . $values[1],
         ];
         return $rule;
     }
@@ -767,7 +790,7 @@ class BunnyQueryContext implements QueryContextInterface
         if (is_null($lower) && is_null($upper)) {
             return null;
         }
-        return $lower !== null ? $lower.'|:AGE:Y' : '|'.$upper.':AGE:Y';
+        return $lower !== null ? $lower . '|:AGE:Y' : '|' . $upper . ':AGE:Y';
     }
 
     public function encodeBunnyTimeConstraint(
@@ -784,14 +807,16 @@ class BunnyQueryContext implements QueryContextInterface
         // - not an 'inbetween' and you'd think would be logical
         // - we have to default to use lower for now
 
+        // A value left of the pipe means "more months ago", so
+        // $lower (on/after) goes right of the pipe and $upper (on/before) goes left of it.
         [$date, $pattern] = $lower !== null
             ? [
                 $lower,
-                '%d|:TIME:M'
+                '|%d:TIME:M'
             ]
             : [
                 $upper,
-                '|%d:TIME:M'
+                '%d|:TIME:M'
             ];
 
         $months = $this->getRelativeMonths($date);

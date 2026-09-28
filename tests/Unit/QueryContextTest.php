@@ -473,7 +473,7 @@ class QueryContextTest extends TestCase
             $this->assertInstanceOf(
                 QueryContextInterface::class,
                 $context,
-                'Context is not an instance of QueryContextInterface: '.get_class($context)
+                'Context is not an instance of QueryContextInterface: ' . get_class($context)
             );
         }
     }
@@ -973,11 +973,11 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
-        // Full [0, 120] age band is unconstrained, so only the sex group remains.
+        // Age group + sex group.
         $this->assertEquals('AND', $result['groups_oper']);
-        $this->assertCount(1, $result['groups']);
+        $this->assertCount(2, $result['groups']);
 
-        $sexGroup = $result['groups'][0];
+        $sexGroup = $result['groups'][1];
         $this->assertEquals('OR', $sexGroup['rules_oper']);
         $this->assertCount(2, $sexGroup['rules']);
         $this->assertEquals('Person', $sexGroup['rules'][0]['varcat']);
@@ -1018,7 +1018,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(3, $result['groups']);
 
         $values = array_map(
-            fn ($group) => $group['rules'][0]['value'],
+            fn($group) => $group['rules'][0]['value'],
             $result['groups']
         );
         $this->assertEquals(['3955320', '18|65', '8507'], $values);
@@ -1070,7 +1070,7 @@ class QueryContextTest extends TestCase
         // (Moderna AND CloseContact) OR (Pfizer AND CloseContact), then AND age.
         // This genuine OR-of-ANDs cannot append a further AND level, so it must
         // distribute the age rule into each of the two AND groups.
-        $andGroup = fn (int $left, int $right) => [
+        $andGroup = fn(int $left, int $right) => [
             'rules' => [
                 ['rule' => ['concept' => ['concept_id' => $left, 'category' => 'Drug', 'children' => []]], 'exclude' => false],
                 ['combinator' => 'and'],
@@ -1128,15 +1128,15 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
-        // Full [0, 120] age band is unconstrained, so only the location group remains.
+        // AGE and LOCATION are both single rules, so they share one AND group.
         $this->assertEquals('AND', $result['groups_oper']);
         $this->assertCount(1, $result['groups']);
 
         $locationGroup = $result['groups'][0];
         $this->assertEquals('AND', $locationGroup['rules_oper']);
-        $this->assertCount(1, $locationGroup['rules']);
+        $this->assertCount(2, $locationGroup['rules']);
 
-        $rule = $locationGroup['rules'][0];
+        $rule = $locationGroup['rules'][1];
         $this->assertEquals('OMOP', $rule['varname']);
         $this->assertEquals('Location', $rule['varcat']);
         $this->assertEquals('GEO_RADIUS', $rule['type']);
@@ -1176,10 +1176,10 @@ class QueryContextTest extends TestCase
         $result = $this->bunnyContext->translate($input);
 
         $this->assertEquals('AND', $result['groups_oper']);
-        // clinical group + location group
+        // clinical group + age/location group
         $this->assertCount(2, $result['groups']);
 
-        $locationRule = $result['groups'][1]['rules'][0];
+        $locationRule = $result['groups'][1]['rules'][1];
         $this->assertEquals('GEO_RADIUS', $locationRule['type']);
         $this->assertEquals('51.5074|-0.1278|5000', $locationRule['value']);
     }
@@ -1200,9 +1200,11 @@ class QueryContextTest extends TestCase
 
         $result = $this->bunnyContext->translate($input);
 
-        // No clinical rules, unconstrained age, no valid location -> nothing.
-        $this->assertEquals('OR', $result['groups_oper']);
-        $this->assertCount(0, $result['groups']);
+        // No clinical rules and no valid location -> the age rule alone.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertCount(1, $result['groups'][0]['rules']);
+        $this->assertEquals('AGE', $result['groups'][0]['rules'][0]['varname']);
     }
 
     public function test_demographics_age_and_location_share_one_group(): void
@@ -1250,5 +1252,115 @@ class QueryContextTest extends TestCase
         $beaconResult = $this->manager->handle(self::INPUT_QUERY, QueryContextType::Beacon);
         $this->assertIsArray($beaconResult);
         $this->assertArrayHasKey('query', $beaconResult);
+    }
+
+    public function test_demographics_death_not_recorded_produces_negated_death_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'death' => ['value' => 0]
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // AGE and DEATH are both single rules, so they share one AND group.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $deathGroup = $result['groups'][0];
+        $this->assertEquals('AND', $deathGroup['rules_oper']);
+        $this->assertCount(2, $deathGroup['rules']);
+
+        $rule = $deathGroup['rules'][1];
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('Death', $rule['varcat']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('!=', $rule['oper']);
+        $this->assertEquals('', $rule['value']);
+    }
+
+    public function test_demographic_death_recorded_produces_death_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'location' => [],
+                'death' => ['value' => 1]
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // AGE and DEATH are both single rules, so they share one AND group.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $deathGroup = $result['groups'][0];
+        $this->assertEquals('AND', $deathGroup['rules_oper']);
+        $this->assertCount(2, $deathGroup['rules']);
+
+        $rule = $deathGroup['rules'][1];
+        $this->assertEquals('OMOP', $rule['varname']);
+        $this->assertEquals('Death', $rule['varcat']);
+        $this->assertEquals('TEXT', $rule['type']);
+        $this->assertEquals('=', $rule['oper']);
+        $this->assertEquals('', $rule['value']);
+    }
+
+    public function test_demographics_death_ignored_when_unrecognised_value(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [0, 120],
+                'sex' => [],
+                'race' => [],
+                'death' => "wrong"
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        // No clinical rules and an unusable death value -> the age rule alone.
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+        $this->assertCount(1, $result['groups'][0]['rules']);
+        $this->assertEquals('AGE', $result['groups'][0]['rules'][0]['varname']);
+    }
+
+    public function test_demographics_full_range_age_band_still_produces_age_rule(): void
+    {
+        $input = [
+            'rules' => [],
+            'valid' => true,
+            'demographics' => [
+                'age' => [
+                    config('system.demographic_age_min'),
+                    config('system.demographic_age_max'),
+                ],
+                'sex' => [],
+                'race' => [],
+            ],
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+
+        $this->assertEquals('AND', $result['groups_oper']);
+        $this->assertCount(1, $result['groups']);
+
+        $ageRule = $result['groups'][0]['rules'][0];
+        $this->assertEquals('AGE', $ageRule['varname']);
+        $this->assertEquals('0|120', $ageRule['value']);
     }
 }

@@ -68,5 +68,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());
         });
+
+        RateLimiter::for('click-tracking', function (Request $request) {
+            return Limit::perMinute(config('api.click_rate_limit'))
+                ->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

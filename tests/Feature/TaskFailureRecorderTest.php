@@ -48,12 +48,12 @@ class TaskFailureRecorderTest extends TestCase
         $this->assertNotNull($run);
         $this->assertSame('failed', $run->result_status);
         $this->assertSame('MissingRequiredTable', $run->error_class);
-        $this->assertSame('Death data table missing', $run->error_message);
+        $this->assertSame('Death-record data not yet available', $run->error_message);
         $this->assertNotNull($run->finished_at);
 
         $this->assertNotNull($result);
         $this->assertSame('failed', $result->status);
-        $this->assertSame('Death data table missing', $result->message);
+        $this->assertSame('Death-record data not yet available', $result->message);
         $this->assertSame(0, (int) $result->count);
 
         Carbon::setTestNow();
@@ -71,7 +71,7 @@ class TaskFailureRecorderTest extends TestCase
         $result = Result::where('task_id', $task->id)->first();
 
         $this->assertSame(
-            'Location data table missing; Death data table missing',
+            'Location data not yet available; Death-record data not yet available',
             $result->message
         );
     }
@@ -89,8 +89,8 @@ class TaskFailureRecorderTest extends TestCase
             ->getJson('/api/v1/query/' . $task->submittedQuery->pid);
 
         $response->assertOk();
-        $response->assertJsonPath('data.tasks.0.result.message', 'Location data table missing');
-        $response->assertJsonPath('data.tasks.0.latest_run.error_message', 'Location data table missing');
+        $response->assertJsonPath('data.tasks.0.result.message', 'Location data not yet available');
+        $response->assertJsonPath('data.tasks.0.latest_run.error_message', 'Location data not yet available');
     }
 
     private function makeTask(): Task

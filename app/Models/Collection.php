@@ -6,6 +6,7 @@ use App\Contracts\ValidatableModel;
 use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Services\QueryContext\QueryContextType;
+use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
 use Hdruk\LaravelModelStates\Models\ModelState;
 use Hdruk\LaravelModelStates\Models\State;
@@ -83,6 +84,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     use Filter;
     use HasFactory;
     use HasState;
+    use ResolvesByIdOrPid;
     use Search;
 
     public const STATUS_DRAFT = 'draft';

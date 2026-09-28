@@ -43,6 +43,22 @@ class QueryDefinitionInspector
     }
 
     /**
+     * Mirrors BunnyQueryContext::makeDeathRule - only a `value` of 0 or 1 emits
+     * a rule against the death table, so only those require it.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    public function usesDemographicDeath(array $definition): bool
+    {
+        $death = $definition['demographics']['death'] ?? null;
+        if (! is_array($death)) {
+            return false;
+        }
+
+        return in_array($death['value'] ?? null, [0, 1], true);
+    }
+
+    /**
      * @param  array<string, mixed>  $node
      * @param  array<int, string>  $categories
      */

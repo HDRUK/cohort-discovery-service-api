@@ -61,14 +61,19 @@ class ActivityLogger
         ]), $description);
     }
 
+    /**
+     * Pass $anonymous when the entry must not be attributable to a user
+     * (e.g. events covered by the DPIA that may only be logged in aggregate).
+     */
     public function custom(
         string $logName,
         string $event,
         ?Model $subject = null,
         array $properties = [],
-        ?string $description = null
+        ?string $description = null,
+        bool $anonymous = false
     ): void {
-        $this->log($logName, $event, $subject, $properties, $description);
+        $this->log($logName, $event, $subject, $properties, $description, $anonymous);
     }
 
     private function log(
@@ -76,11 +81,17 @@ class ActivityLogger
         string $event,
         ?Model $subject = null,
         array $properties = [],
-        ?string $description = null
+        ?string $description = null,
+        bool $anonymous = false
     ): void {
         $activity = activity($logName)
-            ->event($event)
-            ->causedBy(Auth::user());
+            ->event($event);
+
+        if ($anonymous) {
+            $activity->causedByAnonymous();
+        } else {
+            $activity->causedBy(Auth::user());
+        }
 
         if ($subject) {
             $activity->performedOn($subject);

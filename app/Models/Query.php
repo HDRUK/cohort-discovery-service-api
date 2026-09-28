@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\TaskType;
 use App\Rules\IdOrUuid;
 use App\Traits\Downloadable;
+use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -59,6 +60,7 @@ class Query extends Model
     use Downloadable;
     use Filter;
     use HasFactory;
+    use ResolvesByIdOrPid;
     use Search;
     use SoftDeletes;
 

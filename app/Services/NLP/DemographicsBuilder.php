@@ -3,9 +3,10 @@
 namespace App\Services\NLP;
 
 use Generator;
+use Illuminate\Support\Facades\Log;
 
 /**
- * Builds the demographics block (age band, sex, race) from an NLP /extract
+ * Builds the demographics block (age band, sex, race, and death) from an NLP /extract
  * response.
  *
  * The NLP service does not build demographics itself — it returns clinical
@@ -20,15 +21,17 @@ class DemographicsBuilder
      * - this is a placeholder
      * - will likely expand out to a controlled list that gets passed
      * - and/or look up from the latest_distributions table
-    */
+     */
     private const GENDER_CONCEPTS = [8507 => 'Male', 8532 => 'Female'];
 
     public function build(array $extract): array
     {
+
         return [
             'age' => $this->collapseAge($extract['age_constraints'] ?? []),
             'sex' => $this->collectSex($extract),
             'race' => [], #to-do
+            'death' => $this->collectDeath($extract['death_constraints'] ?? null),
         ];
     }
 
@@ -129,15 +132,35 @@ class DemographicsBuilder
 
         $constraints = array_filter(
             $constraints,
-            fn ($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
+            fn($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
         );
 
-        $mins = array_filter(array_column($constraints, 'min'), fn ($v) => $v !== null);
-        $maxs = array_filter(array_column($constraints, 'max'), fn ($v) => $v !== null);
+        $mins = array_filter(array_column($constraints, 'min'), fn($v) => $v !== null);
+        $maxs = array_filter(array_column($constraints, 'max'), fn($v) => $v !== null);
 
         $lo = $mins ? max($mins) : $ageMin;
         $hi = $maxs ? min($maxs) : $ageMax;
 
         return [max($ageMin, (int) $lo), min($ageMax, (int) $hi)];
+    }
+
+    /**
+     * Currently, can either be 0 to represent no death recorded, or
+     * 1 to represent death recorded, or null for "any" (no filter)
+     * 
+     * @return ?array
+     */
+    private function collectDeath(?int $extract): ?array
+    {
+        try {
+            if (is_null($extract)) {
+                return null;
+            }
+
+            return ['value' => $extract];
+        } catch (\Exception $e) {
+            Log::error('DemographicsBuilder@collectDeath: ' . $e->getMessage());
+            return null;
+        }
     }
 }

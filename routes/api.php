@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\ApplicationController;
+use App\Http\Controllers\Api\V1\ClickController;
 use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\CollectionController;
@@ -121,6 +122,9 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/queries/delete/bulk', [QueryController::class, 'destroyBulk']);
     Route::post('/v1/queries/translate/{context}', [QueryController::class, 'translate']);
     Route::get('/v1/queries/{pid}/download/{format}', [QueryController::class, 'download']);
+
+    Route::post('/v1/clicks', [ClickController::class, 'store'])
+        ->middleware(['throttle:click-tracking']);
 
     Route::get('/v1/concept_sets', [ConceptSetController::class, 'index']);
     Route::post('/v1/concept_sets', [ConceptSetController::class, 'store']);
