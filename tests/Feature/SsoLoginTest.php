@@ -26,6 +26,8 @@ class SsoLoginTest extends TestCase
 
         // The redirect action fetches the discovery document before each
         // test's fakeHttp() call, so these are always stubbed.
+        $this->forgetDiscoveryCache();
+
         Http::fake([
             FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response(FakeIdp::discoveryResponse()),
             FakeIdp::ISSUER.'/protocol/openid-connect/certs' => Http::response(FakeIdp::jwksResponse()),
@@ -66,6 +68,27 @@ class SsoLoginTest extends TestCase
     private function callbackUrl(string $state): string
     {
         return '/api/auth/sso/default/callback?code=fake-auth-code&state='.$state;
+    }
+
+    private function forgetDiscoveryCache(): void
+    {
+        \Cache::forget('sso:disc:default');
+        \Cache::forget('sso:jwks:default');
+    }
+
+    /**
+     * Replace the stubs registered in setUp rather than adding to them.
+     * Http::fake() merges, and the first matching stub wins, so a test that
+     * needs a different response for an already-stubbed URL needs a clean
+     * factory.
+     */
+    private function refakeHttp(array $stubs): void
+    {
+        $this->forgetDiscoveryCache();
+
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake($stubs);
     }
 
     private function assertErrorRedirect($response, string $errorCode): void
@@ -345,6 +368,48 @@ class SsoLoginTest extends TestCase
         $this->assertSame(
             [['slug' => 'default', 'label' => 'Fake IdP', 'redirect_url' => url('/api/auth/sso/default/redirect')]],
             $response->json('data')
+        );
+    }
+
+    public function test_issuer_mismatch_redirects_to_error_url(): void
+    {
+        $this->refakeHttp([
+            FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response(
+                array_merge(FakeIdp::discoveryResponse(), ['issuer' => 'https://someone-else.test'])
+            ),
+        ]);
+
+        $this->assertErrorRedirect(
+            $this->get('/api/auth/sso/default/redirect'),
+            'provider_not_configured'
+        );
+    }
+
+    public function test_discovery_endpoint_on_a_foreign_host_redirects_to_error_url(): void
+    {
+        $this->refakeHttp([
+            FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response(
+                array_merge(FakeIdp::discoveryResponse(), [
+                    'jwks_uri' => 'https://attacker.test/certs',
+                ])
+            ),
+        ]);
+
+        $this->assertErrorRedirect(
+            $this->get('/api/auth/sso/default/redirect'),
+            'provider_not_configured'
+        );
+    }
+
+    public function test_unreachable_provider_redirects_to_error_url(): void
+    {
+        $this->refakeHttp([
+            FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response('', 503),
+        ]);
+
+        $this->assertErrorRedirect(
+            $this->get('/api/auth/sso/default/redirect'),
+            'provider_unreachable'
         );
     }
 }

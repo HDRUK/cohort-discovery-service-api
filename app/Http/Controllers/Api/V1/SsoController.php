@@ -12,6 +12,8 @@ use App\Services\Sso\OneTimeCodeStore;
 use App\Services\Sso\SsoUserResolver;
 use App\Support\ApplicationMode;
 use App\Traits\Responses;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -102,7 +104,24 @@ class SsoController extends Controller
             abort(404);
         }
 
-        return redirect()->away($this->oidc->buildAuthorizationRedirect($config));
+        try {
+            return redirect()->away($this->oidc->buildAuthorizationRedirect($config));
+        } catch (SsoException $e) {
+            \Log::warning('SSO redirect failed', [
+                'provider' => $provider,
+                'error_code' => $e->errorCode,
+                'detail' => $e->getMessage(),
+            ]);
+
+            return $this->errorRedirect($e->errorCode);
+        } catch (ConnectionException|RequestException $e) {
+            \Log::warning('SSO redirect failed to reach the provider', [
+                'provider' => $provider,
+                'detail' => $e->getMessage(),
+            ]);
+
+            return $this->errorRedirect('provider_unreachable');
+        }
     }
 
     /**
@@ -224,6 +243,13 @@ class SsoController extends Controller
     private function ensureSsoAvailable(): void
     {
         abort_unless(ApplicationMode::isStandalone() && config('sso.enabled'), 404);
+
+        if (! config('sso.frontend_callback_url')) {
+            throw new \RuntimeException(
+                'SSO is enabled but SSO_FRONTEND_CALLBACK_URL is not set. Without it the '
+                .'login cannot be handed back to the frontend.'
+            );
+        }
     }
 
     private function errorRedirect(string $errorCode): RedirectResponse
