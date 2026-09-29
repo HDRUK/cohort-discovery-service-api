@@ -117,6 +117,7 @@ class TermDirectoryController extends Controller
      *      @OA\Response(
      *      response=200,
      *      description="CSV file of concepts")
+     * )
      */
     public function download(
         Request $request,
