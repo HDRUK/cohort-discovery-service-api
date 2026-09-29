@@ -7,12 +7,17 @@ use App\Services\Activity\ActivityLogger;
 use App\Services\TermDirectory\TermDirectoryService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use App\Models\Collection;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Auth\Access\AuthorizationException;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use DateTime;
+use DateTimeZone;
 
 /**
  * @OA\Tag(
@@ -171,13 +176,25 @@ class TermDirectoryController extends Controller
                 }
             );
 
+            // Build filename
+            $concept_name = $request->has('concept_name') ? '_' . str_replace(' ', '_', $request->query('concept_name')) : '';
+            $domain = $request->has('domain_id') ? '_' . $request->query('domain_id') : '';
+            $domains = $request->has('domain_id__in') ? '_' . str_replace('', '_', $request->query('domain_id__in')) : '';
+
+            $collectionNames = $this->resolveCollectionNames($request);
+            $collections = !empty($collectionNames) ? '_' . $collectionNames->implode('_') : '';
+
+            $sort = $request->has('sort') ? '_' . $request->query('sort') : '';
+
+            $datetime = new DateTime("now", new DateTimeZone('Europe/London'));
+            $datetime = '_' . $datetime->format('d-m-Y_H-i');
+
+            $filename = sprintf('term-directory-exported%s%s%s%s%s%s.csv', $concept_name, $domain, $domains, $collections, $sort, $datetime);
+
             $response->headers->set('Content-Type', 'text/csv');
-            $filename = 'term-directory-exported.csv';
             $response->headers->set('Content-Disposition', 'attachment;filename="' . $filename . '"');
             $response->headers->set('Cache-Control', 'max-age=0');
 
-
-            // return $allConcepts;
             return $response;
         } catch (\Throwable $e) {
             \Log::error('TermDirectoryController@download/ - failed' .
@@ -185,5 +202,23 @@ class TermDirectoryController extends Controller
 
             return $this->ErrorResponse();
         }
+    }
+
+    /**
+     * The user's visible collections, optionally narrowed to requested collection names.
+     * Names outside the visible set are dropped so they can never widen access.
+     */
+    private function resolveCollectionNames(Request $request): SupportCollection
+    {
+        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('name');
+
+        $requestedPids = (array) $request->input('collection_pid', []);
+        if (empty($requestedPids)) {
+            return $visible;
+        }
+
+        $requested = Collection::whereIn('pid', $requestedPids)->pluck('name');
+
+        return $visible->intersect($requested)->values();
     }
 }
