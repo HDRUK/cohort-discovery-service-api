@@ -182,7 +182,7 @@ class TermDirectoryController extends Controller
             $domains = $request->has('domain_id__in') ? '_' . str_replace('', '_', $request->query('domain_id__in')) : '';
 
             $collectionNames = $this->resolveCollectionNames($request);
-            $collections = !empty($collectionNames) ? '_' . $collectionNames->implode('_') : '';
+            $collections = $collectionNames->isNotEmpty() ? '_' . $collectionNames->implode('_') : '';
 
             $sort = $request->has('sort') ? '_' . $request->query('sort') : '';
 
