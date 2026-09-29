@@ -971,6 +971,218 @@
                 }
             }
         },
+        "/api/v1/collections/{id}/health": {
+            "get": {
+                "tags": [
+                    "Collection Health"
+                ],
+                "summary": "Binned ping history for a collection host",
+                "description": "Collection hosts prove they are alive by polling for work. This endpoint\n     *         returns how many polls ('pings') arrived per bin, split by task type - 'a' for cohort\n     *         query jobs, 'b' for distributions jobs - plus a derived summary per task type.\n     *\n     *         Every bin carries an average pings-per-minute rate as well as the raw sum, so the\n     *         numbers mean the same thing at every bin width: 'per_minute' is the series to chart,\n     *         and the bin is a resolution control rather than a scale change. The final bin of a\n     *         range is in progress, so it is divided by the minutes elapsed so far rather than by\n     *         the full bin width.\n     *\n     *         The series is zero-filled across every bin in the range, so a silent host shows as\n     *         a run of zeros rather than as missing entries.\n     *\n     *         Two ways to pick the range. 'window' is a duration back from now and returns exactly\n     *         that many bins ending at the current, partial bin - so window=1h with minute bins is\n     *         60 bins. 'from'/'to' is an explicit span and returns every bin from the one containing\n     *         'from' to the one containing 'to', both inclusive. 'from' wins if both are supplied.\n     *\n     *         Requests whose bin and range would produce more than COLLECTION_HEALTH_MAX_BINS bins\n     *         are rejected with a 422 rather than served.",
+                "operationId": "2d099fa70dfa7f0f5e072eb1b997a093",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Collection integer id or UUID pid",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "c9f0f895-fb98-4ebd-9b1e-0f2a0b9a3f11"
+                        }
+                    },
+                    {
+                        "name": "bin",
+                        "in": "query",
+                        "description": "Bin width. Either a named unit - minute, hour, day, week, month - or a\n     *             positive multiple of m, h, d or w for a custom width, such as 10m, 6h, 2d or 4w.\n     *             Custom widths are aligned to an absolute grid, so a 10m bin always starts at :00,\n     *             :10, :20 and so on. Months have no multiple form. Defaults to minute.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "minute",
+                            "example": "10m"
+                        }
+                    },
+                    {
+                        "name": "window",
+                        "in": "query",
+                        "description": "Duration back from now: a positive integer followed by m, h, d or w. Defaults to 1h. Ignored when 'from' is supplied.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "1h",
+                            "example": "24h"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start of an explicit range (ISO-8601). Overrides 'window'.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-08-30T00:00:00Z"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End of an explicit range (ISO-8601). Defaults to now.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-09-01T00:00:00Z"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Binned ping history",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "collection_id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "bin": {
+                                                    "type": "string",
+                                                    "example": "minute"
+                                                },
+                                                "from": {
+                                                    "description": "Start of the first bin, inclusive",
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T09:01:00Z"
+                                                },
+                                                "to": {
+                                                    "description": "End of the range, EXCLUSIVE - the start of the bin after the last one returned. Note this differs from /task-history, where 'to' is inclusive.",
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:01:00Z"
+                                                },
+                                                "summary": {
+                                                    "description": "Keyed by task type, 'a' and 'b'",
+                                                    "properties": {
+                                                        "a": {
+                                                            "properties": {
+                                                                "last_ping_at": {
+                                                                    "type": "string",
+                                                                    "format": "date-time",
+                                                                    "example": "2026-09-01T09:59:41Z",
+                                                                    "nullable": true
+                                                                },
+                                                                "pings": {
+                                                                    "type": "integer",
+                                                                    "example": 706
+                                                                },
+                                                                "per_minute": {
+                                                                    "description": "Minute-weighted average pings per minute across the whole range: pings / minutes. Null only when no minute of the range has elapsed.",
+                                                                    "type": "number",
+                                                                    "format": "float",
+                                                                    "example": 11.767,
+                                                                    "nullable": true
+                                                                },
+                                                                "minutes": {
+                                                                    "description": "Total elapsed minutes covered by the range",
+                                                                    "type": "integer",
+                                                                    "example": 60
+                                                                },
+                                                                "silent_minutes": {
+                                                                    "description": "Minutes within the range that had zero pings",
+                                                                    "type": "integer",
+                                                                    "example": 3
+                                                                },
+                                                                "bins": {
+                                                                    "type": "integer",
+                                                                    "example": 60
+                                                                },
+                                                                "empty_bins": {
+                                                                    "type": "integer",
+                                                                    "example": 1
+                                                                },
+                                                                "longest_gap_bins": {
+                                                                    "type": "integer",
+                                                                    "example": 1
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "series": {
+                                                    "description": "Keyed by task type, 'a' and 'b'. Chart 'per_minute' - it is the same\n     *                         quantity at every bin width, so changing the bin re-shapes the line without\n     *                         re-scaling the axis. 'n' is the raw sum for that bin.",
+                                                    "properties": {
+                                                        "a": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "properties": {
+                                                                    "bin": {
+                                                                        "type": "string",
+                                                                        "format": "date-time",
+                                                                        "example": "2026-09-01T09:59:00Z"
+                                                                    },
+                                                                    "n": {
+                                                                        "description": "Pings summed across the bin",
+                                                                        "type": "integer",
+                                                                        "example": 706
+                                                                    },
+                                                                    "minutes": {
+                                                                        "description": "Elapsed minutes this bin covers. Equals the bin width except for the final, in-progress bin, and is 0 for a bin wholly in the future.",
+                                                                        "type": "integer",
+                                                                        "example": 60
+                                                                    },
+                                                                    "silent_minutes": {
+                                                                        "description": "Minutes within the bin that had zero pings - the gap signal that stays meaningful at coarse bin widths",
+                                                                        "type": "integer",
+                                                                        "example": 3
+                                                                    },
+                                                                    "per_minute": {
+                                                                        "description": "n / minutes, rounded to 3dp. Null when minutes is 0.",
+                                                                        "type": "number",
+                                                                        "format": "float",
+                                                                        "example": 11.767,
+                                                                        "nullable": true
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not an admin, and not attached to the collection's custodian"
+                    },
+                    "404": {
+                        "description": "Collection not found"
+                    },
+                    "422": {
+                        "description": "Validation error, or the bin and range would produce too many bins"
+                    },
+                    "500": {
+                        "description": "Unexpected error"
+                    }
+                }
+            }
+        },
         "/api/v1/collection-hosts": {
             "get": {
                 "tags": [
@@ -4392,6 +4604,10 @@
         {
             "name": "Collections",
             "description": "API Endpoints for managing Collections"
+        },
+        {
+            "name": "Collection Health",
+            "description": "Liveness telemetry for collection hosts, derived from their task polling"
         },
         {
             "name": "CollectionHosts",
