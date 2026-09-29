@@ -136,14 +136,6 @@ class TermDirectoryController extends Controller
                 }
             }
 
-            // need to figure out what type of log to use
-            // $activityLogger->viewed('term_directory', null, [
-            //     'filters' => $request->query(),
-            //     'result' => ['total' => $concepts->total()],
-            // ]);
-
-            // \Log::debug(count($allConcepts));
-
             $response = new StreamedResponse(
                 function () use ($allConcepts) {
                     // Open output stream
@@ -194,6 +186,10 @@ class TermDirectoryController extends Controller
             $response->headers->set('Content-Type', 'text/csv');
             $response->headers->set('Content-Disposition', 'attachment;filename="' . $filename . '"');
             $response->headers->set('Cache-Control', 'max-age=0');
+
+            $activityLogger->custom('term_directory', 'downloaded', null, [
+                'filters' => $request->query(),
+            ]);
 
             return $response;
         } catch (\Throwable $e) {
