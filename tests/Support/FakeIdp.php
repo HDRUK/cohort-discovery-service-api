@@ -45,6 +45,7 @@ class FakeIdp
             'token_endpoint' => self::ISSUER.'/protocol/openid-connect/token',
             'userinfo_endpoint' => self::ISSUER.'/protocol/openid-connect/userinfo',
             'jwks_uri' => self::ISSUER.'/protocol/openid-connect/certs',
+            'end_session_endpoint' => self::ISSUER.'/protocol/openid-connect/logout',
         ];
     }
 

@@ -198,6 +198,7 @@ Route::prefix('auth/sso')->controller(\App\Http\Controllers\Api\V1\SsoController
     Route::get('/{provider}/redirect', 'redirect')->middleware('throttle:polling');
     Route::get('/{provider}/callback', 'callback')->middleware('throttle:polling');
     Route::post('/exchange', 'exchange')->middleware('throttle:polling');
+    Route::get('/{provider}/logout', 'logout')->middleware('throttle:polling');
 });
 
 Route::get('/status', function (Request $request) {

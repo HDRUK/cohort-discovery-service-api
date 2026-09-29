@@ -21,6 +21,13 @@ return [
     'frontend_error_url' => env('SSO_FRONTEND_ERROR_URL'),
 
     /*
+     * Absolute URL on the frontend to land on after logout - passed to the
+     * IdP as post_logout_redirect_uri. Falls back to the origin of
+     * frontend_callback_url + /login when unset.
+     */
+    'frontend_login_url' => env('SSO_FRONTEND_LOGIN_URL'),
+
+    /*
      * How long an in-flight authorization transaction (state/nonce/PKCE
      * verifier) survives between redirect and callback.
      */

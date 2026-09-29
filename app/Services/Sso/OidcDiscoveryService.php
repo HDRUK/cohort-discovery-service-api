@@ -45,7 +45,7 @@ class OidcDiscoveryService
         // URL in it as attacker-controlled until proven otherwise: a hostile
         // or compromised one could otherwise point jwks_uri at an internal
         // address and have us fetch it, or at a host whose keys it controls
-        foreach (['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'userinfo_endpoint'] as $endpoint) {
+        foreach (['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'userinfo_endpoint', 'end_session_endpoint'] as $endpoint) {
             if (! empty($metadata[$endpoint])) {
                 $this->assertUrlBelongsToIssuer($provider, (string) $metadata[$endpoint], $endpoint);
             }

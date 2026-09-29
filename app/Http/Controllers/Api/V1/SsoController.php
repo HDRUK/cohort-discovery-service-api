@@ -175,7 +175,7 @@ class SsoController extends Controller
             return $this->errorRedirect($e->errorCode);
         }
 
-        $token = $this->tokens->makeForUser($user, 'sso_login');
+        $token = $this->tokens->makeForUser($user, 'sso_login', ['*'], $provider);
         $handoffCode = $this->codes->issue($token->accessToken);
 
         \Log::info('SSO login succeeded', [
@@ -238,6 +238,71 @@ class SsoController extends Controller
             'access_token' => $accessToken,
             'token_type' => 'Bearer',
         ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/auth/sso/{provider}/logout",
+     *     summary="Best-effort RP-initiated logout: bounce through the IdP's own logout page",
+     *     tags={"SSO"},
+     *     @OA\Parameter(name="provider", in="path", required=true, @OA\Schema(type="string", example="default")),
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to the IdP's end_session_endpoint, or straight back to the frontend login page if the provider is unknown, unreachable, or does not advertise one"
+     *     )
+     * )
+     *
+     * The frontend already knows which provider a session came from (it's a
+     * claim on the app's own JWT), so this needs no auth of its own - it
+     * only ever discloses a provider's logout URL, never a user's identity.
+     * Every failure mode falls through to a plain redirect rather than an
+     * error: the user is already logged out of the app by the time this is
+     * called, so the worst outcome is "still logged into the IdP", not
+     * "stuck on an error page".
+     */
+    public function logout(string $provider): RedirectResponse
+    {
+        $this->ensureSsoAvailable();
+
+        $postLogoutRedirectUri = $this->postLogoutRedirectUrl();
+
+        try {
+            $config = OidcProviderConfig::fromConfig($provider);
+            $endSessionEndpoint = $this->oidc->discoverEndSessionEndpoint($config);
+        } catch (ProviderNotConfiguredException|SsoException|ConnectionException|RequestException $e) {
+            \Log::warning('SSO logout could not discover the provider, sending the browser straight back', [
+                'provider' => $provider,
+                'detail' => $e->getMessage(),
+            ]);
+
+            return redirect()->away($postLogoutRedirectUri);
+        }
+
+        if (! $endSessionEndpoint) {
+            return redirect()->away($postLogoutRedirectUri);
+        }
+
+        return redirect()->away(
+            $endSessionEndpoint.(str_contains($endSessionEndpoint, '?') ? '&' : '?').http_build_query([
+                'client_id' => $config->clientId,
+                'post_logout_redirect_uri' => $postLogoutRedirectUri,
+            ])
+        );
+    }
+
+    private function postLogoutRedirectUrl(): string
+    {
+        $configured = config('sso.frontend_login_url');
+
+        if ($configured) {
+            return $configured;
+        }
+
+        $parts = parse_url(config('sso.frontend_callback_url'));
+        $origin = ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? '')
+            .(isset($parts['port']) ? ':'.$parts['port'] : '');
+
+        return $origin.'/login';
     }
 
     private function ensureSsoAvailable(): void

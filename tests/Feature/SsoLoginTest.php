@@ -13,6 +13,7 @@ class SsoLoginTest extends TestCase
 {
     private const FE_CALLBACK = 'http://fe.test/auth/sso/callback';
     private const FE_ERROR = 'http://fe.test/auth/sso/error';
+    private const FE_LOGIN = 'http://fe.test/login';
 
     protected function setUp(): void
     {
@@ -100,6 +101,15 @@ class SsoLoginTest extends TestCase
         );
     }
 
+    private function decodeJwtPayload(string $jwt): array
+    {
+        [, $payload] = explode('.', $jwt);
+        $payload = strtr($payload, '-_', '+/');
+        $payload .= str_repeat('=', (4 - strlen($payload) % 4) % 4);
+
+        return json_decode(base64_decode($payload), true);
+    }
+
     public function test_full_login_flow_provisions_user_and_hands_off_token(): void
     {
         [$state, $nonce] = $this->startLogin();
@@ -147,6 +157,10 @@ class SsoLoginTest extends TestCase
         // The minted token must satisfy the (fixed) DecodeJwt middleware
         $this->enableMiddleware();
         $this->withJwt($accessToken)->getJson('/api/v1/user')->assertOk();
+
+        // Carries the provider slug so the frontend can offer RP-initiated logout
+        $claims = $this->decodeJwtPayload($accessToken);
+        $this->assertSame('default', $claims['user']['sso_provider']);
     }
 
     public function test_existing_identity_logs_in_without_creating_rows(): void
@@ -411,5 +425,79 @@ class SsoLoginTest extends TestCase
             $this->get('/api/auth/sso/default/redirect'),
             'provider_unreachable'
         );
+    }
+
+    public function test_logout_redirects_through_the_idps_end_session_endpoint(): void
+    {
+        (new FakeIdp())->fakeHttp();
+
+        $response = $this->get('/api/auth/sso/default/logout');
+
+        $response->assertRedirect();
+        $location = $response->headers->get('Location');
+        $this->assertStringStartsWith(FakeIdp::ISSUER.'/protocol/openid-connect/logout?', $location);
+
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+        $this->assertSame(FakeIdp::CLIENT_ID, $query['client_id']);
+        $this->assertSame(self::FE_LOGIN, $query['post_logout_redirect_uri']);
+    }
+
+    public function test_logout_uses_configured_frontend_login_url_when_set(): void
+    {
+        config(['sso.frontend_login_url' => 'http://fe.test/login']);
+        (new FakeIdp())->fakeHttp();
+
+        $location = $this->get('/api/auth/sso/default/logout')->headers->get('Location');
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertSame('http://fe.test/login', $query['post_logout_redirect_uri']);
+    }
+
+    public function test_logout_derives_login_url_from_callback_origin_when_unset(): void
+    {
+        (new FakeIdp())->fakeHttp();
+
+        $location = $this->get('/api/auth/sso/default/logout')->headers->get('Location');
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertSame('http://fe.test/login', $query['post_logout_redirect_uri']);
+    }
+
+    public function test_logout_falls_back_to_frontend_login_when_no_end_session_endpoint(): void
+    {
+        $this->refakeHttp([
+            FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response(
+                collect(FakeIdp::discoveryResponse())->except('end_session_endpoint')->all()
+            ),
+        ]);
+
+        $response = $this->get('/api/auth/sso/default/logout');
+
+        $response->assertRedirect(self::FE_LOGIN);
+    }
+
+    public function test_logout_falls_back_to_frontend_login_for_unknown_provider(): void
+    {
+        $response = $this->get('/api/auth/sso/nonexistent/logout');
+
+        $response->assertRedirect(self::FE_LOGIN);
+    }
+
+    public function test_logout_falls_back_to_frontend_login_when_provider_unreachable(): void
+    {
+        $this->refakeHttp([
+            FakeIdp::ISSUER.'/.well-known/openid-configuration' => Http::response('', 503),
+        ]);
+
+        $response = $this->get('/api/auth/sso/default/logout');
+
+        $response->assertRedirect(self::FE_LOGIN);
+    }
+
+    public function test_logout_returns_404_when_sso_disabled(): void
+    {
+        config(['sso.enabled' => false]);
+
+        $this->get('/api/auth/sso/default/logout')->assertNotFound();
     }
 }

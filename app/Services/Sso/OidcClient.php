@@ -26,6 +26,17 @@ class OidcClient
     }
 
     /**
+     * The IdP's RP-initiated logout endpoint, if it advertises one.
+     * Optional per spec - not every provider has it.
+     */
+    public function discoverEndSessionEndpoint(OidcProviderConfig $provider): ?string
+    {
+        $metadata = $this->discovery->metadata($provider);
+
+        return $metadata['end_session_endpoint'] ?? null;
+    }
+
+    /**
      * Create an authorisation transaction and return the IdP authorise URL.
      */
     public function buildAuthorizationRedirect(OidcProviderConfig $provider): string

@@ -39,7 +39,7 @@ class LocalPersonalAccessTokenService
     /**
      * Create a personal access token for a user with optional extra claims.
      */
-    public function makeForUser(User $user, string $name = 'local_login', array $scopes = ['*'])
+    public function makeForUser(User $user, string $name = 'local_login', array $scopes = ['*'], ?string $ssoProvider = null)
     {
         $tokenTtl = config('system.standalone_jwt_ttl_minutes', 60);
         $now = CarbonImmutable::now();
@@ -66,6 +66,10 @@ class LocalPersonalAccessTokenService
                 'workgroups' => $user->workgroups,
                 'cohort_admin_teams' => $user->custodians,
             ];
+
+            if ($ssoProvider !== null) {
+                $userObj['sso_provider'] = $ssoProvider;
+            }
 
             $builder = $this->jwtConfig->builder()
                 ->identifiedBy($jwt->claims()->get('jti'))
