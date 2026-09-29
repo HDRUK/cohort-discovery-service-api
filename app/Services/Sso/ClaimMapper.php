@@ -4,6 +4,7 @@ namespace App\Services\Sso;
 
 use App\Models\User;
 use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -21,6 +22,11 @@ use Spatie\Permission\Models\Role;
  */
 class ClaimMapper
 {
+    public function __construct(
+        private readonly ActivityLogger $activity,
+    ) {
+    }
+
     public function apply(User $user, OidcProviderConfig $provider, OidcAuthResult $result): void
     {
         $mapping = $provider->claimMapping;
@@ -45,13 +51,11 @@ class ClaimMapper
 
         $workgroupIds = Workgroup::whereIn('claim_value', $values)->pluck('id')->all();
 
-        if ($mapping->isIdpAuthoritative()) {
-            $user->workgroups()->sync($workgroupIds);
+        $changes = $mapping->isIdpAuthoritative()
+            ? $user->workgroups()->sync($workgroupIds)
+            : $user->workgroups()->syncWithoutDetaching($workgroupIds);
 
-            return;
-        }
-
-        $user->workgroups()->syncWithoutDetaching($workgroupIds);
+        $this->recordMembershipChange($user, 'workgroups', $mapping, $changes);
     }
 
     private function syncRoles(User $user, ClaimMappingConfig $mapping, OidcAuthResult $result): void
@@ -78,13 +82,25 @@ class ClaimMapper
             ->pluck('id')
             ->all();
 
-        if ($mapping->isIdpAuthoritative()) {
-            $user->roles()->sync($roleIds);
+        $changes = $mapping->isIdpAuthoritative()
+            ? $user->roles()->sync($roleIds)
+            : $user->roles()->syncWithoutDetaching($roleIds);
 
+        $this->recordMembershipChange($user, 'roles', $mapping, $changes);
+    }
+
+    private function recordMembershipChange(User $user, string $relation, ClaimMappingConfig $mapping, array $changes): void
+    {
+        if ($changes['attached'] === [] && $changes['detached'] === []) {
             return;
         }
 
-        $user->roles()->syncWithoutDetaching($roleIds);
+        $this->activity->custom('sso', 'claims_mapped', $user, [
+            'relation' => $relation,
+            'authority' => $mapping->isIdpAuthoritative() ? 'idp' : 'local',
+            'attached' => array_values($changes['attached']),
+            'detached' => array_values($changes['detached']),
+        ]);
     }
 
     /**

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Exceptions\Sso\ProviderNotConfiguredException;
 use App\Exceptions\Sso\SsoException;
 use App\Http\Controllers\Controller;
+use App\Services\Activity\ActivityLogger;
 use App\Services\Authentication\LocalPersonalAccessTokenService;
 use App\Services\Sso\OidcClient;
+use App\Services\Sso\LogoutTicketStore;
 use App\Services\Sso\OidcProviderConfig;
 use App\Services\Sso\OneTimeCodeStore;
 use App\Services\Sso\SsoUserResolver;
@@ -46,6 +48,8 @@ class SsoController extends Controller
         private readonly SsoUserResolver $resolver,
         private readonly OneTimeCodeStore $codes,
         private readonly LocalPersonalAccessTokenService $tokens,
+        private readonly LogoutTicketStore $logoutTickets,
+        private readonly ActivityLogger $activity,
     ) {
     }
 
@@ -113,12 +117,22 @@ class SsoController extends Controller
                 'detail' => $e->getMessage(),
             ]);
 
+            $this->activity->failed('sso', null, $e, [
+                'provider' => $provider,
+                'error_code' => $e->errorCode,
+            ], 'sso_login_start_failed');
+
             return $this->errorRedirect($e->errorCode);
         } catch (ConnectionException|RequestException $e) {
             \Log::warning('SSO redirect failed to reach the provider', [
                 'provider' => $provider,
                 'detail' => $e->getMessage(),
             ]);
+
+            $this->activity->failed('sso', null, $e, [
+                'provider' => $provider,
+                'error_code' => 'provider_unreachable',
+            ], 'sso_login_start_failed');
 
             return $this->errorRedirect('provider_unreachable');
         }
@@ -152,6 +166,12 @@ class SsoController extends Controller
                 'error' => $request->query('error'),
             ]);
 
+            $this->activity->custom('sso', 'login_failed', null, [
+                'provider' => $provider,
+                'error_code' => 'idp_error',
+                'idp_error' => $request->query('error'),
+            ]);
+
             return $this->errorRedirect('idp_error');
         }
 
@@ -159,6 +179,11 @@ class SsoController extends Controller
         $state = $request->query('state');
 
         if (! is_string($code) || ! is_string($state) || $code === '' || $state === '') {
+            $this->activity->custom('sso', 'login_failed', null, [
+                'provider' => $provider,
+                'error_code' => 'invalid_callback',
+            ]);
+
             return $this->errorRedirect('invalid_callback');
         }
 
@@ -172,15 +197,26 @@ class SsoController extends Controller
                 'detail' => $e->getMessage(),
             ]);
 
+            $this->activity->failed('sso', null, $e, [
+                'provider' => $provider,
+                'error_code' => $e->errorCode,
+            ], 'sso_login_failed');
+
             return $this->errorRedirect($e->errorCode);
         }
 
-        $token = $this->tokens->makeForUser($user, 'sso_login', ['*'], $provider);
+        $logoutTicket = $result->idToken ? $this->logoutTickets->issue($result->idToken) : null;
+
+        $token = $this->tokens->makeForUser($user, 'sso_login', ['*'], $provider, $logoutTicket);
         $handoffCode = $this->codes->issue($token->accessToken);
 
         \Log::info('SSO login succeeded', [
             'provider' => $provider,
             'user_id' => $user->id,
+        ]);
+
+        $this->activity->custom('sso', 'login', $user, [
+            'provider' => $provider,
         ]);
 
         $callbackUrl = config('sso.frontend_callback_url');
@@ -230,6 +266,8 @@ class SsoController extends Controller
         $accessToken = $this->codes->redeem($input['code']);
 
         if (! $accessToken) {
+            $this->activity->custom('sso', 'code_exchange_failed');
+
             return response()->json(['error' => 'invalid or expired code'], 401);
         }
 
@@ -260,7 +298,7 @@ class SsoController extends Controller
      * called, so the worst outcome is "still logged into the IdP", not
      * "stuck on an error page".
      */
-    public function logout(string $provider): RedirectResponse
+    public function logout(Request $request, string $provider): RedirectResponse
     {
         $this->ensureSsoAvailable();
 
@@ -275,18 +313,50 @@ class SsoController extends Controller
                 'detail' => $e->getMessage(),
             ]);
 
+            $this->activity->custom('sso', 'logout', null, [
+                'provider' => $provider,
+                'reached_idp' => false,
+                'reason' => 'provider_undiscoverable',
+            ]);
+
             return redirect()->away($postLogoutRedirectUri);
         }
 
         if (! $endSessionEndpoint) {
+            $this->activity->custom('sso', 'logout', null, [
+                'provider' => $provider,
+                'reached_idp' => false,
+                'reason' => 'no_end_session_endpoint',
+            ]);
+
             return redirect()->away($postLogoutRedirectUri);
         }
 
+        $ticket = $request->query('ticket');
+        $idToken = is_string($ticket) && $ticket !== ''
+            ? $this->logoutTickets->redeem($ticket)
+            : null;
+
+        if (! $idToken) {
+            \Log::info('SSO logout has no id_token_hint; the provider may ask the user to confirm', [
+                'provider' => $provider,
+            ]);
+        }
+
+        $this->activity->custom('sso', 'logout', null, [
+            'provider' => $provider,
+            'reached_idp' => true,
+            'had_id_token_hint' => $idToken !== null,
+        ]);
+
+        $params = array_filter([
+            'client_id' => $config->clientId,
+            'post_logout_redirect_uri' => $postLogoutRedirectUri,
+            'id_token_hint' => $idToken,
+        ]);
+
         return redirect()->away(
-            $endSessionEndpoint.(str_contains($endSessionEndpoint, '?') ? '&' : '?').http_build_query([
-                'client_id' => $config->clientId,
-                'post_logout_redirect_uri' => $postLogoutRedirectUri,
-            ])
+            $endSessionEndpoint.(str_contains($endSessionEndpoint, '?') ? '&' : '?').http_build_query($params)
         );
     }
 

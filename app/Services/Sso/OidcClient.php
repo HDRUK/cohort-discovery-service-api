@@ -122,7 +122,7 @@ class OidcClient
             );
         }
 
-        return OidcAuthResult::fromClaims($claims);
+        return OidcAuthResult::fromClaims($claims, $idToken);
     }
 
     /**

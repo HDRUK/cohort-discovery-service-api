@@ -320,6 +320,59 @@ class SsoLoginTest extends TestCase
         $this->assertErrorRedirect($response, 'idp_error');
     }
 
+    public function test_login_logout_and_failures_are_written_to_the_activity_log(): void
+    {
+        \DB::table('activity_log')->truncate();
+
+        [$state, $nonce] = $this->startLogin();
+        (new FakeIdp())->fakeHttp([
+            'sub' => 'subject-audited',
+            'email' => 'audited@example.com',
+            'email_verified' => true,
+            'nonce' => $nonce,
+        ]);
+
+        $callback = $this->get($this->callbackUrl($state));
+        parse_str(parse_url($callback->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        $user = User::where('email', 'audited@example.com')->firstOrFail();
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_login',
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'properties->provider' => 'default',
+        ]);
+
+        $this->postJson('/api/auth/sso/exchange', ['code' => $query['code']])->assertOk();
+        $this->postJson('/api/auth/sso/exchange', ['code' => $query['code']])->assertUnauthorized();
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_code_exchange_failed',
+        ]);
+
+        $this->get('/api/auth/sso/default/callback?error=access_denied');
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_login_failed',
+            'properties->error_code' => 'idp_error',
+            'properties->idp_error' => 'access_denied',
+        ]);
+
+        $this->get('/api/auth/sso/default/logout');
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_logout',
+            'properties->provider' => 'default',
+            'properties->reached_idp' => true,
+            'properties->had_id_token_hint' => false,
+        ]);
+    }
+
     public function test_exchange_code_is_single_use(): void
     {
         [$state, $nonce] = $this->startLogin();
@@ -499,5 +552,63 @@ class SsoLoginTest extends TestCase
         config(['sso.enabled' => false]);
 
         $this->get('/api/auth/sso/default/logout')->assertNotFound();
+    }
+
+    /**
+     * Without id_token_hint an IdP cannot tell which session to end and stops
+     * to ask the user, which reads as a broken logout. The ticket buys the
+     * hint back without ever putting the id_token in the browser.
+     */
+    public function test_logout_ticket_from_the_token_supplies_the_id_token_hint(): void
+    {
+        [$state, $nonce] = $this->startLogin();
+        (new FakeIdp())->fakeHttp([
+            'sub' => 'subject-logout',
+            'email' => 'logout@example.com',
+            'email_verified' => true,
+            'name' => 'Logout Tester',
+            'nonce' => $nonce,
+        ]);
+
+        $callback = $this->get($this->callbackUrl($state));
+        parse_str(parse_url($callback->headers->get('Location'), PHP_URL_QUERY), $handoff);
+        $accessToken = $this->postJson('/api/auth/sso/exchange', ['code' => $handoff['code']])
+            ->json('data.access_token');
+
+        $ticket = $this->decodeJwtPayload($accessToken)['user']['sso_logout_ticket'];
+        $this->assertNotEmpty($ticket);
+
+        $location = $this->get('/api/auth/sso/default/logout?ticket='.$ticket)
+            ->headers->get('Location');
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertNotEmpty($query['id_token_hint']);
+        $this->assertSame(self::FE_LOGIN, $query['post_logout_redirect_uri']);
+
+        // Single use - a replayed ticket must not resurrect the hint
+        $replayed = $this->get('/api/auth/sso/default/logout?ticket='.$ticket)
+            ->headers->get('Location');
+        parse_str(parse_url($replayed, PHP_URL_QUERY), $replayedQuery);
+        $this->assertArrayNotHasKey('id_token_hint', $replayedQuery);
+    }
+
+    public function test_logout_without_a_ticket_still_redirects_to_the_idp(): void
+    {
+        $location = $this->get('/api/auth/sso/default/logout')->headers->get('Location');
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertStringStartsWith(FakeIdp::ISSUER.'/protocol/openid-connect/logout?', $location);
+        $this->assertArrayNotHasKey('id_token_hint', $query);
+        $this->assertSame(FakeIdp::CLIENT_ID, $query['client_id']);
+    }
+
+    public function test_logout_ignores_an_unknown_ticket(): void
+    {
+        $location = $this->get('/api/auth/sso/default/logout?ticket='.str_repeat('a', 64))
+            ->headers->get('Location');
+        parse_str(parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertArrayNotHasKey('id_token_hint', $query);
+        $this->assertSame(self::FE_LOGIN, $query['post_logout_redirect_uri']);
     }
 }

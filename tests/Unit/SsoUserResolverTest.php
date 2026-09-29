@@ -232,6 +232,50 @@ class SsoUserResolverTest extends TestCase
 
         $this->assertFalse($user->workgroups()->where('workgroups.id', $local->id)->exists());
         $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_claims_mapped',
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'properties->relation' => 'workgroups',
+            'properties->authority' => 'idp',
+            'properties->detached' => json_encode([$local->id]),
+        ]);
+    }
+
+    public function test_provisioning_and_linking_are_written_to_the_activity_log(): void
+    {
+        \DB::table('activity_log')->truncate();
+
+        $provisioned = $this->resolver->resolve($this->provider, $this->authResult([
+            'email' => 'resolver.audited@example.com',
+            'email_verified' => true,
+        ]));
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_user_provisioned',
+            'subject_type' => User::class,
+            'subject_id' => $provisioned->id,
+            'properties->provider' => 'default',
+        ]);
+
+        $existing = User::factory()->create(['email' => 'already.here@example.com']);
+
+        $this->resolver->resolve($this->provider, OidcAuthResult::fromClaims([
+            'sub' => 'sub-2',
+            'email' => $existing->email,
+            'email_verified' => true,
+        ]));
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'sso',
+            'description' => 'sso_identity_linked',
+            'subject_type' => User::class,
+            'subject_id' => $existing->id,
+            'properties->matched_on' => 'verified_email',
+        ]);
     }
 
     public function test_absent_claim_leaves_workgroups_untouched_even_under_idp_authority(): void

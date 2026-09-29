@@ -6,6 +6,7 @@ use App\Exceptions\Sso\SsoLinkingException;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
 use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
 
@@ -22,6 +23,7 @@ class SsoUserResolver
 {
     public function __construct(
         private readonly ClaimMapper $claimMapper,
+        private readonly ActivityLogger $activity,
     ) {
     }
 
@@ -61,6 +63,12 @@ class SsoUserResolver
                 }
 
                 $this->createIdentity($existing, $provider, $result);
+
+                $this->activity->custom('sso', 'identity_linked', $existing, [
+                    'provider' => $provider->slug,
+                    'matched_on' => 'verified_email',
+                ]);
+
                 $this->claimMapper->apply($existing, $provider, $result);
 
                 return $existing;
@@ -76,6 +84,11 @@ class SsoUserResolver
             ]);
 
             $this->createIdentity($user, $provider, $result);
+
+            $this->activity->created('sso', $user, [
+                'provider' => $provider->slug,
+            ], 'sso_user_provisioned');
+
             $this->applyLocalDefaults($user);
             $this->claimMapper->apply($user, $provider, $result);
 

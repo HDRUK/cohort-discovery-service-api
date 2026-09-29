@@ -51,7 +51,7 @@ return [
      * deployment via config overrides.
      */
     'providers' => [
-        'default' => [
+        'keycloak' => [
             'enabled' => (bool) env('SSO_DEFAULT_ENABLED', false),
             'label' => env('SSO_DEFAULT_LABEL', 'Single Sign-On'),
             'issuer' => env('SSO_DEFAULT_ISSUER'),
