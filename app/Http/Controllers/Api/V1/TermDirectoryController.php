@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use DateTime;
 use DateTimeZone;
+use Carbon\Carbon;
+
 
 /**
  * @OA\Tag(
@@ -164,13 +166,12 @@ class TermDirectoryController extends Controller
             $domain = $request->has('domain_id') ? '_' . $request->query('domain_id') : '';
             $domains = $request->has('domain_id__in') ? '_' . str_replace('', '_', $request->query('domain_id__in')) : '';
 
-            $collectionNames = $termDirectory->resolveCollectionField($request, 'name');
+            $collectionNames = $request->has('collection_pid') ? $termDirectory->resolveCollectionField($request, 'name') : new SupportCollection();
             $collections = $collectionNames->isNotEmpty() ? '_' . $collectionNames->implode('_') : '';
 
             $sort = $request->has('sort') ? '_' . $request->query('sort') : '';
 
-            $datetime = new DateTime("now", new DateTimeZone('Europe/London'));
-            $datetime = '_' . $datetime->format('d-m-Y_H-i');
+            $datetime = '_' . Carbon::now()->format('Y-m-d_H-i-s');
 
             $filename = sprintf('term-directory-exported%s%s%s%s%s%s.csv', $concept_name, $domain, $domains, $collections, $sort, $datetime);
 
