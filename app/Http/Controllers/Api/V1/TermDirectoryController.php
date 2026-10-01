@@ -125,19 +125,10 @@ class TermDirectoryController extends Controller
     ): StreamedResponse | JsonResponse {
         try {
 
-            $concepts = $termDirectory->search($request, 100);
-            $lastPage = $concepts->lastPage();
-            $allConcepts = $concepts->items();
-
-            if ($lastPage > 1) {
-                for ($pageNum = 2; $pageNum <= $lastPage; $pageNum++) {
-                    $concepts = $termDirectory->search($request->merge(['page' => $pageNum]), 100);
-                    $allConcepts = array_merge($allConcepts, $concepts->items());
-                }
-            }
+            $concepts = $termDirectory->search($request, $this->resolvePerPage())->items();
 
             $response = new StreamedResponse(
-                function () use ($allConcepts) {
+                function () use ($concepts) {
                     // Open output stream
                     $handle = fopen('php://output', 'w');
 
@@ -152,7 +143,7 @@ class TermDirectoryController extends Controller
                     // Add CSV headers
                     fputcsv($handle, $headerRow);
                     // add the given number of rows to the file.
-                    foreach ($allConcepts as $concept) {
+                    foreach ($concepts as $concept) {
                         $row = [
                             $concept['concept_id'] !== null ? $concept['concept_id'] : '',
                             $concept['concept_name'] !== null ? $concept['concept_name'] : '',
