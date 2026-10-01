@@ -164,7 +164,7 @@ class TermDirectoryController extends Controller
             $domain = $request->has('domain_id') ? '_' . $request->query('domain_id') : '';
             $domains = $request->has('domain_id__in') ? '_' . str_replace('', '_', $request->query('domain_id__in')) : '';
 
-            $collectionNames = $this->resolveCollectionNames($request);
+            $collectionNames = $termDirectory->resolveCollectionField($request, 'name');
             $collections = $collectionNames->isNotEmpty() ? '_' . $collectionNames->implode('_') : '';
 
             $sort = $request->has('sort') ? '_' . $request->query('sort') : '';
@@ -189,23 +189,5 @@ class TermDirectoryController extends Controller
 
             return $this->ErrorResponse();
         }
-    }
-
-    /**
-     * The user's visible collections, optionally narrowed to requested collection names.
-     * Names outside the visible set are dropped so they can never widen access.
-     */
-    private function resolveCollectionNames(Request $request): SupportCollection
-    {
-        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('name');
-
-        $requestedPids = (array) $request->input('collection_pid', []);
-        if (empty($requestedPids)) {
-            return $visible;
-        }
-
-        $requested = Collection::whereIn('pid', $requestedPids)->pluck('name');
-
-        return $visible->intersect($requested)->values();
     }
 }
