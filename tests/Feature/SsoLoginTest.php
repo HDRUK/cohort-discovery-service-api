@@ -39,6 +39,7 @@ class SsoLoginTest extends TestCase
             'sso.providers.default' => FakeIdp::providerConfig(),
             'sso.frontend_callback_url' => self::FE_CALLBACK,
             'sso.frontend_error_url' => self::FE_ERROR,
+            'sso.frontend_login_url' => self::FE_LOGIN,
         ]);
     }
 
