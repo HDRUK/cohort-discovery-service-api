@@ -27,15 +27,25 @@ REDIS_PASSWORD=
 REDIS_PORT=6379
 ```
 
-### Integration mode
+### Open-source mode
 
-There are two running modes to choose from:
+There are two running modes, and only one of them is for you.
+
+**`integrated` is used exclusively by HDR UK's Health Data Gateway.** It exists to share tokens with
+the Gateway, which acts as the identity provider - it is not a general-purpose SSO mechanism, and it
+will not work with a third-party identity provider.
+
+When forking, cloning or deploying this yourself, use `standalone` and either configure an OIDC
+provider or fall back to username/password credentials:
 
 ```
-APP_OPERATION_MODE="integrated" # or "standalone"
+APP_OPERATION_MODE="standalone"
 ```
 
-This is documented further down
+An unrecognised value refuses to boot rather than quietly defaulting.
+
+Full detail in [`docs/auth/`](docs/auth/README.md) - start with
+[Operation modes](docs/auth/operation-modes.md).
 
 ### Other
 
@@ -47,14 +57,21 @@ OCTANE_SERVER=frankenphp # if you use this
 ### Local Development
 
 ```
+php artisan migrate:fresh --seed --seeder=DevDatabaseSeeder
+```
+
+This reaches `StandaloneDemoSeeder`, which creates the `CohortDiscoveryService` personal
+access client. You need that client to issue tokens, so use this seeder if you intend to log
+in at all.
+
+### Schema and reference data only
+
+```
 php artisan migrate:fresh --seed
 ```
 
-### For Deployment
-
-```
-php artisan migrate:fresh --seed --seeder=DevDatabaseSeeder
-```
+`DatabaseSeeder` covers workgroups, roles, states, custodians and feature flags, but **not**
+the personal access client - login will fail until one exists.
 
 ## OMOP configuration
 
@@ -211,11 +228,130 @@ For more information [follow the instructions here](https://hutch.health/bunny/c
 
 # Standalone Integration
 
-... to be completed ...
+In standalone mode the Cohort-Discovery-Service API is its own identity authority. Users live in the
+local `users` table, log in with email + password via `POST /api/auth/login`, and receive an RS256 JWT
+signed with the Passport keys.
+
+```
+APP_OPERATION_MODE="standalone"
+STANDALONE_JWT_TTL_MINUTES=120 # how long a login lives before the user has to go around again
+```
+
+You'll need Passport keys in place (`php artisan passport:keys` if you don't have them already) and the
+`CohortDiscoveryService` personal access client, created by `StandaloneDemoSeeder` and `TestingSeeder` - but
+*not* by the plain `DatabaseSeeder`, so check you seeded with one of those. No keys, no tokens - it's that
+kind of relationship.
+
+## OIDC Single Sign-On (optional)
+
+Once deployed you can also hand the front door over to an external identity provider - Keycloak, Entra ID,
+your institution's finest. Password login carries on working alongside it; SSO is an additional way in, not
+a replacement.
+
+One constraint worth knowing before you pick a provider: the token and JWKS endpoints must live on the same
+origin as the issuer, which rules out Google (three different hosts). See
+[Supported identity providers](docs/auth/standalone-oidc-setup.md#7-supported-identity-providers).
+
+A word of warning before you start: SSO is *standalone-only*. In integrated mode the Health Data Gateway *is* the
+identity provider, so these endpoints politely 404 and pretend they don't exist.
+
+### Configuration
+
+Add the following to your `.env`:
+
+```
+SSO_ENABLED=true
+SSO_FRONTEND_CALLBACK_URL="http://localhost:3000/auth/sso/callback"                   # or wherever your client deployment lives
+SSO_FRONTEND_ERROR_URL="http://localhost:3000/auth/sso/error"                         # where failed logins get sent
+
+SSO_DEFAULT_ENABLED=true
+SSO_DEFAULT_LABEL="Single Sign-On"                                                    # what the FE shows on the button
+SSO_DEFAULT_ISSUER="http://localhost:8080/realms/cohort-discovery-service"            # your IdP's issuer, exactly as it appears in its tokens
+SSO_DEFAULT_CLIENT_ID=<client id you registered with the IdP>
+SSO_DEFAULT_CLIENT_SECRET=<client secret to go with it>
+SSO_DEFAULT_SCOPES="openid profile email"
+```
+
+The `DEFAULT` in the variable names refers to the provider slug (`default`), which appears in the URLs
+below. Additional providers can be added under `config/sso.php` per deployment - each gets its own slug.
+
+There are also some optional dials, all with sensible defaults, if you feel the need to fine tune:
+
+```
+SSO_DEFAULT_DISCOVERY_URL=      # defaults to {issuer}/.well-known/openid-configuration
+SSO_DEFAULT_REDIRECT_URI=       # defaults to {app url}/api/auth/sso/default/callback
+SSO_TXN_TTL_SECONDS=600         # how long a login attempt can idle between redirect and callback
+SSO_HANDOFF_CODE_TTL_SECONDS=60 # how long the FE has to exchange its one-time code
+SSO_ID_TOKEN_LEEWAY_SECONDS=30  # clock-skew forgiveness when validating id_tokens
+```
+
+### Register the callback with your IdP
+
+Your IdP needs to know where to send people back to. Register:
+
+```
+http://localhost:8100/api/auth/sso/default/callback # or wherever you are running your instance of the cohort-discovery-service-api
+```
+
+Make sure the IdP actually releases the `email` claim (it's in the default scopes, but some enterprise
+setups withhold it) - without an email we can neither link nor create an account, and the login will fail.
+
+### OIDC Flow
+
+1. FE asks `GET /api/auth/sso/providers` for what's on offer and renders a button per provider
+2. The browser navigates to `GET /api/auth/sso/default/redirect` and is bounced to the IdP
+3. The IdP bounces back to our callback; we validate the id_token (signature, issuer, audience,
+   nonce and expiry), find or create the user, mint the same
+   RS256 JWT a password login would get, and bounce the browser to `SSO_FRONTEND_CALLBACK_URL`
+   with a single-use `?code=`
+4. The FE swaps that code at `POST /api/auth/sso/exchange` (`{"code": "..."}`) for the actual
+   `access_token` - so the token itself never rides in a URL
+
+First-time visitors are created on the spot with the `DEFAULT` workgroup and the `user` role
+(controllable via the `sso-ensure-defaults-on-jit` feature flag). Returning visitors are matched by
+their provider identity. If someone arrives whose email matches an existing account, we only link the
+two when the IdP swears the email is verified - anything less smells like an account takeover, and we
+send it to the error URL instead.
+
+### Claim mapping (optional)
+
+By default the local database is the authority on roles and workgroups, and the IdP only proves
+identity. If your IdP already manages group membership, it can drive workgroups and roles instead:
+
+```
+SSO_DEFAULT_CLAIM_MAPPING_ENABLED=true
+SSO_DEFAULT_WORKGROUPS_CLAIM="eduperson_entitlement"
+SSO_DEFAULT_CLAIM_AUTHORITY="local"   # "local" only adds; "idp" also removes
+```
+
+Claim values are matched against the `claim_value` column on `workgroups`. Under `local` an
+admin's manual assignment survives the user's next login; under `idp` the claim is the whole truth
+and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
+string never becomes a Daphne role by accident.
+
+See [Standalone OIDC setup](docs/auth/standalone-oidc-setup.md) for a worked Keycloak example, the full
+variable reference, linking rules, known limitations and a troubleshooting table. The frontend's side of
+the contract is in [Frontend contract](docs/auth/frontend-contract.md).
+
+> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed. See
+> [Migrating from the OIDC resource server](docs/auth/migrating-from-oidc-resource-server.md) - and read the
+> `SSO_MIGRATION_PROVIDER_SLUG` section before running migrations.
+
+### Trying it locally
+
+A disposable Keycloak is the quickest way to confirm the flow:
+
+```
+docker run -p 8080:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak start-dev
+```
+
+Create a realm, a confidential client with the callback URL above, a test user with a verified email,
+point the `SSO_DEFAULT_*` vars at it, and visit `http://localhost:8100/api/auth/sso/default/redirect`
+in a browser.
 
 # Gateway Integration
 
-To use DAPHNE with the HDR UK Gateway, follow the next steps to setup this as an integration
+To use Cohort Discovery Service with the HDR UK Gateway, follow the next steps to setup this as an integration
 
 Add the following to your .env for the gateway-api:
 

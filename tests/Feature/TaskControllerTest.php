@@ -767,7 +767,7 @@ class TaskControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_returns_unauthorized_for_status_endpoint_with_invalid_credentials(): void
+    public function it_returns_unauthorised_for_status_endpoint_with_invalid_credentials(): void
     {
         Config::set('system.basic_auth_enabled', true);
         $this->enableMiddleware();

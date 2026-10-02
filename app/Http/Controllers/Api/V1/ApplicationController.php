@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ModelBackedRequest;
 use App\Models\User;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\ClientRepository;
 
 class ApplicationController extends Controller
@@ -25,15 +27,12 @@ class ApplicationController extends Controller
         return $this->OKResponse([]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(ModelBackedRequest $request): JsonResponse
     {
-        $input = $request->only([
-            'user_id',
-            'application_name',
-            'redirect_uris',
-        ]);
+        $input = $request->validated();
 
-        $user = User::where('id', $input['user_id'])->first();
+        /** @var User $user */
+        $user = Auth::user();
 
         $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
             user: $user,
