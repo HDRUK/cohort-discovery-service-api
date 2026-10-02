@@ -187,6 +187,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 });
 
 Route::prefix('auth')->group(function () {
+    Route::get('/methods', [\App\Http\Controllers\Api\V1\AuthMethodsController::class, 'index']);
     Route::post('/login', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'login']);
     Route::post('/logout', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'logout']);
 });
