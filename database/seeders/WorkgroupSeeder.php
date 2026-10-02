@@ -8,9 +8,12 @@ use Illuminate\Database\Seeder;
 class WorkgroupSeeder extends Seeder
 {
     private array $workgroups = [
-        'ADMIN' => null,
-        'DEFAULT' => null,
-        'CUSTODIAN' => null,
+        'ADMIN' => null,          // Null so ClaimMapper::syncWorkgroups() can never auto-assign
+        'DEFAULT' => null,        // a user into privileged workgroups from IdP claims; only
+        'CUSTODIAN' => null,      // admin-assigned membership is possible. Integrated-mode auth
+                                  // (config/claimsaccesscontrol.php) uses a separate name-based
+                                  // matching strategy; reconciling the two is deferred (DP-976).
+
         'NON-UK-INDUSTRY' => 'non-uk-industry',
         'NON-UK-RESEARCH' => 'non-uk-research',
         'OTHER' => 'other',
