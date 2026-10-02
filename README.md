@@ -325,7 +325,7 @@ admin's manual assignment survives the user's next login; under `idp` the claim 
 and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
 string never becomes a Daphne role by accident.
 
-For a worked Keycloak example, the full variable reference, linking rules, known limitations and a troubleshooting table, consult the source code in `config/sso.php` and related service classes in `app/Services/Sso/`.
+For a worked Keycloak example, the full variable reference, linking rules, known limitations and a troubleshooting table, see the [OIDC / SSO login](https://hdruk.github.io/cohort-discovery-service-docs/developers/modes/#oidc-sso-login-optional) section of the developer docs.
 
 > **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed.
 > Read the `SSO_MIGRATION_PROVIDER_SLUG` section in the migrations before running them.
