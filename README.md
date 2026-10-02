@@ -44,9 +44,6 @@ APP_OPERATION_MODE="standalone"
 
 An unrecognised value refuses to boot rather than quietly defaulting.
 
-Full detail in [`docs/auth/`](docs/auth/README.md) - start with
-[Operation modes](docs/auth/operation-modes.md).
-
 ### Other
 
 ```
@@ -249,8 +246,7 @@ your institution's finest. Password login carries on working alongside it; SSO i
 a replacement.
 
 One constraint worth knowing before you pick a provider: the token and JWKS endpoints must live on the same
-origin as the issuer, which rules out Google (three different hosts). See
-[Supported identity providers](docs/auth/standalone-oidc-setup.md#7-supported-identity-providers).
+origin as the issuer, which rules out Google (three different hosts).
 
 A word of warning before you start: SSO is *standalone-only*. In integrated mode the Health Data Gateway *is* the
 identity provider, so these endpoints politely 404 and pretend they don't exist.
@@ -329,13 +325,10 @@ admin's manual assignment survives the user's next login; under `idp` the claim 
 and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
 string never becomes a Daphne role by accident.
 
-See [Standalone OIDC setup](docs/auth/standalone-oidc-setup.md) for a worked Keycloak example, the full
-variable reference, linking rules, known limitations and a troubleshooting table. The frontend's side of
-the contract is in [Frontend contract](docs/auth/frontend-contract.md).
+For a worked Keycloak example, the full variable reference, linking rules, known limitations and a troubleshooting table, consult the source code in `config/sso.php` and related service classes in `app/Services/Sso/`.
 
-> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed. See
-> [Migrating from the OIDC resource server](docs/auth/migrating-from-oidc-resource-server.md) - and read the
-> `SSO_MIGRATION_PROVIDER_SLUG` section before running migrations.
+> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed.
+> Read the `SSO_MIGRATION_PROVIDER_SLUG` section in the migrations before running them.
 
 ### Trying it locally
 
