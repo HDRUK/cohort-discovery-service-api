@@ -203,6 +203,18 @@ class SsoController extends Controller
             ], 'sso_login_failed');
 
             return $this->errorRedirect($e->errorCode);
+        } catch (ConnectionException|RequestException $e) {
+            \Log::warning('SSO callback failed to reach the provider', [
+                'provider' => $provider,
+                'detail' => $e->getMessage(),
+            ]);
+
+            $this->activity->failed('sso', null, $e, [
+                'provider' => $provider,
+                'error_code' => 'provider_unreachable',
+            ], 'sso_login_failed');
+
+            return $this->errorRedirect('provider_unreachable');
         }
 
         $logoutTicket = $result->idToken ? $this->logoutTickets->issue($result->idToken) : null;
