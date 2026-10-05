@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\UserIdentity;
 use Illuminate\Support\Facades\Http;
-use Laravel\Pennant\Feature;
 use Tests\Support\FakeIdp;
 use Tests\TestCase;
 
@@ -23,7 +22,7 @@ class SsoLoginTest extends TestCase
         UserIdentity::truncate();
         \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        Feature::activate('sso-ensure-defaults-on-jit');
+        config(['claimsaccesscontrol.sync.provision.defaults_on_create' => true]);
 
         // The redirect action fetches the discovery document before each
         // test's fakeHttp() call, so these are always stubbed.

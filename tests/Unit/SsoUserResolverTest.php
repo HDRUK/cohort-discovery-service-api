@@ -8,8 +8,8 @@ use App\Models\UserIdentity;
 use App\Models\Workgroup;
 use App\Services\Sso\OidcAuthResult;
 use App\Services\Sso\OidcProviderConfig;
+use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\Sso\SsoUserResolver;
-use Laravel\Pennant\Feature;
 use Tests\Support\FakeIdp;
 use Tests\TestCase;
 
@@ -27,11 +27,14 @@ class SsoUserResolverTest extends TestCase
         UserIdentity::truncate();
         \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Pennant's database driver prefers stored values over define(),
-        // so toggle the persisted flag directly
-        Feature::activate('sso-ensure-defaults-on-jit');
-
-        config(['sso.providers.default' => FakeIdp::providerConfig()]);
+        config([
+            'claimsaccesscontrol.sync.provision.defaults_on_create' => true,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER,
+            'claimsaccesscontrol.sync.workgroups.authoritative' => false,
+            'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_NEVER,
+            'claimsaccesscontrol.sync.roles.authoritative' => false,
+            'sso.providers.default' => FakeIdp::providerConfig(),
+        ]);
 
         $this->resolver = app(SsoUserResolver::class);
         $this->provider = OidcProviderConfig::fromConfig('default');
@@ -58,9 +61,9 @@ class SsoUserResolverTest extends TestCase
         $this->assertSame(1, $user->identities()->count());
     }
 
-    public function test_jit_defaults_are_skipped_when_flag_is_off(): void
+    public function test_jit_defaults_are_skipped_when_turned_off(): void
     {
-        Feature::deactivate('sso-ensure-defaults-on-jit');
+        config(['claimsaccesscontrol.sync.provision.defaults_on_create' => false]);
 
         $user = $this->resolver->resolve($this->provider, $this->authResult([
             'email' => 'noflags@example.com',
@@ -141,24 +144,31 @@ class SsoUserResolverTest extends TestCase
         $this->assertSame(2, UserIdentity::count());
     }
 
-    private function withClaimMapping(array $mapping): OidcProviderConfig
+    private function withClaimMapping(array $mapping = [], array $sync = []): OidcProviderConfig
     {
         config(['sso.providers.mapped' => FakeIdp::providerConfig([
             'claim_mapping' => array_merge([
-                'enabled' => true,
-                'authority' => 'local',
                 'workgroups_claim' => 'eduperson_entitlement',
                 'roles_claim' => null,
-                'role_map' => [],
             ], $mapping),
         ])]);
+
+        config(array_merge([
+            'claimsaccesscontrol.workgroup_mappings' => [
+                'mapped-wg' => 'urn:wg:mapped',
+                'local-only' => 'urn:wg:local',
+            ],
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+        ], $sync));
 
         return OidcProviderConfig::fromConfig('mapped');
     }
 
-    public function test_claim_mapping_is_off_by_default(): void
+    public function test_claims_are_ignored_when_they_are_never_trusted(): void
     {
-        Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
+
+        $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);
 
         $user = $this->resolver->resolve($this->provider, $this->authResult([
             'email' => 'nomap@example.com',
@@ -171,7 +181,7 @@ class SsoUserResolverTest extends TestCase
 
     public function test_claim_mapping_assigns_workgroups_from_entitlements(): void
     {
-        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
         $user = $this->resolver->resolve($this->withClaimMapping([]), $this->authResult([
             'email' => 'mapped@example.com',
@@ -182,12 +192,12 @@ class SsoUserResolverTest extends TestCase
         $this->assertTrue($user->workgroups()->where('workgroups.id', $wg->id)->exists());
     }
 
-    public function test_local_authority_never_removes_a_locally_assigned_workgroup(): void
+    public function test_additive_sync_never_removes_a_locally_assigned_workgroup(): void
     {
-        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
-        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
-        $provider = $this->withClaimMapping(['authority' => 'local']);
+        $provider = $this->withClaimMapping();
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'sticky@example.com',
@@ -209,12 +219,12 @@ class SsoUserResolverTest extends TestCase
         $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
     }
 
-    public function test_idp_authority_removes_workgroups_the_claim_omits(): void
+    public function test_authoritative_sync_removes_workgroups_the_claim_omits(): void
     {
-        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
-        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
-        $provider = $this->withClaimMapping(['authority' => 'idp']);
+        $provider = $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.authoritative' => true]);
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'strict@example.com',
@@ -239,7 +249,7 @@ class SsoUserResolverTest extends TestCase
             'subject_type' => User::class,
             'subject_id' => $user->id,
             'properties->relation' => 'workgroups',
-            'properties->authority' => 'idp',
+            'properties->authoritative' => true,
             'properties->detached' => json_encode([$local->id]),
         ]);
     }
@@ -278,11 +288,11 @@ class SsoUserResolverTest extends TestCase
         ]);
     }
 
-    public function test_absent_claim_leaves_workgroups_untouched_even_under_idp_authority(): void
+    public function test_absent_claim_leaves_workgroups_untouched_even_under_authoritative_sync(): void
     {
-        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
-        $provider = $this->withClaimMapping(['authority' => 'idp']);
+        $provider = $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.authoritative' => true]);
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'quiet@example.com',
@@ -299,11 +309,11 @@ class SsoUserResolverTest extends TestCase
         $this->assertTrue($user->workgroups()->where('workgroups.id', $mapped->id)->exists());
     }
 
-    public function test_present_but_empty_claim_clears_workgroups_under_idp_authority(): void
+    public function test_present_but_empty_claim_clears_workgroups_under_authoritative_sync(): void
     {
-        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $mapped = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
-        $provider = $this->withClaimMapping(['authority' => 'idp']);
+        $provider = $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.authoritative' => true]);
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'emptied@example.com',
@@ -322,7 +332,7 @@ class SsoUserResolverTest extends TestCase
 
     public function test_entitlements_encoded_as_a_json_string_are_understood(): void
     {
-        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['claim_value' => 'urn:wg:mapped', 'active' => 1]);
+        $wg = Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
         $user = $this->resolver->resolve($this->withClaimMapping([]), $this->authResult([
             'email' => 'jsonclaim@example.com',
@@ -333,12 +343,15 @@ class SsoUserResolverTest extends TestCase
         $this->assertTrue($user->workgroups()->where('workgroups.id', $wg->id)->exists());
     }
 
-    public function test_roles_are_mapped_only_via_an_explicit_role_map(): void
+    public function test_roles_are_mapped_via_the_role_mappings_config(): void
     {
-        $provider = $this->withClaimMapping([
-            'roles_claim' => 'groups',
-            'role_map' => ['urn:group:cohort-admins' => 'admin'],
-        ]);
+        $provider = $this->withClaimMapping(
+            ['roles_claim' => 'groups'],
+            [
+                'claimsaccesscontrol.role_mappings' => ['admin' => 'urn:group:cohort-admins'],
+                'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            ],
+        );
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'rolemapped@example.com',
@@ -349,11 +362,11 @@ class SsoUserResolverTest extends TestCase
         $this->assertTrue($user->fresh()->hasRole('admin'));
     }
 
-    public function test_unknown_authority_value_falls_back_to_local(): void
+    public function test_unknown_trust_value_falls_back_to_never(): void
     {
-        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['claim_value' => 'urn:wg:local', 'active' => 1]);
+        $local = Workgroup::firstOrCreate(['name' => 'LOCAL-ONLY'], ['active' => 1]);
 
-        $provider = $this->withClaimMapping(['authority' => 'nonsense']);
+        $provider = $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.trust' => 'nonsense']);
 
         $user = $this->resolver->resolve($provider, $this->authResult([
             'email' => 'typo@example.com',

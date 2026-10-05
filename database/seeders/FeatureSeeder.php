@@ -18,17 +18,7 @@ class FeatureSeeder extends Seeder
         'flatten-nested-groups' => true,
         'query-nlp' => true,
         'in-app-messenger' => false,
-        'integrated-sync-workgroups-every-request' => false,
-        'integrated-sync-workgroups-first-login' => true,
-        'integrated-ensure-default-wgs' => true,
-        'integrated-sync-sde-wgs-from-claim' => true,
-        'integrated-sync-roles-every-request' => true,
-        'integrated-sync-custodians-every-request' => true,
         'admin-more-collection-details' => true,
-        // This decides whether a brand new SSO user gets any permissions
-        // at the moment we create them, or arrives with none until an
-        // admin steps in.
-        'sso-ensure-defaults-on-jit' => true,
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
         'access-banner' => false,

@@ -63,40 +63,9 @@ return [
             // Defaults to url('/api/auth/sso/default/callback')
             'redirect_uri' => env('SSO_DEFAULT_REDIRECT_URI'),
 
-            /*
-             * Optional: let the IdP have a say in what the user can do.
-             *
-             * Off by default, and deliberately so - the local database is
-             * the authority on roles and workgroups unless a deployment
-             * explicitly says otherwise. Sites that manage group membership
-             * centrally (institutional IdPs, LS AAI and friends) can turn
-             * this on and let entitlements do the work.
-             */
             'claim_mapping' => [
-                'enabled' => (bool) env('SSO_DEFAULT_CLAIM_MAPPING_ENABLED', false),
-
-                /*
-                 * 'local' - claims may only add workgroups/roles; anything an
-                 *           admin assigned here survives. Safe default.
-                 * 'idp'   - the IdP is the whole truth; membership it does not
-                 *           mention is removed on every login.
-                 */
-                'authority' => env('SSO_DEFAULT_CLAIM_AUTHORITY', 'local'),
-
-                // Claim holding group membership, matched against workgroups.claim_value
                 'workgroups_claim' => env('SSO_DEFAULT_WORKGROUPS_CLAIM', 'eduperson_entitlement'),
-
-                // Claim holding role membership. Unset means roles are never mapped.
                 'roles_claim' => env('SSO_DEFAULT_ROLES_CLAIM'),
-
-                /*
-                 * Claim value => local role name. Explicit by design: an IdP
-                 * string should never become a Daphne role by accident, and
-                 * 'admin' means very different things in different realms.
-                 */
-                'role_map' => [
-                    // 'urn:example:group:cohort-admins' => 'admin',
-                ],
             ],
         ],
     ],

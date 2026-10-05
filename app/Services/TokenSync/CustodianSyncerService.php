@@ -4,15 +4,22 @@ namespace App\Services\TokenSync;
 
 use App\Models\User;
 use App\Models\Custodian;
-use Laravel\Pennant\Feature;
+use App\Services\Claims\ClaimSyncPolicy;
+use Carbon\CarbonInterface;
 
 class CustodianSyncerService
 {
+    public function __construct(
+        private readonly ClaimSyncPolicy $policy,
+    ) {
+    }
+
     public function sync(
         User $user,
         array $custodians,
+        ?CarbonInterface $claimsSyncedAt = null,
     ): void {
-        if (!Feature::active('integrated-sync-custodians-every-request')) {
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
             return;
         }
 

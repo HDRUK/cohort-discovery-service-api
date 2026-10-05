@@ -154,20 +154,25 @@ class DecodeJwt
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
 
+                $claimsSyncedAt = $user->claims_synced_at;
+
                 $this->workgroupSyncer->sync(
                     $user,
                     $jwtUser->workgroups ?? [],
                     $jwtUser->cohort_discovery_nhs_sde ?? false,
+                    $claimsSyncedAt,
                 );
 
                 $this->roleSyncer->sync(
                     $user,
-                    $jwtUser->cohort_discovery_roles ?? []
+                    $jwtUser->cohort_discovery_roles ?? [],
+                    $claimsSyncedAt,
                 );
 
                 $this->custodianSyncer->sync(
                     $user,
-                    $jwtUser->cohort_admin_teams ?? []
+                    $jwtUser->cohort_admin_teams ?? [],
+                    $claimsSyncedAt,
                 );
 
                 $this->userInfoSyncer->sync(
@@ -175,6 +180,9 @@ class DecodeJwt
                     $jwtUser->name ?? null,
                     isset($jwtUser->id) ? (string) $jwtUser->id : null,
                 );
+
+                $user->claims_synced_at = now();
+                $user->save();
 
                 Cache::put($cacheKey, true, $ttl);
 

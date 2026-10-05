@@ -5,10 +5,10 @@ namespace App\Services\Sso;
 use App\Exceptions\Sso\SsoLinkingException;
 use App\Models\User;
 use App\Models\UserIdentity;
-use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Claims\ClaimResolver;
+use App\Services\Claims\ClaimSyncPolicy;
 use Illuminate\Support\Facades\DB;
-use Laravel\Pennant\Feature;
 
 /**
  * Resolves an external OIDC identity to a local user.
@@ -24,6 +24,8 @@ class SsoUserResolver
     public function __construct(
         private readonly ClaimMapper $claimMapper,
         private readonly ActivityLogger $activity,
+        private readonly ClaimResolver $resolver,
+        private readonly ClaimSyncPolicy $policy,
     ) {
     }
 
@@ -109,14 +111,13 @@ class SsoUserResolver
 
     private function applyLocalDefaults(User $user): void
     {
-        if (! Feature::active('sso-ensure-defaults-on-jit')) {
+        if (! $this->policy->shouldApplyDefaultsOnCreate()) {
             return;
         }
 
-        $defaultWorkgroupId = Workgroup::where('name', 'DEFAULT')->value('id');
-        if ($defaultWorkgroupId) {
-            $user->workgroups()->syncWithoutDetaching([(int) $defaultWorkgroupId]);
-        }
+        $user->workgroups()->syncWithoutDetaching(
+            $this->resolver->workgroupIdsForNames(['DEFAULT'])
+        );
 
         $user->assignRole('user');
     }
