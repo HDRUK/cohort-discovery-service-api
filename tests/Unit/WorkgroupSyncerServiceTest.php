@@ -202,6 +202,18 @@ class WorkgroupSyncerServiceTest extends TestCase
         $this->assertSame(0, $user->workgroups()->count());
     }
 
+    public function test_sync_reports_whether_it_ran_so_callers_only_stamp_a_real_sync(): void
+    {
+        $user = $this->user();
+
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        $this->assertFalse($this->syncer->sync($user, ['uk-research'], false));
+
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN]);
+        $this->assertTrue($this->syncer->sync($user, ['uk-research'], false, null));
+        $this->assertFalse($this->syncer->sync($user, ['uk-research'], false, now()));
+    }
+
     public function test_first_login_trust_only_syncs_for_an_unsynced_user(): void
     {
         config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN]);

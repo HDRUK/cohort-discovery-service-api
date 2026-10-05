@@ -31,6 +31,11 @@ class FeatureSeeder extends Seeder
 
     /**
      * Run the database seeds.
+     *
+     * The list above is the whole truth about which flags exist. Flags already
+     * present keep whatever an admin set them to; flags no longer listed are
+     * purged, so retiring one needs only an edit here and a deployment step
+     * that re-runs this seeder.
      */
     public function run(): void
     {
@@ -49,5 +54,24 @@ class FeatureSeeder extends Seeder
                 Feature::deactivate($name);
             }
         }
+
+        $this->purgeRetiredFeatures();
+    }
+
+    private function purgeRetiredFeatures(): void
+    {
+        $retired = \DB::table('features')
+            ->whereNotIn('name', array_keys($this->features))
+            ->distinct()
+            ->pluck('name')
+            ->all();
+
+        if ($retired === []) {
+            return;
+        }
+
+        Feature::purge($retired);
+
+        $this->command?->info('Purged retired feature flags: '.implode(', ', $retired));
     }
 }

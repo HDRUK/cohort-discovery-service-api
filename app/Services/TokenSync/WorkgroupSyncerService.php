@@ -22,9 +22,9 @@ class WorkgroupSyncerService
         array $tokenWorkgroups,
         bool $hasSdeApproval,
         ?CarbonInterface $claimsSyncedAt = null,
-    ): void {
+    ): bool {
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_WORKGROUPS, $claimsSyncedAt)) {
-            return;
+            return false;
         }
 
         $finalIds = array_values(array_unique(array_merge(
@@ -37,6 +37,8 @@ class WorkgroupSyncerService
         } else {
             $user->workgroups()->syncWithoutDetaching($finalIds);
         }
+
+        return true;
     }
 
     private function defaultWorkgroupIds(bool $hasSdeApproval): array

@@ -18,9 +18,9 @@ class CustodianSyncerService
         User $user,
         array $custodians,
         ?CarbonInterface $claimsSyncedAt = null,
-    ): void {
+    ): bool {
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
-            return;
+            return false;
         }
 
         $rows = collect($custodians)->map(fn ($t) => [
@@ -31,7 +31,8 @@ class CustodianSyncerService
 
         if (count($rows) === 0) {
             $user->custodians()->sync([]);
-            return;
+
+            return true;
         }
 
         Custodian::upsert(
@@ -52,6 +53,7 @@ class CustodianSyncerService
 
         $user->custodians()->sync($custodianIds);
 
+        return true;
     }
 
 

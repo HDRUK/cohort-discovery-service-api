@@ -19,9 +19,9 @@ class RoleSyncerService
         User $user,
         array $roleNames,
         ?CarbonInterface $claimsSyncedAt = null,
-    ): void {
+    ): bool {
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_ROLES, $claimsSyncedAt)) {
-            return;
+            return false;
         }
 
         $roleIds = $this->resolver->roleIdsForClaimValues($roleNames);
@@ -31,5 +31,7 @@ class RoleSyncerService
         } else {
             $user->roles()->syncWithoutDetaching($roleIds);
         }
+
+        return true;
     }
 }

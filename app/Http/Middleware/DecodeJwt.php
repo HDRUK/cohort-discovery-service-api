@@ -156,24 +156,24 @@ class DecodeJwt
 
                 $claimsSyncedAt = $user->claims_synced_at;
 
-                $this->workgroupSyncer->sync(
+                $synced = $this->workgroupSyncer->sync(
                     $user,
                     $jwtUser->workgroups ?? [],
                     $jwtUser->cohort_discovery_nhs_sde ?? false,
                     $claimsSyncedAt,
                 );
 
-                $this->roleSyncer->sync(
+                $synced = $this->roleSyncer->sync(
                     $user,
                     $jwtUser->cohort_discovery_roles ?? [],
                     $claimsSyncedAt,
-                );
+                ) || $synced;
 
-                $this->custodianSyncer->sync(
+                $synced = $this->custodianSyncer->sync(
                     $user,
                     $jwtUser->cohort_admin_teams ?? [],
                     $claimsSyncedAt,
-                );
+                ) || $synced;
 
                 $this->userInfoSyncer->sync(
                     $user,
@@ -181,8 +181,10 @@ class DecodeJwt
                     isset($jwtUser->id) ? (string) $jwtUser->id : null,
                 );
 
-                $user->claims_synced_at = now();
-                $user->save();
+                if ($synced) {
+                    $user->claims_synced_at = now();
+                    $user->save();
+                }
 
                 Cache::put($cacheKey, true, $ttl);
 
