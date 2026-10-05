@@ -60,7 +60,7 @@ return [
             'client_id' => env('SSO_DEFAULT_CLIENT_ID'),
             'client_secret' => env('SSO_DEFAULT_CLIENT_SECRET'),
             'scopes' => env('SSO_DEFAULT_SCOPES', 'openid profile email'),
-            // Defaults to url('/api/auth/sso/{slug}/callback')
+            // Defaults to url('/api/auth/sso/default/callback')
             'redirect_uri' => env('SSO_DEFAULT_REDIRECT_URI'),
 
             'claim_mapping' => [
