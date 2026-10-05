@@ -3,45 +3,35 @@
 namespace App\Services\TokenSync;
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Laravel\Pennant\Feature;
+use App\Services\Claims\ClaimResolver;
+use App\Services\Claims\ClaimSyncPolicy;
+use Carbon\CarbonInterface;
 
 class RoleSyncerService
 {
+    public function __construct(
+        private readonly ClaimResolver $resolver,
+        private readonly ClaimSyncPolicy $policy,
+    ) {
+    }
+
     public function sync(
         User $user,
         array $roleNames,
-    ): void {
-
-        if (!Feature::active('integrated-sync-roles-every-request')) {
-            return;
+        ?CarbonInterface $claimsSyncedAt = null,
+    ): bool {
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_ROLES, $claimsSyncedAt)) {
+            return false;
         }
 
-        $roleMap = config('claimsaccesscontrol.role_mappings');
+        $roleIds = $this->resolver->roleIdsForClaimValues($roleNames);
 
-        $externalNames = collect($roleNames)
-            ->filter()
-            ->values()
-            ->all();
+        if ($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES)) {
+            $user->roles()->sync($roleIds);
+        } else {
+            $user->roles()->syncWithoutDetaching($roleIds);
+        }
 
-        $internalNames = collect($roleMap)
-            ->filter(fn ($external) => in_array($external, $externalNames, true))
-            ->keys()
-            ->map(fn ($n) => mb_strtolower($n))
-            ->values()
-            ->all();
-
-        $roleIds = Role::query()
-            ->whereIn(\DB::raw('LOWER(name)'), $internalNames)
-            ->pluck('id')
-            ->toArray();
-
-        $user->roles()->sync($roleIds);
-
-        \Log::info('syncing roles against user (' . $user->id . '): ' . json_encode($roleIds));
-
+        return true;
     }
-
-
-
 }

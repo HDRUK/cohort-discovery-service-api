@@ -4,16 +4,23 @@ namespace App\Services\TokenSync;
 
 use App\Models\User;
 use App\Models\Custodian;
-use Laravel\Pennant\Feature;
+use App\Services\Claims\ClaimSyncPolicy;
+use Carbon\CarbonInterface;
 
 class CustodianSyncerService
 {
+    public function __construct(
+        private readonly ClaimSyncPolicy $policy,
+    ) {
+    }
+
     public function sync(
         User $user,
         array $custodians,
-    ): void {
-        if (!Feature::active('integrated-sync-custodians-every-request')) {
-            return;
+        ?CarbonInterface $claimsSyncedAt = null,
+    ): bool {
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
+            return false;
         }
 
         $rows = collect($custodians)->map(fn ($t) => [
@@ -24,7 +31,8 @@ class CustodianSyncerService
 
         if (count($rows) === 0) {
             $user->custodians()->sync([]);
-            return;
+
+            return true;
         }
 
         Custodian::upsert(
@@ -45,6 +53,7 @@ class CustodianSyncerService
 
         $user->custodians()->sync($custodianIds);
 
+        return true;
     }
 
 

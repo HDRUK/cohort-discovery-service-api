@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use DB;
 use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Models\Role;
@@ -68,7 +71,6 @@ class User extends Authenticatable implements OAuthenticatable
         'email',
         'external_id',
         'password',
-        'oidc_sub',
     ];
 
     /**
@@ -141,8 +143,21 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'claims_synced_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function claimsSyncedAt(): ?CarbonInterface
+    {
+        return $this->claims_synced_at
+            ? Carbon::parse($this->claims_synced_at)
+            : null;
+    }
+
+    public function identities(): HasMany
+    {
+        return $this->hasMany(UserIdentity::class);
     }
 
     public function workgroups(): BelongsToMany

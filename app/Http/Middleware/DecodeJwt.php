@@ -10,9 +10,12 @@ use Firebase\JWT\Key;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Support\SystemClock;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Lcobucci\JWT\Validation\Constraint\LooseValidAt;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use App\Services\TokenSync\RoleSyncerService;
 use App\Services\TokenSync\CustodianSyncerService;
@@ -29,7 +32,6 @@ class DecodeJwt
         private readonly RoleSyncerService $roleSyncer,
         private readonly CustodianSyncerService $custodianSyncer,
         private readonly UserInfoSyncerService $userInfoSyncer,
-        private readonly ValidateOidcToken $validateOidcToken,
     ) {
     }
 
@@ -39,10 +41,6 @@ class DecodeJwt
         $startMicrotime = microtime(true);
 
         try {
-            if (config('services.oidc.enabled', false)) {
-                return $this->validateOidcToken->handle($request, $next);
-            }
-
             if (! $token) {
                 return response()->json(['error' => 'No token'], 401);
             }
@@ -97,8 +95,20 @@ class DecodeJwt
                     $publicKey
                 );
 
-                /** @var \Lcobucci\JWT\UnencryptedToken $jwt */
-                $jwt = $jwtConfig->parser()->parse($token);
+                try {
+                    /** @var \Lcobucci\JWT\UnencryptedToken $jwt */
+                    $jwt = $jwtConfig->parser()->parse($token);
+
+                    // Parsing only proves it LOOKS like a JWT - the signature
+                    // and expiry checks prove it's one of ours and still warm
+                    $jwtConfig->validator()->assert(
+                        $jwt,
+                        new SignedWith(new Sha256(), $publicKey),
+                        new LooseValidAt(new SystemClock(), new \DateInterval('PT30S'))
+                    );
+                } catch (\Exception $e) {
+                    return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
+                }
 
                 $jwtUser = $jwt->claims()->get('user');
                 if (! $jwtUser) {
@@ -144,27 +154,37 @@ class DecodeJwt
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
 
-                $this->workgroupSyncer->sync(
+                $claimsSyncedAt = $user->claimsSyncedAt();
+
+                $synced = $this->workgroupSyncer->sync(
                     $user,
                     $jwtUser->workgroups ?? [],
                     $jwtUser->cohort_discovery_nhs_sde ?? false,
+                    $claimsSyncedAt,
                 );
 
-                $this->roleSyncer->sync(
+                $synced = $this->roleSyncer->sync(
                     $user,
-                    $jwtUser->cohort_discovery_roles ?? []
-                );
+                    $jwtUser->cohort_discovery_roles ?? [],
+                    $claimsSyncedAt,
+                ) || $synced;
 
-                $this->custodianSyncer->sync(
+                $synced = $this->custodianSyncer->sync(
                     $user,
-                    $jwtUser->cohort_admin_teams ?? []
-                );
+                    $jwtUser->cohort_admin_teams ?? [],
+                    $claimsSyncedAt,
+                ) || $synced;
 
                 $this->userInfoSyncer->sync(
                     $user,
                     $jwtUser->name ?? null,
                     isset($jwtUser->id) ? (string) $jwtUser->id : null,
                 );
+
+                if ($synced) {
+                    $user->claims_synced_at = now();
+                    $user->save();
+                }
 
                 Cache::put($cacheKey, true, $ttl);
 
