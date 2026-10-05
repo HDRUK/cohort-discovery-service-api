@@ -154,7 +154,7 @@ class DecodeJwt
         try {
             Cache::lock($lockKey, $lockSeconds)->block($waitSeconds, function () use ($cacheKey, $ttl, $user, $jwtUser, $jti) {
 
-                $claimsSyncedAt = $user->claims_synced_at;
+                $claimsSyncedAt = $user->claimsSyncedAt();
 
                 $synced = $this->workgroupSyncer->sync(
                     $user,

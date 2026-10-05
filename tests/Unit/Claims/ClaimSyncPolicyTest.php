@@ -2,7 +2,9 @@
 
 namespace Tests\Unit\Claims;
 
+use App\Models\User;
 use App\Services\Claims\ClaimSyncPolicy;
+use Carbon\CarbonInterface;
 use Tests\TestCase;
 
 class ClaimSyncPolicyTest extends TestCase
@@ -61,6 +63,18 @@ class ClaimSyncPolicyTest extends TestCase
         config(['claimsaccesscontrol.sync.workgroups' => []]);
 
         $this->assertFalse($this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_WORKGROUPS, null));
+    }
+
+    public function test_claims_synced_at_reaches_the_policy_as_a_carbon_instance(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertNull($user->claimsSyncedAt());
+
+        $user->claims_synced_at = now();
+        $user->save();
+
+        $this->assertInstanceOf(CarbonInterface::class, $user->fresh()->claimsSyncedAt());
     }
 
     public function test_the_shipped_defaults_preserve_integrated_behaviour(): void

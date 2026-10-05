@@ -20,7 +20,7 @@ class ClaimMapper
     public function apply(User $user, OidcProviderConfig $provider, OidcAuthResult $result): void
     {
         $mapping = $provider->claimMapping;
-        $claimsSyncedAt = $user->claims_synced_at;
+        $claimsSyncedAt = $user->claimsSyncedAt();
 
         $synced = $this->syncWorkgroups($user, $mapping, $result, $claimsSyncedAt);
         $synced = $this->syncRoles($user, $mapping, $result, $claimsSyncedAt) || $synced;
