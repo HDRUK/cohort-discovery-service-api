@@ -31,9 +31,7 @@ class OidcClient
      */
     public function discoverEndSessionEndpoint(OidcProviderConfig $provider): ?string
     {
-        $metadata = $this->discovery->metadata($provider);
-
-        return $metadata['end_session_endpoint'] ?? null;
+        return $this->discovery->metadata($provider)->endSessionEndpoint;
     }
 
     /**
@@ -68,7 +66,7 @@ class OidcClient
             'code_challenge_method' => 'S256',
         ]);
 
-        return $this->discovery->metadata($provider)['authorization_endpoint'].'?'.$query;
+        return $this->discovery->metadata($provider)->authorizationEndpoint.'?'.$query;
     }
 
     /**
@@ -92,7 +90,7 @@ class OidcClient
         $response = Http::asForm()
             ->timeout(10)
             ->connectTimeout(3)
-            ->post($metadata['token_endpoint'], [
+            ->post($metadata->tokenEndpoint, [
                 'grant_type' => 'authorization_code',
                 'code' => $code,
                 'redirect_uri' => $provider->redirectUri,
@@ -114,10 +112,10 @@ class OidcClient
 
         $claims = $this->validateIdToken($idToken, $provider, $txn['nonce']);
 
-        if ((empty($claims['email']) || empty($claims['name'])) && ! empty($metadata['userinfo_endpoint'])) {
+        if ((empty($claims['email']) || empty($claims['name'])) && $metadata->userinfoEndpoint !== null) {
             $claims = $this->mergeUserinfoClaims(
                 $claims,
-                $metadata['userinfo_endpoint'],
+                $metadata->userinfoEndpoint,
                 (string) $response->json('access_token')
             );
         }

@@ -16,7 +16,7 @@ class OidcDiscoveryService
     /**
      * Fetch (and cache) the provider's OIDC discovery document.
      */
-    public function metadata(OidcProviderConfig $provider): array
+    public function metadata(OidcProviderConfig $provider): OidcProviderMetadata
     {
         $metadata = Cache::remember(
             self::DISCOVERY_CACHE_PREFIX.$provider->slug,
@@ -51,7 +51,7 @@ class OidcDiscoveryService
             }
         }
 
-        return $metadata;
+        return OidcProviderMetadata::fromDiscoveryDocument($metadata);
     }
 
     /**
@@ -66,7 +66,7 @@ class OidcDiscoveryService
             self::JWKS_CACHE_PREFIX.$provider->slug,
             config('sso.jwks_cache_ttl_seconds', 3600),
             fn () => Http::timeout(10)->connectTimeout(3)
-                ->get($this->metadata($provider)['jwks_uri'])
+                ->get($this->metadata($provider)->jwksUri)
                 ->throw()
                 ->json()
         );
