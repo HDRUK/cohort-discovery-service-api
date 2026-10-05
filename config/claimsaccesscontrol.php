@@ -18,10 +18,6 @@ return [
      * The default workgroup mappings are for HDRUK gateway
      */
     'workgroup_mappings' => [
-        // Integrated mode (Gateway JWT) workgroup mapping — matches by name. Standalone mode
-        // (OIDC/SSO) uses a separate ClaimMapper::syncWorkgroups() that matches by claim_value
-        // and has explicit guards to prevent IdP claims assigning ADMIN/DEFAULT/CUSTODIAN.
-        // See WorkgroupSeeder.php for rationale.
         'admin' => 'admin',
         'custodian' => 'custodian',
         'default' => 'default',
