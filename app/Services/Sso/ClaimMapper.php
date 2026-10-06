@@ -24,6 +24,7 @@ class ClaimMapper
 
         $synced = $this->syncWorkgroups($user, $mapping, $result, $claimsSyncedAt);
         $synced = $this->syncRoles($user, $mapping, $result, $claimsSyncedAt) || $synced;
+        $synced = $this->syncCustodians($user, $mapping, $result, $claimsSyncedAt) || $synced;
 
         if ($synced) {
             $user->claims_synced_at = now();
@@ -49,7 +50,10 @@ class ClaimMapper
             return false;
         }
 
-        $workgroupIds = $this->resolver->workgroupIdsForClaimValues($values);
+        $workgroupIds = array_values(array_unique(array_merge(
+            $this->defaultWorkgroupIds(),
+            $this->resolver->workgroupIdsForClaimValues($values),
+        )));
 
         $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS)
             ? $user->workgroups()->sync($workgroupIds)
@@ -58,6 +62,15 @@ class ClaimMapper
         $this->recordMembershipChange($user, 'workgroups', ClaimSyncPolicy::SUBJECT_WORKGROUPS, $changes);
 
         return true;
+    }
+
+    private function defaultWorkgroupIds(): array
+    {
+        if (! $this->policy->shouldEnsureDefaultWorkgroup()) {
+            return [];
+        }
+
+        return $this->resolver->workgroupIdsForNames(['DEFAULT']);
     }
 
     private function syncRoles(
@@ -87,6 +100,47 @@ class ClaimMapper
             : $user->roles()->syncWithoutDetaching($roleIds);
 
         $this->recordMembershipChange($user, 'roles', ClaimSyncPolicy::SUBJECT_ROLES, $changes);
+
+        return true;
+    }
+
+    private function syncCustodians(
+        User $user,
+        ClaimMappingConfig $mapping,
+        OidcAuthResult $result,
+        ?CarbonInterface $claimsSyncedAt,
+    ): bool {
+        if (! $mapping->custodiansClaim) {
+            \Log::debug('SSO custodians sync skipped: no custodians_claim configured for this provider');
+
+            return false;
+        }
+
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
+            \Log::debug('SSO custodians sync skipped: not trusted by current sync policy');
+
+            return false;
+        }
+
+        $values = $this->claimValues($result->rawClaims, $mapping->custodiansClaim);
+
+        \Log::debug("SSO custodians claim [{$mapping->custodiansClaim}] raw values: ".json_encode($values));
+
+        if ($values === null) {
+            \Log::debug('SSO custodians sync skipped: claim absent from token');
+
+            return false;
+        }
+
+        $custodianIds = $this->resolver->custodianIdsForClaimValues($values);
+
+        \Log::debug('SSO custodians claim resolved to custodian ids: '.json_encode($custodianIds));
+
+        $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS)
+            ? $user->custodians()->sync($custodianIds)
+            : $user->custodians()->syncWithoutDetaching($custodianIds);
+
+        $this->recordMembershipChange($user, 'custodians', ClaimSyncPolicy::SUBJECT_CUSTODIANS, $changes);
 
         return true;
     }
