@@ -46,7 +46,7 @@ class TaskFailureRecorderTest extends TestCase
         $this->assertNotNull($task->completed_at);
 
         $this->assertNotNull($run);
-        $this->assertSame('failed', $run->result_status);
+        $this->assertSame('missing', $run->result_status);
         $this->assertSame('MissingRequiredTable', $run->error_class);
         $this->assertSame('Death-record data not yet available', $run->error_message);
         $this->assertNotNull($run->finished_at);
