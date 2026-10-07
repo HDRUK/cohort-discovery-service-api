@@ -13,7 +13,8 @@ class TestingSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            DatabaseSeeder::class
+            DatabaseSeeder::class,
+            PersonalAccessClientSeeder::class,
         ]);
 
         User::factory()->create([
