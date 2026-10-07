@@ -304,26 +304,77 @@ setups withhold it) - without an email we can neither link nor create an account
    `access_token` - so the token itself never rides in a URL
 
 First-time visitors are created on the spot with the `DEFAULT` workgroup and the `user` role
-(controllable via the `sso-ensure-defaults-on-jit` feature flag). Returning visitors are matched by
+(controllable via `CLAIM_PROVISION_DEFAULTS_ON_CREATE`). Returning visitors are matched by
 their provider identity. If someone arrives whose email matches an existing account, we only link the
 two when the IdP swears the email is verified - anything less smells like an account takeover, and we
 send it to the error URL instead.
 
 ### Claim mapping (optional)
 
-By default the local database is the authority on roles and workgroups, and the IdP only proves
-identity. If your IdP already manages group membership, it can drive workgroups and roles instead:
+By default the local database is the authority and the IdP only proves identity. If your IdP already
+manages membership, it can drive three subjects instead - `workgroups`, `roles` and `custodians` -
+each governed by the same pair of settings, in both operation modes.
+
+**Trust** says when a claim is read at all: `never`, `first_login`, or `always`. An unrecognised
+value falls back to `never` rather than defaulting open.
+
+**Authoritative** says whether a sync may *remove* membership the claim did not mention. `false`
+only ever adds, so an admin's manual assignment survives the user's next login; `true` makes the
+claim the whole truth.
+
+Which claim carries what is per-provider in `config/sso.php`:
 
 ```
-SSO_DEFAULT_CLAIM_MAPPING_ENABLED=true
 SSO_DEFAULT_WORKGROUPS_CLAIM="eduperson_entitlement"
-SSO_DEFAULT_CLAIM_AUTHORITY="local"   # "local" only adds; "idp" also removes
+SSO_DEFAULT_ROLES_CLAIM="roles"
+SSO_DEFAULT_CUSTODIANS_CLAIM="teams"
 ```
 
-Claim values are matched against the `claim_value` column on `workgroups`. Under `local` an
-admin's manual assignment survives the user's next login; under `idp` the claim is the whole truth
-and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
-string never becomes a Daphne role by accident.
+Workgroup and role claim values are matched against the mapping tables in
+`config/claimsaccesscontrol.php` (`workgroup_mappings`, `role_mappings`), so an IdP string never
+becomes a Daphne workgroup or role by accident. Custodians have no mapping table - a claim value is
+matched directly against the custodian's name, case-insensitively, so **setting
+`SSO_DEFAULT_CUSTODIANS_CLAIM` means any IdP group named after a custodian grants membership to it.**
+Leave it unset unless the IdP is a trusted source for that.
+
+Two things stop a claim locking people out. An authoritative workgroup sync force-merges `DEFAULT`,
+and an authoritative role sync force-merges `user`, so neither can leave an account with nothing
+(`CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP`, `CLAIM_SYNC_ENSURE_DEFAULT_ROLE`). Separately, a sync will
+never strip the `admin` role from the last admin in the system - it retains it and logs a warning
+instead. An absent claim is also not an empty one: if the IdP stops releasing a claim entirely
+nothing is removed, and only a claim that is present and empty clears the relation.
+
+#### Worked examples
+
+Fully claims-driven - the IdP is the authority on everything, on every login:
+
+```
+CLAIM_SYNC_WORKGROUPS="always"
+CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE=true
+CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP=true
+CLAIM_SYNC_ROLES="always"
+CLAIM_SYNC_ROLES_AUTHORITATIVE=true
+CLAIM_SYNC_ENSURE_DEFAULT_ROLE=true
+CLAIM_SYNC_CUSTODIANS="always"
+CLAIM_SYNC_CUSTODIANS_AUTHORITATIVE=true
+```
+
+Hybrid - roles from the IdP, workgroups seeded once then admin-managed, custodians entirely internal:
+
+```
+CLAIM_SYNC_WORKGROUPS="first_login"
+CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE=false
+CLAIM_SYNC_ROLES="always"
+CLAIM_SYNC_ROLES_AUTHORITATIVE=true
+CLAIM_SYNC_CUSTODIANS="never"
+```
+
+For the hybrid case leave `SSO_DEFAULT_CUSTODIANS_CLAIM` unset as well, so custodian membership is
+only ever assigned locally.
+
+> One trap worth knowing: Laravel loads `.env` via phpdotenv in immutable mode, so a duplicated key
+> does **not** override - the first occurrence wins and later ones are silently ignored. Keep one
+> block active rather than overriding individual lines further down the file.
 
 For a worked Keycloak example, the full variable reference, linking rules, known limitations and a troubleshooting table, see the [OIDC / SSO login](https://hdruk.github.io/cohort-discovery-service-docs/developers/modes/#oidc-sso-login-optional) section of the developer docs.
 
