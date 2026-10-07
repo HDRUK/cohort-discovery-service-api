@@ -9,7 +9,6 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Enums\MissingDataTable;
 
-
 class TaskFailureRecorder
 {
     /**
