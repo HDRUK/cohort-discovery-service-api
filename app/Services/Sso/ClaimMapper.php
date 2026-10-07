@@ -111,30 +111,20 @@ class ClaimMapper
         ?CarbonInterface $claimsSyncedAt,
     ): bool {
         if (! $mapping->custodiansClaim) {
-            \Log::debug('SSO custodians sync skipped: no custodians_claim configured for this provider');
-
             return false;
         }
 
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
-            \Log::debug('SSO custodians sync skipped: not trusted by current sync policy');
-
             return false;
         }
 
         $values = $this->claimValues($result->rawClaims, $mapping->custodiansClaim);
 
-        \Log::debug("SSO custodians claim [{$mapping->custodiansClaim}] raw values: ".json_encode($values));
-
         if ($values === null) {
-            \Log::debug('SSO custodians sync skipped: claim absent from token');
-
             return false;
         }
 
         $custodianIds = $this->resolver->custodianIdsForClaimValues($values);
-
-        \Log::debug('SSO custodians claim resolved to custodian ids: '.json_encode($custodianIds));
 
         $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS)
             ? $user->custodians()->sync($custodianIds)

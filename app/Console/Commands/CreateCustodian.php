@@ -21,17 +21,19 @@ class CreateCustodian extends Command
             return self::FAILURE;
         }
 
-        $custodian = Custodian::where('name', $name)->first();
+        $custodian = Custodian::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
 
         if ($custodian) {
-            $this->warn("Custodian [{$name}] already exists (#{$custodian->id}).");
+            $this->warn("Custodian [{$custodian->name}] already exists.");
+            $this->line((string) $custodian->id);
 
             return self::SUCCESS;
         }
 
         $custodian = Custodian::create(['name' => $name]);
 
-        $this->info("Created custodian #{$custodian->id}: {$custodian->name}");
+        $this->info("Created custodian [{$custodian->name}].");
+        $this->line((string) $custodian->id);
 
         return self::SUCCESS;
     }

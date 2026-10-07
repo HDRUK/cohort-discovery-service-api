@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             StateSeeder::class,
             CustodianSeeder::class,
             FeatureSeeder::class,
+            PersonalAccessClientSeeder::class,
         ]);
 
     }

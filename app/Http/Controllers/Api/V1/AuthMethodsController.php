@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\Authentication\LoginMethods;
+use App\Services\Sso\OidcProviderConfig;
 use App\Traits\Responses;
 
 class AuthMethodsController extends Controller
@@ -25,13 +26,12 @@ class AuthMethodsController extends Controller
             ];
         }
 
-        if (config('sso.enabled')) {
-            $providers = config('sso.providers', []);
-            foreach ($providers as $slug => $config) {
+        if ($this->loginMethods->ssoAvailable()) {
+            foreach (OidcProviderConfig::enabledProviders() as $slug => $label) {
                 $methods[] = [
                     'type' => 'oidc',
                     'slug' => $slug,
-                    'label' => $config['label'] ?? 'Single Sign-On',
+                    'label' => $label,
                     'redirect_url' => url("/api/auth/sso/{$slug}/redirect"),
                 ];
             }

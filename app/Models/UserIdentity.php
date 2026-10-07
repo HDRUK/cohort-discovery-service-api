@@ -15,6 +15,11 @@ class UserIdentity extends Model
         'last_login_at',
     ];
 
+    protected $hidden = [
+        'provider_sub',
+        'email_at_link',
+    ];
+
     protected $casts = [
         'last_login_at' => 'datetime',
     ];
