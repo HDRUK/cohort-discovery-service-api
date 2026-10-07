@@ -19,10 +19,14 @@ class WorkgroupSyncerService
 
     public function sync(
         User $user,
-        array $tokenWorkgroups,
+        ?array $tokenWorkgroups,
         bool $hasSdeApproval,
         ?CarbonInterface $claimsSyncedAt = null,
     ): bool {
+        if ($tokenWorkgroups === null) {
+            return false;
+        }
+
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_WORKGROUPS, $claimsSyncedAt)) {
             return false;
         }

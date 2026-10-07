@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
+use App\Services\Claims\RoleSyncFloor;
 use Carbon\CarbonInterface;
 
 class ClaimMapper
@@ -14,6 +15,7 @@ class ClaimMapper
         private readonly ActivityLogger $activity,
         private readonly ClaimResolver $resolver,
         private readonly ClaimSyncPolicy $policy,
+        private readonly RoleSyncFloor $roleFloor,
     ) {
     }
 
@@ -93,7 +95,10 @@ class ClaimMapper
             return false;
         }
 
-        $roleIds = $this->resolver->roleIdsForClaimValues($values);
+        $roleIds = $this->roleFloor->apply(
+            $user,
+            $this->resolver->roleIdsForClaimValues($values)
+        );
 
         $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES)
             ? $user->roles()->sync($roleIds)

@@ -16,12 +16,18 @@ class CustodianSyncerService
 
     public function sync(
         User $user,
-        array $custodians,
+        ?array $custodians,
         ?CarbonInterface $claimsSyncedAt = null,
     ): bool {
+        if ($custodians === null) {
+            return false;
+        }
+
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
             return false;
         }
+
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS);
 
         $rows = collect($custodians)->map(fn ($t) => [
             'external_custodian_id' => $t->id,
@@ -30,7 +36,9 @@ class CustodianSyncerService
         ])->all();
 
         if (count($rows) === 0) {
-            $user->custodians()->sync([]);
+            if ($authoritative) {
+                $user->custodians()->sync([]);
+            }
 
             return true;
         }
@@ -51,7 +59,9 @@ class CustodianSyncerService
             ->pluck('id')
             ->all();
 
-        $user->custodians()->sync($custodianIds);
+        $authoritative
+            ? $user->custodians()->sync($custodianIds)
+            : $user->custodians()->syncWithoutDetaching($custodianIds);
 
         return true;
     }
