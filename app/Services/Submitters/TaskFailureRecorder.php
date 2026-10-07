@@ -7,6 +7,8 @@ use App\Models\Task;
 use App\Models\TaskRun;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Enums\MissingDataTable;
+
 
 class TaskFailureRecorder
 {
@@ -26,13 +28,16 @@ class TaskFailureRecorder
     ): void {
         $message = implode('; ', $reasons);
         $finishedAt = Carbon::now();
+        $missingReasons = [MissingDataTable::Location->reason(), MissingDataTable::Death->reason()];
+        $missingData = array_intersect($missingReasons, $reasons);
+        $resultStatus = !empty($missingData) ? 'missing' : 'failed';
 
         TaskRun::create([
             'task_id' => $task->id,
             'attempt' => 1,
             'worker_id' => 'system',
             'finished_at' => $finishedAt,
-            'result_status' => 'failed',
+            'result_status' => $resultStatus,
             'error_class' => $errorClass,
             'error_message' => mb_strimwidth($message, 0, 2000, '…'),
         ]);
@@ -42,7 +47,7 @@ class TaskFailureRecorder
         $result = new Result([
             'task_id' => $task->id,
             'count' => 0,
-            'status' => 'failed',
+            'status' => $resultStatus,
             'message' => $message,
         ]);
         $result->pid = (string) Str::uuid();
