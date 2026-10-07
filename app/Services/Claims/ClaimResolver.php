@@ -33,9 +33,14 @@ class ClaimResolver
 
     public function roleIdsForClaimValues(array $claimValues): array
     {
-        $normalised = $this->normalise(
+        return $this->roleIdsForNames(
             $this->localNames('claimsaccesscontrol.role_mappings', $claimValues)
         );
+    }
+
+    public function roleIdsForNames(array $names): array
+    {
+        $normalised = $this->normalise($names);
 
         if ($normalised === []) {
             return [];

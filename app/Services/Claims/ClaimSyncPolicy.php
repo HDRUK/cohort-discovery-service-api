@@ -46,6 +46,11 @@ class ClaimSyncPolicy
         return (bool) config('claimsaccesscontrol.sync.workgroups.ensure_default', true);
     }
 
+    public function shouldEnsureDefaultRole(): bool
+    {
+        return (bool) config('claimsaccesscontrol.sync.roles.ensure_default', true);
+    }
+
     public function shouldSyncSdeWorkgroupsFromClaim(): bool
     {
         return (bool) config('claimsaccesscontrol.sync.workgroups.sde_from_claim', true);
