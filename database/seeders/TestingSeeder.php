@@ -3,9 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Laravel\Passport\Client;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class TestingSeeder extends Seeder
 {
@@ -22,19 +20,6 @@ class TestingSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
-
-        if (! Client::where('provider', 'users')->exists()) {
-            $client = Client::create([
-                'owner_type' => null,
-                'owner_id' => null,
-                'secret' => Str::random(40),
-                'name' => 'CohortDiscoveryService',
-                'provider' => 'users',
-                'redirect_uris' => [],
-                'grant_types' => ['personal_access'],
-                'revoked' => 0,
-            ]);
-        }
 
         $this->call([
             CollectionHostSeeder::class,
