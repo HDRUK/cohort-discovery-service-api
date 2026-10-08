@@ -1,3 +1,14 @@
+## [1.16.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.15.0...v1.16.0) (2026-10-08)
+
+### ✨ Features
+
+* **DP-1147:** add new 'missing' status (#340) ([8cbce11](https://github.com/HDRUK/cohort-discovery-service-api/commit/8cbce11f4f6642820022fab7bdbf9fcfebc36b3b)), closes [DP-1147](undefinedDP-1147)
+* **DP-976:** Fully generic OIDC implementation, driven entirely by config/sso.php prodiver shapes. (#303) ([1124e8d](https://github.com/HDRUK/cohort-discovery-service-api/commit/1124e8d2c910b2dae41f2e040bb51cf9c38107c7)), closes [DP-976](undefinedDP-976)
+
+### 🐛 Bug Fixes
+
+* **GAT-8645:** Updated the base OS version (#335) ([e5c8e1b](https://github.com/HDRUK/cohort-discovery-service-api/commit/e5c8e1bc87081349ebe3e42a8f301fa05cfb28bb)), closes [GAT-8645](undefinedGAT-8645)
+
 ## [1.15.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.14.0...v1.15.0) (2026-09-16)
 
 ### ✨ Features
