@@ -5,6 +5,64 @@
         "version": "1.0.0"
     },
     "paths": {
+        "/api/auth/methods": {
+            "get": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "List the ways a user may sign in to this deployment",
+                "description": "Unauthenticated, and never 404s - an empty list is a valid answer, and is what integrated mode returns because the HDR UK Gateway is the identity provider there. Entries are discriminated by `type`: `password` renders a credentials form against POST /api/auth/login, `oidc` renders a button that navigates to `redirect_url`.",
+                "operationId": "4e53e828e034bfa139c9961b4af05612",
+                "responses": {
+                    "200": {
+                        "description": "Available login methods, in the order they should be offered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "password",
+                                                            "oidc"
+                                                        ],
+                                                        "example": "oidc"
+                                                    },
+                                                    "label": {
+                                                        "type": "string",
+                                                        "example": "Single Sign-On"
+                                                    },
+                                                    "slug": {
+                                                        "description": "OIDC entries only",
+                                                        "type": "string",
+                                                        "example": "keycloak"
+                                                    },
+                                                    "redirect_url": {
+                                                        "description": "OIDC entries only",
+                                                        "type": "string",
+                                                        "example": "https://api.example.com/api/auth/sso/keycloak/redirect"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/clicks": {
             "post": {
                 "tags": [
@@ -2275,6 +2333,31 @@
                     },
                     "401": {
                         "description": "Invalid, expired, or already-used code"
+                    }
+                }
+            }
+        },
+        "/api/auth/sso/{provider}/logout": {
+            "get": {
+                "tags": [
+                    "SSO"
+                ],
+                "summary": "Best-effort RP-initiated logout: bounce through the IdP's own logout page",
+                "operationId": "372c72ac94ef0c090734990aae91e2ba",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "default"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the IdP's end_session_endpoint, or straight back to the frontend login page if the provider is unknown, unreachable, or does not advertise one"
                     }
                 }
             }

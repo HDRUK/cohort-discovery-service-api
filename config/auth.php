@@ -117,4 +117,25 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Login
+    |--------------------------------------------------------------------------
+    |
+    | Whether email and password is offered as a way in. Turning this off hides
+    | it from GET /api/auth/methods and makes POST /api/auth/login return 403,
+    | for deployments where an external identity provider is the only front
+    | door and a password path around its MFA is not wanted.
+    |
+    | Deliberately deploy-time rather than a Pennant flag: a runtime toggle on
+    | the last working way in is a lockout waiting to happen. For the same
+    | reason the setting is ignored unless at least one SSO provider is
+    | actually usable - see App\Services\Authentication\LoginMethods.
+    |
+    */
+
+    'password_login' => [
+        'enabled' => (bool) env('AUTH_PASSWORD_LOGIN_ENABLED', true),
+    ],
+
 ];

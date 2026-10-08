@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Exceptions\Sso\SsoLinkingException;
+use App\Models\Custodian;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Models\Workgroup;
@@ -360,6 +361,43 @@ class SsoUserResolverTest extends TestCase
         ]));
 
         $this->assertTrue($user->fresh()->hasRole('admin'));
+    }
+
+    public function test_custodians_are_matched_to_existing_records_by_name(): void
+    {
+        $custodian = Custodian::factory()->create(['name' => 'Acme Health']);
+
+        $provider = $this->withClaimMapping(
+            ['custodians_claim' => 'teams'],
+            ['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS],
+        );
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-match@example.com',
+            'email_verified' => true,
+            'teams' => ['acme health', 'unknown-team'],
+        ]));
+
+        $custodians = $user->fresh()->custodians;
+        $this->assertCount(1, $custodians);
+        $this->assertTrue($custodians->contains('id', $custodian->id));
+    }
+
+    public function test_custodians_are_not_created_from_unmatched_claim_values(): void
+    {
+        $provider = $this->withClaimMapping(
+            ['custodians_claim' => 'teams'],
+            ['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS],
+        );
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-unmatched@example.com',
+            'email_verified' => true,
+            'teams' => ['nonexistent-team'],
+        ]));
+
+        $this->assertFalse(Custodian::where('name', 'nonexistent-team')->exists());
+        $this->assertCount(0, $user->fresh()->custodians);
     }
 
     public function test_unknown_trust_value_falls_back_to_never(): void
