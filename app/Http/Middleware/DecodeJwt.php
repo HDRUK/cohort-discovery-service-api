@@ -158,20 +158,20 @@ class DecodeJwt
 
                 $synced = $this->workgroupSyncer->sync(
                     $user,
-                    $jwtUser->workgroups ?? [],
+                    $this->claimOrNull($jwtUser, 'workgroups'),
                     $jwtUser->cohort_discovery_nhs_sde ?? false,
                     $claimsSyncedAt,
                 );
 
                 $synced = $this->roleSyncer->sync(
                     $user,
-                    $jwtUser->cohort_discovery_roles ?? [],
+                    $this->claimOrNull($jwtUser, 'cohort_discovery_roles'),
                     $claimsSyncedAt,
                 ) || $synced;
 
                 $synced = $this->custodianSyncer->sync(
                     $user,
-                    $jwtUser->cohort_admin_teams ?? [],
+                    $this->claimOrNull($jwtUser, 'cohort_admin_teams'),
                     $claimsSyncedAt,
                 ) || $synced;
 
@@ -194,6 +194,21 @@ class DecodeJwt
             \Log::warning("JWT sync lock timeout for jti={$jti} (waitSeconds={$waitSeconds}) - skipping sync this request");
             return;
         }
+    }
+
+    /**
+     * Null means the Gateway did not send the claim at all, which an
+     * authoritative syncer must not read as "the user belongs to nothing".
+     */
+    protected function claimOrNull(object $jwtUser, string $claim): ?array
+    {
+        if (! property_exists($jwtUser, $claim)) {
+            return null;
+        }
+
+        $value = $jwtUser->{$claim};
+
+        return $value === null ? null : (array) $value;
     }
 
     protected function claimsTtlSeconds(object $claims): int

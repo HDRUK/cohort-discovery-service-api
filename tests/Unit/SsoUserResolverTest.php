@@ -11,6 +11,7 @@ use App\Services\Sso\OidcAuthResult;
 use App\Services\Sso\OidcProviderConfig;
 use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\Sso\SsoUserResolver;
+use Illuminate\Support\Str;
 use Tests\Support\FakeIdp;
 use Tests\TestCase;
 
@@ -163,6 +164,11 @@ class SsoUserResolverTest extends TestCase
         ], $sync));
 
         return OidcProviderConfig::fromConfig('mapped');
+    }
+
+    private function custodian(string $name): Custodian
+    {
+        return Custodian::firstOrCreate(['name' => $name], ['pid' => (string) Str::uuid()]);
     }
 
     public function test_claims_are_ignored_when_they_are_never_trusted(): void
@@ -398,6 +404,140 @@ class SsoUserResolverTest extends TestCase
 
         $this->assertFalse(Custodian::where('name', 'nonexistent-team')->exists());
         $this->assertCount(0, $user->fresh()->custodians);
+    }
+
+    public function test_authoritative_sync_detaches_a_custodian_the_claim_omits(): void
+    {
+        $acme = $this->custodian('Detach Acme');
+        $beta = $this->custodian('Detach Beta');
+
+        $provider = $this->withClaimMapping(
+            ['custodians_claim' => 'teams'],
+            [
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.authoritative' => true,
+            ],
+        );
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-detach@example.com',
+            'email_verified' => true,
+            'teams' => ['detach acme', 'detach beta'],
+        ]));
+        $this->assertCount(2, $user->fresh()->custodians);
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-detach@example.com',
+            'email_verified' => true,
+            'teams' => ['detach acme'],
+        ]));
+
+        $custodians = $user->fresh()->custodians;
+        $this->assertTrue($custodians->contains('id', $acme->id));
+        $this->assertFalse($custodians->contains('id', $beta->id));
+    }
+
+    public function test_absent_custodians_claim_leaves_custodians_untouched_under_authoritative_sync(): void
+    {
+        $acme = $this->custodian('Silent Acme');
+
+        $provider = $this->withClaimMapping(
+            ['custodians_claim' => 'teams'],
+            [
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.authoritative' => true,
+            ],
+        );
+
+        $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-silent@example.com',
+            'email_verified' => true,
+            'teams' => ['silent acme'],
+        ]));
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-silent@example.com',
+            'email_verified' => true,
+        ]));
+
+        $this->assertTrue($user->fresh()->custodians->contains('id', $acme->id));
+    }
+
+    public function test_present_but_empty_custodians_claim_clears_custodians_under_authoritative_sync(): void
+    {
+        $acme = $this->custodian('Emptied Acme');
+
+        $provider = $this->withClaimMapping(
+            ['custodians_claim' => 'teams'],
+            [
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.authoritative' => true,
+            ],
+        );
+
+        $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-emptied@example.com',
+            'email_verified' => true,
+            'teams' => ['emptied acme'],
+        ]));
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'custodian-emptied@example.com',
+            'email_verified' => true,
+            'teams' => [],
+        ]));
+
+        $this->assertFalse($user->fresh()->custodians->contains('id', $acme->id));
+    }
+
+    public function test_the_default_workgroup_floor_survives_an_authoritative_clear(): void
+    {
+        $default = Workgroup::firstOrCreate(['name' => 'DEFAULT'], ['active' => 1]);
+        Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
+
+        $provider = $this->withClaimMapping([], [
+            'claimsaccesscontrol.sync.workgroups.authoritative' => true,
+            'claimsaccesscontrol.sync.workgroups.ensure_default' => true,
+        ]);
+
+        $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'floored@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => ['urn:wg:mapped'],
+        ]));
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'floored@example.com',
+            'email_verified' => true,
+            'eduperson_entitlement' => [],
+        ]));
+
+        $this->assertSame(
+            ['DEFAULT'],
+            $user->fresh()->workgroups()->pluck('name')->all()
+        );
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $default->id)->exists());
+    }
+
+    public function test_the_default_role_floor_survives_an_authoritative_clear(): void
+    {
+        $provider = $this->withClaimMapping(
+            ['roles_claim' => 'groups'],
+            [
+                'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.roles.authoritative' => true,
+                'claimsaccesscontrol.sync.roles.ensure_default' => true,
+                'claimsaccesscontrol.role_mappings' => ['admin' => 'urn:group:cohort-admins'],
+            ],
+        );
+
+        $user = $this->resolver->resolve($provider, $this->authResult([
+            'email' => 'role-floored@example.com',
+            'email_verified' => true,
+            'groups' => [],
+        ]));
+
+        $this->assertSame(['user'], $user->fresh()->roles()->pluck('name')->all());
     }
 
     public function test_unknown_trust_value_falls_back_to_never(): void
