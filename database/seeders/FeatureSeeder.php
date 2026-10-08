@@ -18,12 +18,6 @@ class FeatureSeeder extends Seeder
         'flatten-nested-groups' => true,
         'query-nlp' => true,
         'in-app-messenger' => false,
-        'integrated-sync-workgroups-every-request' => false,
-        'integrated-sync-workgroups-first-login' => true,
-        'integrated-ensure-default-wgs' => true,
-        'integrated-sync-sde-wgs-from-claim' => true,
-        'integrated-sync-roles-every-request' => true,
-        'integrated-sync-custodians-every-request' => true,
         'admin-more-collection-details' => true,
         'query-builder-use-value-as-number' => false,
         'distribution-use-central-domain' => false,
@@ -37,6 +31,11 @@ class FeatureSeeder extends Seeder
 
     /**
      * Run the database seeds.
+     *
+     * The list above is the whole truth about which flags exist. Flags already
+     * present keep whatever an admin set them to; flags no longer listed are
+     * purged, so retiring one needs only an edit here and a deployment step
+     * that re-runs this seeder.
      */
     public function run(): void
     {
@@ -55,5 +54,24 @@ class FeatureSeeder extends Seeder
                 Feature::deactivate($name);
             }
         }
+
+        $this->purgeRetiredFeatures();
+    }
+
+    private function purgeRetiredFeatures(): void
+    {
+        $retired = \DB::table('features')
+            ->whereNotIn('name', array_keys($this->features))
+            ->distinct()
+            ->pluck('name')
+            ->all();
+
+        if ($retired === []) {
+            return;
+        }
+
+        Feature::purge($retired);
+
+        $this->command?->info('Purged retired feature flags: '.implode(', ', $retired));
     }
 }

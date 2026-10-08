@@ -30,7 +30,6 @@ class Workgroup extends Model implements ValidatableModel
     protected $fillable = [
         'name',
         'active',
-        'claim_value',
     ];
 
     protected static array $searchableColumns = [
@@ -52,13 +51,11 @@ class Workgroup extends Model implements ValidatableModel
             'store' => [
                 'name' => 'required|string|min:3|max:255',
                 'active' => 'required|boolean',
-                'claim_value' => 'nullable|string|max:512|unique:workgroups,claim_value',
             ],
             'update' => [
                 'id' => 'required|integer|exists:workgroups,id',
                 'name' => 'sometimes|string|min:3|max:255',
                 'active' => 'sometimes|boolean',
-                'claim_value' => 'nullable|string|max:512|unique:workgroups,claim_value',
             ],
             'delete' => [
                 'id' => 'required|integer|exists:workgroups,id',
