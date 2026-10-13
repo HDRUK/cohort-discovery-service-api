@@ -74,8 +74,13 @@ class DecodeJwt
                     Auth::setUser($user);
 
                     $this->syncIntegratedOncePerToken($claims, $user, $jwtUser);
-                } catch (\Exception $e) {
-                    return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
+                } catch (\Throwable $e) {
+                    \Log::warning('JWT validation failed', [
+                        'error' => $e->getMessage(),
+                        'ip' => $request->ip(),
+                    ]);
+
+                    return response()->json(['error' => 'Invalid token'], 401);
                 }
             } else {
                 $privateKeyEnv = config('passport.private_key');
@@ -106,8 +111,13 @@ class DecodeJwt
                         new SignedWith(new Sha256(), $publicKey),
                         new LooseValidAt(new SystemClock(), new \DateInterval('PT30S'))
                     );
-                } catch (\Exception $e) {
-                    return response()->json(['error' => 'Invalid token: '.$e->getMessage()], 401);
+                } catch (\Throwable $e) {
+                    \Log::warning('JWT validation failed', [
+                        'error' => $e->getMessage(),
+                        'ip' => $request->ip(),
+                    ]);
+
+                    return response()->json(['error' => 'Invalid token'], 401);
                 }
 
                 $jwtUser = $jwt->claims()->get('user');
