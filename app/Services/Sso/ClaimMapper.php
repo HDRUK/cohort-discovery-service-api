@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
+use App\Services\Claims\RoleSyncFloor;
 use Carbon\CarbonInterface;
 
 class ClaimMapper
@@ -14,6 +15,7 @@ class ClaimMapper
         private readonly ActivityLogger $activity,
         private readonly ClaimResolver $resolver,
         private readonly ClaimSyncPolicy $policy,
+        private readonly RoleSyncFloor $roleFloor,
     ) {
     }
 
@@ -55,11 +57,21 @@ class ClaimMapper
             $this->resolver->workgroupIdsForClaimValues($values),
         )));
 
-        $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS)
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS);
+
+        $changes = $authoritative
             ? $user->workgroups()->sync($workgroupIds)
             : $user->workgroups()->syncWithoutDetaching($workgroupIds);
 
-        $this->recordMembershipChange($user, 'workgroups', ClaimSyncPolicy::SUBJECT_WORKGROUPS, $changes);
+        $this->activity->membershipChanged(
+            'sso',
+            'claims_mapped',
+            $user,
+            'workgroups',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_WORKGROUPS),
+        );
 
         return true;
     }
@@ -93,13 +105,26 @@ class ClaimMapper
             return false;
         }
 
-        $roleIds = $this->resolver->roleIdsForClaimValues($values);
+        $roleIds = $this->roleFloor->apply(
+            $user,
+            $this->resolver->roleIdsForClaimValues($values)
+        );
 
-        $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES)
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES);
+
+        $changes = $authoritative
             ? $user->roles()->sync($roleIds)
             : $user->roles()->syncWithoutDetaching($roleIds);
 
-        $this->recordMembershipChange($user, 'roles', ClaimSyncPolicy::SUBJECT_ROLES, $changes);
+        $this->activity->membershipChanged(
+            'sso',
+            'claims_mapped',
+            $user,
+            'roles',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_ROLES),
+        );
 
         return true;
     }
@@ -126,28 +151,23 @@ class ClaimMapper
 
         $custodianIds = $this->resolver->custodianIdsForClaimValues($values);
 
-        $changes = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS)
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS);
+
+        $changes = $authoritative
             ? $user->custodians()->sync($custodianIds)
             : $user->custodians()->syncWithoutDetaching($custodianIds);
 
-        $this->recordMembershipChange($user, 'custodians', ClaimSyncPolicy::SUBJECT_CUSTODIANS, $changes);
+        $this->activity->membershipChanged(
+            'sso',
+            'claims_mapped',
+            $user,
+            'custodians',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_CUSTODIANS),
+        );
 
         return true;
-    }
-
-    private function recordMembershipChange(User $user, string $relation, string $subject, array $changes): void
-    {
-        if ($changes['attached'] === [] && $changes['detached'] === []) {
-            return;
-        }
-
-        $this->activity->custom('sso', 'claims_mapped', $user, [
-            'relation' => $relation,
-            'trust' => $this->policy->trustedModeOrNever($subject),
-            'authoritative' => $this->policy->isAuthoritative($subject),
-            'attached' => array_values($changes['attached']),
-            'detached' => array_values($changes['detached']),
-        ]);
     }
 
     /**
