@@ -60,6 +60,7 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            'use_upsert_alias' => env('DB_MYSQL_USE_UPSERT_ALIAS', true),
         ],
 
         'omop' => [
@@ -81,6 +82,7 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('DB_OMOP_MYSQL_ATTR_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
                 PDO::MYSQL_ATTR_LOCAL_INFILE => true,
             ]) : [],
+            'use_upsert_alias' => env('DB_MYSQL_USE_UPSERT_ALIAS', true),
         ],
 
         'mariadb' => [
@@ -168,7 +170,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', true),
         ],
 
