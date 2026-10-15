@@ -14,7 +14,7 @@ class QueryRateLimiter
             return false;
         }
 
-        if ($user->hasAnyRole(['admin', 'custodian'])) {
+        if ($user->hasRole('admin') || $user->custodians()->exists()) {
             return false;
         }
 

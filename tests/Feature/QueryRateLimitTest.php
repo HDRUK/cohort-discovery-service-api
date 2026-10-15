@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\TaskType;
 use App\Models\Collection;
+use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Task;
 use App\Models\User;
@@ -31,6 +32,7 @@ class QueryRateLimitTest extends TestCase
         Task::truncate();
         Query::truncate();
         Collection::truncate();
+        DB::table('custodian_has_users')->truncate();
         DB::table('features')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
@@ -88,10 +90,10 @@ class QueryRateLimitTest extends TestCase
             ->assertCreated();
     }
 
-    public function test_custodian_role_is_exempt(): void
+    public function test_custodian_is_exempt(): void
     {
         Feature::activate('query-rate-limit');
-        $this->user->syncRoles(['custodian']);
+        $this->user->custodians()->attach(Custodian::factory()->create()->id);
 
         $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
             ->assertCreated();
