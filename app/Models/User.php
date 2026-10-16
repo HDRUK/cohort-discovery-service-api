@@ -31,7 +31,13 @@ use Spatie\Permission\Traits\HasRoles;
  *     @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
  *     @OA\Property(property="email_verified_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
- *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
+ *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(
+ *         property="query_quota",
+ *         type="object",
+ *         description="This user's monthly query allowance (limit, used, remaining, and whether they're exempt from the cap)",
+ *         example={"limit": 500, "used": 12, "remaining": 488, "unlimited": false}
+ *     )
  * )
  */
 class User extends Authenticatable implements OAuthenticatable

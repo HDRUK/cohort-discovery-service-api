@@ -205,6 +205,7 @@ class QueryController extends Controller
      *     ),
      *
      *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=429, description="Monthly query limit reached"),
      *     @OA\Response(response=500, description="Server error")
      * )
      */
