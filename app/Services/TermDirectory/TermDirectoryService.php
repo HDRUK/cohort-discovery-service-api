@@ -30,13 +30,13 @@ class TermDirectoryService
     {
         $page = LengthAwarePaginator::resolveCurrentPage();
 
-        $collectionIds = $this->resolveCollectionIds($request);
+        $collectionIds = $this->resolveCollectionField($request, 'id');
 
         // Columns that define one aggregated concept row.
         $groupKeys = ['concept_id', 'concept_name', 'domain_id'];
 
         // Fresh builder per use — the search/filter scopes mutate the query.
-        $base = fn () => LatestDistribution::whereIn('collection_id', $collectionIds)
+        $base = fn() => LatestDistribution::whereIn('collection_id', $collectionIds)
             ->searchViaRequest()
             ->filterViaRequest();
 
@@ -96,19 +96,19 @@ class TermDirectoryService
     }
 
     /**
-     * The user's visible collections, optionally narrowed to requested public pids.
+     * The user's visible collections, optionally narrowed to requested field.
      * Pids outside the visible set are dropped so they can never widen access.
      */
-    private function resolveCollectionIds(Request $request): SupportCollection
+    public function resolveCollectionField(Request $request, string $field): SupportCollection
     {
-        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
+        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck($field);
 
         $requestedPids = (array) $request->input('collection_pid', []);
         if (empty($requestedPids)) {
             return $visible;
         }
 
-        $requested = Collection::whereIn('pid', $requestedPids)->pluck('id');
+        $requested = Collection::whereIn('pid', $requestedPids)->pluck($field);
 
         return $visible->intersect($requested)->values();
     }
@@ -139,7 +139,7 @@ class TermDirectoryService
             ->whereIn('concept_id', $conceptIds)
             ->groupBy($groupKeys)
             ->get()
-            ->keyBy(fn ($row) => $this->termGroupKey($row));
+            ->keyBy(fn($row) => $this->termGroupKey($row));
     }
 
     /**

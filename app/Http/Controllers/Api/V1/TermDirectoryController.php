@@ -7,14 +7,27 @@ use App\Services\Activity\ActivityLogger;
 use App\Services\TermDirectory\TermDirectoryService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
+use App\Models\Collection;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use DateTime;
+use DateTimeZone;
+use Carbon\Carbon;
+
 
 /**
  * @OA\Tag(
  *     name="TermDirectory",
  *     description="Lists OMOP concept availability across the federation, backing the Term Directory page."
+ * )
+ * @OA\Tag(
+ *     name="TermDirectoryDownload",
+ *     description="Exports all available concepts from the term directory as CSV"
  * )
  */
 class TermDirectoryController extends Controller
@@ -94,6 +107,88 @@ class TermDirectoryController extends Controller
             Log::error('TermDirectoryController@index - failed: ' . $e->getMessage());
 
             return $this->ErrorResponse($e->getMessage());
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/term-directory/download",
+     *     summary="Export all available term directory concepts as CSV",
+     *     tags={"TermDirectoryDownload"},
+     *      @OA\Response(
+     *      response=200,
+     *      description="CSV file of concepts")
+     * )
+     */
+    public function download(
+        Request $request,
+        ActivityLogger $activityLogger,
+        TermDirectoryService $termDirectory,
+    ): StreamedResponse | JsonResponse {
+        try {
+
+            $concepts = $termDirectory->search($request, $this->resolvePerPage())->items();
+
+            $response = new StreamedResponse(
+                function () use ($concepts) {
+                    // Open output stream
+                    $handle = fopen('php://output', 'w');
+
+                    $headerRow = [
+                        'Concept ID',
+                        'Term Name',
+                        'Domain',
+                        'Count',
+                        'Associated Collections',
+                    ];
+
+                    // Add CSV headers
+                    fputcsv($handle, $headerRow);
+                    // add the given number of rows to the file.
+                    foreach ($concepts as $concept) {
+                        $row = [
+                            $concept['concept_id'] !== null ? $concept['concept_id'] : '',
+                            $concept['concept_name'] !== null ? $concept['concept_name'] : '',
+                            $concept['domain_id'] !== null ? $concept['domain_id'] : '',
+                            $concept['count'] !== null ? $concept['count'] : '',
+                            $concept['ncollections'] !== null ? $concept['ncollections'] : '',
+                        ];
+                        fputcsv($handle, $row);
+                    }
+
+                    // Close the output stream
+                    fclose($handle);
+                }
+            );
+
+            // Build filename
+            $concept_name = $request->has('concept_name') ? '_' . str_replace(' ', '_', $request->query('concept_name')) : '';
+            $domain = $request->has('domain_id') ? '_' . $request->query('domain_id') : '';
+            $domains = $request->has('domain_id__in') ? '_' . str_replace('', '_', $request->query('domain_id__in')) : '';
+
+            $collectionNames = $request->has('collection_pid') ? $termDirectory->resolveCollectionField($request, 'name') : new SupportCollection();
+            $collections = $collectionNames->isNotEmpty() ? '_' . $collectionNames->implode('_') : '';
+
+            $sort = $request->has('sort') ? '_' . $request->query('sort') : '';
+
+            $datetime = '_' . Carbon::now()->format('Y-m-d_H-i-s');
+
+            $filename = sprintf('term-directory-exported%s%s%s%s%s%s.csv', $concept_name, $domain, $domains, $collections, $sort, $datetime);
+
+            $response->headers->set('Content-Type', 'text/csv');
+            $response->headers->set('Content-Disposition', 'attachment;filename="' . $filename . '"');
+            $response->headers->set('Cache-Control', 'max-age=0');
+
+            $activityLogger->custom('term_directory', 'downloaded', null, [
+                'filters' => $request->query(),
+            ]);
+
+            return $response;
+        } catch (\Throwable $e) {
+            \Log::error('TermDirectoryController@download/ - failed' .
+                ' (exception: ' . $e->getMessage() . ')');
+
+            return $this->ErrorResponse();
         }
     }
 }
