@@ -162,11 +162,13 @@ class QueryRateLimitTest extends TestCase
         $this->actingAsJwt($this->user)->getJson('/api/v1/user')
             ->assertOk()
             ->assertJson([
-                'query_quota' => [
-                    'limit' => 1,
-                    'used' => 1,
-                    'remaining' => 0,
-                    'unlimited' => false,
+                'data' => [
+                    'query_quota' => [
+                        'limit' => 1,
+                        'used' => 1,
+                        'remaining' => 0,
+                        'unlimited' => false,
+                    ],
                 ],
             ]);
     }
@@ -179,11 +181,13 @@ class QueryRateLimitTest extends TestCase
         $this->actingAsJwt($this->user)->getJson('/api/v1/user')
             ->assertOk()
             ->assertJson([
-                'query_quota' => [
-                    'limit' => 1,
-                    'used' => 0,
-                    'remaining' => null,
-                    'unlimited' => true,
+                'data' => [
+                    'query_quota' => [
+                        'limit' => 1,
+                        'used' => 0,
+                        'remaining' => null,
+                        'unlimited' => true,
+                    ],
                 ],
             ]);
     }

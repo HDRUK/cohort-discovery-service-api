@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use App\Services\Submitters\QueryRateLimiter;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -81,6 +82,15 @@ class User extends Authenticatable implements OAuthenticatable
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array/JSON form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'query_quota',
     ];
 
     protected static array $searchableColumns = [
@@ -187,6 +197,11 @@ class User extends Authenticatable implements OAuthenticatable
     public function getRoleNamesAttribute(): array
     {
         return $this->roles->pluck('name')->toArray();
+    }
+
+    public function getQueryQuotaAttribute(): array
+    {
+        return app(QueryRateLimiter::class)->usageSummary($this);
     }
 
     public function roles(): BelongsToMany
