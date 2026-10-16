@@ -217,6 +217,10 @@ class QueryController extends Controller
 
         try {
             if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
+                $activityLogger->custom('queries', 'rate_limit_exceeded', null, [
+                    'monthly_limit' => config('api.monthly_query_limit'),
+                ]);
+
                 return $this->TooManyRequestsResponse();
             }
 
@@ -543,6 +547,10 @@ class QueryController extends Controller
                 ->first();
 
             if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
+                $activityLogger->custom('queries', 'rate_limit_exceeded', $query, [
+                    'monthly_limit' => config('api.monthly_query_limit'),
+                ]);
+
                 return $this->TooManyRequestsResponse();
             }
 

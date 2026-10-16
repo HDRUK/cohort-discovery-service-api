@@ -132,4 +132,59 @@ class QueryRateLimitTest extends TestCase
         $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
             ->assertStatus(429);
     }
+
+    public function test_rate_limit_hit_is_logged(): void
+    {
+        Feature::activate('query-rate-limit');
+        DB::table('activity_log')->truncate();
+
+        $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
+            ->assertCreated();
+
+        $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
+            ->assertStatus(429);
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'queries',
+            'description' => 'query_rate_limit_exceeded',
+            'causer_id' => $this->user->id,
+            'properties->monthly_limit' => 1,
+        ]);
+    }
+
+    public function test_user_payload_includes_query_quota(): void
+    {
+        Feature::activate('query-rate-limit');
+
+        $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
+            ->assertCreated();
+
+        $this->actingAsJwt($this->user)->getJson('/api/v1/user')
+            ->assertOk()
+            ->assertJson([
+                'query_quota' => [
+                    'limit' => 1,
+                    'used' => 1,
+                    'remaining' => 0,
+                    'unlimited' => false,
+                ],
+            ]);
+    }
+
+    public function test_user_payload_shows_unlimited_quota_for_exempt_user(): void
+    {
+        Feature::activate('query-rate-limit');
+        $this->user->syncRoles(['admin']);
+
+        $this->actingAsJwt($this->user)->getJson('/api/v1/user')
+            ->assertOk()
+            ->assertJson([
+                'query_quota' => [
+                    'limit' => 1,
+                    'used' => 0,
+                    'remaining' => null,
+                    'unlimited' => true,
+                ],
+            ]);
+    }
 }

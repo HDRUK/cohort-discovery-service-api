@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Submitters\QueryRateLimiter;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -190,14 +191,14 @@ class UserController extends Controller
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
      */
-    public function getMe(Request $request, ActivityLogger $activityLogger)
+    public function getMe(Request $request, ActivityLogger $activityLogger, QueryRateLimiter $rateLimiter)
     {
         $user = User::with(['workgroups', 'roles', 'custodians'])
             ->findOrFail(Auth::id());
 
         $activityLogger->viewed('users', $user, [], 'authenticated_user_viewed');
 
-        return $this->OKResponse($user);
+        return $this->OKResponseExtended($user, 'query_quota', $rateLimiter->usageSummary($user));
     }
 
     /**
