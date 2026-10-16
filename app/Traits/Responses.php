@@ -78,6 +78,14 @@ trait Responses
         ], Response::HTTP_NOT_FOUND);
     }
 
+    public function TooManyRequestsResponse(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'too many requests',
+            'data' => null,
+        ], Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
     public function ErrorResponse(mixed $error = null): JsonResponse
     {
         return response()->json([

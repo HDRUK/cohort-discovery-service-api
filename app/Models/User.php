@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use App\Services\Submitters\QueryRateLimiter;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -30,7 +31,13 @@ use Spatie\Permission\Traits\HasRoles;
  *     @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
  *     @OA\Property(property="email_verified_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
- *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z")
+ *     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-08-06T12:34:56Z"),
+ *     @OA\Property(
+ *         property="query_quota",
+ *         type="object",
+ *         description="This user's monthly query allowance (limit, used, remaining, and whether they're exempt from the cap)",
+ *         example={"limit": 500, "used": 12, "remaining": 488, "unlimited": false}
+ *     )
  * )
  */
 class User extends Authenticatable implements OAuthenticatable
@@ -81,6 +88,15 @@ class User extends Authenticatable implements OAuthenticatable
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array/JSON form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'query_quota',
     ];
 
     protected static array $searchableColumns = [
@@ -187,6 +203,11 @@ class User extends Authenticatable implements OAuthenticatable
     public function getRoleNamesAttribute(): array
     {
         return $this->roles->pluck('name')->toArray();
+    }
+
+    public function getQueryQuotaAttribute(): array
+    {
+        return app(QueryRateLimiter::class)->usageSummary($this);
     }
 
     public function roles(): BelongsToMany
