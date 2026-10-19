@@ -28,16 +28,17 @@ class CollectionPollRecorder
     private function recordPing(int $collectionId, TaskType $taskType, Carbon $at): void
     {
         try {
-            // VALUES() is deprecated in MySQL 8.0.20+ in favour of the `AS new` row
-            // alias, but the alias needs 8.0.19+ and VALUES() still works across all
-            // of 8.0 - swap it when the minimum server version is pinned higher.
-            DB::statement(
+            $connection = DB::connection();
+            $useUpsertAlias = $connection->getConfig('use_upsert_alias');
+
+            $connection->statement(
                 'INSERT INTO collection_ping_buckets
                     (collection_id, task_type, bucket_minute, n, first_ping_at, last_ping_at)
-                 VALUES (?, ?, ?, 1, ?, ?)
+                 VALUES (?, ?, ?, 1, ?, ?)'
+                 .($useUpsertAlias ? ' AS new' : '').'
                  ON DUPLICATE KEY UPDATE
                     n = n + 1,
-                    last_ping_at = VALUES(last_ping_at)',
+                    last_ping_at = '.($useUpsertAlias ? 'new.last_ping_at' : 'VALUES(last_ping_at)'),
                 [
                     $collectionId,
                     $taskType->value,
