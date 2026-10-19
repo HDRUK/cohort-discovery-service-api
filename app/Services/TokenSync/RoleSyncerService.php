@@ -3,45 +3,57 @@
 namespace App\Services\TokenSync;
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Laravel\Pennant\Feature;
+use App\Services\Activity\ActivityLogger;
+use App\Services\Claims\ClaimResolver;
+use App\Services\Claims\ClaimSyncPolicy;
+use App\Services\Claims\RoleSyncFloor;
+use Carbon\CarbonInterface;
 
 class RoleSyncerService
 {
-    public function sync(
-        User $user,
-        array $roleNames,
-    ): void {
-
-        if (!Feature::active('integrated-sync-roles-every-request')) {
-            return;
-        }
-
-        $roleMap = config('claimsaccesscontrol.role_mappings');
-
-        $externalNames = collect($roleNames)
-            ->filter()
-            ->values()
-            ->all();
-
-        $internalNames = collect($roleMap)
-            ->filter(fn ($external) => in_array($external, $externalNames, true))
-            ->keys()
-            ->map(fn ($n) => mb_strtolower($n))
-            ->values()
-            ->all();
-
-        $roleIds = Role::query()
-            ->whereIn(\DB::raw('LOWER(name)'), $internalNames)
-            ->pluck('id')
-            ->toArray();
-
-        $user->roles()->sync($roleIds);
-
-        \Log::info('syncing roles against user (' . $user->id . '): ' . json_encode($roleIds));
-
+    public function __construct(
+        private readonly ActivityLogger $activity,
+        private readonly ClaimResolver $resolver,
+        private readonly ClaimSyncPolicy $policy,
+        private readonly RoleSyncFloor $roleFloor,
+    ) {
     }
 
+    public function sync(
+        User $user,
+        ?array $roleNames,
+        ?CarbonInterface $claimsSyncedAt = null,
+    ): bool {
+        if ($roleNames === null) {
+            return false;
+        }
 
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_ROLES, $claimsSyncedAt)) {
+            return false;
+        }
 
+        $roleIds = $this->roleFloor->apply(
+            $user,
+            $this->resolver->roleIdsForClaimValues($roleNames)
+        );
+
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES);
+
+        $changes = $authoritative
+            ? $user->roles()->sync($roleIds)
+            : $user->roles()->syncWithoutDetaching($roleIds);
+
+        $this->activity->membershipChanged(
+            'claims',
+            'claims_synced',
+            $user,
+            'roles',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_ROLES),
+            'claims_synced',
+        );
+
+        return true;
+    }
 }

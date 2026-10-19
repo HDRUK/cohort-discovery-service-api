@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 
@@ -89,12 +90,21 @@ abstract class TestCase extends BaseTestCase
             'iss' => 'test-suite',
             'iat' => $now,
             'exp' => $now + 3600,
+            'jti' => (string) Str::uuid(),
             'user' => [
                 'email' => $email,
                 'cohort_admin_teams' => [],
                 'workgroups' => [],
             ],
         ], $overrides);
+
+        if (ApplicationMode::isStandalone()) {
+            // DecodeJwt verifies standalone tokens against the Passport RSA keys
+            $privateKey = config('passport.private_key')
+                ?: file_get_contents(storage_path('oauth-private.key'));
+
+            return JWT::encode($payload, $privateKey, 'RS256');
+        }
 
         $secret = Config::get('api.jwt_secret', 'test_secret');
 

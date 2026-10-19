@@ -4,27 +4,69 @@ namespace App\Services\TokenSync;
 
 use App\Models\User;
 use App\Models\Custodian;
-use Laravel\Pennant\Feature;
+use App\Services\Activity\ActivityLogger;
+use App\Services\Claims\ClaimSyncPolicy;
+use Carbon\CarbonInterface;
 
 class CustodianSyncerService
 {
+    public function __construct(
+        private readonly ActivityLogger $activity,
+        private readonly ClaimSyncPolicy $policy,
+    ) {
+    }
+
     public function sync(
         User $user,
-        array $custodians,
-    ): void {
-        if (!Feature::active('integrated-sync-custodians-every-request')) {
-            return;
+        ?array $custodians,
+        ?CarbonInterface $claimsSyncedAt = null,
+    ): bool {
+        if ($custodians === null) {
+            return false;
         }
 
-        $rows = collect($custodians)->map(fn ($t) => [
+        if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_CUSTODIANS, $claimsSyncedAt)) {
+            return false;
+        }
+
+        $valid = collect($custodians)->filter(
+            fn ($t) => is_object($t) && isset($t->id, $t->name) && is_string($t->id) && is_string($t->name)
+        );
+
+        if ($valid->count() !== count($custodians)) {
+            \Log::warning("Custodian claim sync skipped malformed entries for user {$user->id}", [
+                'valid' => $valid->count(),
+                'total' => count($custodians),
+            ]);
+        }
+
+        if ($custodians !== [] && $valid->isEmpty()) {
+            return false;
+        }
+
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS);
+
+        $rows = $valid->map(fn ($t) => [
             'external_custodian_id' => $t->id,
             'name' => $t->name,
             'external_custodian_name' => $t->name,
-        ])->all();
+        ])->values()->all();
 
         if (count($rows) === 0) {
-            $user->custodians()->sync([]);
-            return;
+            if ($authoritative) {
+                $this->activity->membershipChanged(
+                    'claims',
+                    'claims_synced',
+                    $user,
+                    'custodians',
+                    $user->custodians()->sync([]),
+                    $authoritative,
+                    $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_CUSTODIANS),
+                    'claims_synced',
+                );
+            }
+
+            return true;
         }
 
         Custodian::upsert(
@@ -33,8 +75,8 @@ class CustodianSyncerService
             ['name', 'external_custodian_name']
         );
 
-        $externalIds = collect($custodians)
-            ->pluck('id')
+        $externalIds = collect($rows)
+            ->pluck('external_custodian_id')
             ->values()
             ->all();
 
@@ -43,9 +85,21 @@ class CustodianSyncerService
             ->pluck('id')
             ->all();
 
-        $user->custodians()->sync($custodianIds);
+        $changes = $authoritative
+            ? $user->custodians()->sync($custodianIds)
+            : $user->custodians()->syncWithoutDetaching($custodianIds);
 
+        $this->activity->membershipChanged(
+            'claims',
+            'claims_synced',
+            $user,
+            'custodians',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_CUSTODIANS),
+            'claims_synced',
+        );
+
+        return true;
     }
-
-
 }

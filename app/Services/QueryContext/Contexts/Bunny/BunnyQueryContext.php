@@ -807,14 +807,16 @@ class BunnyQueryContext implements QueryContextInterface
         // - not an 'inbetween' and you'd think would be logical
         // - we have to default to use lower for now
 
+        // A value left of the pipe means "more months ago", so
+        // $lower (on/after) goes right of the pipe and $upper (on/before) goes left of it.
         [$date, $pattern] = $lower !== null
             ? [
                 $lower,
-                '%d|:TIME:M'
+                '|%d:TIME:M'
             ]
             : [
                 $upper,
-                '|%d:TIME:M'
+                '%d|:TIME:M'
             ];
 
         $months = $this->getRelativeMonths($date);

@@ -4,7 +4,6 @@ use Illuminate\Http\Request;
 use App\Http\Middleware\ClaimBasedAccessControl;
 use App\Http\Middleware\CollectionHostBasicAuth;
 use App\Http\Middleware\DecodeJwt;
-use App\Http\Middleware\ValidateOidcToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,7 +18,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'decode.jwt' => DecodeJwt::class,
-            'validate.oidc' => ValidateOidcToken::class,
             'cbac' => ClaimBasedAccessControl::class,
             // 'client_basic_auth' => CollectionHostBasicAuth::class,
         ]);
