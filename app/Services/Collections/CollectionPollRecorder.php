@@ -29,16 +29,22 @@ class CollectionPollRecorder
     {
         try {
             $connection = DB::connection();
-            $useUpsertAlias = $connection->getConfig('use_upsert_alias');
+
+            if ($connection->getConfig('use_upsert_alias')) {
+                $insertRowAlias = 'AS new';
+                $lastPingAtUpdate = 'new.last_ping_at';
+            } else {
+                $insertRowAlias = '';
+                $lastPingAtUpdate = 'VALUES(last_ping_at)';
+            }
 
             $connection->statement(
-                'INSERT INTO collection_ping_buckets
+                "INSERT INTO collection_ping_buckets
                     (collection_id, task_type, bucket_minute, n, first_ping_at, last_ping_at)
-                 VALUES (?, ?, ?, 1, ?, ?)'
-                 .($useUpsertAlias ? ' AS new' : '').'
+                 VALUES (?, ?, ?, 1, ?, ?) {$insertRowAlias}
                  ON DUPLICATE KEY UPDATE
                     n = n + 1,
-                    last_ping_at = '.($useUpsertAlias ? 'new.last_ping_at' : 'VALUES(last_ping_at)'),
+                    last_ping_at = {$lastPingAtUpdate}",
                 [
                     $collectionId,
                     $taskType->value,
