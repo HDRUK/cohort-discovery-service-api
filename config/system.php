@@ -56,6 +56,8 @@ return [
 
     'collection_inactivity_minutes' => env('COLLECTION_INACTIVITY_MINUTES', 30),
 
+    'collection_health_max_bins' => (int)env('COLLECTION_HEALTH_MAX_BINS', 2000),
+
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
     'default_child_age_max' => (int)env('DEFAULT_CHILD_AGE_MAX', 17),
 
