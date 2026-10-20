@@ -1,5 +1,6 @@
 *.log
 .DS_Store
+.ipynb_checkpoints
 .env
 .env.testing
 .env.backup
@@ -17,7 +18,7 @@
 /public/build
 /public/hot
 /public/storage
-/storage/*.key
+/storage/*.key*
 /storage/pail
 /vendor
 Homestead.json
