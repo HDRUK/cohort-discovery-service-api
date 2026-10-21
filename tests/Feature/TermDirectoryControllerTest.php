@@ -13,6 +13,7 @@ use Tests\TestCase;
 class TermDirectoryControllerTest extends TestCase
 {
     private const BASE_URL = '/api/v1/term-directory';
+    private const BASE_URL_DOWNLOAD = self::BASE_URL . '/download';
 
     // concept_ids from the MinimalOmopSeeder (minimal_concept.csv)
     // which is ran by the RefreshDatabaseLite trait on test setup.
@@ -517,6 +518,28 @@ class TermDirectoryControllerTest extends TestCase
             DB::table('latest_distributions_materialised')->count(),
             'the materialised table should stay in lockstep with the view after a refresh'
         );
+    }
+
+    public function test_download_returns_csv_and_contains_expected_data(): void
+    {
+        $csvHeaders = ['Concept ID', 'Term Name', 'Domain', 'Count', 'Associated Collections'];
+        $csv1stRow = ['1075887', 'Hypertension in chronic kidney disease stage 3A due to type 1 diabetes mellitus', 'Condition', '50', '1'];
+        $csv2ndRow = ['1075886', 'Hypertension in chronic kidney disease stage 3B due to type 1 diabetes mellitus', 'Condition', '10', '1'];
+
+        $res = $this->actingAsJwt($this->user)
+            ->get(self::BASE_URL_DOWNLOAD);
+        $res->assertStatus(200);
+        $res->assertHeaderContains('Content-Disposition', '.csv');
+
+        foreach ($csvHeaders as $header) {
+            $this->assertStringContainsString($header, $res->streamedContent());
+        }
+        foreach ($csv1stRow as $row) {
+            $this->assertStringContainsString($row, $res->streamedContent());
+        }
+        foreach ($csv2ndRow as $row) {
+            $this->assertStringContainsString($row, $res->streamedContent());
+        }
     }
 
     /**

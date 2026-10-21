@@ -100,7 +100,6 @@ Route::prefix('v1/task')
 
         Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
             ->name('task.result');
-
     });
 
 Route::middleware(['decode.jwt'])->group(function () {
@@ -172,6 +171,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::post('/v1/omop/concepts/search', [OmopController::class, 'searchConcepts']);
 
     Route::get('/v1/term-directory', [TermDirectoryController::class, 'index']);
+    Route::get('/v1/term-directory/download', [TermDirectoryController::class, 'download']);
 
     Route::post('/v1/parse-query', [QueryParserController::class, 'parse']);
 
