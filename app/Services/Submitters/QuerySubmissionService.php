@@ -6,6 +6,8 @@ use App\Enums\MissingDataTable;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use App\Services\Activity\ActivityLogger;
+use App\Services\Collections\CollectionBacklogLimiter;
 use App\Support\QueryDefinitionInspector;
 use Carbon\Carbon;
 use DB;
@@ -22,6 +24,8 @@ class QuerySubmissionService
         protected Task $taskModel,
         protected TaskFailureRecorder $taskFailureRecorder,
         protected QueryDefinitionInspector $inspector,
+        protected CollectionBacklogLimiter $backlogLimiter,
+        protected ActivityLogger $activityLogger,
     ) {
     }
 
@@ -50,8 +54,10 @@ class QuerySubmissionService
                     ->when(! empty($data['collection_filter']), function ($q) use ($data) {
                         $q->whereIn('pid', $data['collection_filter']);
                     })
-                    ->select(['id', 'type', 'location_enabled', 'death_enabled'])
+                    ->select(['id', 'pid', 'name', 'type', 'location_enabled', 'death_enabled'])
                     ->get();
+
+                $pendingCounts = $this->backlogLimiter->pendingCountsFor($collections->pluck('id'));
 
                 // Determine, once, whether this query targets the location/death
                 // tables, and whether each is enabled globally via feature flag.
@@ -70,7 +76,8 @@ class QuerySubmissionService
                     $usesLocation,
                     $usesDeath,
                     $locationFeatureOn,
-                    $deathFeatureOn
+                    $deathFeatureOn,
+                    $pendingCounts
                 ) {
                     $task = Task::create([
                         'pid' => Str::uuid(),
@@ -84,6 +91,14 @@ class QuerySubmissionService
                     // that is disabled globally (feature off) or missing for this
                     // collection (flag off) - failing it with a clear reason.
                     $reasons = [];
+                    $errorClass = 'MissingRequiredTable';
+                    $pendingCount = $pendingCounts[$collection->id] ?? 0;
+
+                    if ($this->backlogLimiter->isSaturated($pendingCount)) {
+                        $reasons[] = CollectionBacklogLimiter::BLOCKED_REASON;
+                        $errorClass = CollectionBacklogLimiter::ERROR_CLASS;
+                        $this->recordBacklogBlock($collection, $query, $pendingCount);
+                    }
                     if ($usesLocation && (! $locationFeatureOn || ! $collection->location_enabled)) {
                         $reasons[] = MissingDataTable::Location->reason();
                     }
@@ -91,7 +106,7 @@ class QuerySubmissionService
                         $reasons[] = MissingDataTable::Death->reason();
                     }
                     if (! empty($reasons)) {
-                        $this->taskFailureRecorder->failWithReasons($task, $reasons);
+                        $this->taskFailureRecorder->failWithReasons($task, $reasons, $errorClass);
                     }
 
                     // Offload side effects (job dispatching) to observers - TODO
@@ -113,5 +128,22 @@ class QuerySubmissionService
                 'task_pids' => null,
             ];
         }
+    }
+
+    private function recordBacklogBlock(Collection $collection, Query $query, int $pendingCount): void
+    {
+        \Log::warning($this->tag.' - collection backlog exceeded', [
+            'collection_pid' => $collection->pid,
+            'collection_name' => $collection->name,
+            'pending_tasks' => $pendingCount,
+            'limit' => $this->backlogLimiter->limit(),
+            'query_pid' => $query->pid,
+        ]);
+
+        $this->activityLogger->custom('collections', 'task_backlog_blocked', $collection, [
+            'pending_tasks' => $pendingCount,
+            'limit' => $this->backlogLimiter->limit(),
+            'query_pid' => $query->pid,
+        ]);
     }
 }

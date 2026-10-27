@@ -93,6 +93,44 @@ class SlackNotifier
         ], "🚨 Collection suspended due to inactivity: {$c->name}", '#E01E5A');
     }
 
+    public function collectionBacklogSuspended(Collection $c, int $pending, int $limit): void
+    {
+        $this->sendBlocks([
+            [
+                'type' => 'header',
+                'text' => ['type' => 'plain_text', 'text' => '🚨 Collection Suspended', 'emoji' => true],
+            ],
+            [
+                'type' => 'section',
+                'fields' => [
+                    ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Status:*\n⛔ Suspended"],
+                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Reason:*\n{$pending} pending tasks (limit {$limit})"],
+                ],
+            ],
+        ], "🚨 Collection suspended due to task backlog: {$c->name}", '#E01E5A');
+    }
+
+    public function collectionBacklogWarning(Collection $c, int $pending, int $limit): void
+    {
+        $this->sendBlocks([
+            [
+                'type' => 'header',
+                'text' => ['type' => 'plain_text', 'text' => '⚠️ Collection Backlog Building', 'emoji' => true],
+            ],
+            [
+                'type' => 'section',
+                'fields' => [
+                    ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Status:*\n⚠️ Backlog building"],
+                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Pending tasks:*\n{$pending} / {$limit}"],
+                ],
+            ],
+        ], "⚠️ Collection task backlog building: {$c->name} ({$pending}/{$limit})", '#ECB22E');
+    }
+
     public function collectionBackOnline(Collection $c): void
     {
         $this->sendBlocks([

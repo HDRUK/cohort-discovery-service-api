@@ -7,8 +7,6 @@ use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Services\Submitters\QuerySubmissionService;
-use App\Services\Submitters\TaskFailureRecorder;
-use App\Support\QueryDefinitionInspector;
 use DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -40,13 +38,7 @@ class QuerySubmissionServiceTest extends TestCase
             'task_type' => TaskType::A->value,
         ];
 
-        $service = new QuerySubmissionService(
-            new Query(),
-            new Collection(),
-            new Task(),
-            new TaskFailureRecorder(),
-            new QueryDefinitionInspector(),
-        );
+        $service = app(QuerySubmissionService::class);
 
         // Run
         $result = $service->handle($data, 1);
@@ -69,13 +61,7 @@ class QuerySubmissionServiceTest extends TestCase
             'task_type' => TaskType::A->value,
         ];
 
-        $service = new QuerySubmissionService(
-            new Query(),
-            new Collection(),
-            new Task(),
-            new TaskFailureRecorder(),
-            new QueryDefinitionInspector(),
-        );
+        $service = app(QuerySubmissionService::class);
         $result = $service->handle($data, 1);
 
         $this->assertArrayHasKey('query_pid', $result);
