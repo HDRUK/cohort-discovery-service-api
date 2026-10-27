@@ -9,6 +9,7 @@ use App\Models\Custodian;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Str;
@@ -47,7 +48,8 @@ class CollectionHostController extends Controller
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting()
-                ->get();
+                ->get()
+                ->makeVisible(CollectionHost::CREDENTIAL_FIELDS);
 
             return $this->OKResponse($hosts);
         } catch (AuthorizationException $e) {
@@ -63,13 +65,18 @@ class CollectionHostController extends Controller
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         try {
-            $custodian = Custodian::where('pid', $custodianPid)->first();
-            $custodianId = $custodian->id;
+            $custodian = Custodian::where('pid', $custodianPid)->firstOrFail();
+            $this->authorize('view', $custodian);
 
-            return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)
+            return $this->OKResponse(CollectionHost::where('custodian_id', $custodian->id)
                     ->with(['collections','custodian'])
                     ->applySorting()
-                    ->get());
+                    ->get()
+                    ->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionHostController@indexByCustodian - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getTraceAsString().')');
@@ -115,7 +122,7 @@ class CollectionHostController extends Controller
 
             $this->authorize('view', $collectionHost);
 
-            return $this->OKResponse($collectionHost);
+            return $this->OKResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Exception $e) {
@@ -166,7 +173,7 @@ class CollectionHostController extends Controller
                 'custodian_id' => $validated['custodian_id'],
             ]);
 
-            return $this->CreatedResponse($collectionHost);
+            return $this->CreatedResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -224,7 +231,7 @@ class CollectionHostController extends Controller
 
             $collectionHost->update($validated);
 
-            return $this->OKResponse($collectionHost);
+            return $this->OKResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {

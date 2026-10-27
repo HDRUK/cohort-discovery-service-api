@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Result;
@@ -525,6 +526,11 @@ class TaskControllerTest extends TestCase
 
         $this->assertNotNull($collectionHost);
 
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $collectionHost->id,
+            'collection_id' => $collection->id,
+        ]);
+
         $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid, [
             'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}"),
         ]);
@@ -541,6 +547,82 @@ class TaskControllerTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_polling_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+
+        $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid.'.a', [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret'),
+        ]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('collection_activity_logs', [
+            'collection_id' => $collection->id,
+        ]);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_posting_a_result_for_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+        CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$collection->pid,
+            ['status' => 'ok', 'queryResult' => ['count' => 1]],
+            ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret')]
+        );
+
+        $response->assertStatus(403);
+        $this->assertNull($task->fresh()->completed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_posting_a_result_for_another_collections_task(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $servedCollection = Collection::factory()->bunny()->create();
+        $task = Task::factory()->create();
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'linked-client',
+            'client_secret' => 'linked-secret',
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $collectionHost->id,
+            'collection_id' => $servedCollection->id,
+        ]);
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$servedCollection->pid,
+            ['status' => 'ok', 'queryResult' => ['count' => 1]],
+            ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('linked-client:linked-secret')]
+        );
+
+        $response->assertStatus(403);
+        $this->assertNull($task->fresh()->completed_at);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]

@@ -111,6 +111,24 @@ class CustodianTest extends TestCase
         $this->assertNotEmpty($content['data'][count($content['data']) - 1]['network']);
     }
 
+    public function test_listing_custodians_does_not_expose_host_credentials(): void
+    {
+        $this->user->removeRole('admin');
+
+        $custodian = Custodian::factory()->create();
+        CollectionHost::factory()->create([
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])->getJson($this->url);
+
+        $response->assertStatus(200);
+        $host = $response->json('data.0.hosts.0');
+        $this->assertNotEmpty($host);
+        $this->assertArrayNotHasKey('client_id', $host);
+        $this->assertArrayNotHasKey('client_secret', $host);
+    }
+
     public function test_the_application_can_list_custodians_sorted(): void
     {
         $response = $this->actingAsJwt($this->user, [])->getJson($this->url.'?sort=name:desc');

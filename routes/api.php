@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\FeatureController;
 use App\Http\Middleware\CollectionHostBasicAuth;
+use App\Http\Middleware\EnsureCollectionHostServesCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -96,9 +97,11 @@ Route::prefix('v1/task')
             ->name('task.status');
 
         Route::get('/nextjob/{collectionId}', 'nextJob')
+            ->middleware(EnsureCollectionHostServesCollection::class)
             ->name('task.nextjob');
 
         Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
+            ->middleware(EnsureCollectionHostServesCollection::class)
             ->name('task.result');
 
     });

@@ -48,6 +48,8 @@ class CollectionHost extends Model implements ValidatableModel
         'custodian_id',
     ];
 
+    protected $hidden = self::CREDENTIAL_FIELDS;
+
     protected static array $searchableColumns = [
         'name',
         'query_context_type',
@@ -61,6 +63,11 @@ class CollectionHost extends Model implements ValidatableModel
         'created_at',
         'updated_at',
         'custodian_id',
+    ];
+
+    public const CREDENTIAL_FIELDS = [
+        'client_id',
+        'client_secret',
     ];
 
     public function getValidationRules(string $context): array
