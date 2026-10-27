@@ -42,10 +42,16 @@ class CollectionTaskBacklogMonitor implements ApiCommand
         foreach ($collections as $c) {
             $pending = $pendingCounts[$c->id] ?? 0;
 
-            if ($this->backlogLimiter->isSaturated($pending)) {
-                $this->suspend($c, $pending);
-            } elseif ($this->backlogLimiter->isWarning($pending)) {
-                $this->warn($c, $pending);
+            try {
+                if ($this->backlogLimiter->isSaturated($pending)) {
+                    $this->suspend($c, $pending);
+                } elseif ($this->backlogLimiter->isWarning($pending)) {
+                    $this->sendBacklogWarning($c, $pending);
+                } else {
+                    Cache::forget($this->notifiedCacheKey($c));
+                }
+            } catch (\Throwable $e) {
+                Log::error($this->tag . ' - Collection (' . $c->id . ') failed: ' . $e->getMessage());
             }
         }
 
@@ -64,23 +70,29 @@ class CollectionTaskBacklogMonitor implements ApiCommand
         ], null, true);
 
         $c->setState(Collection::STATUS_SUSPENDED);
-        $this->slackNotifier->collectionBacklogSuspended($c, $pending, $limit);
+
+        if ($this->shouldNotify($c)) {
+            $this->slackNotifier->collectionBacklogSuspended($c, $pending, $limit);
+        }
     }
 
-    private function warn(Collection $c, int $pending): void
+    private function sendBacklogWarning(Collection $c, int $pending): void
     {
         $limit = $this->backlogLimiter->limit();
 
         Log::warning($this->tag . ' - Collection (' . $c->id . ') has ' . $pending . ' pending tasks, approaching limit ' . $limit);
 
-        if (! Cache::add($this->warningCacheKey($c), true, now()->addHour())) {
-            return;
+        if ($this->shouldNotify($c)) {
+            $this->slackNotifier->collectionBacklogWarning($c, $pending, $limit);
         }
-
-        $this->slackNotifier->collectionBacklogWarning($c, $pending, $limit);
     }
 
-    private function warningCacheKey(Collection $c): string
+    private function shouldNotify(Collection $c): bool
+    {
+        return Cache::add($this->notifiedCacheKey($c), true, now()->addHour());
+    }
+
+    private function notifiedCacheKey(Collection $c): string
     {
         return 'collection-backlog-warned:' . $c->id;
     }
@@ -90,7 +102,7 @@ class CollectionTaskBacklogMonitor implements ApiCommand
      */
     private function getCollections(): \Illuminate\Database\Eloquent\Collection
     {
-        return Collection::whereRelation(
+        return Collection::with('custodian')->whereRelation(
             'modelState.state',
             'slug',
             Collection::STATUS_ACTIVE

@@ -105,7 +105,7 @@ class SlackNotifier
                 'fields' => [
                     ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
                     ['type' => 'mrkdwn', 'text' => "*Status:*\n⛔ Suspended"],
-                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian?->name}"],
                     ['type' => 'mrkdwn', 'text' => "*Reason:*\n{$pending} pending tasks (limit {$limit})"],
                 ],
             ],
@@ -124,7 +124,7 @@ class SlackNotifier
                 'fields' => [
                     ['type' => 'mrkdwn', 'text' => "*Collection:*\n{$c->name}"],
                     ['type' => 'mrkdwn', 'text' => "*Status:*\n⚠️ Backlog building"],
-                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian->name}"],
+                    ['type' => 'mrkdwn', 'text' => "*Custodian:*\n{$c->custodian?->name}"],
                     ['type' => 'mrkdwn', 'text' => "*Pending tasks:*\n{$pending} / {$limit}"],
                 ],
             ],

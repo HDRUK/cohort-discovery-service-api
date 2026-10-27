@@ -251,7 +251,7 @@ class TaskController extends Controller
         // Always log activity, regardless of if jobs exist
         $wasSuspended = $taskType === TaskType::A && $collection->isInState(Collection::STATUS_SUSPENDED);
         $pollRecorder->record($collection, $taskType);
-        if ($wasSuspended && ! $backlogLimiter->isSaturated($backlogLimiter->pendingCountFor($collection))) {
+        if ($wasSuspended && $backlogLimiter->hasDrainedFor($collection)) {
             $collection->setState(Collection::STATUS_ACTIVE);
             $this->slackNotifier->collectionBackOnline($collection);
         }

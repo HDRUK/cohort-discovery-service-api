@@ -8,6 +8,7 @@ use App\Models\Query;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Collections\CollectionBacklogLimiter;
+use App\Services\QueryContext\QueryContextManager;
 use DB;
 use Hdruk\LaravelModelStates\Models\State;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +18,8 @@ use Tests\TestCase;
 class TaskPollBacklogGuardTest extends TestCase
 {
     private const LIMIT = 2;
+
+    private const WARNING_LIMIT = 1;
 
     private const SLACK_URL = 'https://hooks.slack.com/test';
 
@@ -37,6 +40,7 @@ class TaskPollBacklogGuardTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         config()->set('system.collection_pending_task_limit', self::LIMIT);
+        config()->set('system.collection_pending_task_warning_limit', self::WARNING_LIMIT);
         config()->set('services.slack_webhook.url', self::SLACK_URL);
         Http::fake(['*' => Http::response([], 200)]);
 
@@ -91,6 +95,10 @@ class TaskPollBacklogGuardTest extends TestCase
     public function test_a_saturated_collection_is_still_handed_work_to_drain(): void
     {
         $this->fillBacklog(self::LIMIT);
+
+        $contextManager = $this->createMock(QueryContextManager::class);
+        $contextManager->method('handle')->willReturn(['translated' => 'query']);
+        $this->app->instance(QueryContextManager::class, $contextManager);
 
         $this->poll()->assertOk();
 

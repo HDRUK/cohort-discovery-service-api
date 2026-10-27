@@ -26,7 +26,7 @@ class CollectionBacklogLimiter
 
     public function warningLimit(): int
     {
-        return (int) config('system.collection_pending_task_warning_limit');
+        return min((int) config('system.collection_pending_task_warning_limit'), $this->limit());
     }
 
     public function isSaturated(int $pendingCount): bool
@@ -41,6 +41,21 @@ class CollectionBacklogLimiter
             && $pendingCount < $this->limit();
     }
 
+    public function hasDrained(int $pendingCount): bool
+    {
+        return $pendingCount < $this->warningLimit();
+    }
+
+    public function isSaturatedFor(Collection $collection): bool
+    {
+        return $this->enabled() && $this->isSaturated($this->pendingCountFor($collection));
+    }
+
+    public function hasDrainedFor(Collection $collection): bool
+    {
+        return ! $this->enabled() || $this->hasDrained($this->pendingCountFor($collection));
+    }
+
     public function pendingCountFor(Collection $collection): int
     {
         return $this->pendingCountsFor([$collection->id])[$collection->id] ?? 0;
@@ -52,7 +67,11 @@ class CollectionBacklogLimiter
      */
     public function pendingCountsFor(iterable $collectionIds): array
     {
-        $ids = collect($collectionIds)->filter()->unique()->values();
+        if (! $this->enabled()) {
+            return [];
+        }
+
+        $ids = collect($collectionIds)->filter(fn ($id) => $id !== null)->unique()->values();
 
         if ($ids->isEmpty()) {
             return [];

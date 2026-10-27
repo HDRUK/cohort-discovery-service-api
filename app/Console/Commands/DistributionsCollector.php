@@ -11,6 +11,7 @@ use App\Models\CollectionConfig;
 use App\Models\CollectionConfigRun;
 use App\Models\Query;
 use App\Models\Task;
+use App\Services\Collections\CollectionBacklogLimiter;
 use Carbon\Carbon;
 use Log;
 use Str;
@@ -20,6 +21,11 @@ class DistributionsCollector implements ApiCommand
     private string $tag = 'DistributionsCollector';
 
     private string $timezone = 'Europe/London';
+
+    public function __construct(
+        private CollectionBacklogLimiter $backlogLimiter
+    ) {
+    }
 
     public function rules(): array
     {
@@ -201,7 +207,14 @@ class DistributionsCollector implements ApiCommand
     private function generateQueriesAndTasks(CollectionConfig $c): void
     {
         try {
-            $collectionName = strtolower(str_replace(' ', '-', Collection::where('id', $c->collection_id)->value('name')));
+            $collection = Collection::find($c->collection_id);
+            $collectionName = strtolower(str_replace(' ', '-', (string) $collection?->name));
+
+            if ($collection && $this->backlogLimiter->isSaturatedFor($collection)) {
+                Log::warning($this->tag.' skipping '.$collectionName.' config ('.$c->id.') - collection task backlog is saturated');
+
+                return;
+            }
 
             Log::info($this->tag.' generating queries and tasks for '.$collectionName.' config ('.$c->id.')');
 

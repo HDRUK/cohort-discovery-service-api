@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Collections\CollectionBacklogLimiter;
 use Hdruk\LaravelModelStates\Models\State;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Pennant\Feature;
@@ -35,6 +36,8 @@ class CollectionTaskBacklogMonitorTest extends TestCase
         DB::table('activity_log')->truncate();
         DB::table('features')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        Cache::flush();
 
         config()->set('system.collection_pending_task_limit', self::LIMIT);
         config()->set('system.collection_pending_task_warning_limit', self::WARNING_LIMIT);

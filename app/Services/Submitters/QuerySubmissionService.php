@@ -90,15 +90,20 @@ class QuerySubmissionService
                     // Block the task for this collection when it queries a table
                     // that is disabled globally (feature off) or missing for this
                     // collection (flag off) - failing it with a clear reason.
-                    $reasons = [];
-                    $errorClass = 'MissingRequiredTable';
                     $pendingCount = $pendingCounts[$collection->id] ?? 0;
 
                     if ($this->backlogLimiter->isSaturated($pendingCount)) {
-                        $reasons[] = CollectionBacklogLimiter::BLOCKED_REASON;
-                        $errorClass = CollectionBacklogLimiter::ERROR_CLASS;
                         $this->recordBacklogBlock($collection, $query, $pendingCount);
+                        $this->taskFailureRecorder->failWithReasons(
+                            $task,
+                            [CollectionBacklogLimiter::BLOCKED_REASON],
+                            CollectionBacklogLimiter::ERROR_CLASS
+                        );
+
+                        return $task;
                     }
+
+                    $reasons = [];
                     if ($usesLocation && (! $locationFeatureOn || ! $collection->location_enabled)) {
                         $reasons[] = MissingDataTable::Location->reason();
                     }
@@ -106,7 +111,7 @@ class QuerySubmissionService
                         $reasons[] = MissingDataTable::Death->reason();
                     }
                     if (! empty($reasons)) {
-                        $this->taskFailureRecorder->failWithReasons($task, $reasons, $errorClass);
+                        $this->taskFailureRecorder->failWithReasons($task, $reasons);
                     }
 
                     // Offload side effects (job dispatching) to observers - TODO
