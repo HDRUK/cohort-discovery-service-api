@@ -220,7 +220,7 @@ class TaskController extends Controller
      */
     public function nextJob(
         Request $request,
-        string $collectionId,
+        string $collectionPid,
         QueryContextManager $contextManager,
         ActivityLogger $activityLogger,
         CollectionPollRecorder $pollRecorder
@@ -229,7 +229,7 @@ class TaskController extends Controller
         // - also could give us some information like the BUNNY version it is using (git sha?)
         $workerId =  $request->ip();
 
-        $parts = explode('.', $collectionId);
+        $parts = explode('.', $collectionPid);
         $parsedId = $parts[0];
         $rawType = $parts[1] ?? 'a';
 
@@ -239,7 +239,7 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info($workerId. ' - Looking for new job for '.$collectionId);
+        \Log::info($workerId. ' - Looking for new job for '.$collectionPid);
         $collection = Collection::where('pid', $parsedId)->first();
 
         if (! $collection) {

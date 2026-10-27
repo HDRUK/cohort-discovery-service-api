@@ -24,7 +24,7 @@ class EnsureCollectionHostServesCollection
 
         $servedCollectionIds = $client->collections()->pluck('collections.id');
 
-        $collectionPid = explode('.', (string) $request->route('collectionId'))[0];
+        $collectionPid = explode('.', (string) $request->route('collectionPid'))[0];
         $collection = Collection::where('pid', $collectionPid)->first();
 
         if ($collection && ! $servedCollectionIds->contains($collection->id)) {

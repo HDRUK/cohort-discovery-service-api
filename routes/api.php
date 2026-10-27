@@ -96,11 +96,11 @@ Route::prefix('v1/task')
         Route::get('/status/{pid}', 'status')
             ->name('task.status');
 
-        Route::get('/nextjob/{collectionId}', 'nextJob')
+        Route::get('/nextjob/{collectionPid}', 'nextJob')
             ->middleware(EnsureCollectionHostServesCollection::class)
             ->name('task.nextjob');
 
-        Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
+        Route::post('/result/{uuid}/{collectionPid}', 'receiveResult')
             ->middleware(EnsureCollectionHostServesCollection::class)
             ->name('task.result');
 
