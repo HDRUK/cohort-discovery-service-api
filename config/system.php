@@ -57,6 +57,7 @@ return [
     'collection_inactivity_minutes' => env('COLLECTION_INACTIVITY_MINUTES', 30),
 
     'collection_health_max_bins' => (int)env('COLLECTION_HEALTH_MAX_BINS', 2000),
+
     /*
     |--------------------------------------------------------------------------
     | Collection pending task backlog
@@ -67,8 +68,8 @@ return [
     | warning limit is the soft threshold that alerts before anything is blocked.
     |
     */
-    'collection_pending_task_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_LIMIT', 1000),
-    'collection_pending_task_warning_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_WARNING_LIMIT', 800),
+    'collection_pending_task_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_LIMIT', 50),
+    'collection_pending_task_warning_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_WARNING_LIMIT', 10),
 
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
     'default_child_age_max' => (int)env('DEFAULT_CHILD_AGE_MAX', 17),
