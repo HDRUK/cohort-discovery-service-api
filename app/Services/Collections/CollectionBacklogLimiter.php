@@ -71,7 +71,7 @@ class CollectionBacklogLimiter
             return [];
         }
 
-        $ids = collect($collectionIds)->filter(fn ($id) => $id !== null)->unique()->values();
+        $ids = collect($collectionIds)->unique()->values();
 
         if ($ids->isEmpty()) {
             return [];
