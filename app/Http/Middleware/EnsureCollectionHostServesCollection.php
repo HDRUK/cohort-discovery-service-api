@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Collection;
 use App\Models\CollectionHost;
 use App\Models\Task;
+use App\Support\CollectionPollTarget;
 use App\Traits\Responses;
 use Closure;
 use Illuminate\Http\Request;
@@ -24,8 +25,8 @@ class EnsureCollectionHostServesCollection
 
         $servedCollectionIds = $client->collections()->pluck('collections.id');
 
-        $collectionPid = explode('.', (string) $request->route('collectionPid'))[0];
-        $collection = Collection::where('pid', $collectionPid)->first();
+        $pollTarget = CollectionPollTarget::fromRouteParameter((string) $request->route('collectionPid'));
+        $collection = Collection::where('pid', $pollTarget->collectionPid)->first();
 
         if ($collection && ! $servedCollectionIds->contains($collection->id)) {
             return $this->ForbiddenResponse();

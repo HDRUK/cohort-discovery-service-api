@@ -14,6 +14,7 @@ use App\Models\TaskRun;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionPollRecorder;
 use App\Services\QueryContext\QueryContextManager;
+use App\Support\CollectionPollTarget;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Carbon\Carbon;
@@ -229,18 +230,16 @@ class TaskController extends Controller
         // - also could give us some information like the BUNNY version it is using (git sha?)
         $workerId =  $request->ip();
 
-        $parts = explode('.', $collectionPid);
-        $parsedId = $parts[0];
-        $rawType = $parts[1] ?? 'a';
+        $pollTarget = CollectionPollTarget::fromRouteParameter($collectionPid);
 
         try {
-            $taskType = TaskType::from($rawType);
+            $taskType = TaskType::from($pollTarget->rawTaskType);
         } catch (\ValueError $e) {
-            return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
+            return $this->BadRequestResponseExtended("Invalid task type: '{$pollTarget->rawTaskType}'. Allowed types are: 'a', 'b'.");
         }
 
         \Log::info($workerId. ' - Looking for new job for '.$collectionPid);
-        $collection = Collection::where('pid', $parsedId)->first();
+        $collection = Collection::where('pid', $pollTarget->collectionPid)->first();
 
         if (! $collection) {
             return $this->NotFoundResponse();
