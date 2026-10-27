@@ -48,7 +48,10 @@ class CollectionHost extends Model implements ValidatableModel
         'custodian_id',
     ];
 
-    protected $hidden = self::CREDENTIAL_FIELDS;
+    protected $hidden = [
+        'client_id',
+        'client_secret',
+    ];
 
     protected static array $searchableColumns = [
         'name',
@@ -65,10 +68,10 @@ class CollectionHost extends Model implements ValidatableModel
         'custodian_id',
     ];
 
-    public const CREDENTIAL_FIELDS = [
-        'client_id',
-        'client_secret',
-    ];
+    public function withCredentials(): static
+    {
+        return $this->makeVisible($this->hidden);
+    }
 
     public function getValidationRules(string $context): array
     {

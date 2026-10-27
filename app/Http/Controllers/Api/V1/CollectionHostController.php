@@ -49,7 +49,7 @@ class CollectionHostController extends Controller
                 ->filterViaRequest()
                 ->applySorting()
                 ->get()
-                ->makeVisible(CollectionHost::CREDENTIAL_FIELDS);
+                ->each->withCredentials();
 
             return $this->OKResponse($hosts);
         } catch (AuthorizationException $e) {
@@ -72,7 +72,7 @@ class CollectionHostController extends Controller
                     ->with(['collections','custodian'])
                     ->applySorting()
                     ->get()
-                    ->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
+                    ->each->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (ModelNotFoundException $e) {
@@ -122,7 +122,7 @@ class CollectionHostController extends Controller
 
             $this->authorize('view', $collectionHost);
 
-            return $this->OKResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
+            return $this->OKResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Exception $e) {
@@ -173,7 +173,7 @@ class CollectionHostController extends Controller
                 'custodian_id' => $validated['custodian_id'],
             ]);
 
-            return $this->CreatedResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
+            return $this->CreatedResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -231,7 +231,7 @@ class CollectionHostController extends Controller
 
             $collectionHost->update($validated);
 
-            return $this->OKResponse($collectionHost->makeVisible(CollectionHost::CREDENTIAL_FIELDS));
+            return $this->OKResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
