@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\FeatureController;
 use App\Http\Middleware\CollectionHostBasicAuth;
+use App\Http\Middleware\ServiceAccountBasicAuth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -92,13 +93,13 @@ Route::prefix('v1/task')
     ->controller(TaskController::class)
     ->group(function () {
 
-        Route::get('/status/{pid}', 'status')
+        Route::get('/status/{collectionPid}', 'status')
             ->name('task.status');
 
-        Route::get('/nextjob/{collectionId}', 'nextJob')
+        Route::get('/nextjob/{collectionPid}', 'nextJob')
             ->name('task.nextjob');
 
-        Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
+        Route::post('/result/{taskPid}/{collectionPid}', 'receiveResult')
             ->name('task.result');
 
     });
@@ -213,4 +214,4 @@ Route::get('/status', function (Request $request) {
 });
 
 Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch'])
-    ->middleware(['throttle:polling', CollectionHostBasicAuth::class]);
+    ->middleware(['throttle:polling', ServiceAccountBasicAuth::class]);

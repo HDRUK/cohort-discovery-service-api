@@ -79,6 +79,56 @@ class CollectionHostTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_it_shows_credentials_to_an_admin()
+    {
+        $host = CollectionHost::factory()->create();
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$host->id);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.client_id', $host->client_id)
+            ->assertJsonPath('data.client_secret', $host->client_secret);
+    }
+
+    public function test_it_lists_a_custodians_hosts_with_credentials_for_a_member()
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        CustodianHasUser::create([
+            'user_id' => $this->user->id,
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.client_id', $host->client_id)
+            ->assertJsonPath('data.0.client_secret', $host->client_secret);
+    }
+
+    public function test_it_forbids_listing_a_custodians_hosts_for_a_non_member()
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts');
+
+        $response->assertStatus(403);
+    }
+
+    public function test_it_returns_not_found_listing_hosts_for_an_unknown_custodian()
+    {
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/does-not-exist/collection_hosts');
+
+        $response->assertStatus(404);
+    }
+
     public function test_it_returns_invalid_for_missing_collection_host()
     {
         // LS - Changed to match the new failed validation rules on this class

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\TaskCleanupJob;
 use App\Models\CollectionHost;
+use App\Models\ServiceAccount;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -35,11 +36,11 @@ class ServiceCallerAuthTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_service_caller_accepts_collection_host_credentials(): void
+    public function test_service_caller_accepts_service_account_credentials(): void
     {
         Queue::fake();
 
-        CollectionHost::factory()->create([
+        ServiceAccount::factory()->create([
             'client_id' => 'internal-scheduler',
             'client_secret' => 'scheduler-secret',
         ]);
@@ -50,5 +51,22 @@ class ServiceCallerAuthTest extends TestCase
 
         $response->assertOk();
         Queue::assertPushed(TaskCleanupJob::class);
+    }
+
+    public function test_service_caller_rejects_collection_host_credentials(): void
+    {
+        Queue::fake();
+
+        CollectionHost::factory()->create([
+            'client_id' => 'collection-host-client',
+            'client_secret' => 'collection-host-secret',
+        ]);
+
+        $header = 'Basic '.base64_encode('collection-host-client:collection-host-secret');
+
+        $response = $this->withHeader('Authorization', $header)->postJson($this->url);
+
+        $response->assertUnauthorized();
+        Queue::assertNothingPushed();
     }
 }

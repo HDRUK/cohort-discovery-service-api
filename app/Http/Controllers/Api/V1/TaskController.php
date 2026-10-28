@@ -15,6 +15,7 @@ use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionBacklogLimiter;
 use App\Services\Collections\CollectionPollRecorder;
 use App\Services\QueryContext\QueryContextManager;
+use App\Support\CollectionPollTarget;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Carbon\Carbon;
@@ -221,7 +222,7 @@ class TaskController extends Controller
      */
     public function nextJob(
         Request $request,
-        string $collectionId,
+        string $collectionPid,
         QueryContextManager $contextManager,
         ActivityLogger $activityLogger,
         CollectionPollRecorder $pollRecorder,
@@ -231,18 +232,16 @@ class TaskController extends Controller
         // - also could give us some information like the BUNNY version it is using (git sha?)
         $workerId =  $request->ip();
 
-        $parts = explode('.', $collectionId);
-        $parsedId = $parts[0];
-        $rawType = $parts[1] ?? 'a';
+        $pollTarget = CollectionPollTarget::fromRouteParameter($collectionPid);
 
         try {
-            $taskType = TaskType::from($rawType);
+            $taskType = TaskType::from($pollTarget->rawTaskType);
         } catch (\ValueError $e) {
-            return $this->BadRequestResponseExtended("Invalid task type: '{$rawType}'. Allowed types are: 'a', 'b'.");
+            return $this->BadRequestResponseExtended("Invalid task type: '{$pollTarget->rawTaskType}'. Allowed types are: 'a', 'b'.");
         }
 
-        \Log::info($workerId. ' - Looking for new job for '.$collectionId);
-        $collection = Collection::where('pid', $parsedId)->first();
+        \Log::info($workerId. ' - Looking for new job for '.$collectionPid);
+        $collection = Collection::where('pid', $pollTarget->collectionPid)->first();
 
         if (! $collection) {
             return $this->NotFoundResponse();
@@ -553,6 +552,14 @@ class TaskController extends Controller
         string $collection_pid,
         ActivityLogger $activityLogger
     ): JsonResponse {
+        $taskBelongsToCollection = Task::where('pid', $task_pid)
+            ->whereHas('collection', fn ($query) => $query->where('pid', $collection_pid))
+            ->exists();
+
+        if (! $taskBelongsToCollection) {
+            return $this->NotFoundResponse();
+        }
+
         try {
             DB::transaction(function () use ($request, $task_pid, $activityLogger) {
                 $task = Task::where('pid', $task_pid)
@@ -822,15 +829,15 @@ class TaskController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/task/status/{pid}",
+     *     path="/api/v1/task/status/{collectionPid}",
      *     summary="Get worker task status",
      *     tags={"Tasks"},
      *     @OA\Parameter(
-     *         name="pid",
+     *         name="collectionPid",
      *         in="path",
-     *         description="Task public pid",
+     *         description="Collection public pid",
      *         required=true,
-     *         @OA\Schema(type="string", example="tsk_abc123")
+     *         @OA\Schema(type="string", example="col_abc123")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -839,7 +846,7 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function status(Request $request, string $pid): JsonResponse
+    public function status(Request $request, string $collectionPid): JsonResponse
     {
         return $this->OKResponseSimple([]);
     }
