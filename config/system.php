@@ -58,6 +58,19 @@ return [
 
     'collection_health_max_bins' => (int)env('COLLECTION_HEALTH_MAX_BINS', 2000),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Collection pending task backlog
+    |--------------------------------------------------------------------------
+    | The maximum number of unfinished tasks a single collection may hold. Once
+    | reached, further tasks for that collection are failed immediately rather
+    | than queued, and the collection is suspended by the backlog monitor. The
+    | warning limit is the soft threshold that alerts before anything is blocked.
+    |
+    */
+    'collection_pending_task_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_LIMIT', 50),
+    'collection_pending_task_warning_limit' => (int) env('CDS_COLLECTION_PENDING_TASK_WARNING_LIMIT', 10),
+
     'default_adult_age_min' => (int)env('DEFAULT_ADULT_AGE_MIN', 18),
     'default_child_age_max' => (int)env('DEFAULT_CHILD_AGE_MAX', 17),
 

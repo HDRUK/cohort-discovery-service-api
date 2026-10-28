@@ -68,7 +68,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
@@ -133,7 +133,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
@@ -196,7 +196,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
@@ -241,7 +241,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
@@ -293,7 +293,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(
@@ -334,7 +334,7 @@ class DistributionsCollectorTest extends TestCase
 
         Log::spy();
 
-        $command = new DistributionsCollector();
+        $command = app(DistributionsCollector::class);
         $result = $command->handle([]);
 
         Log::shouldHaveReceived('info')->withArgs(

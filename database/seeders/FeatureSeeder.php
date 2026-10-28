@@ -28,6 +28,7 @@ class FeatureSeeder extends Seeder
         'click-tracking-anonymous' => false,
         'query-builder-use-race' => true,
         'query-rate-limit' => false,
+        'collection-task-backlog-limit' => false,
     ];
 
     /**
