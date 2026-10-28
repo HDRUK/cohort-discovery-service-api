@@ -2,7 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\Task;
+use App\Support\BasicAuthCredentials;
+use App\Support\CollectionPollTarget;
 use App\Traits\Responses;
 use Closure;
 use Illuminate\Http\Request;
@@ -24,21 +28,14 @@ class CollectionHostBasicAuth
         }
         $startMicrotime = microtime(true);
         try {
-            $authorisationHeader = $request->header('Authorization');
+            $credentials = BasicAuthCredentials::fromRequest($request);
 
-            if (! $authorisationHeader || ! preg_match('/Basic\s+(.*)$/i', $authorisationHeader, $matches)) {
+            if (! $credentials) {
                 \Log::error('No authorisation header ');
                 return $this->UnauthorisedResponse();
             }
 
-            $encodedCredentials = $matches[1];
-            $decodedCredentials = base64_decode($encodedCredentials, true);
-
-            if (! $decodedCredentials || strpos($decodedCredentials, ':') === false) {
-                return $this->UnauthorisedResponse();
-            }
-
-            [$clientId, $clientSecret] = explode(':', $decodedCredentials, 2);
+            $clientId = $credentials->clientId;
 
             // Look up client
             $client = CollectionHost::where('client_id', $clientId)->first();
@@ -48,12 +45,15 @@ class CollectionHostBasicAuth
                 return $this->UnauthorisedResponse();
             }
 
-            if (! hash_equals($client->client_secret, $clientSecret)) {
+            if (! hash_equals($client->client_secret, $credentials->clientSecret)) {
                 \Log::error('Client is not authorised ');
                 return $this->UnauthorisedResponse();
             }
 
-            $request->merge(['authenticated_client' => $client]);
+            if (! $this->servesRequestedCollection($request, $client)) {
+                \Log::error('Client does not serve the requested collection ');
+                return $this->ForbiddenResponse();
+            }
 
             return $next($request);
         } finally {
@@ -71,5 +71,26 @@ class CollectionHostBasicAuth
 
         }
 
+    }
+
+    private function servesRequestedCollection(Request $request, CollectionHost $client): bool
+    {
+        $collectionPid = CollectionPollTarget::fromRouteParameter((string) $request->route('collectionPid'))->collectionPid;
+
+        $collectionExists = Collection::where('pid', $collectionPid)->exists();
+
+        if ($collectionExists && ! $client->collections()->where('collections.pid', $collectionPid)->exists()) {
+            return false;
+        }
+
+        $taskPid = $request->route('taskPid');
+
+        if (! $taskPid) {
+            return true;
+        }
+
+        return ! Task::where('pid', $taskPid)
+            ->whereNotIn('collection_id', $client->collections()->select('collections.id'))
+            ->exists();
     }
 }

@@ -819,15 +819,15 @@ class TaskController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/task/status/{pid}",
+     *     path="/api/v1/task/status/{collectionPid}",
      *     summary="Get worker task status",
      *     tags={"Tasks"},
      *     @OA\Parameter(
-     *         name="pid",
+     *         name="collectionPid",
      *         in="path",
-     *         description="Task public pid",
+     *         description="Collection public pid",
      *         required=true,
-     *         @OA\Schema(type="string", example="tsk_abc123")
+     *         @OA\Schema(type="string", example="col_abc123")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -836,7 +836,7 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function status(Request $request, string $pid): JsonResponse
+    public function status(Request $request, string $collectionPid): JsonResponse
     {
         return $this->OKResponseSimple([]);
     }

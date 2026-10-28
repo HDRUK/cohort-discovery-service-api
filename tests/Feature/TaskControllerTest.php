@@ -560,7 +560,6 @@ class TaskControllerTest extends TestCase
         $collectionHost = CollectionHost::factory()->create([
             'client_id' => 'unlinked-client',
             'client_secret' => 'unlinked-secret',
-            'custodian_id' => Custodian::factory()->create()->id,
         ]);
 
         $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid.'.a', [
@@ -574,6 +573,25 @@ class TaskControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_checking_status_for_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $collection = Collection::factory()->bunny()->create();
+        CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+        ]);
+
+        $response = $this->get(self::BASE_URL.'/status/'.$collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret'),
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_forbids_a_host_from_posting_a_result_for_a_collection_it_does_not_serve(): void
     {
         Config::set('system.basic_auth_enabled', true);
@@ -584,7 +602,6 @@ class TaskControllerTest extends TestCase
         CollectionHost::factory()->create([
             'client_id' => 'unlinked-client',
             'client_secret' => 'unlinked-secret',
-            'custodian_id' => Custodian::factory()->create()->id,
         ]);
 
         $response = $this->postJson(
@@ -608,7 +625,6 @@ class TaskControllerTest extends TestCase
         $collectionHost = CollectionHost::factory()->create([
             'client_id' => 'linked-client',
             'client_secret' => 'linked-secret',
-            'custodian_id' => Custodian::factory()->create()->id,
         ]);
         CollectionHostHasCollection::create([
             'collection_host_id' => $collectionHost->id,

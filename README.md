@@ -223,6 +223,48 @@ You then need to configure:
 
 For more information [follow the instructions here](https://hutch.health/bunny/config)
 
+The collection host must be linked to the collection named in `COLLECTION_ID`. A host can only poll
+for, and post results to, collections it is linked to (`collection_host_has_collections`); any other
+collection returns `403`.
+
+# Service accounts
+
+The service layer, `POST /api/v1/services/caller/{command}`, runs scheduled jobs such as
+`task-cleanup-job`. In deployed environments GCP Cloud Scheduler calls it. It uses its own HTTP Basic
+Auth credentials, held in the `service_accounts` table. Collection host credentials are rejected here.
+
+The commands it can run are listed in `app/Console/Commands/Dispatchers/ApiCommandDispatcher.php`.
+
+### Creating a service account
+
+No seeder or deployment step creates one. **After the initial `migrate --seed` of a new environment,
+create one by hand:**
+
+```
+php artisan service-account:create scheduler
+```
+
+The command prints the client ID, the secret, the `client_id:client_secret` pair and a ready-made
+`Authorization` header. The secret is stored hashed and is shown only once. If you lose it, create
+a new account with a different name.
+
+### Using it from GCP Cloud Scheduler
+
+1. Put the printed `client_id:client_secret` pair into the Secret Manager secret
+   `<environment>-cohort-api-scheduler-basic-auth`.
+2. Re-run `terraform apply` in `cohort-discovery-infrastructure`. The scheduler jobs build their
+   `Authorization` header from that secret when Terraform is applied, not on each call.
+
+### Calling it directly
+
+```
+curl -X POST -u '<client_id>:<client_secret>' \
+  http://localhost:8100/api/v1/services/caller/task-cleanup-job
+```
+
+Locally, `CLIENT_BASIC_AUTH_ENABLED=false` turns off both service account and collection host Basic
+Auth.
+
 # Standalone Integration
 
 In standalone mode the Cohort-Discovery-Service API is its own identity authority. Users live in the
