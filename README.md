@@ -70,6 +70,9 @@ php artisan migrate:fresh --seed
 `DatabaseSeeder` covers workgroups, roles, states, custodians and feature flags, but **not**
 the personal access client - login will fail until one exists.
 
+Neither seeder creates a service account for the scheduled service calls. Create one after
+seeding with `php artisan service-account:create scheduler` (see [Service accounts](#service-accounts)).
+
 ## OMOP configuration
 
 Proceed as follows:
