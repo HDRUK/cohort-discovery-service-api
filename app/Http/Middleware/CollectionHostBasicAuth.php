@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Models\Collection;
 use App\Models\CollectionHost;
-use App\Models\Task;
 use App\Support\BasicAuthCredentials;
 use App\Support\CollectionPollTarget;
 use App\Traits\Responses;
@@ -77,20 +76,10 @@ class CollectionHostBasicAuth
     {
         $collectionPid = CollectionPollTarget::fromRouteParameter((string) $request->route('collectionPid'))->collectionPid;
 
-        $collectionExists = Collection::where('pid', $collectionPid)->exists();
-
-        if ($collectionExists && ! $client->collections()->where('collections.pid', $collectionPid)->exists()) {
-            return false;
-        }
-
-        $taskPid = $request->route('taskPid');
-
-        if (! $taskPid) {
+        if (! Collection::where('pid', $collectionPid)->exists()) {
             return true;
         }
 
-        return ! Task::where('pid', $taskPid)
-            ->whereNotIn('collection_id', $client->collections()->select('collections.id'))
-            ->exists();
+        return $client->collections()->where('collections.pid', $collectionPid)->exists();
     }
 }

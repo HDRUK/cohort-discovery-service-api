@@ -615,7 +615,7 @@ class TaskControllerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_forbids_a_host_from_posting_a_result_for_another_collections_task(): void
+    public function it_rejects_a_result_for_another_collections_task_from_a_linked_host(): void
     {
         Config::set('system.basic_auth_enabled', true);
         $this->enableMiddleware();
@@ -637,8 +637,24 @@ class TaskControllerTest extends TestCase
             ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('linked-client:linked-secret')]
         );
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertNull($task->fresh()->completed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_does_not_touch_a_task_when_the_result_names_another_collection(): void
+    {
+        $otherCollection = Collection::factory()->bunny()->create();
+        $task = Task::factory()->create();
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$otherCollection->pid,
+            ['status' => 'error', 'message' => 'forged']
+        );
+
+        $response->assertNotFound();
+        $this->assertNull($task->fresh()->completed_at);
+        $this->assertDatabaseMissing('task_runs', ['task_id' => $task->id]);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]

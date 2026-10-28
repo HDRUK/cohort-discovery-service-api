@@ -550,6 +550,14 @@ class TaskController extends Controller
         string $collection_pid,
         ActivityLogger $activityLogger
     ): JsonResponse {
+        $taskBelongsToCollection = Task::where('pid', $task_pid)
+            ->whereHas('collection', fn ($query) => $query->where('pid', $collection_pid))
+            ->exists();
+
+        if (! $taskBelongsToCollection) {
+            return $this->NotFoundResponse();
+        }
+
         try {
             DB::transaction(function () use ($request, $task_pid, $activityLogger) {
                 $task = Task::where('pid', $task_pid)
