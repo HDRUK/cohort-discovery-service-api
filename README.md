@@ -245,8 +245,14 @@ php artisan service-account:create scheduler
 ```
 
 The command prints the client ID, the secret, the `client_id:client_secret` pair and a ready-made
-`Authorization` header. The secret is stored hashed and is shown only once. If you lose it, create
-a new account with a different name.
+`Authorization` header. The secret is stored hashed and is shown only once.
+
+To replace a lost or leaked secret, regenerate it. The client ID stays the same; the old secret
+stops working straight away, so update Secret Manager and re-apply Terraform afterwards:
+
+```
+php artisan service-account:create scheduler --regenerate
+```
 
 ### Using it from GCP Cloud Scheduler
 

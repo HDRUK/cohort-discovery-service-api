@@ -48,4 +48,23 @@ class CreateServiceAccountCommandTest extends TestCase
 
         $this->assertSame(1, ServiceAccount::where('name', 'scheduler')->count());
     }
+
+    public function test_it_regenerates_an_existing_service_account(): void
+    {
+        $original = ServiceAccount::factory()->create([
+            'name' => 'scheduler',
+            'client_secret' => 'old-secret',
+        ]);
+
+        Artisan::call('service-account:create', ['name' => 'scheduler', '--regenerate' => true]);
+
+        $regenerated = ServiceAccount::where('name', 'scheduler')->firstOrFail();
+        preg_match('/^'.preg_quote($regenerated->client_id, '/').':(\S+)$/m', Artisan::output(), $matches);
+
+        $this->assertSame(1, ServiceAccount::where('name', 'scheduler')->count());
+        $this->assertSame($original->id, $regenerated->id);
+        $this->assertSame($original->client_id, $regenerated->client_id);
+        $this->assertFalse(Hash::check('old-secret', $regenerated->client_secret));
+        $this->assertTrue(Hash::check($matches[1], $regenerated->client_secret));
+    }
 }

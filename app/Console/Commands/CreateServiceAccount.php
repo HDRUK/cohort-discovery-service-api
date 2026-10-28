@@ -8,7 +8,9 @@ use Illuminate\Support\Str;
 
 class CreateServiceAccount extends Command
 {
-    protected $signature = 'service-account:create {name : Name of the service account, e.g. scheduler}';
+    protected $signature = 'service-account:create
+        {name : Name of the service account, e.g. scheduler}
+        {--regenerate : Replace the secret of an existing service account, keeping its client ID}';
 
     protected $description = 'Create a service account for the service layer and print its Basic Auth credentials once.';
 
@@ -22,22 +24,30 @@ class CreateServiceAccount extends Command
             return self::FAILURE;
         }
 
-        if (ServiceAccount::where('name', $name)->exists()) {
-            $this->error("Service account [{$name}] already exists.");
+        $serviceAccount = ServiceAccount::where('name', $name)->first();
+
+        if ($serviceAccount && ! $this->option('regenerate')) {
+            $this->error("Service account [{$name}] already exists. Use --regenerate to replace its secret.");
 
             return self::FAILURE;
         }
 
-        $clientId = (string) Str::uuid();
         $clientSecret = Str::random(64);
 
-        ServiceAccount::create([
-            'name' => $name,
-            'client_id' => $clientId,
-            'client_secret' => $clientSecret,
-        ]);
+        if ($serviceAccount) {
+            $serviceAccount->update(['client_secret' => $clientSecret]);
+            $this->info("Regenerated the secret for service account [{$name}]. The previous secret no longer works.");
+        } else {
+            $serviceAccount = ServiceAccount::create([
+                'name' => $name,
+                'client_id' => (string) Str::uuid(),
+                'client_secret' => $clientSecret,
+            ]);
+            $this->info("Created service account [{$name}].");
+        }
 
-        $this->info("Created service account [{$name}].");
+        $clientId = $serviceAccount->client_id;
+
         $this->warn('The secret is stored hashed and will not be shown again.');
         $this->newLine();
         $this->line("Client ID:     {$clientId}");
