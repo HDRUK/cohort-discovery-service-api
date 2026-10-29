@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Config;
 use DB;
 use App\Models\Collection;
 use App\Models\CollectionHost;
