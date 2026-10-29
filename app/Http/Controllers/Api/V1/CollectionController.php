@@ -179,6 +179,7 @@ class CollectionController extends Controller
      *         name="state",
      *         in="query",
      *         required=false,
+     *         description="Collection state, 'all' (excludes deleted) or 'deleted' (soft-deleted collections only)",
      *         @OA\Schema(type="string", example="active")
      *     ),
      *     @OA\Parameter(
@@ -405,6 +406,7 @@ class CollectionController extends Controller
             $this->authorize('delete', $collection);
 
             if ($collection->delete()) {
+                $collection->setState(Collection::STATUS_DRAFT);
                 $activityLogger->deleted('collections', $collection);
 
                 return $this->OKResponse([]);
@@ -419,6 +421,53 @@ class CollectionController extends Controller
         }
 
         return $this->ErrorResponse();
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/collections/{id}/restore",
+     *     summary="Restore a soft-deleted collection as a draft",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(response=200, description="Collection restored", @OA\JsonContent(ref="#/components/schemas/Collection")),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection not found"),
+     *     @OA\Response(response=422, description="Collection is not deleted")
+     * )
+     */
+    public function restore(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::withTrashed()->findOrFail($validated['id']);
+            $this->authorize('restore', $collection);
+
+            if (! $collection->trashed()) {
+                return $this->ValidationErrorResponse(['id' => ['collection is not deleted']]);
+            }
+
+            $collection->restore();
+            $collection->setState(Collection::STATUS_DRAFT);
+
+            $activityLogger->custom('collections', 'restored', $collection);
+
+            return $this->OKResponse($collection);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@restore - failed: '.$e->getMessage());
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
@@ -751,6 +800,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
+                        ->whereNull('deleted_at')
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
                 'is_synthetic' => ['sometimes', 'boolean'],
@@ -1154,8 +1204,12 @@ class CollectionController extends Controller
                 'lastSuccessfulQuery'
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
-                if ($request->state !== 'all') {
-                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                $state = strtolower($request->state);
+
+                if ($state === Collection::FILTER_DELETED) {
+                    $q->onlyTrashed();
+                } elseif ($state !== 'all') {
+                    $q->whereRelation('modelState.state', 'states.slug', $state);
                 }
             })
             ->searchViaRequest()

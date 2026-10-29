@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @OA\Schema(
@@ -33,6 +34,7 @@ class CollectionHost extends Model implements ValidatableModel
     /** @use HasFactory<\Database\Factories\CollectionHostFactory> */
     use HasFactory;
     use Search;
+    use SoftDeletes;
 
     public $table = 'collection_hosts';
 

@@ -20,8 +20,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Schema(
@@ -86,12 +88,14 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
     use HasState;
     use ResolvesByIdOrPid;
     use Search;
+    use SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PENDING = 'pending';
     public const STATUS_ACTIVE = 'active';
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_SUSPENDED = 'suspended';
+    public const FILTER_DELETED = 'deleted';
 
     public $table = 'collections';
 
@@ -117,6 +121,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'last_active' => 'datetime',
+        'deleted_at' => 'datetime',
         'is_synthetic' => 'boolean',
         'location_enabled' => 'boolean',
         'death_enabled' => 'boolean',
@@ -203,7 +208,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'custodian_id' => 'sometimes|integer|exists:custodians,id',
                 'status' => 'sometimes|boolean',
                 'state' => 'sometimes|string',
-                'host_id' => 'sometimes|integer|exists:collection_hosts,id',
+                'host_id' => ['sometimes', 'integer', Rule::exists('collection_hosts', 'id')->whereNull('deleted_at')],
                 'is_synthetic' => 'sometimes|boolean',
                 'location_enabled' => 'sometimes|boolean',
                 'death_enabled' => 'sometimes|boolean',
