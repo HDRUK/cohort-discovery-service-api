@@ -613,6 +613,57 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_admin_collection_list_includes_host_credentials(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        $collection->host()->sync([$host->id]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_ADMIN_URL);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.data.0.host.0.client_id', $host->client_id)
+            ->assertJsonPath('data.data.0.host.0.client_secret', $host->client_secret);
+    }
+
+    public function test_custodian_collection_list_includes_host_credentials_for_a_member(): void
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        $this->user->custodians()->attach($custodian->id);
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        $collection->host()->sync([$host->id]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.data.0.host.0.client_id', $host->client_id)
+            ->assertJsonPath('data.data.0.host.0.client_secret', $host->client_secret);
+    }
+
+    public function test_custodian_collection_list_hides_credentials_of_a_host_the_member_cannot_view(): void
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        $otherCustodian = Custodian::factory()->create();
+        $this->user->custodians()->attach($custodian->id);
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $host = CollectionHost::factory()->create(['custodian_id' => $otherCustodian->id]);
+        $collection->host()->sync([$host->id]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.data.0.host.0.id', $host->id)
+            ->assertJsonMissingPath('data.data.0.host.0.client_id')
+            ->assertJsonMissingPath('data.data.0.host.0.client_secret');
+    }
+
     public function test_it_returns_metadata_in_collection_details(): void
     {
         $custodian = Custodian::factory()->create();

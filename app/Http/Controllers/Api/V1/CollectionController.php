@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Jobs\RefreshDistributionConceptsView;
 use App\Models\Collection;
+use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\Distribution;
 use App\Models\Task;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -204,6 +206,8 @@ class CollectionController extends Controller
                     $q->whereRelation('workgroups', 'workgroups.id', $request->workgroup_id);
                 })
                 ->paginate($perPage);
+
+            $this->revealViewableHostCredentials($collections);
 
             $activityLogger->viewed('collections', null, [
                 'filters' => $request->query(),
@@ -683,6 +687,8 @@ class CollectionController extends Controller
                 ->where('custodian_id', $custodian->id)
                 ->paginate($perPage);
 
+            $this->revealViewableHostCredentials($collections);
+
             $activityLogger->viewed('collections', $custodian, [
                 'filters' => $request->query(),
                 'result' => [
@@ -1122,6 +1128,17 @@ class CollectionController extends Controller
 
             return $this->ErrorResponse($e->getMessage());
         }
+    }
+
+    // Temporary fix: the FE reads host credentials from the nested collection
+    // payload. This will be reworked once the FE fetches them from the
+    // collection host endpoints instead.
+    private function revealViewableHostCredentials(LengthAwarePaginator $collections): void
+    {
+        $collections->getCollection()
+            ->flatMap->host
+            ->filter(fn (CollectionHost $host) => Gate::allows('view', $host))
+            ->each->withCredentials();
     }
 
     protected function collectionsIndexQuery(Request $request): Builder
