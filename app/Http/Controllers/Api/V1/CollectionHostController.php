@@ -31,6 +31,15 @@ class CollectionHostController extends Controller
      *     summary="Get all collection hosts",
      *     tags={"CollectionHosts"},
      *
+     *     @OA\Parameter(
+     *         name="trashed",
+     *         in="query",
+     *         required=false,
+     *         description="'only' returns soft-deleted hosts, 'with' includes them; omitted excludes them",
+     *
+     *         @OA\Schema(type="string", enum={"only","with"})
+     *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="List of collection hosts",
@@ -45,6 +54,7 @@ class CollectionHostController extends Controller
             $this->authorize('viewAny', CollectionHost::class);
 
             $hosts = CollectionHost::with(['collections','custodian'])
+                ->filterTrashed($request->query('trashed'))
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting()
@@ -69,6 +79,7 @@ class CollectionHostController extends Controller
             $this->authorize('view', $custodian);
 
             return $this->OKResponse(CollectionHost::where('custodian_id', $custodian->id)
+                    ->filterTrashed($request->query('trashed'))
                     ->with(['collections','custodian'])
                     ->applySorting()
                     ->get()
@@ -284,6 +295,53 @@ class CollectionHostController extends Controller
                 json_encode($validated).' (exception: '.$e->getTraceAsString().')');
 
             return $this->NotFoundResponse();
+        }
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/collection_hosts/{id}/restore",
+     *     summary="Restore a soft-deleted collection host",
+     *     tags={"CollectionHosts"},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(response=200, description="Collection host restored"),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection host not found"),
+     *     @OA\Response(response=422, description="Collection host is not deleted")
+     * )
+     */
+    public function restore(ModelBackedRequest $request, int $id): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collectionHost = CollectionHost::withTrashed()->findOrFail($validated['id']);
+            $this->authorize('restore', $collectionHost);
+
+            if (! $collectionHost->trashed()) {
+                return $this->ValidationErrorResponse(['id' => ['collection host is not deleted']]);
+            }
+
+            $collectionHost->restore();
+
+            return $this->OKResponse($collectionHost);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@restore - failed: '.$e->getMessage());
+
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 }

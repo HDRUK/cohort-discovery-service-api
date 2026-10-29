@@ -51,4 +51,9 @@ class CollectionHostPolicy
     {
         return $this->access($user, $collectionHosts);
     }
+
+    public function restore(User $user, CollectionHost $collectionHosts): bool
+    {
+        return $this->access($user, $collectionHosts);
+    }
 }

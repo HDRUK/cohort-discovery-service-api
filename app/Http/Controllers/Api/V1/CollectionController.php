@@ -796,6 +796,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
+                        ->whereNull('deleted_at')
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
                 'is_synthetic' => ['sometimes', 'boolean'],

@@ -7,8 +7,10 @@ use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @OA\Schema(
@@ -33,6 +35,7 @@ class CollectionHost extends Model implements ValidatableModel
     /** @use HasFactory<\Database\Factories\CollectionHostFactory> */
     use HasFactory;
     use Search;
+    use SoftDeletes;
 
     public $table = 'collection_hosts';
 
@@ -65,6 +68,15 @@ class CollectionHost extends Model implements ValidatableModel
         'updated_at',
         'custodian_id',
     ];
+
+    public function scopeFilterTrashed(Builder $query, ?string $mode): void
+    {
+        match ($mode) {
+            'only' => $query->onlyTrashed(),
+            'with' => $query->withTrashed(),
+            default => null,
+        };
+    }
 
     public function withCredentials(): static
     {

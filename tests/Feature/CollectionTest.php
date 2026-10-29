@@ -1106,6 +1106,28 @@ class CollectionTest extends TestCase
         ]);
     }
 
+    public function test_it_cannot_assign_a_deleted_host_to_a_collection(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        $host->delete();
+
+        $this->actingAsJwt($this->user, [])
+            ->postJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid), [
+                'name' => 'Cohort With Deleted Host',
+                'description' => 'Should be rejected',
+                'type' => QueryContextType::Bunny->value,
+                'host_id' => $host->id,
+            ])
+            ->assertStatus(422);
+
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$collection->id, ['host_id' => $host->id])
+            ->assertStatus(422);
+    }
+
     public function test_store_by_custodian_defaults_location_and_death_flags_to_false(): void
     {
         $custodian = Custodian::factory()->create();

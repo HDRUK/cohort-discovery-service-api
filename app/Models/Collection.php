@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Schema(
@@ -207,7 +208,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                 'custodian_id' => 'sometimes|integer|exists:custodians,id',
                 'status' => 'sometimes|boolean',
                 'state' => 'sometimes|string',
-                'host_id' => 'sometimes|integer|exists:collection_hosts,id',
+                'host_id' => ['sometimes', 'integer', Rule::exists('collection_hosts', 'id')->whereNull('deleted_at')],
                 'is_synthetic' => 'sometimes|boolean',
                 'location_enabled' => 'sometimes|boolean',
                 'death_enabled' => 'sometimes|boolean',
