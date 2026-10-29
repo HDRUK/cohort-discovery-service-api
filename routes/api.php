@@ -145,6 +145,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::put('/v1/collections/{id}', [CollectionController::class, 'update']);
     Route::delete('/v1/collections/{id}', [CollectionController::class, 'destroy']);
     Route::put('/v1/collections/{id}/transition_to', [CollectionController::class, 'transitionTo']);
+    Route::put('/v1/collections/{id}/restore', [CollectionController::class, 'restore']);
 
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);

@@ -613,6 +613,111 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_deleting_a_collection_soft_deletes_it_and_resets_state_to_draft(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $collection->setState(Collection::STATUS_ACTIVE);
+
+        $this->actingAsJwt($this->user, [])
+            ->deleteJson(self::BASE_URL.'/'.$collection->id)
+            ->assertStatus(200);
+
+        $this->assertSoftDeleted('collections', ['id' => $collection->id]);
+
+        $trashed = Collection::withTrashed()->find($collection->id);
+        $this->assertSame(Collection::STATUS_DRAFT, $trashed->getState());
+    }
+
+    public function test_deleted_collections_are_excluded_from_all_and_listed_under_deleted(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $kept = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $deleted = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $deleted->delete();
+
+        foreach ([self::BASE_ADMIN_URL, self::BASE_ADMIN_URL.'?state=all'] as $url) {
+            $response = $this->actingAsJwt($this->user, [])->getJson($url);
+            $response->assertStatus(200);
+            $this->assertSame([$kept->id], array_column($response->json('data.data'), 'id'));
+        }
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_ADMIN_URL.'?state=deleted');
+
+        $response->assertStatus(200);
+        $rows = $response->json('data.data');
+        $this->assertSame([$deleted->id], array_column($rows, 'id'));
+        $this->assertNotNull($rows[0]['deleted_at']);
+    }
+
+    public function test_deleted_collections_are_excluded_from_other_listings(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $deleted = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $deleted->setState(Collection::STATUS_ACTIVE);
+        $deleted->delete();
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/status/'.Collection::STATUS_ACTIVE)
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data.data');
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::USER_COLLECTIONS_URL)
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_it_can_restore_a_deleted_collection_as_draft(): void
+    {
+        $custodian = Custodian::factory()->create();
+
+        foreach ([
+            Collection::STATUS_ACTIVE,
+            Collection::STATUS_PENDING,
+            Collection::STATUS_SUSPENDED,
+            Collection::STATUS_REJECTED,
+        ] as $state) {
+            $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+            $collection->setState($state);
+            $collection->delete();
+
+            $this->actingAsJwt($this->user, [])
+                ->putJson(self::BASE_URL.'/'.$collection->id.'/restore')
+                ->assertStatus(200);
+
+            $restored = Collection::find($collection->id);
+            $this->assertNotNull($restored);
+            $this->assertSame(Collection::STATUS_DRAFT, $restored->getState());
+        }
+    }
+
+    public function test_it_cannot_restore_a_collection_that_is_not_deleted(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$collection->id.'/restore')
+            ->assertStatus(422);
+    }
+
+    public function test_it_cannot_restore_a_collection_without_access(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $collection->delete();
+
+        $nonAdmin = User::factory()->create();
+
+        $this->actingAsJwt($nonAdmin, [])
+            ->putJson(self::BASE_URL.'/'.$collection->id.'/restore')
+            ->assertStatus(403);
+
+        $this->assertSoftDeleted('collections', ['id' => $collection->id]);
+    }
+
     public function test_it_returns_metadata_in_collection_details(): void
     {
         $custodian = Custodian::factory()->create();
