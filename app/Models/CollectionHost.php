@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 /**
  * @OA\Schema(
@@ -72,8 +73,8 @@ class CollectionHost extends Model implements ValidatableModel
     public function scopeFilterTrashed(Builder $query, ?string $mode): void
     {
         match ($mode) {
-            'only' => $query->onlyTrashed(),
-            'with' => $query->withTrashed(),
+            'only' => $query->withoutGlobalScope(SoftDeletingScope::class)->whereNotNull('deleted_at'),
+            'with' => $query->withoutGlobalScope(SoftDeletingScope::class),
             default => null,
         };
     }
