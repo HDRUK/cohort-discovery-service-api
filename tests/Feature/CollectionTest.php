@@ -613,7 +613,7 @@ class CollectionTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_admin_collection_list_includes_host_credentials(): void
+    public function test_admin_collection_list_hides_host_credentials(): void
     {
         $custodian = Custodian::factory()->create();
         $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
@@ -624,8 +624,9 @@ class CollectionTest extends TestCase
             ->getJson(self::BASE_ADMIN_URL);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.data.0.host.0.client_id', $host->client_id)
-            ->assertJsonPath('data.data.0.host.0.client_secret', $host->client_secret);
+            ->assertJsonPath('data.data.0.host.0.id', $host->id)
+            ->assertJsonMissingPath('data.data.0.host.0.client_id')
+            ->assertJsonMissingPath('data.data.0.host.0.client_secret');
     }
 
     public function test_custodian_collection_list_includes_host_credentials_for_a_member(): void

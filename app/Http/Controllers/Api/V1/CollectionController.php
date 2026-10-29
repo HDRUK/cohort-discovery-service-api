@@ -207,8 +207,6 @@ class CollectionController extends Controller
                 })
                 ->paginate($perPage);
 
-            $this->revealViewableHostCredentials($collections);
-
             $activityLogger->viewed('collections', null, [
                 'filters' => $request->query(),
                 'result' => [
