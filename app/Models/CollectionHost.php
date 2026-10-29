@@ -7,11 +7,9 @@ use Hdruk\LaravelSearchAndFilter\Traits\Filter;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 /**
  * @OA\Schema(
@@ -69,15 +67,6 @@ class CollectionHost extends Model implements ValidatableModel
         'updated_at',
         'custodian_id',
     ];
-
-    public function scopeFilterTrashed(Builder $query, ?string $mode): void
-    {
-        match ($mode) {
-            'only' => $query->withoutGlobalScope(SoftDeletingScope::class)->whereNotNull('deleted_at'),
-            'with' => $query->withoutGlobalScope(SoftDeletingScope::class),
-            default => null,
-        };
-    }
 
     public function withCredentials(): static
     {

@@ -55,7 +55,8 @@ class CollectionHostController extends Controller
             $this->authorize('viewAny', CollectionHost::class);
 
             $hosts = CollectionHost::with(['collections','custodian'])
-                ->filterTrashed($request->query('trashed'))
+                ->when($request->query('trashed') === 'only', fn ($q) => $q->onlyTrashed())
+                ->when($request->query('trashed') === 'with', fn ($q) => $q->withTrashed())
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting()
@@ -80,7 +81,8 @@ class CollectionHostController extends Controller
             $this->authorize('view', $custodian);
 
             return $this->OKResponse(CollectionHost::where('custodian_id', $custodian->id)
-                    ->filterTrashed($request->query('trashed'))
+                    ->when($request->query('trashed') === 'only', fn ($q) => $q->onlyTrashed())
+                    ->when($request->query('trashed') === 'with', fn ($q) => $q->withTrashed())
                     ->with(['collections','custodian'])
                     ->applySorting()
                     ->get()
