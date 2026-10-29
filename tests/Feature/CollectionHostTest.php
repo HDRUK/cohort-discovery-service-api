@@ -194,6 +194,11 @@ class CollectionHostTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertSoftDeleted('collection_hosts', ['id' => $host->id]);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'collection_hosts',
+            'event' => 'deleted',
+            'subject_id' => $host->id,
+        ]);
     }
 
     public function test_deleted_hosts_are_excluded_by_default_and_listed_with_trashed(): void
@@ -244,6 +249,11 @@ class CollectionHostTest extends TestCase
             ->assertStatus(200);
 
         $this->assertNotSoftDeleted('collection_hosts', ['id' => $host->id]);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'collection_hosts',
+            'event' => 'restored',
+            'subject_id' => $host->id,
+        ]);
     }
 
     public function test_it_cannot_restore_a_collection_host_that_is_not_deleted(): void

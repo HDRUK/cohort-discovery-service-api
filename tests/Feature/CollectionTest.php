@@ -627,6 +627,11 @@ class CollectionTest extends TestCase
 
         $trashed = Collection::withTrashed()->find($collection->id);
         $this->assertSame(Collection::STATUS_DRAFT, $trashed->getState());
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'collections',
+            'event' => 'deleted',
+            'subject_id' => $collection->id,
+        ]);
     }
 
     public function test_deleted_collections_are_excluded_from_all_and_listed_under_deleted(): void
@@ -690,6 +695,11 @@ class CollectionTest extends TestCase
             $restored = Collection::find($collection->id);
             $this->assertNotNull($restored);
             $this->assertSame(Collection::STATUS_DRAFT, $restored->getState());
+            $this->assertDatabaseHas('activity_log', [
+                'log_name' => 'collections',
+                'event' => 'restored',
+                'subject_id' => $collection->id,
+            ]);
         }
     }
 

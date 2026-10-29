@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -277,7 +278,7 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
 
@@ -286,6 +287,7 @@ class CollectionHostController extends Controller
             $this->authorize('delete', $collectionHost);
 
             $collectionHost->delete();
+            $activityLogger->deleted('collection_hosts', $collectionHost);
 
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
@@ -318,7 +320,7 @@ class CollectionHostController extends Controller
      *     @OA\Response(response=422, description="Collection host is not deleted")
      * )
      */
-    public function restore(ModelBackedRequest $request, int $id): JsonResponse
+    public function restore(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $request->merge(['id' => $id]);
         $validated = $request->validated();
@@ -332,6 +334,7 @@ class CollectionHostController extends Controller
             }
 
             $collectionHost->restore();
+            $activityLogger->custom('collection_hosts', 'restored', $collectionHost);
 
             return $this->OKResponse($collectionHost);
         } catch (AuthorizationException $e) {
