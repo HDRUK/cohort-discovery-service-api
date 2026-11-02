@@ -163,6 +163,8 @@ class RefreshLatestDistributionsView implements ShouldQueue
                 FROM {$this->viewName}
             ");
 
+            DB::select("ANALYZE TABLE {$new}");
+
             DB::statement("DROP TABLE IF EXISTS {$old}");
             DB::statement("RENAME TABLE {$this->matTable} TO {$old}, {$new} TO {$this->matTable}");
             DB::statement("DROP TABLE IF EXISTS {$old}");
