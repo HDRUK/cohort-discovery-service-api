@@ -9,12 +9,10 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "darkaonline/l5-swagger": "^11.2",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/guzzle": "^7.10",
-        "hdruk/claims-based-access-control": "^0.1.11",
-        "hdruk/laravel-messenger": "dev-main",
         "hdruk/laravel-model-states": "dev-main",
         "hdruk/laravel-plugin-core": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
@@ -111,10 +109,6 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/hdruk/claims-based-access-control"
-        },
-        {
-            "type": "vcs",
             "url": "https://github.com/hdruk/laravel-search-and-filter"
         },
         {
@@ -124,10 +118,6 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-workflow-states"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/hdruk/laravel-messenger"
         }
     ],
     "minimum-stability": "dev",
