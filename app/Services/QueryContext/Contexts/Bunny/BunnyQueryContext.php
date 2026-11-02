@@ -709,6 +709,7 @@ class BunnyQueryContext implements QueryContextInterface
         $conceptId = (string) ($concept['concept_id'] ?? '');
 
         $rule = null;
+
         if ($measurementValue !== null && count($measurementValue) === 2) {
             [$lower, $upper] = $measurementValue;
 

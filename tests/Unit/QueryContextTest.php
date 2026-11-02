@@ -1016,6 +1016,7 @@ class QueryContextTest extends TestCase
         $result = $this->bunnyContext->translate($input);
         $rule = $result['groups'][0]['rules'][0];
 
+        $this->assertEquals('NUM', $rule['type']);
         $this->assertEquals('1|3', $rule['value']);
         $this->assertEquals('18|:AGE:Y', $rule['time']);
     }
