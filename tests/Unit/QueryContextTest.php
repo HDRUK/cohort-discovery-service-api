@@ -7,6 +7,7 @@ use App\Services\QueryContext\Contexts\Bunny\BunnyQueryContext;
 use App\Services\QueryContext\Contexts\QueryContextInterface;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
+use Carbon\Carbon;
 use Tests\TestCase;
 
 class QueryContextTest extends TestCase
@@ -902,6 +903,124 @@ class QueryContextTest extends TestCase
         $this->assertEquals('-1000000000|10', $rule['value']);
     }
 
+    public function test_measurement_concept_with_value_range_keeps_upper_time_constraint(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 3955297,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [0, null],
+                    'timeConstraint' => [null, Carbon::today()->subMonths(3)->toIso8601String()],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('0|1000000000', $rule['value']);
+        $this->assertEquals('3|:TIME:M', $rule['time']);
+    }
+
+    public function test_measurement_concept_with_value_range_keeps_lower_time_constraint(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 3955297,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [1.0, 3.0],
+                    'timeConstraint' => [Carbon::today()->subMonths(6)->toIso8601String(), null],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('1|3', $rule['value']);
+        $this->assertEquals('|6:TIME:M', $rule['time']);
+    }
+
+    public function test_multi_concept_measurement_rule_keeps_time_constraint_on_every_expanded_rule(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            ['concept_id' => 3955297, 'category' => 'Measurement', 'children' => []],
+                            ['concept_id' => 3955300, 'category' => 'Measurement', 'children' => []],
+                        ],
+                    ],
+                    'valueAsNumber' => [0, null],
+                    'timeConstraint' => [null, Carbon::today()->subMonths(2)->toIso8601String()],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rules = $result['groups'][0]['rules'];
+
+        $this->assertCount(2, $rules);
+        foreach ($rules as $rule) {
+            $this->assertEquals('NUM', $rule['type']);
+            $this->assertEquals('0|1000000000', $rule['value']);
+            $this->assertEquals('2|:TIME:M', $rule['time']);
+        }
+    }
+
+    public function test_measurement_concept_with_value_range_falls_back_to_age_constraint(): void
+    {
+        $input = [
+            'rules' => [
+                [
+                    'rule' => [
+                        'concept' => [
+                            'concept_id' => 3955297,
+                            'category' => 'Measurement',
+                            'children' => [],
+                        ],
+                    ],
+                    'valueAsNumber' => [1.0, 3.0],
+                    'ageConstraint' => [18, null],
+                    'exclude' => false,
+                    'valid' => true,
+                ],
+            ],
+            'valid' => true,
+        ];
+
+        $result = $this->bunnyContext->translate($input);
+        $rule = $result['groups'][0]['rules'][0];
+
+        $this->assertEquals('NUM', $rule['type']);
+        $this->assertEquals('1|3', $rule['value']);
+        $this->assertEquals('18|:AGE:Y', $rule['time']);
+    }
+
     public function test_measurement_concept_without_value_range_encodes_as_text_rule(): void
     {
         $input = [
@@ -1018,7 +1137,7 @@ class QueryContextTest extends TestCase
         $this->assertCount(3, $result['groups']);
 
         $values = array_map(
-            fn($group) => $group['rules'][0]['value'],
+            fn ($group) => $group['rules'][0]['value'],
             $result['groups']
         );
         $this->assertEquals(['3955320', '18|65', '8507'], $values);
@@ -1070,7 +1189,7 @@ class QueryContextTest extends TestCase
         // (Moderna AND CloseContact) OR (Pfizer AND CloseContact), then AND age.
         // This genuine OR-of-ANDs cannot append a further AND level, so it must
         // distribute the age rule into each of the two AND groups.
-        $andGroup = fn(int $left, int $right) => [
+        $andGroup = fn (int $left, int $right) => [
             'rules' => [
                 ['rule' => ['concept' => ['concept_id' => $left, 'category' => 'Drug', 'children' => []]], 'exclude' => false],
                 ['combinator' => 'and'],
