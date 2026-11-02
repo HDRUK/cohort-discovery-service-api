@@ -418,6 +418,69 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertEquals(1, $response->json('data.data.0.ncollections'));
     }
 
+    public function test_concepts_with_only_zero_counts_are_excluded(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 0,
+            'name'           => '8507',
+            'category'       => 'Gender',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $this->assertEquals(2, $response->json('data.total'));
+        $this->assertNotContains(self::CONCEPT_ID_GENDER, array_column($response->json('data.data'), 'concept_id'));
+    }
+
+    public function test_zero_count_collections_are_not_counted_in_ncollections(): void
+    {
+        $second = Collection::factory()->create();
+        $task = Task::factory()->create(['collection_id' => $second->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'task_id'       => $task->id,
+            'collection_id' => $second->id,
+            'path'          => 'test/path',
+            'file_name'     => 'code.distribution',
+            'status'        => 'done',
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $second->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_A,
+            'count'          => 0,
+            'name'           => 'CONCEPT_A',
+            'category'       => 'Condition',
+            'description'    => 'Concept A description',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $rows = collect($response->json('data.data'))->keyBy('concept_id');
+        $this->assertEquals(10, $rows[self::CONCEPT_ID_A]['count']);
+        $this->assertEquals(1, $rows[self::CONCEPT_ID_A]['ncollections']);
+    }
+
     public function test_collection_pid_filter_combines_with_domain_filter(): void
     {
         $collection = Collection::firstOrFail();
@@ -517,6 +580,102 @@ class TermDirectoryControllerTest extends TestCase
             DB::table('latest_distributions_materialised')->count(),
             'the materialised table should stay in lockstep with the view after a refresh'
         );
+    }
+
+    public function test_equal_counts_paginate_without_repeats_or_gaps(): void
+    {
+        $collection = Collection::first();
+        $resultFileId = DB::table('result_files')->value('id');
+
+        DB::table('distributions')->where('collection_id', $collection->id)->update(['count' => 7]);
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_GENDER,
+            'count'          => 7,
+            'name'           => '8507',
+            'category'       => 'Gender',
+            'description'    => 'MALE',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $conceptIds = [];
+        foreach ([1, 2, 3] as $page) {
+            $response = $this->actingAsJwt($this->user)
+                ->getJson(self::BASE_URL . '?per_page=1&page=' . $page);
+            $response->assertOk();
+            $this->assertEquals(3, $response->json('data.total'));
+            $conceptIds = array_merge($conceptIds, array_column($response->json('data.data'), 'concept_id'));
+        }
+
+        $this->assertSame([self::CONCEPT_ID_GENDER, self::CONCEPT_ID_A, self::CONCEPT_ID_B], $conceptIds);
+    }
+
+    public function test_sort_by_concept_name_orders_rows_and_returns_names(): void
+    {
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?sort=concept_name:asc');
+
+        $response->assertOk();
+        $this->assertSame(
+            [self::CONCEPT_ID_B, self::CONCEPT_ID_A],
+            array_column($response->json('data.data'), 'concept_id')
+        );
+        $this->assertStringContainsString('stage 3A', $response->json('data.data.0.concept_name'));
+        $this->assertStringContainsString('stage 3B', $response->json('data.data.1.concept_name'));
+    }
+
+    public function test_concept_reported_under_two_domains_appears_once_per_domain(): void
+    {
+        $second = Collection::factory()->create();
+        $task = Task::factory()->create(['collection_id' => $second->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'task_id'       => $task->id,
+            'collection_id' => $second->id,
+            'path'          => 'test/path',
+            'file_name'     => 'code.distribution',
+            'status'        => 'done',
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $second->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_A,
+            'count'          => 3,
+            'name'           => 'CONCEPT_A',
+            'category'       => 'Observation',
+            'description'    => 'Concept A description',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $this->assertEquals(3, $response->json('data.total'));
+        $rows = collect($response->json('data.data'))
+            ->where('concept_id', self::CONCEPT_ID_A)
+            ->keyBy('domain_id');
+        $this->assertEquals(10, $rows['Condition']['count']);
+        $this->assertEquals(3, $rows['Observation']['count']);
+        $this->assertNotEmpty($rows['Observation']['concept_name']);
+    }
+
+    public function test_refresh_keeps_the_covering_index(): void
+    {
+        $indexes = collect(DB::select('SHOW INDEX FROM latest_distributions_materialised'))
+            ->pluck('Key_name')
+            ->unique();
+
+        $this->assertContains('ldm_concept_domain_collection_count_idx', $indexes);
     }
 
     /**
