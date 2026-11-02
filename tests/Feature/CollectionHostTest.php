@@ -24,6 +24,7 @@ class CollectionHostTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         User::truncate();
+        CustodianHasUser::truncate();
         Collection::truncate();
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');

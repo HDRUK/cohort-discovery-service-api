@@ -52,7 +52,7 @@ class QueryParserTest extends TestCase
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === true);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === true);
     }
 
     public function test_use_stats_ordering_not_sent_when_flag_inactive(): void
@@ -61,7 +61,7 @@ class QueryParserTest extends TestCase
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === false);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_stats_ordering'] === false);
     }
 
     public function test_use_collection_filter_sent_when_flag_active(): void
@@ -72,7 +72,7 @@ class QueryParserTest extends TestCase
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && $r->data()['use_collection_filter'] === true);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_collection_filter'] === true);
     }
 
     public function test_collection_ids_forwarded_to_nlp(): void
@@ -98,7 +98,7 @@ class QueryParserTest extends TestCase
             'collections' => ['test-collection-pid'],
         ])->assertOk();
 
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && $r->data()['collection_ids'] === [$collectionId]);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['collection_ids'] === [$collectionId]);
     }
 
     public function test_parse_returns_422_for_invalid_collection_ids(): void
@@ -115,7 +115,7 @@ class QueryParserTest extends TestCase
 
         $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && $r->data()['use_collection_filter'] === false);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && $r->data()['use_collection_filter'] === false);
     }
 
     /**
@@ -180,7 +180,7 @@ class QueryParserTest extends TestCase
         $response = $this->postJson(self::BASE_URL, ['query' => 'diabetes'])->assertOk();
 
         $this->assertArrayNotHasKey('demographics', $this->parsedResult($response));
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
     }
 
     public function test_demographics_block_built_when_flag_active(): void
@@ -212,7 +212,7 @@ class QueryParserTest extends TestCase
         $this->postJson(self::BASE_URL, ['query' => 'women under 65 with ca125 who died'])->assertOk();
 
         // The gender concept now ranks high, so no elevated max_matches is needed.
-        Http::assertSent(fn($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/extract') && str_contains($r->url(), 'max_matches=10'));
     }
 
     public function test_gender_span_and_age_stripped_from_rules_when_flag_active(): void

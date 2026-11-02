@@ -132,11 +132,11 @@ class DemographicsBuilder
 
         $constraints = array_filter(
             $constraints,
-            fn($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
+            fn ($c) => is_array($c) && ($c['scope'] ?? 'query') === 'query'
         );
 
-        $mins = array_filter(array_column($constraints, 'min'), fn($v) => $v !== null);
-        $maxs = array_filter(array_column($constraints, 'max'), fn($v) => $v !== null);
+        $mins = array_filter(array_column($constraints, 'min'), fn ($v) => $v !== null);
+        $maxs = array_filter(array_column($constraints, 'max'), fn ($v) => $v !== null);
 
         $lo = $mins ? max($mins) : $ageMin;
         $hi = $maxs ? min($maxs) : $ageMax;
@@ -147,7 +147,7 @@ class DemographicsBuilder
     /**
      * Currently, can either be 0 to represent no death recorded, or
      * 1 to represent death recorded, or null for "any" (no filter)
-     * 
+     *
      * @return ?array
      */
     private function collectDeath(?int $extract): ?array
