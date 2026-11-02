@@ -708,11 +708,12 @@ class BunnyQueryContext implements QueryContextInterface
 
         $conceptId = (string) ($concept['concept_id'] ?? '');
 
+        $rule = null;
         if ($measurementValue !== null && count($measurementValue) === 2) {
             [$lower, $upper] = $measurementValue;
 
             if ($lower !== null || $upper !== null) {
-                return [
+                $rule = [
                     'varname' => 'OMOP=' . $conceptId,
                     'varcat'  => 'Measurement',
                     'type'    => 'NUM',
@@ -722,7 +723,7 @@ class BunnyQueryContext implements QueryContextInterface
             }
         }
 
-        $rule = $this->makeConceptRule($conceptId, $category, $isExcluded);
+        $rule ??= $this->makeConceptRule($conceptId, $category, $isExcluded);
 
         // note: bunny cannot handle both time and age constraints
         // - try time constraint then fallback to age constraint
