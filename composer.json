@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.4",
         "darkaonline/l5-swagger": "^11.2",
+        "doctrine/annotations": "^2.0",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/guzzle": "^7.10",
         "hdruk/laravel-model-states": "dev-main",
