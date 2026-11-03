@@ -1,3 +1,27 @@
+## [1.17.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.16.0...v1.17.0) (2026-11-03)
+
+### ✨ Features
+
+* **DP-1120:** collection health endpoint (#325) ([9f44db9](https://github.com/HDRUK/cohort-discovery-service-api/commit/9f44db9299f5e4322ff9232ae3382ee1148d40b9)), closes [DP-1120](undefinedDP-1120) [endpoint](undefineddpoint)
+* **DP-1120:** collection task history endpoint (#326) ([bcfa549](https://github.com/HDRUK/cohort-discovery-service-api/commit/bcfa5490363174db8854d6926433441a7422d7c7)), closes [DP-1120](undefinedDP-1120) [endpoint](undefineddpoint)
+* **DP-1120:** record collection host polls into per-minute ping buckets (#324) ([f548e34](https://github.com/HDRUK/cohort-discovery-service-api/commit/f548e3474bf2cb08321aff7bc9ec4e36d57fae5b)), closes [DP-1120](undefinedDP-1120)
+* **DP-1174:** add feature-flagged monthly query rate limit (#349) ([0b666e1](https://github.com/HDRUK/cohort-discovery-service-api/commit/0b666e1e4dce376070749a025085b4f948702fc7)), closes [DP-1174](undefinedDP-1174)
+* **DP-1177:** cap pending tasks per collection behind a feature flag (#351) ([27b4add](https://github.com/HDRUK/cohort-discovery-service-api/commit/27b4add188fd82dea3a2ec05c5cfd1b25b1ebf6a)), closes [DP-1177](undefinedDP-1177)
+* **DP-1184:** soft delete collections and collection hosts, add restore (#354) ([4a57b5b](https://github.com/HDRUK/cohort-discovery-service-api/commit/4a57b5bd13053237f4d43efb4c4a61a200541683)), closes [DP-1184](undefinedDP-1184)
+* **DP-976:** Add admin users management (#337) ([e55b4cc](https://github.com/HDRUK/cohort-discovery-service-api/commit/e55b4ccb97618e5c6a1d850ed3c0f526bd82e0a9)), closes [DP-976](undefinedDP-976)
+
+### 🐛 Bug Fixes
+
+* **DP-1133:** preempts rework of VALUES function in mysql before removal (#348) ([fefdaf2](https://github.com/HDRUK/cohort-discovery-service-api/commit/fefdaf256663d9431105381a2d7c98307e4cd3b8)), closes [DP-1133](undefinedDP-1133)
+* **DP-1183:** improve security around collection hosts (#353) ([f633142](https://github.com/HDRUK/cohort-discovery-service-api/commit/f6331421f3cbf032eab6e87af93365be7dbded63)), closes [DP-1183](undefinedDP-1183)
+* **DP-1183:** return host credentials on the custodian collection list (#355) ([103f76a](https://github.com/HDRUK/cohort-discovery-service-api/commit/103f76a8d683b5414ec0c203b2f136b4c46c33c2)), closes [DP-1183](undefinedDP-1183)
+* **DP-1213:** keep time constraint on value-filtered Bunny rules (#358) ([4048aca](https://github.com/HDRUK/cohort-discovery-service-api/commit/4048acab967274ef4a3de18aa0466b0640e266fa)), closes [DP-1213](undefinedDP-1213)
+* **DP-976:** close the deprovisioning and lockout gaps in claim sync (#339) ([13a4235](https://github.com/HDRUK/cohort-discovery-service-api/commit/13a423521bcc5477e37130d062f1817ee6193807))
+
+### ⚡ Performance Improvements
+
+* **DP-1077:** group term directory concepts in index order (#356) ([e66eeee](https://github.com/HDRUK/cohort-discovery-service-api/commit/e66eeee8b0de1a8e8a33fb90f3d0805458bc4371)), closes [DP-1077](undefinedDP-1077)
+
 ## [1.16.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.15.0...v1.16.0) (2026-10-08)
 
 ### ✨ Features
