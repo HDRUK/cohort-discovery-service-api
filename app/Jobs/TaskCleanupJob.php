@@ -23,8 +23,8 @@ class TaskCleanupJob implements ShouldQueue
     public function handle()
     {
         $timeoutSecondsByType = [
-            TaskType::A->value => (int) config('tasks.default_timeout_seconds', 60),
-            TaskType::B->value => (int) config('tasks.b_type_timeout_seconds', 3600),
+            TaskType::A->value => config('tasks.a_type_timeout_seconds'),
+            TaskType::B->value => config('tasks.b_type_timeout_seconds'),
         ];
         $now = Carbon::now();
 

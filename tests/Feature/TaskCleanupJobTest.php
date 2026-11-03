@@ -18,7 +18,7 @@ class TaskCleanupJobTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-11-03 12:00:00'));
         config([
-            'tasks.default_timeout_seconds' => 300,
+            'tasks.a_type_timeout_seconds' => 300,
             'tasks.b_type_timeout_seconds' => 3600,
         ]);
     }
