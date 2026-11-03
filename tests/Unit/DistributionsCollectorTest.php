@@ -3,9 +3,8 @@
 namespace Tests\Unit;
 
 use App\Console\Commands\DistributionsCollector;
-use App\Enums\DistributionJobType;
+use App\Enums\DistributionQueryType;
 use App\Enums\FrequencyMode;
-use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
@@ -54,7 +53,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -64,7 +63,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -94,7 +93,7 @@ class DistributionsCollectorTest extends TestCase
         $query = Query::first();
         $task = Task::first();
 
-        $this->assertTrue(QueryType::GENERIC->value === $query->definition['code']);
+        $this->assertTrue(DistributionQueryType::GENERIC->value === $query->definition['code']);
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
         $this->assertTrue(TaskType::B->value === $task->task_type->value);
@@ -119,7 +118,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::WEEKLY->value,
             'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -129,7 +128,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::WEEKLY->value,
             'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -159,7 +158,7 @@ class DistributionsCollectorTest extends TestCase
         $query = Query::first();
         $task = Task::first();
 
-        $this->assertTrue(QueryType::GENERIC->value === $query->definition['code']);
+        $this->assertTrue(DistributionQueryType::GENERIC->value === $query->definition['code']);
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
         $this->assertTrue(TaskType::B->value === $task->task_type->value);
@@ -184,7 +183,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::WEEKLY->value,
             'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::DEMOGRAPHICS->value,
+            'type' => DistributionQueryType::DEMOGRAPHICS->value,
         ]);
 
         $command = app(DistributionsCollector::class);
@@ -197,8 +196,8 @@ class DistributionsCollectorTest extends TestCase
         $query = Query::first();
         $task = Task::first();
 
-        $this->assertTrue(QueryType::DEMOGRAPHICS->value === $query->definition['code']);
-        $this->assertTrue(QueryType::DEMOGRAPHICS->value === $query->query_type);
+        $this->assertTrue(DistributionQueryType::DEMOGRAPHICS->value === $query->definition['code']);
+        $this->assertTrue(DistributionQueryType::DEMOGRAPHICS->value === $query->query_type);
         $this->assertEquals($query->id, $task->query_id);
         $this->assertTrue(TaskType::B->value === $task->task_type->value);
         $this->assertEquals($query->name, 'distribution-job-'.strtolower($collection->name));
@@ -225,7 +224,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::QUARTERLY->value,
             'run_time_frequency' => (int) $currentQuarter,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -275,7 +274,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::BIANNUALLY->value,
             'run_time_frequency' => $currentHalf,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -320,7 +319,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::QUARTERLY->value,
             'run_time_frequency' => $quarter,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         // Already ran this quarter
@@ -362,7 +361,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::BIANNUALLY->value,
             'run_time_frequency' => $currentHalf,
             'collection_id' => $collection->id,
-            'type' => DistributionJobType::GENERIC->value,
+            'type' => DistributionQueryType::GENERIC->value,
         ]);
 
         CollectionConfigRun::create([

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum QueryType: string
+enum DistributionQueryType: string
 {
     case DEMOGRAPHICS = 'DEMOGRAPHICS';
     case GENERIC = 'GENERIC';

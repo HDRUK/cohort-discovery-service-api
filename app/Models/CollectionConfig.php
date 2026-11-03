@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
-use App\Enums\DistributionJobType;
+use App\Enums\DistributionQueryType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -78,7 +78,7 @@ class CollectionConfig extends Model implements ValidatableModel
                 'frequency_mode' => 'required|integer',
                 'run_time_frequency' => 'required|integer',
                 'enabled' => 'required|integer',
-                'type' => ['required', Rule::enum(DistributionJobType::class)],
+                'type' => ['required', Rule::enum(DistributionQueryType::class)],
             ],
             'update' => [
                 'id' => 'required|exists:collection_config,id',
@@ -88,7 +88,7 @@ class CollectionConfig extends Model implements ValidatableModel
                 'frequency_mode' => 'sometimes|integer',
                 'run_time_frequency' => 'sometimes|integer',
                 'enabled' => 'sometimes|integer',
-                'type' => ['sometimes', Rule::enum(DistributionJobType::class)],
+                'type' => ['sometimes', Rule::enum(DistributionQueryType::class)],
             ],
             'delete' => [
                 'id' => 'required|exists:collection_config,id',

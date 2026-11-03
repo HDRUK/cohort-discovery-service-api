@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\DistributionJobType;
+use App\Enums\DistributionQueryType;
 use App\Enums\FrequencyMode;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
@@ -94,7 +94,7 @@ class CollectionSeeder extends Seeder
         );
         // Create two CollectionConfig records for the above Collection
         // to mimic the distribution and generic query types
-        $types = [DistributionJobType::GENERIC, DistributionJobType::DEMOGRAPHICS];
+        $types = [DistributionQueryType::GENERIC, DistributionQueryType::DEMOGRAPHICS];
         $frequencyMode = FrequencyMode::WEEKLY->value; // Weekly
         $frequencyRun = 6; // ...on Sunday's
 

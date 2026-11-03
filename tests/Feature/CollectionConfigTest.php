@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\DistributionJobType;
+use App\Enums\DistributionQueryType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Models\User;
@@ -128,9 +128,9 @@ class CollectionConfigTest extends TestCase
 
         $this->payload['run_time_hour'] = 12;
         $this->payload['run_time_minute'] = 30;
-        $this->payload['type'] = $this->payload['type'] === DistributionJobType::GENERIC
-            ? DistributionJobType::DEMOGRAPHICS->value
-            : DistributionJobType::GENERIC->value;
+        $this->payload['type'] = $this->payload['type'] === DistributionQueryType::GENERIC
+            ? DistributionQueryType::DEMOGRAPHICS->value
+            : DistributionQueryType::GENERIC->value;
 
         $response = $this->actingAsJwt(
             $this->user,

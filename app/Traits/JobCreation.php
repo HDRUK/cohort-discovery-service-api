@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use App\Enums\TaskType;
 use App\Models\Query;
 use App\Models\Task;
@@ -11,7 +11,7 @@ use Str;
 
 trait JobCreation
 {
-    public function createQuery(string $name, QueryType $type, int $userId): Query
+    public function createQuery(string $name, DistributionQueryType $type, int $userId): Query
     {
         return Query::create([
             'user_id' => $userId,

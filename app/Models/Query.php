@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use Carbon\Carbon;
 
 /**
@@ -150,7 +150,7 @@ class Query extends Model
         };
     }
 
-    public static function createDistributionQuery(Collection $collection, QueryType $type, int $userId): self
+    public static function createDistributionQuery(Collection $collection, DistributionQueryType $type, int $userId): self
     {
         $code = $type->value;
         $name = sprintf('%s-%s-%s', $collection->name, $code, Carbon::now()->format('Ymd_His'));

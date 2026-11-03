@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
-use App\Enums\DistributionJobType;
+use App\Enums\DistributionQueryType;
 use App\Enums\FrequencyMode;
 use App\Enums\TaskType;
 use App\Models\Collection;
@@ -218,10 +218,10 @@ class DistributionsCollector implements ApiCommand
 
             Log::info($this->tag.' generating queries and tasks for '.$collectionName.' config ('.$c->id.')');
 
-            $jobType = DistributionJobType::tryFrom((string) $c->type);
+            $distributionQueryType = DistributionQueryType::tryFrom((string) $c->type);
 
-            if (! $jobType) {
-                $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown DistributionJobType: '.$c->type.
+            if (! $distributionQueryType) {
+                $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown DistributionQueryType: '.$c->type.
                     'for collection_id ('.$c['collection_id'].') under config ('.
                     $c['id'].')';
 
@@ -245,11 +245,11 @@ class DistributionsCollector implements ApiCommand
 
             $query = Query::create([
                 'pid' => Str::uuid(),
-                'name' => $jobType->queryNamePrefix().'-'.$collectionName,
+                'name' => $this->queryNamePrefix($distributionQueryType).'-'.$collectionName,
                 'definition' => [
-                    'code' => $jobType->queryType()->value,
+                    'code' => $distributionQueryType->value,
                 ],
-                'query_type' => $jobType->queryType()->value,
+                'query_type' => $distributionQueryType->value,
             ]);
 
             Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
@@ -286,5 +286,13 @@ class DistributionsCollector implements ApiCommand
                 'errors' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function queryNamePrefix(DistributionQueryType $distributionQueryType): string
+    {
+        return match ($distributionQueryType) {
+            DistributionQueryType::GENERIC => 'omop-concept-job',
+            DistributionQueryType::DEMOGRAPHICS => 'distribution-job',
+        };
     }
 }
