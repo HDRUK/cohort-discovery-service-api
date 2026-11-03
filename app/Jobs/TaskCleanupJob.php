@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Enums\TaskType;
 use App\Models\Task;
 use App\Models\TaskRun;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,24 +22,36 @@ class TaskCleanupJob implements ShouldQueue
 
     public function handle()
     {
-        $timeoutSeconds = (int) config('tasks.default_timeout_seconds', 60);
+        $timeoutSecondsByType = [
+            TaskType::A->value => (int) config('tasks.default_timeout_seconds', 60),
+            TaskType::B->value => (int) config('tasks.b_type_timeout_seconds', 3600),
+        ];
         $now = Carbon::now();
-        $cutoff = $now->copy()->subSeconds($timeoutSeconds);
 
         Task::query()
             ->whereNull('completed_at')
-            ->where('created_at', '<', $cutoff)
-            ->chunkById(100, function ($tasks) use ($now, $timeoutSeconds) {
+            ->where(function ($query) use ($now, $timeoutSecondsByType) {
+                foreach ($timeoutSecondsByType as $taskType => $timeoutSeconds) {
+                    $query->orWhere(fn ($q) => $q
+                        ->where('task_type', $taskType)
+                        ->where('created_at', '<', $now->copy()->subSeconds($timeoutSeconds)));
+                }
+            })
+            ->chunkById(100, function ($tasks) use ($now, $timeoutSecondsByType) {
                 foreach ($tasks as $t) {
                     //$task = Task::whereKey($t->id)->lockForUpdate()->first(); // temp disabled
                     $task = Task::whereKey($t->id)->first();
                     if (! $task || $task->completed_at) {
-                        return;
+                        continue;
                     }
 
                     if ($task->leased_until && $task->leased_until->isFuture()) {
-                        return;
+                        continue;
                     }
+
+                    $timeout = CarbonInterval::seconds($timeoutSecondsByType[$task->task_type->value])
+                        ->cascade()
+                        ->forHumans();
 
                     $tr = TaskRun::updateOrCreate(
                         [
@@ -47,7 +61,7 @@ class TaskCleanupJob implements ShouldQueue
                         [
                             'finished_at' => $now,
                             'error_class' => 'Timeout',
-                            'error_message' => "No result received within {$timeoutSeconds} seconds.",
+                            'error_message' => "No result received within {$timeout} ({$task->task_type->name}-type task).",
                             'claimed_at' => $task->started_at ?? $now,
                             'started_at' => $task->started_at ?? $now,
                         ]
