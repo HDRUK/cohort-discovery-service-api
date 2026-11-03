@@ -96,7 +96,7 @@ class DistributionsCollectorTest extends TestCase
         $this->assertTrue(QueryType::GENERIC->value === $query->definition['code']);
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
-        $this->assertTrue(TaskType::A->value === $task->task_type->value);
+        $this->assertTrue(TaskType::B->value === $task->task_type->value);
         $this->assertEquals($query->name, 'omop-concept-job-'.strtolower($collection->name));
     }
 
@@ -161,7 +161,7 @@ class DistributionsCollectorTest extends TestCase
         $this->assertTrue(QueryType::GENERIC->value === $query->definition['code']);
         $this->assertEquals($collection->id, $task->collection_id);
         $this->assertEquals($query->id, $task->query_id);
-        $this->assertTrue(TaskType::A->value === $task->task_type->value);
+        $this->assertTrue(TaskType::B->value === $task->task_type->value);
         $this->assertEquals($query->name, 'omop-concept-job-'.strtolower($collection->name));
     }
 

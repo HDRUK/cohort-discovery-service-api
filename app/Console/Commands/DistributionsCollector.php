@@ -236,7 +236,7 @@ class DistributionsCollector implements ApiCommand
                         'query_id' => $query->id,
                         'collection_id' => $c->collection_id,
                         'created_at' => Carbon::now(),
-                        'task_type' => TaskType::A->value,
+                        'task_type' => TaskType::B->value,
                     ]);
 
                     Log::info($this->tag.' created Task: '.$task->id.' for config ('.$c->id.')');
