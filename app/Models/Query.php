@@ -184,6 +184,7 @@ class Query extends Model
         });
     }
 
+    /** @return HasMany<Task, $this> */
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class, 'query_id');
