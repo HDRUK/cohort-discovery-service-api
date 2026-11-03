@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum CollectionConfigType: string
+enum DistributionJobType: string
 {
     case GENERIC = 'a';
     case DEMOGRAPHICS = 'b';

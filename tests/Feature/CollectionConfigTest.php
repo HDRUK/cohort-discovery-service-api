@@ -91,6 +91,23 @@ class CollectionConfigTest extends TestCase
         $this->assertTrue($content['collection_id'] === $collection->id);
     }
 
+    public function test_it_rejects_a_config_type_that_is_not_a_distribution_job_type(): void
+    {
+        $collection = Collection::factory()->create();
+
+        $this->payload['collection_id'] = $collection->id;
+        $this->payload['type'] = 'x';
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->postJson(self::BASE_URL, $this->payload);
+        $response->assertStatus(422);
+
+        $this->assertDatabaseCount('collection_config', 0);
+    }
+
     public function test_it_can_update_collection_config(): void
     {
         $collection = Collection::factory()->create();

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
+use App\Enums\DistributionJobType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Schema(
@@ -50,7 +52,6 @@ class CollectionConfig extends Model implements ValidatableModel
         //    - (1-5 week number of the month)
         'run_time_frequency',
         'enabled',
-        // Can be either: A - Query, or B - Distribution
         'type',
         'last_run_at',
     ];
@@ -77,7 +78,7 @@ class CollectionConfig extends Model implements ValidatableModel
                 'frequency_mode' => 'required|integer',
                 'run_time_frequency' => 'required|integer',
                 'enabled' => 'required|integer',
-                'type' => 'required|string',
+                'type' => ['required', Rule::enum(DistributionJobType::class)],
             ],
             'update' => [
                 'id' => 'required|exists:collection_config,id',
@@ -87,7 +88,7 @@ class CollectionConfig extends Model implements ValidatableModel
                 'frequency_mode' => 'sometimes|integer',
                 'run_time_frequency' => 'sometimes|integer',
                 'enabled' => 'sometimes|integer',
-                'type' => 'sometimes|string',
+                'type' => ['sometimes', Rule::enum(DistributionJobType::class)],
             ],
             'delete' => [
                 'id' => 'required|exists:collection_config,id',

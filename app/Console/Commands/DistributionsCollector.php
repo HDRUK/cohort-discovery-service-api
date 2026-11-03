@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
-use App\Enums\CollectionConfigType;
+use App\Enums\DistributionJobType;
 use App\Enums\FrequencyMode;
 use App\Enums\TaskType;
 use App\Models\Collection;
@@ -218,10 +218,10 @@ class DistributionsCollector implements ApiCommand
 
             Log::info($this->tag.' generating queries and tasks for '.$collectionName.' config ('.$c->id.')');
 
-            $configType = CollectionConfigType::tryFrom(strtolower((string) $c->type));
+            $jobType = DistributionJobType::tryFrom(strtolower((string) $c->type));
 
-            if (! $configType) {
-                $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown CollectionConfigType: '.$c->type.
+            if (! $jobType) {
+                $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown DistributionJobType: '.$c->type.
                     'for collection_id ('.$c['collection_id'].') under config ('.
                     $c['id'].')';
 
@@ -245,11 +245,11 @@ class DistributionsCollector implements ApiCommand
 
             $query = Query::create([
                 'pid' => Str::uuid(),
-                'name' => $configType->queryNamePrefix().'-'.$collectionName,
+                'name' => $jobType->queryNamePrefix().'-'.$collectionName,
                 'definition' => [
-                    'code' => $configType->queryType()->value,
+                    'code' => $jobType->queryType()->value,
                 ],
-                'query_type' => $configType->queryType()->value,
+                'query_type' => $jobType->queryType()->value,
             ]);
 
             Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
