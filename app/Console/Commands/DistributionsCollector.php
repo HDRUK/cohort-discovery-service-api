@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Contracts\ApiCommand;
+use App\Enums\DistributionQueryType;
 use App\Enums\FrequencyMode;
-use App\Enums\QueryType;
 use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
@@ -218,101 +218,64 @@ class DistributionsCollector implements ApiCommand
 
             Log::info($this->tag.' generating queries and tasks for '.$collectionName.' config ('.$c->id.')');
 
-            switch (strtolower($c->type)) {
-                case TaskType::A->value: // Generic
-                    $query = Query::create([
-                        'pid' => Str::uuid(),
-                        'name' => 'omop-concept-job-'.$collectionName,
-                        'definition' => [
-                            'code' => QueryType::GENERIC->value,
-                        ],
-                        'query_type' => QueryType::GENERIC->value,
-                    ]);
+            $distributionQueryType = DistributionQueryType::tryFrom((string) $c->type);
 
-                    Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
+            if (! $distributionQueryType) {
+                $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown DistributionQueryType: '.$c->type.
+                    'for collection_id ('.$c['collection_id'].') under config ('.
+                    $c['id'].')';
 
-                    $task = Task::create([
-                        'pid' => Str::uuid(),
-                        'query_id' => $query->id,
-                        'collection_id' => $c->collection_id,
-                        'created_at' => Carbon::now(),
-                        'task_type' => TaskType::A->value,
-                    ]);
+                CollectionConfigRun::create([
+                    'collection_config_id' => $c->id,
+                    'query_id' => null,
+                    'task_id' => null,
+                    'ran_at' => Carbon::now($this->timezone),
+                    'successful' => false,
+                    'errors' => $errorMsg,
+                ]);
 
-                    Log::info($this->tag.' created Task: '.$task->id.' for config ('.$c->id.')');
+                $c->update([
+                    'last_run_at' => Carbon::now($this->timezone),
+                ]);
 
-                    CollectionConfigRun::create([
-                        'collection_config_id' => $c->id,
-                        'query_id' => $query->id,
-                        'task_id' => $task->id,
-                        'ran_at' => Carbon::now($this->timezone),
-                        'successful' => true,
-                        'errors' => null,
-                    ]);
+                Log::error($errorMsg);
 
-                    $c->update([
-                        'last_run_at' => Carbon::now($this->timezone),
-                    ]);
-
-                    return;
-                case TaskType::B->value: // Demographics
-                    $query = Query::create([
-                        'pid' => Str::uuid(),
-                        'name' => 'distribution-job-'.$collectionName,
-                        'definition' => [
-                            'code' => QueryType::DEMOGRAPHICS->value,
-                        ],
-                        'query_type' => QueryType::DEMOGRAPHICS->value,
-                    ]);
-
-                    Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
-
-                    $task = Task::create([
-                        'pid' => Str::uuid(),
-                        'query_id' => $query->id,
-                        'collection_id' => $c->collection_id,
-                        'created_at' => Carbon::now(),
-                        'task_type' => TaskType::B->value,
-                    ]);
-
-                    Log::info($this->tag.' created Task: '.$task->id.' for config ('.$c->id.')');
-
-                    CollectionConfigRun::create([
-                        'collection_config_id' => $c->id,
-                        'query_id' => $query->id,
-                        'task_id' => $task->id,
-                        'ran_at' => Carbon::now($this->timezone),
-                        'successful' => true,
-                        'errors' => null,
-                    ]);
-
-                    $c->update([
-                        'last_run_at' => Carbon::now($this->timezone),
-                    ]);
-
-                    return;
-                default:
-                    $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown TaskType: '.$c->type.
-                        'for collection_id ('.$c['collection_id'].') under config ('.
-                        $c['id'].')';
-
-                    CollectionConfigRun::create([
-                        'collection_config_id' => $c->id,
-                        'query_id' => null,
-                        'task_id' => null,
-                        'ran_at' => Carbon::now($this->timezone),
-                        'successful' => false,
-                        'errors' => $errorMsg,
-                    ]);
-
-                    $c->update([
-                        'last_run_at' => Carbon::now($this->timezone),
-                    ]);
-
-                    Log::error($errorMsg);
-
-                    return;
+                return;
             }
+
+            $query = Query::create([
+                'pid' => Str::uuid(),
+                'name' => $this->queryNamePrefix($distributionQueryType).'-'.$collectionName,
+                'definition' => [
+                    'code' => $distributionQueryType->value,
+                ],
+                'query_type' => $distributionQueryType->value,
+            ]);
+
+            Log::info($this->tag.' created Query: '.$query->id.' for config ('.$c->id.')');
+
+            $task = Task::create([
+                'pid' => Str::uuid(),
+                'query_id' => $query->id,
+                'collection_id' => $c->collection_id,
+                'created_at' => Carbon::now(),
+                'task_type' => TaskType::B->value,
+            ]);
+
+            Log::info($this->tag.' created Task: '.$task->id.' for config ('.$c->id.')');
+
+            CollectionConfigRun::create([
+                'collection_config_id' => $c->id,
+                'query_id' => $query->id,
+                'task_id' => $task->id,
+                'ran_at' => Carbon::now($this->timezone),
+                'successful' => true,
+                'errors' => null,
+            ]);
+
+            $c->update([
+                'last_run_at' => Carbon::now($this->timezone),
+            ]);
         } catch (\Throwable $e) {
             CollectionConfigRun::create([
                 'collection_config_id' => $c->id,
@@ -323,5 +286,13 @@ class DistributionsCollector implements ApiCommand
                 'errors' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function queryNamePrefix(DistributionQueryType $distributionQueryType): string
+    {
+        return match ($distributionQueryType) {
+            DistributionQueryType::GENERIC => 'omop-concept-job',
+            DistributionQueryType::DEMOGRAPHICS => 'distribution-job',
+        };
     }
 }

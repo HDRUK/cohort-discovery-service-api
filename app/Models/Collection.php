@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use App\Enums\TaskType;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\ResolvesByIdOrPid;
@@ -254,7 +254,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value);
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::DEMOGRAPHICS->value);
             }
         );
     }
@@ -265,7 +265,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value);
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::GENERIC->value);
             }
         );
     }
@@ -276,7 +276,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::DEMOGRAPHICS->value)
                     ->whereHas('result');
             }
         );
@@ -288,7 +288,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::GENERIC->value)
                     ->whereHas('result');
             }
         );

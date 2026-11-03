@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\Collection;
 use App\Models\Query;
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use App\Traits\JobCreation;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +26,7 @@ class DistributionController extends Controller
                 return $this->NotFoundResponse();
             }
             $queryType = $request->validated('query_type');
-            $queryTypeEnum = QueryType::from($queryType);
+            $queryTypeEnum = DistributionQueryType::from($queryType);
 
             $query = Query::createDistributionQuery($collection, $queryTypeEnum, Auth::id());
 
