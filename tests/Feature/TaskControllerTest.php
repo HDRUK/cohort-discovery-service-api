@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Result;
@@ -14,6 +15,7 @@ use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
 use Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -524,6 +526,11 @@ class TaskControllerTest extends TestCase
 
         $this->assertNotNull($collectionHost);
 
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $collectionHost->id,
+            'collection_id' => $collection->id,
+        ]);
+
         $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid, [
             'HTTP_AUTHORIZATION' => 'Basic '.base64_encode("{$collectionHost->client_id}:{$collectionHost->client_secret}"),
         ]);
@@ -540,6 +547,114 @@ class TaskControllerTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_polling_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+        ]);
+
+        $response = $this->get(self::BASE_URL.'/nextjob/'.$collection->pid.'.a', [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret'),
+        ]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('collection_activity_logs', [
+            'collection_id' => $collection->id,
+        ]);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_checking_status_for_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $collection = Collection::factory()->bunny()->create();
+        CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+        ]);
+
+        $response = $this->get(self::BASE_URL.'/status/'.$collection->pid, [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret'),
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_a_host_from_posting_a_result_for_a_collection_it_does_not_serve(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+        CollectionHost::factory()->create([
+            'client_id' => 'unlinked-client',
+            'client_secret' => 'unlinked-secret',
+        ]);
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$collection->pid,
+            ['status' => 'ok', 'queryResult' => ['count' => 1]],
+            ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('unlinked-client:unlinked-secret')]
+        );
+
+        $response->assertStatus(403);
+        $this->assertNull($task->fresh()->completed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_a_result_for_another_collections_task_from_a_linked_host(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+        $this->enableMiddleware();
+
+        $servedCollection = Collection::factory()->bunny()->create();
+        $task = Task::factory()->create();
+        $collectionHost = CollectionHost::factory()->create([
+            'client_id' => 'linked-client',
+            'client_secret' => 'linked-secret',
+        ]);
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $collectionHost->id,
+            'collection_id' => $servedCollection->id,
+        ]);
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$servedCollection->pid,
+            ['status' => 'ok', 'queryResult' => ['count' => 1]],
+            ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('linked-client:linked-secret')]
+        );
+
+        $response->assertNotFound();
+        $this->assertNull($task->fresh()->completed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_does_not_touch_a_task_when_the_result_names_another_collection(): void
+    {
+        $otherCollection = Collection::factory()->bunny()->create();
+        $task = Task::factory()->create();
+
+        $response = $this->postJson(
+            self::BASE_URL.'/result/'.$task->pid.'/'.$otherCollection->pid,
+            ['status' => 'error', 'message' => 'forged']
+        );
+
+        $response->assertNotFound();
+        $this->assertNull($task->fresh()->completed_at);
+        $this->assertDatabaseMissing('task_runs', ['task_id' => $task->id]);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -799,6 +914,8 @@ class TaskControllerTest extends TestCase
 
         \DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Task::truncate();
+        TaskRun::truncate();
+        Result::truncate();
         \DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $queryA = Query::factory()->create();
@@ -883,6 +1000,78 @@ class TaskControllerTest extends TestCase
             fn ($request) =>
             str_contains($request->body(), $collection->name)
         );
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_a_ping_bucket_for_task_type_a_when_polled(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+
+        $bucket = DB::table('collection_ping_buckets')
+            ->where('collection_id', $collection->id)
+            ->first();
+
+        $this->assertNotNull($bucket);
+        $this->assertSame('a', $bucket->task_type);
+        $this->assertSame(1, (int) $bucket->n);
+        $this->assertSame(
+            Carbon::now()->startOfMinute()->toDateTimeString(),
+            Carbon::parse($bucket->bucket_minute)->toDateTimeString()
+        );
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_task_type_b_pings_in_a_separate_bucket(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}.b")->assertSuccessful();
+
+        $buckets = DB::table('collection_ping_buckets')
+            ->where('collection_id', $collection->id)
+            ->pluck('n', 'task_type');
+
+        $this->assertSame(1, (int) $buckets['a']);
+        $this->assertSame(1, (int) $buckets['b']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_increments_one_bucket_for_repeat_polls_in_the_same_minute(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+        $first = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->first();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+
+        $buckets = DB::table('collection_ping_buckets')->where('collection_id', $collection->id)->get();
+
+        $this->assertCount(1, $buckets);
+        $this->assertSame(3, (int) $buckets[0]->n);
+        $this->assertSame($first->first_ping_at, $buckets[0]->first_ping_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_records_both_the_activity_log_and_the_ping_bucket_for_one_poll(): void
+    {
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}")->assertSuccessful();
+
+        $this->assertDatabaseHas('collection_activity_logs', [
+            'collection_id' => $collection->id,
+            'task_type' => 'a',
+        ]);
+
+        $this->assertDatabaseHas('collection_ping_buckets', [
+            'collection_id' => $collection->id,
+            'task_type' => 'a',
+        ]);
     }
 
 }

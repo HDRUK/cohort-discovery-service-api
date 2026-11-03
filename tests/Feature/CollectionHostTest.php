@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Config;
 use DB;
 use App\Models\Collection;
 use App\Models\CollectionHost;
@@ -23,6 +24,7 @@ class CollectionHostTest extends TestCase
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         User::truncate();
+        CustodianHasUser::truncate();
         Collection::truncate();
         CollectionHost::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -77,6 +79,56 @@ class CollectionHostTest extends TestCase
         )
             ->getJson(self::BASE_URL.'/'.$host->id);
         $response->assertStatus(403);
+    }
+
+    public function test_it_shows_credentials_to_an_admin()
+    {
+        $host = CollectionHost::factory()->create();
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$host->id);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.client_id', $host->client_id)
+            ->assertJsonPath('data.client_secret', $host->client_secret);
+    }
+
+    public function test_it_lists_a_custodians_hosts_with_credentials_for_a_member()
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        CustodianHasUser::create([
+            'user_id' => $this->user->id,
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.client_id', $host->client_id)
+            ->assertJsonPath('data.0.client_secret', $host->client_secret);
+    }
+
+    public function test_it_forbids_listing_a_custodians_hosts_for_a_non_member()
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts');
+
+        $response->assertStatus(403);
+    }
+
+    public function test_it_returns_not_found_listing_hosts_for_an_unknown_custodian()
+    {
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson('/api/v1/custodians/does-not-exist/collection_hosts');
+
+        $response->assertStatus(404);
     }
 
     public function test_it_returns_invalid_for_missing_collection_host()
@@ -143,7 +195,88 @@ class CollectionHostTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('collection_hosts', ['id' => $host->id]);
+        $this->assertSoftDeleted('collection_hosts', ['id' => $host->id]);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'collection_hosts',
+            'event' => 'deleted',
+            'subject_id' => $host->id,
+        ]);
+    }
+
+    public function test_deleted_hosts_are_excluded_by_default_and_listed_with_trashed(): void
+    {
+        $kept = CollectionHost::factory()->create();
+        $deleted = CollectionHost::factory()->create();
+        $deleted->delete();
+
+        $ids = fn (string $query) => array_column(
+            $this->actingAsJwt($this->user, [])->getJson(self::BASE_URL.$query)->json('data'),
+            'id'
+        );
+
+        $this->assertSame([$kept->id], $ids(''));
+        $this->assertSame([$deleted->id], $ids('?trashed=only'));
+        $this->assertEqualsCanonicalizing([$kept->id, $deleted->id], $ids('?trashed=with'));
+    }
+
+    public function test_a_deleted_host_cannot_authenticate(): void
+    {
+        Config::set('system.basic_auth_enabled', true);
+
+        $host = CollectionHost::factory()->create([
+            'client_id' => 'test-client',
+            'client_secret' => 'test-secret',
+        ]);
+        $collection = Collection::factory()->create();
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $host->id,
+            'collection_id' => $collection->id,
+        ]);
+        $headers = ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('test-client:test-secret')];
+
+        $this->get('/api/v1/task/status/'.$collection->pid, $headers)->assertOk();
+
+        $host->delete();
+
+        $this->get('/api/v1/task/status/'.$collection->pid, $headers)->assertStatus(401);
+    }
+
+    public function test_it_can_restore_a_deleted_collection_host(): void
+    {
+        $host = CollectionHost::factory()->create();
+        $host->delete();
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$host->id.'/restore')
+            ->assertStatus(200);
+
+        $this->assertNotSoftDeleted('collection_hosts', ['id' => $host->id]);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'collection_hosts',
+            'event' => 'restored',
+            'subject_id' => $host->id,
+        ]);
+    }
+
+    public function test_it_cannot_restore_a_collection_host_that_is_not_deleted(): void
+    {
+        $host = CollectionHost::factory()->create();
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$host->id.'/restore')
+            ->assertStatus(422);
+    }
+
+    public function test_it_cannot_restore_a_collection_host_without_access(): void
+    {
+        $host = CollectionHost::factory()->create();
+        $host->delete();
+
+        $this->actingAsJwt(User::factory()->create(), [])
+            ->putJson(self::BASE_URL.'/'.$host->id.'/restore')
+            ->assertStatus(403);
+
+        $this->assertSoftDeleted('collection_hosts', ['id' => $host->id]);
     }
 
     public function test_it_can_search_by_name(): void

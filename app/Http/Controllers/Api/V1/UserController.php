@@ -52,7 +52,7 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::with(['workgroups','custodians'])
+        $users = User::with(['workgroups', 'custodians', 'roles', 'identities'])
             ->searchViaRequest()
             ->withStatus()
             ->applySorting()

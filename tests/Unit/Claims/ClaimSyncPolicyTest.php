@@ -95,8 +95,10 @@ class ClaimSyncPolicyTest extends TestCase
             ClaimSyncPolicy::TRUST_ALWAYS,
             $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_CUSTODIANS)
         );
+        $this->assertTrue($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS));
 
         $this->assertTrue($this->policy->shouldEnsureDefaultWorkgroup());
+        $this->assertTrue($this->policy->shouldEnsureDefaultRole());
         $this->assertTrue($this->policy->shouldSyncSdeWorkgroupsFromClaim());
         $this->assertTrue($this->policy->shouldApplyDefaultsOnCreate());
     }

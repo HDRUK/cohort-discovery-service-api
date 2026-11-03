@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Jobs\RefreshDistributionConceptsView;
 use App\Models\Collection;
+use App\Models\CollectionHost;
 use App\Models\Custodian;
 use App\Models\Distribution;
 use App\Models\Task;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -177,6 +179,7 @@ class CollectionController extends Controller
      *         name="state",
      *         in="query",
      *         required=false,
+     *         description="Collection state, 'all' (excludes deleted) or 'deleted' (soft-deleted collections only)",
      *         @OA\Schema(type="string", example="active")
      *     ),
      *     @OA\Parameter(
@@ -403,6 +406,7 @@ class CollectionController extends Controller
             $this->authorize('delete', $collection);
 
             if ($collection->delete()) {
+                $collection->setState(Collection::STATUS_DRAFT);
                 $activityLogger->deleted('collections', $collection);
 
                 return $this->OKResponse([]);
@@ -417,6 +421,53 @@ class CollectionController extends Controller
         }
 
         return $this->ErrorResponse();
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/collections/{id}/restore",
+     *     summary="Restore a soft-deleted collection as a draft",
+     *     tags={"Collections"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(response=200, description="Collection restored", @OA\JsonContent(ref="#/components/schemas/Collection")),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection not found"),
+     *     @OA\Response(response=422, description="Collection is not deleted")
+     * )
+     */
+    public function restore(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collection = Collection::withTrashed()->findOrFail($validated['id']);
+            $this->authorize('restore', $collection);
+
+            if (! $collection->trashed()) {
+                return $this->ValidationErrorResponse(['id' => ['collection is not deleted']]);
+            }
+
+            $collection->restore();
+            $collection->setState(Collection::STATUS_DRAFT);
+
+            $activityLogger->custom('collections', 'restored', $collection);
+
+            return $this->OKResponse($collection);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionController@restore - failed: '.$e->getMessage());
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
@@ -683,6 +734,8 @@ class CollectionController extends Controller
                 ->where('custodian_id', $custodian->id)
                 ->paginate($perPage);
 
+            $this->revealViewableHostCredentials($collections);
+
             $activityLogger->viewed('collections', $custodian, [
                 'filters' => $request->query(),
                 'result' => [
@@ -747,6 +800,7 @@ class CollectionController extends Controller
                     'required',
                     'integer',
                     Rule::exists('collection_hosts', 'id')
+                        ->whereNull('deleted_at')
                         ->where(fn ($q) => $q->where('custodian_id', $custodian->id)),
                 ],
                 'is_synthetic' => ['sometimes', 'boolean'],
@@ -1124,6 +1178,17 @@ class CollectionController extends Controller
         }
     }
 
+    // Temporary fix: the FE reads host credentials from the nested collection
+    // payload. This will be reworked once the FE fetches them from the
+    // collection host endpoints instead.
+    private function revealViewableHostCredentials(LengthAwarePaginator $collections): void
+    {
+        $collections->getCollection()
+            ->flatMap->host
+            ->filter(fn (CollectionHost $host) => Gate::allows('view', $host))
+            ->each->withCredentials();
+    }
+
     protected function collectionsIndexQuery(Request $request): Builder
     {
         return Collection::query()
@@ -1139,8 +1204,12 @@ class CollectionController extends Controller
                 'lastSuccessfulQuery'
             ])
             ->when($request->filled('state'), function ($q) use ($request) {
-                if ($request->state !== 'all') {
-                    $q->whereRelation('modelState.state', 'states.slug', strtolower($request->state));
+                $state = strtolower($request->state);
+
+                if ($state === Collection::FILTER_DELETED) {
+                    $q->onlyTrashed();
+                } elseif ($state !== 'all') {
+                    $q->whereRelation('modelState.state', 'states.slug', $state);
                 }
             })
             ->searchViaRequest()

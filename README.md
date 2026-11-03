@@ -44,9 +44,6 @@ APP_OPERATION_MODE="standalone"
 
 An unrecognised value refuses to boot rather than quietly defaulting.
 
-Full detail in [`docs/auth/`](docs/auth/README.md) - start with
-[Operation modes](docs/auth/operation-modes.md).
-
 ### Other
 
 ```
@@ -72,6 +69,9 @@ php artisan migrate:fresh --seed
 
 `DatabaseSeeder` covers workgroups, roles, states, custodians and feature flags, but **not**
 the personal access client - login will fail until one exists.
+
+Neither seeder creates a service account for the scheduled service calls. Create one after
+seeding with `php artisan service-account:create scheduler` (see [Service accounts](#service-accounts)).
 
 ## OMOP configuration
 
@@ -226,6 +226,54 @@ You then need to configure:
 
 For more information [follow the instructions here](https://hutch.health/bunny/config)
 
+The collection host must be linked to the collection named in `COLLECTION_ID`. A host can only poll
+for, and post results to, collections it is linked to (`collection_host_has_collections`); any other
+collection returns `403`.
+
+# Service accounts
+
+The service layer, `POST /api/v1/services/caller/{command}`, runs scheduled jobs such as
+`task-cleanup-job`. In deployed environments GCP Cloud Scheduler calls it. It uses its own HTTP Basic
+Auth credentials, held in the `service_accounts` table. Collection host credentials are rejected here.
+
+The commands it can run are listed in `app/Console/Commands/Dispatchers/ApiCommandDispatcher.php`.
+
+### Creating a service account
+
+No seeder or deployment step creates one. **After the initial `migrate --seed` of a new environment,
+create one by hand:**
+
+```
+php artisan service-account:create scheduler
+```
+
+The command prints the client ID, the secret, the `client_id:client_secret` pair and a ready-made
+`Authorization` header. The secret is stored hashed and is shown only once.
+
+To replace a lost or leaked secret, regenerate it. The client ID stays the same; the old secret
+stops working straight away, so update Secret Manager and re-apply Terraform afterwards:
+
+```
+php artisan service-account:create scheduler --regenerate
+```
+
+### Using it from GCP Cloud Scheduler
+
+1. Put the printed `client_id:client_secret` pair into the Secret Manager secret
+   `<environment>-cohort-api-scheduler-basic-auth`.
+2. Re-run `terraform apply` in `cohort-discovery-infrastructure`. The scheduler jobs build their
+   `Authorization` header from that secret when Terraform is applied, not on each call.
+
+### Calling it directly
+
+```
+curl -X POST -u '<client_id>:<client_secret>' \
+  http://localhost:8100/api/v1/services/caller/task-cleanup-job
+```
+
+Locally, `CLIENT_BASIC_AUTH_ENABLED=false` turns off both service account and collection host Basic
+Auth.
+
 # Standalone Integration
 
 In standalone mode the Cohort-Discovery-Service API is its own identity authority. Users live in the
@@ -249,8 +297,7 @@ your institution's finest. Password login carries on working alongside it; SSO i
 a replacement.
 
 One constraint worth knowing before you pick a provider: the token and JWKS endpoints must live on the same
-origin as the issuer, which rules out Google (three different hosts). See
-[Supported identity providers](docs/auth/standalone-oidc-setup.md#7-supported-identity-providers).
+origin as the issuer, which rules out Google (three different hosts).
 
 A word of warning before you start: SSO is *standalone-only*. In integrated mode the Health Data Gateway *is* the
 identity provider, so these endpoints politely 404 and pretend they don't exist.
@@ -308,34 +355,82 @@ setups withhold it) - without an email we can neither link nor create an account
    `access_token` - so the token itself never rides in a URL
 
 First-time visitors are created on the spot with the `DEFAULT` workgroup and the `user` role
-(controllable via the `sso-ensure-defaults-on-jit` feature flag). Returning visitors are matched by
+(controllable via `CLAIM_PROVISION_DEFAULTS_ON_CREATE`). Returning visitors are matched by
 their provider identity. If someone arrives whose email matches an existing account, we only link the
 two when the IdP swears the email is verified - anything less smells like an account takeover, and we
 send it to the error URL instead.
 
 ### Claim mapping (optional)
 
-By default the local database is the authority on roles and workgroups, and the IdP only proves
-identity. If your IdP already manages group membership, it can drive workgroups and roles instead:
+By default the local database is the authority and the IdP only proves identity. If your IdP already
+manages membership, it can drive three subjects instead - `workgroups`, `roles` and `custodians` -
+each governed by the same pair of settings, in both operation modes.
+
+**Trust** says when a claim is read at all: `never`, `first_login`, or `always`. An unrecognised
+value falls back to `never` rather than defaulting open.
+
+**Authoritative** says whether a sync may *remove* membership the claim did not mention. `false`
+only ever adds, so an admin's manual assignment survives the user's next login; `true` makes the
+claim the whole truth.
+
+Which claim carries what is per-provider in `config/sso.php`:
 
 ```
-SSO_DEFAULT_CLAIM_MAPPING_ENABLED=true
 SSO_DEFAULT_WORKGROUPS_CLAIM="eduperson_entitlement"
-SSO_DEFAULT_CLAIM_AUTHORITY="local"   # "local" only adds; "idp" also removes
+SSO_DEFAULT_ROLES_CLAIM="roles"
+SSO_DEFAULT_CUSTODIANS_CLAIM="teams"
 ```
 
-Claim values are matched against the `claim_value` column on `workgroups`. Under `local` an
-admin's manual assignment survives the user's next login; under `idp` the claim is the whole truth
-and anything it omits is removed. Roles need an explicit `role_map` in `config/sso.php` - an IdP
-string never becomes a Daphne role by accident.
+Workgroup and role claim values are matched against the mapping tables in
+`config/claimsaccesscontrol.php` (`workgroup_mappings`, `role_mappings`), so an IdP string never
+becomes a Daphne workgroup or role by accident. Custodians have no mapping table - a claim value is
+matched directly against the custodian's name, case-insensitively, so **setting
+`SSO_DEFAULT_CUSTODIANS_CLAIM` means any IdP group named after a custodian grants membership to it.**
+Leave it unset unless the IdP is a trusted source for that.
 
-See [Standalone OIDC setup](docs/auth/standalone-oidc-setup.md) for a worked Keycloak example, the full
-variable reference, linking rules, known limitations and a troubleshooting table. The frontend's side of
-the contract is in [Frontend contract](docs/auth/frontend-contract.md).
+Two things stop a claim locking people out. An authoritative workgroup sync force-merges `DEFAULT`,
+and an authoritative role sync force-merges `user`, so neither can leave an account with nothing
+(`CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP`, `CLAIM_SYNC_ENSURE_DEFAULT_ROLE`). Separately, a sync will
+never strip the `admin` role from the last admin in the system - it retains it and logs a warning
+instead. An absent claim is also not an empty one: if the IdP stops releasing a claim entirely
+nothing is removed, and only a claim that is present and empty clears the relation.
 
-> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed. See
-> [Migrating from the OIDC resource server](docs/auth/migrating-from-oidc-resource-server.md) - and read the
-> `SSO_MIGRATION_PROVIDER_SLUG` section before running migrations.
+#### Worked examples
+
+Fully claims-driven - the IdP is the authority on everything, on every login:
+
+```
+CLAIM_SYNC_WORKGROUPS="always"
+CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE=true
+CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP=true
+CLAIM_SYNC_ROLES="always"
+CLAIM_SYNC_ROLES_AUTHORITATIVE=true
+CLAIM_SYNC_ENSURE_DEFAULT_ROLE=true
+CLAIM_SYNC_CUSTODIANS="always"
+CLAIM_SYNC_CUSTODIANS_AUTHORITATIVE=true
+```
+
+Hybrid - roles from the IdP, workgroups seeded once then admin-managed, custodians entirely internal:
+
+```
+CLAIM_SYNC_WORKGROUPS="first_login"
+CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE=false
+CLAIM_SYNC_ROLES="always"
+CLAIM_SYNC_ROLES_AUTHORITATIVE=true
+CLAIM_SYNC_CUSTODIANS="never"
+```
+
+For the hybrid case leave `SSO_DEFAULT_CUSTODIANS_CLAIM` unset as well, so custodian membership is
+only ever assigned locally.
+
+> One trap worth knowing: Laravel loads `.env` via phpdotenv in immutable mode, so a duplicated key
+> does **not** override - the first occurrence wins and later ones are silently ignored. Keep one
+> block active rather than overriding individual lines further down the file.
+
+For a worked Keycloak example, the full variable reference, linking rules, known limitations and a troubleshooting table, see the [OIDC / SSO login](https://hdruk.github.io/cohort-discovery-service-docs/developers/modes/#oidc-sso-login-optional) section of the developer docs.
+
+> **Upgrading from v1.13.0?** The `OIDC_*` resource-server integration has been removed.
+> Read the `SSO_MIGRATION_PROVIDER_SLUG` section in the migrations before running them.
 
 ### Trying it locally
 

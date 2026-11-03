@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\CollectionNoActivityMonitor;
+use App\Console\Commands\CollectionTaskBacklogMonitor;
 use App\Console\Commands\Dispatchers\ApiCommandDispatcher;
 use App\Console\Commands\DistributionsCollector;
 use App\Jobs\TaskCleanupJob;
@@ -43,6 +44,15 @@ class ApiCommandDispatcherTest extends TestCase
         $mock->shouldReceive('handle')->once()->with([])->andReturn(1);
 
         $this->dispatcher->run('collection-no-activity-monitor', []);
+    }
+
+    public function test_collection_task_backlog_monitor_is_routed_via_dispatcher(): void
+    {
+        $mock = $this->mock(CollectionTaskBacklogMonitor::class);
+        $mock->shouldReceive('rules')->andReturn([]);
+        $mock->shouldReceive('handle')->once()->with([])->andReturn(1);
+
+        $this->dispatcher->run('collection-task-backlog-monitor', []);
     }
 
     public function test_unknown_command_throws_not_found_exception(): void

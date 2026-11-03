@@ -66,6 +66,10 @@ return [
             'claim_mapping' => [
                 'workgroups_claim' => env('SSO_DEFAULT_WORKGROUPS_CLAIM', 'eduperson_entitlement'),
                 'roles_claim' => env('SSO_DEFAULT_ROLES_CLAIM'),
+                // Unset by default: custodian membership is manually
+                // assigned in standalone mode, not claim-provisioned - set
+                // this only when the IdP is a trusted source for it
+                'custodians_claim' => env('SSO_DEFAULT_CUSTODIANS_CLAIM'),
             ],
         ],
     ],

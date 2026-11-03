@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\CollectionHost;
 use App\Models\Custodian;
+use App\Services\Activity\ActivityLogger;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Str;
@@ -30,6 +32,15 @@ class CollectionHostController extends Controller
      *     summary="Get all collection hosts",
      *     tags={"CollectionHosts"},
      *
+     *     @OA\Parameter(
+     *         name="trashed",
+     *         in="query",
+     *         required=false,
+     *         description="'only' returns soft-deleted hosts, 'with' includes them; omitted excludes them",
+     *
+     *         @OA\Schema(type="string", enum={"only","with"})
+     *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="List of collection hosts",
@@ -44,10 +55,13 @@ class CollectionHostController extends Controller
             $this->authorize('viewAny', CollectionHost::class);
 
             $hosts = CollectionHost::with(['collections','custodian'])
+                ->when($request->query('trashed') === 'only', fn ($q) => $q->onlyTrashed())
+                ->when($request->query('trashed') === 'with', fn ($q) => $q->withTrashed())
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting()
-                ->get();
+                ->get()
+                ->each->withCredentials();
 
             return $this->OKResponse($hosts);
         } catch (AuthorizationException $e) {
@@ -63,13 +77,20 @@ class CollectionHostController extends Controller
     public function indexByCustodian(Request $request, string $custodianPid): JsonResponse
     {
         try {
-            $custodian = Custodian::where('pid', $custodianPid)->first();
-            $custodianId = $custodian->id;
+            $custodian = Custodian::where('pid', $custodianPid)->firstOrFail();
+            $this->authorize('view', $custodian);
 
-            return $this->OKResponse(CollectionHost::where('custodian_id', $custodianId)
+            return $this->OKResponse(CollectionHost::where('custodian_id', $custodian->id)
+                    ->when($request->query('trashed') === 'only', fn ($q) => $q->onlyTrashed())
+                    ->when($request->query('trashed') === 'with', fn ($q) => $q->withTrashed())
                     ->with(['collections','custodian'])
                     ->applySorting()
-                    ->get());
+                    ->get()
+                    ->each->withCredentials());
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
         } catch (\Throwable $e) {
             \Log::error('CollectionHostController@indexByCustodian - failed: '.
                 json_encode($request->all()).' (exception: '.$e->getTraceAsString().')');
@@ -115,7 +136,7 @@ class CollectionHostController extends Controller
 
             $this->authorize('view', $collectionHost);
 
-            return $this->OKResponse($collectionHost);
+            return $this->OKResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Exception $e) {
@@ -166,7 +187,7 @@ class CollectionHostController extends Controller
                 'custodian_id' => $validated['custodian_id'],
             ]);
 
-            return $this->CreatedResponse($collectionHost);
+            return $this->CreatedResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -224,7 +245,7 @@ class CollectionHostController extends Controller
 
             $collectionHost->update($validated);
 
-            return $this->OKResponse($collectionHost);
+            return $this->OKResponse($collectionHost->withCredentials());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -259,7 +280,7 @@ class CollectionHostController extends Controller
      *     )
      * )
      */
-    public function destroy(ModelBackedRequest $request, int $id): JsonResponse
+    public function destroy(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
     {
         $validated = $request->validated();
 
@@ -268,6 +289,7 @@ class CollectionHostController extends Controller
             $this->authorize('delete', $collectionHost);
 
             $collectionHost->delete();
+            $activityLogger->deleted('collection_hosts', $collectionHost);
 
             return $this->OKResponse([]);
         } catch (AuthorizationException $e) {
@@ -277,6 +299,54 @@ class CollectionHostController extends Controller
                 json_encode($validated).' (exception: '.$e->getTraceAsString().')');
 
             return $this->NotFoundResponse();
+        }
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/collection_hosts/{id}/restore",
+     *     summary="Restore a soft-deleted collection host",
+     *     tags={"CollectionHosts"},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(response=200, description="Collection host restored"),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Collection host not found"),
+     *     @OA\Response(response=422, description="Collection host is not deleted")
+     * )
+     */
+    public function restore(ModelBackedRequest $request, int $id, ActivityLogger $activityLogger): JsonResponse
+    {
+        $request->merge(['id' => $id]);
+        $validated = $request->validated();
+
+        try {
+            $collectionHost = CollectionHost::withTrashed()->findOrFail($validated['id']);
+            $this->authorize('restore', $collectionHost);
+
+            if (! $collectionHost->trashed()) {
+                return $this->ValidationErrorResponse(['id' => ['collection host is not deleted']]);
+            }
+
+            $collectionHost->restore();
+            $activityLogger->custom('collection_hosts', 'restored', $collectionHost);
+
+            return $this->OKResponse($collectionHost);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
+        } catch (ModelNotFoundException $e) {
+            return $this->NotFoundResponse();
+        } catch (\Throwable $e) {
+            \Log::error('CollectionHostController@restore - failed: '.$e->getMessage());
+
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 }

@@ -5,7 +5,9 @@ use App\Http\Controllers\Api\V1\ClickController;
 use App\Http\Controllers\Api\V1\CodeController;
 use App\Http\Controllers\Api\V1\CollectionConfigController;
 use App\Http\Controllers\Api\V1\CollectionController;
+use App\Http\Controllers\Api\V1\CollectionHealthController;
 use App\Http\Controllers\Api\V1\CollectionHostController;
+use App\Http\Controllers\Api\V1\CollectionTaskHistoryController;
 use App\Http\Controllers\Api\V1\ConceptSetController;
 use App\Http\Controllers\Api\V1\CustodianController;
 use App\Http\Controllers\Api\V1\CustodianNetworkController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkgroupController;
 use App\Http\Controllers\Api\V1\FeatureController;
 use App\Http\Middleware\CollectionHostBasicAuth;
+use App\Http\Middleware\ServiceAccountBasicAuth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +65,7 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::post('/v1/collection_hosts', [CollectionHostController::class, 'store']);
     Route::put('/v1/collection_hosts/{id}', [CollectionHostController::class, 'update']);
     Route::delete('/v1/collection_hosts/{id}', [CollectionHostController::class, 'destroy']);
+    Route::put('/v1/collection_hosts/{id}/restore', [CollectionHostController::class, 'restore']);
 
     Route::get('/v1/custodians/{custodianPid}/collection_hosts', [CollectionHostController::class, 'indexByCustodian']);
 
@@ -90,13 +94,13 @@ Route::prefix('v1/task')
     ->controller(TaskController::class)
     ->group(function () {
 
-        Route::get('/status/{pid}', 'status')
+        Route::get('/status/{collectionPid}', 'status')
             ->name('task.status');
 
-        Route::get('/nextjob/{collectionId}', 'nextJob')
+        Route::get('/nextjob/{collectionPid}', 'nextJob')
             ->name('task.nextjob');
 
-        Route::post('/result/{uuid}/{collectionId}', 'receiveResult')
+        Route::post('/result/{taskPid}/{collectionPid}', 'receiveResult')
             ->name('task.result');
 
     });
@@ -142,12 +146,15 @@ Route::middleware(['decode.jwt'])->group(function () {
     Route::put('/v1/collections/{id}', [CollectionController::class, 'update']);
     Route::delete('/v1/collections/{id}', [CollectionController::class, 'destroy']);
     Route::put('/v1/collections/{id}/transition_to', [CollectionController::class, 'transitionTo']);
+    Route::put('/v1/collections/{id}/restore', [CollectionController::class, 'restore']);
 
     Route::get('/v1/collections/status/{status}', [CollectionController::class, 'getByStatus']);
     Route::get('/v1/collection/{pid}', [CollectionController::class, 'getCollection']);
     Route::get('/v1/collections/{pid}/details', [CollectionController::class, 'getCollectionDetails']);
     Route::get('/v1/collections/{pid}/concepts', [CollectionController::class, 'getCollectionConcepts']);
     Route::get('/v1/collections/{pid}/vocab-drift', [CollectionController::class, 'getCollectionVocabDrift']);
+    Route::get('/v1/collections/{id}/health', [CollectionHealthController::class, 'show']);
+    Route::get('/v1/collections/{id}/task-history', [CollectionTaskHistoryController::class, 'index']);
     Route::get('/v1/collection/{pid}/codes', [CodeController::class, 'getCollectionCodeStats']);
 
     Route::post('/v1/collection/{pid}/distributions/run-manually', [DistributionController::class, 'manuallyTriggeredRun'])->whereUuid('pid');
@@ -187,6 +194,7 @@ Route::middleware(['decode.jwt'])->group(function () {
 });
 
 Route::prefix('auth')->group(function () {
+    Route::get('/methods', [\App\Http\Controllers\Api\V1\AuthMethodsController::class, 'index']);
     Route::post('/login', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'login']);
     Route::post('/logout', [\App\Http\Controllers\Api\V1\LocalAuthController::class, 'logout']);
 });
@@ -208,4 +216,4 @@ Route::get('/status', function (Request $request) {
 });
 
 Route::post('/v1/services/caller/{command}', [ServiceCallerController::class, 'dispatch'])
-    ->middleware(['throttle:polling', CollectionHostBasicAuth::class]);
+    ->middleware(['throttle:polling', ServiceAccountBasicAuth::class]);

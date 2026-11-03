@@ -278,7 +278,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules' => array_map(
-                    fn($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
+                    fn ($rule) => ['rules_oper' => 'AND', 'rules' => [$rule]],
                     $group['rules']
                 ),
             ];
@@ -684,7 +684,7 @@ class BunnyQueryContext implements QueryContextInterface
             return [
                 'rules_oper' => 'OR',
                 'rules'      => array_map(
-                    fn(array $c) => $this->makeSingleConceptRule($child, $c),
+                    fn (array $c) => $this->makeSingleConceptRule($child, $c),
                     $concept
                 ),
             ];
@@ -696,9 +696,6 @@ class BunnyQueryContext implements QueryContextInterface
     private function makeSingleConceptRule(array $child, array $concept): array
     {
         $isExcluded = (bool) ($child['exclude'] ?? false);
-        $timeConstraint = $child['timeConstraint'] ?? [null, null];
-        $ageConstraint = $child['ageConstraint'] ?? [null, null];
-        $measurementValue = $child['valueAsNumber'] ?? null;
 
         $category = $concept['category'] ?? 'UNKNOWN';
 
@@ -708,21 +705,42 @@ class BunnyQueryContext implements QueryContextInterface
 
         $conceptId = (string) ($concept['concept_id'] ?? '');
 
-        if ($measurementValue !== null && count($measurementValue) === 2) {
-            [$lower, $upper] = $measurementValue;
+        $rule = $this->makeMeasurementValueRule($conceptId, $child['valueAsNumber'] ?? null, $isExcluded)
+            ?? $this->makeConceptRule($conceptId, $category, $isExcluded);
 
-            if ($lower !== null || $upper !== null) {
-                return [
-                    'varname' => 'OMOP=' . $conceptId,
-                    'varcat'  => 'Measurement',
-                    'type'    => 'NUM',
-                    'oper'    => $isExcluded ? '!=' : '=',
-                    'value'   => ($lower ?? self::BUNNY_NUM_LOWER_SENTINEL) . '|' . ($upper ?? self::BUNNY_NUM_UPPER_SENTINEL),
-                ];
-            }
+        $bunnyTime = $this->encodeRuleTime($child);
+        if ($bunnyTime !== null) {
+            $rule['time'] = $bunnyTime;
         }
 
-        $rule = $this->makeConceptRule($conceptId, $category, $isExcluded);
+        return $rule;
+    }
+
+    private function makeMeasurementValueRule(string $conceptId, ?array $measurementValue, bool $isExcluded): ?array
+    {
+        if ($measurementValue === null || count($measurementValue) !== 2) {
+            return null;
+        }
+
+        [$lower, $upper] = $measurementValue;
+
+        if ($lower === null && $upper === null) {
+            return null;
+        }
+
+        return [
+            'varname' => 'OMOP=' . $conceptId,
+            'varcat'  => 'Measurement',
+            'type'    => 'NUM',
+            'oper'    => $isExcluded ? '!=' : '=',
+            'value'   => ($lower ?? self::BUNNY_NUM_LOWER_SENTINEL) . '|' . ($upper ?? self::BUNNY_NUM_UPPER_SENTINEL),
+        ];
+    }
+
+    private function encodeRuleTime(array $child): ?string
+    {
+        $timeConstraint = $child['timeConstraint'] ?? [null, null];
+        $ageConstraint = $child['ageConstraint'] ?? [null, null];
 
         // note: bunny cannot handle both time and age constraints
         // - try time constraint then fallback to age constraint
@@ -737,11 +755,7 @@ class BunnyQueryContext implements QueryContextInterface
             $bunnyTime = $this->encodeBunnyAgeConstraint($lower, $upper);
         }
 
-        if ($bunnyTime !== null) {
-            $rule['time'] = $bunnyTime;
-        }
-
-        return $rule;
+        return $bunnyTime;
     }
 
     protected function makeLeafAgeFilter(array $child): array

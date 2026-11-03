@@ -60,4 +60,9 @@ class CollectionPolicy
     {
         return $this->access($user, $collection);
     }
+
+    public function restore(User $user, Collection $collection): bool
+    {
+        return $this->access($user, $collection);
+    }
 }

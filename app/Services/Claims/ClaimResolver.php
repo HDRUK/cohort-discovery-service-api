@@ -2,6 +2,7 @@
 
 namespace App\Services\Claims;
 
+use App\Models\Custodian;
 use App\Models\Workgroup;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -32,15 +33,42 @@ class ClaimResolver
 
     public function roleIdsForClaimValues(array $claimValues): array
     {
-        $normalised = $this->normalise(
+        return $this->roleIdsForNames(
             $this->localNames('claimsaccesscontrol.role_mappings', $claimValues)
         );
+    }
+
+    public function roleIdsForNames(array $names): array
+    {
+        $normalised = $this->normalise($names);
 
         if ($normalised === []) {
             return [];
         }
 
         return Role::query()
+            ->whereIn(DB::raw('LOWER(name)'), $normalised)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Resolve claim values directly to existing Custodian rows, matched
+     * case-insensitively on name. Unlike workgroups/roles there is no
+     * local mapping table and nothing is created on the fly - in
+     * standalone mode custodians are provisioned by an admin, and a claim
+     * value with no matching record is simply ignored.
+     */
+    public function custodianIdsForClaimValues(array $claimValues): array
+    {
+        $normalised = $this->normalise($claimValues);
+
+        if ($normalised === []) {
+            return [];
+        }
+
+        return Custodian::query()
             ->whereIn(DB::raw('LOWER(name)'), $normalised)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)

@@ -3,6 +3,7 @@
 namespace App\Services\TokenSync;
 
 use App\Models\User;
+use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
 use Carbon\CarbonInterface;
@@ -12,6 +13,7 @@ class WorkgroupSyncerService
     private array $nhsWorkgroups = ['NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH'];
 
     public function __construct(
+        private readonly ActivityLogger $activity,
         private readonly ClaimResolver $resolver,
         private readonly ClaimSyncPolicy $policy,
     ) {
@@ -19,10 +21,14 @@ class WorkgroupSyncerService
 
     public function sync(
         User $user,
-        array $tokenWorkgroups,
+        ?array $tokenWorkgroups,
         bool $hasSdeApproval,
         ?CarbonInterface $claimsSyncedAt = null,
     ): bool {
+        if ($tokenWorkgroups === null) {
+            return false;
+        }
+
         if (! $this->policy->shouldSync(ClaimSyncPolicy::SUBJECT_WORKGROUPS, $claimsSyncedAt)) {
             return false;
         }
@@ -32,11 +38,22 @@ class WorkgroupSyncerService
             $this->resolver->workgroupIdsForClaimValues($tokenWorkgroups),
         )));
 
-        if ($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS)) {
-            $user->workgroups()->sync($finalIds);
-        } else {
-            $user->workgroups()->syncWithoutDetaching($finalIds);
-        }
+        $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS);
+
+        $changes = $authoritative
+            ? $user->workgroups()->sync($finalIds)
+            : $user->workgroups()->syncWithoutDetaching($finalIds);
+
+        $this->activity->membershipChanged(
+            'claims',
+            'claims_synced',
+            $user,
+            'workgroups',
+            $changes,
+            $authoritative,
+            $this->policy->trustedModeOrNever(ClaimSyncPolicy::SUBJECT_WORKGROUPS),
+            'claims_synced',
+        );
 
         return true;
     }

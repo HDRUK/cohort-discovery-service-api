@@ -27,6 +27,8 @@ class FeatureSeeder extends Seeder
         'query-builder-use-demographic-rule' => false,
         'click-tracking-anonymous' => false,
         'query-builder-use-race' => true,
+        'query-rate-limit' => false,
+        'collection-task-backlog-limit' => false,
     ];
 
     /**

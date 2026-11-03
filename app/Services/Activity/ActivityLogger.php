@@ -61,6 +61,29 @@ class ActivityLogger
         ]), $description);
     }
 
+    public function membershipChanged(
+        string $logName,
+        string $event,
+        Model $subject,
+        string $relation,
+        array $changes,
+        bool $authoritative,
+        string $trust,
+        ?string $description = null,
+    ): void {
+        if ($changes['attached'] === [] && $changes['detached'] === []) {
+            return;
+        }
+
+        $this->custom($logName, $event, $subject, [
+            'relation' => $relation,
+            'authoritative' => $authoritative,
+            'trust' => $trust,
+            'attached' => array_values($changes['attached']),
+            'detached' => array_values($changes['detached']),
+        ], $description);
+    }
+
     /**
      * Pass $anonymous when the entry must not be attributable to a user
      * (e.g. events covered by the DPIA that may only be logged in aggregate).

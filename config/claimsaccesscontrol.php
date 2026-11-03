@@ -46,10 +46,12 @@ return [
         'roles' => [
             'trust' => env('CLAIM_SYNC_ROLES', 'always'),
             'authoritative' => (bool) env('CLAIM_SYNC_ROLES_AUTHORITATIVE', true),
+            'ensure_default' => (bool) env('CLAIM_SYNC_ENSURE_DEFAULT_ROLE', true),
         ],
 
         'custodians' => [
             'trust' => env('CLAIM_SYNC_CUSTODIANS', 'always'),
+            'authoritative' => (bool) env('CLAIM_SYNC_CUSTODIANS_AUTHORITATIVE', true),
         ],
 
         'provision' => [

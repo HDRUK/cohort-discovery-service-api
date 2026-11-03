@@ -9,6 +9,7 @@ use App\Models\Query;
 use App\Services\Activity\ActivityLogger;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
+use App\Services\Submitters\QueryRateLimiter;
 use App\Services\Submitters\QuerySubmissionService;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -204,14 +205,26 @@ class QueryController extends Controller
      *     ),
      *
      *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=429, description="Monthly query limit reached"),
      *     @OA\Response(response=500, description="Server error")
      * )
      */
-    public function store(ModelBackedRequest $request, ActivityLogger $activityLogger): JsonResponse
-    {
+    public function store(
+        ModelBackedRequest $request,
+        ActivityLogger $activityLogger,
+        QueryRateLimiter $rateLimiter
+    ): JsonResponse {
         $validated = $request->validated();
 
         try {
+            if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
+                $activityLogger->custom('queries', 'rate_limit_exceeded', null, [
+                    'monthly_limit' => config('api.monthly_query_limit'),
+                ]);
+
+                return $this->TooManyRequestsResponse();
+            }
+
             $result = app(QuerySubmissionService::class)
                 ->handle($validated, Auth::id());
 
@@ -522,6 +535,7 @@ class QueryController extends Controller
     public function duplicateAndReRun(
         ModelBackedRequest $request,
         ActivityLogger $activityLogger,
+        QueryRateLimiter $rateLimiter,
         mixed $key = null
     ): JsonResponse {
         $validated = $request->validated();
@@ -532,6 +546,14 @@ class QueryController extends Controller
             $query = Query::with('tasks.collection')
                 ->whereIdOrPid($key)
                 ->first();
+
+            if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
+                $activityLogger->custom('queries', 'rate_limit_exceeded', $query, [
+                    'monthly_limit' => config('api.monthly_query_limit'),
+                ]);
+
+                return $this->TooManyRequestsResponse();
+            }
 
             $data['name'] = $query->name .= ' - ReRun (' . now()->format('Y-m-d H:i:s') . ')';
             $data['task_type'] = TaskType::A;
