@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Console\Commands\DistributionsCollector;
+use App\Enums\CollectionConfigType;
 use App\Enums\FrequencyMode;
 use App\Enums\QueryType;
 use App\Enums\TaskType;
@@ -53,7 +54,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -63,7 +64,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::MONTHLY->value,
             'run_time_frequency' => $now->weekOfMonth,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -118,7 +119,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::WEEKLY->value,
             'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -128,7 +129,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::WEEKLY->value,
             'run_time_frequency' => $now->dayOfWeek,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -165,6 +166,44 @@ class DistributionsCollectorTest extends TestCase
         $this->assertEquals($query->name, 'omop-concept-job-'.strtolower($collection->name));
     }
 
+    public function test_it_creates_demographics_query_and_distribution_task_for_demographics_config(): void
+    {
+        $this->disableObservers();
+
+        $now = Carbon::now($this->timezone);
+        Carbon::setTestNow($now);
+
+        $collection = Collection::factory()->create([
+            'name' => 'TestCollection',
+        ]);
+
+        CollectionConfig::create([
+            'enabled' => 1,
+            'run_time_hour' => $now->hour,
+            'run_time_minute' => $now->minute,
+            'frequency_mode' => FrequencyMode::WEEKLY->value,
+            'run_time_frequency' => $now->dayOfWeek,
+            'collection_id' => $collection->id,
+            'type' => CollectionConfigType::DEMOGRAPHICS->value,
+        ]);
+
+        $command = app(DistributionsCollector::class);
+        $result = $command->handle([]);
+
+        $this->assertTrue($result[0]['weekly'] === 1);
+        $this->assertDatabaseCount('queries', 1);
+        $this->assertDatabaseCount('tasks', 1);
+
+        $query = Query::first();
+        $task = Task::first();
+
+        $this->assertTrue(QueryType::DEMOGRAPHICS->value === $query->definition['code']);
+        $this->assertTrue(QueryType::DEMOGRAPHICS->value === $query->query_type);
+        $this->assertEquals($query->id, $task->query_id);
+        $this->assertTrue(TaskType::B->value === $task->task_type->value);
+        $this->assertEquals($query->name, 'distribution-job-'.strtolower($collection->name));
+    }
+
     public function test_it_creates_query_and_task_for_quarterly_config_matching_time_and_quarter(): void
     {
         $this->disableObservers();
@@ -186,7 +225,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::QUARTERLY->value,
             'run_time_frequency' => (int) $currentQuarter,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         $this->assertDatabaseHas('collection_config', [
@@ -236,7 +275,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::BIANNUALLY->value,
             'run_time_frequency' => $currentHalf,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         Log::spy();
@@ -281,7 +320,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::QUARTERLY->value,
             'run_time_frequency' => $quarter,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         // Already ran this quarter
@@ -323,7 +362,7 @@ class DistributionsCollectorTest extends TestCase
             'frequency_mode' => FrequencyMode::BIANNUALLY->value,
             'run_time_frequency' => $currentHalf,
             'collection_id' => $collection->id,
-            'type' => TaskType::A->value,
+            'type' => CollectionConfigType::GENERIC->value,
         ]);
 
         CollectionConfigRun::create([
