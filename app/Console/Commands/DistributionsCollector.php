@@ -218,7 +218,7 @@ class DistributionsCollector implements ApiCommand
 
             Log::info($this->tag.' generating queries and tasks for '.$collectionName.' config ('.$c->id.')');
 
-            $jobType = DistributionJobType::tryFrom(strtolower((string) $c->type));
+            $jobType = DistributionJobType::tryFrom((string) $c->type);
 
             if (! $jobType) {
                 $errorMsg = $this->tag.' attempting to createQueriesAndTasks with unknown DistributionJobType: '.$c->type.

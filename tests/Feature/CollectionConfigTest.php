@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DistributionJobType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Models\User;
@@ -96,7 +97,7 @@ class CollectionConfigTest extends TestCase
         $collection = Collection::factory()->create();
 
         $this->payload['collection_id'] = $collection->id;
-        $this->payload['type'] = 'x';
+        $this->payload['type'] = 'b';
 
         $response = $this->actingAsJwt(
             $this->user,
@@ -127,7 +128,9 @@ class CollectionConfigTest extends TestCase
 
         $this->payload['run_time_hour'] = 12;
         $this->payload['run_time_minute'] = 30;
-        $this->payload['type'] = ($this->payload['type'] === 'a' ? 'b' : 'a');
+        $this->payload['type'] = $this->payload['type'] === DistributionJobType::GENERIC
+            ? DistributionJobType::DEMOGRAPHICS->value
+            : DistributionJobType::GENERIC->value;
 
         $response = $this->actingAsJwt(
             $this->user,

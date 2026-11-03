@@ -4,8 +4,8 @@ namespace App\Enums;
 
 enum DistributionJobType: string
 {
-    case GENERIC = 'a';
-    case DEMOGRAPHICS = 'b';
+    case GENERIC = 'GENERIC';
+    case DEMOGRAPHICS = 'DEMOGRAPHICS';
 
     public function queryType(): QueryType
     {
