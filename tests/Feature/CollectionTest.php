@@ -670,37 +670,41 @@ class CollectionTest extends TestCase
         $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
 
         $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->id)
+            ->getJson(self::BASE_ADMIN_URL)
             ->assertStatus(200)
-            ->assertJsonPath('data.host.id', $host->id)
-            ->assertJsonPath('data.host.name', $host->name);
+            ->assertJsonPath('data.data.0.host.id', $host->id)
+            ->assertJsonPath('data.data.0.host.name', $host->name);
     }
 
     public function test_it_returns_null_host_for_a_collection_without_one(): void
     {
-        $collection = Collection::factory()->create();
+        Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
 
-        $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->id)
-            ->assertStatus(200)
-            ->assertJsonPath('data.host', null);
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_ADMIN_URL)
+            ->assertStatus(200);
+
+        $this->assertArrayHasKey('host', $response->json('data.data.0'));
+        $this->assertNull($response->json('data.data.0.host'));
     }
 
     public function test_it_rejects_a_second_host_for_a_collection(): void
     {
-        $collection = Collection::factory()->create();
-        $this->linkHost($collection, CollectionHost::factory()->create());
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
 
         $this->expectException(UniqueConstraintViolationException::class);
 
-        $this->linkHost($collection, CollectionHost::factory()->create());
+        $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
     }
 
     public function test_a_host_can_serve_several_collections(): void
     {
-        $host = CollectionHost::factory()->create();
-        $first = Collection::factory()->create();
-        $second = Collection::factory()->create();
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        $first = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $second = Collection::factory()->create(['custodian_id' => $custodian->id]);
 
         $this->linkHost($first, $host);
         $this->linkHost($second, $host);
