@@ -29,6 +29,7 @@ class TaskControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        CollectionHostHasCollection::truncate();
         $this->enableObservers();
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole('admin');
