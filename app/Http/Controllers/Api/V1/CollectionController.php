@@ -348,10 +348,12 @@ class CollectionController extends Controller
             $before = $collection->only(array_keys($validated));
 
             if ($collection->update($validated)) {
-                CollectionHostHasCollection::updateOrCreate(
-                    ['collection_id' => $collection->id],
-                    ['collection_host_id' => $validated['host_id']]
-                );
+                if (array_key_exists('host_id', $validated)) {
+                    CollectionHostHasCollection::updateOrCreate(
+                        ['collection_id' => $collection->id],
+                        ['collection_host_id' => $validated['host_id']]
+                    );
+                }
 
                 if ($collection->wasChanged('is_synthetic')) {
                     RefreshDistributionConceptsView::dispatch();

@@ -710,6 +710,23 @@ class CollectionTest extends TestCase
         $this->assertCount(2, $host->collections);
     }
 
+    public function test_updating_a_collection_without_host_id_keeps_its_host(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$collection->id, ['is_synthetic' => true])
+            ->assertStatus(200)
+            ->assertJsonPath('data.is_synthetic', true);
+
+        $this->assertDatabaseHas('collection_host_has_collections', [
+            'collection_id' => $collection->id,
+            'collection_host_id' => $host->id,
+        ]);
+    }
+
     public function test_updating_a_collection_replaces_its_host(): void
     {
         $custodian = Custodian::factory()->create();
