@@ -826,10 +826,10 @@ class CollectionController extends Controller
                 'death_enabled' => $validated['death_enabled'] ?? false,
             ]);
 
-            CollectionHostHasCollection::updateOrCreate(
-                ['collection_id' => $collection->id],
-                ['collection_host_id' => $validated['host_id']]
-            );
+            CollectionHostHasCollection::create([
+                'collection_id' => $collection->id,
+                'collection_host_id' => $validated['host_id'],
+            ]);
 
             $activityLogger->created('collections', $collection);
 
