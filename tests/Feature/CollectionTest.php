@@ -7,6 +7,7 @@ use DB;
 use Str;
 use App\Models\Collection;
 use App\Models\CollectionHost;
+use App\Models\CollectionHostHasCollection;
 use App\Models\CustodianHasUser;
 use App\Models\Custodian;
 use App\Models\User;
@@ -18,6 +19,7 @@ use App\Services\QueryContext\QueryContextType;
 use App\Models\CollectionActivityLog;
 use App\Enums\TaskType;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Tests\TestCase;
 
 class CollectionTest extends TestCase
@@ -39,6 +41,7 @@ class CollectionTest extends TestCase
         CustodianHasUser::truncate();
         Collection::truncate();
         CollectionHost::truncate();
+        CollectionHostHasCollection::truncate();
         UserHasWorkgroup::truncate();
         WorkgroupHasCollection::truncate();
         CollectionActivityLog::truncate();
@@ -617,52 +620,112 @@ class CollectionTest extends TestCase
     {
         $custodian = Custodian::factory()->create();
         $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
-        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
-        $collection->host()->sync([$host->id]);
+        $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_ADMIN_URL);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.data.0.host.0.id', $host->id)
-            ->assertJsonMissingPath('data.data.0.host.0.client_id')
-            ->assertJsonMissingPath('data.data.0.host.0.client_secret');
+            ->assertJsonPath('data.data.0.host.id', $host->id)
+            ->assertJsonMissingPath('data.data.0.host.client_id')
+            ->assertJsonMissingPath('data.data.0.host.client_secret');
     }
 
-    public function test_custodian_collection_list_includes_host_credentials_for_a_member(): void
+    public function test_custodian_collection_list_hides_host_credentials_from_a_member(): void
     {
         $this->user->removeRole('admin');
         $custodian = Custodian::factory()->create();
         $this->user->custodians()->attach($custodian->id);
         $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
-        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
-        $collection->host()->sync([$host->id]);
+        $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.data.0.host.0.client_id', $host->client_id)
-            ->assertJsonPath('data.data.0.host.0.client_secret', $host->client_secret);
+            ->assertJsonPath('data.data.0.host.id', $host->id)
+            ->assertJsonMissingPath('data.data.0.host.client_id')
+            ->assertJsonMissingPath('data.data.0.host.client_secret');
     }
 
-    public function test_custodian_collection_list_hides_credentials_of_a_host_the_member_cannot_view(): void
+    public function test_custodian_collection_list_hides_host_credentials_from_an_admin(): void
     {
-        $this->user->removeRole('admin');
         $custodian = Custodian::factory()->create();
-        $otherCustodian = Custodian::factory()->create();
-        $this->user->custodians()->attach($custodian->id);
         $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
-        $host = CollectionHost::factory()->create(['custodian_id' => $otherCustodian->id]);
-        $collection->host()->sync([$host->id]);
+        $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(sprintf(self::CUSTODIAN_BASE_URL, $custodian->pid));
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.data.0.host.0.id', $host->id)
-            ->assertJsonMissingPath('data.data.0.host.0.client_id')
-            ->assertJsonMissingPath('data.data.0.host.0.client_secret');
+            ->assertJsonPath('data.data.0.host.id', $host->id)
+            ->assertJsonMissingPath('data.data.0.host.client_id')
+            ->assertJsonMissingPath('data.data.0.host.client_secret');
+    }
+
+    public function test_it_returns_one_host_object_per_collection(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $host = $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.host.id', $host->id)
+            ->assertJsonPath('data.host.name', $host->name);
+    }
+
+    public function test_it_returns_null_host_for_a_collection_without_one(): void
+    {
+        $collection = Collection::factory()->create();
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.host', null);
+    }
+
+    public function test_it_rejects_a_second_host_for_a_collection(): void
+    {
+        $collection = Collection::factory()->create();
+        $this->linkHost($collection, CollectionHost::factory()->create());
+
+        $this->expectException(UniqueConstraintViolationException::class);
+
+        $this->linkHost($collection, CollectionHost::factory()->create());
+    }
+
+    public function test_a_host_can_serve_several_collections(): void
+    {
+        $host = CollectionHost::factory()->create();
+        $first = Collection::factory()->create();
+        $second = Collection::factory()->create();
+
+        $this->linkHost($first, $host);
+        $this->linkHost($second, $host);
+
+        $this->assertSame($host->id, $first->host->id);
+        $this->assertSame($host->id, $second->host->id);
+        $this->assertCount(2, $host->collections);
+    }
+
+    public function test_updating_a_collection_replaces_its_host(): void
+    {
+        $custodian = Custodian::factory()->create();
+        $collection = Collection::factory()->create(['custodian_id' => $custodian->id]);
+        $this->linkHost($collection, CollectionHost::factory()->create(['custodian_id' => $custodian->id]));
+        $newHost = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL.'/'.$collection->id, ['host_id' => $newHost->id])
+            ->assertStatus(200);
+
+        $this->assertDatabaseCount('collection_host_has_collections', 1);
+        $this->assertDatabaseHas('collection_host_has_collections', [
+            'collection_id' => $collection->id,
+            'collection_host_id' => $newHost->id,
+        ]);
     }
 
     public function test_deleting_a_collection_soft_deletes_it_and_resets_state_to_draft(): void
@@ -1296,6 +1359,16 @@ class CollectionTest extends TestCase
             'rounding' => '2dp',
             'threshold' => '5',
         ], $overrides));
+    }
+
+    private function linkHost(Collection $collection, CollectionHost $host): CollectionHost
+    {
+        CollectionHostHasCollection::create([
+            'collection_host_id' => $host->id,
+            'collection_id' => $collection->id,
+        ]);
+
+        return $host;
     }
 
 }

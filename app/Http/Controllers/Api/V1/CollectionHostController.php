@@ -43,7 +43,7 @@ class CollectionHostController extends Controller
      *
      *     @OA\Response(
      *         response=200,
-     *         description="List of collection hosts",
+     *         description="List of collection hosts, without credentials",
      *
      *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/CollectionHost"))
      *     )
@@ -60,8 +60,7 @@ class CollectionHostController extends Controller
                 ->searchViaRequest()
                 ->filterViaRequest()
                 ->applySorting()
-                ->get()
-                ->each->withCredentials();
+                ->get();
 
             return $this->OKResponse($hosts);
         } catch (AuthorizationException $e) {
@@ -85,8 +84,7 @@ class CollectionHostController extends Controller
                     ->when($request->query('trashed') === 'with', fn ($q) => $q->withTrashed())
                     ->with(['collections','custodian'])
                     ->applySorting()
-                    ->get()
-                    ->each->withCredentials());
+                    ->get());
         } catch (AuthorizationException $e) {
             return $this->ForbiddenResponse();
         } catch (ModelNotFoundException $e) {

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Jobs\RefreshDistributionConceptsView;
 use App\Models\Collection;
-use App\Models\CollectionHost;
+use App\Models\CollectionHostHasCollection;
 use App\Models\Custodian;
 use App\Models\Distribution;
 use App\Models\Task;
@@ -26,7 +26,6 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -349,7 +348,10 @@ class CollectionController extends Controller
             $before = $collection->only(array_keys($validated));
 
             if ($collection->update($validated)) {
-                $collection->host()->sync([$validated['host_id']]);
+                CollectionHostHasCollection::updateOrCreate(
+                    ['collection_id' => $collection->id],
+                    ['collection_host_id' => $validated['host_id']]
+                );
 
                 if ($collection->wasChanged('is_synthetic')) {
                     RefreshDistributionConceptsView::dispatch();
@@ -734,8 +736,6 @@ class CollectionController extends Controller
                 ->where('custodian_id', $custodian->id)
                 ->paginate($perPage);
 
-            $this->revealViewableHostCredentials($collections);
-
             $activityLogger->viewed('collections', $custodian, [
                 'filters' => $request->query(),
                 'result' => [
@@ -824,7 +824,10 @@ class CollectionController extends Controller
                 'death_enabled' => $validated['death_enabled'] ?? false,
             ]);
 
-            $collection->host()->sync([$validated['host_id']]);
+            CollectionHostHasCollection::updateOrCreate(
+                ['collection_id' => $collection->id],
+                ['collection_host_id' => $validated['host_id']]
+            );
 
             $activityLogger->created('collections', $collection);
 
@@ -1176,17 +1179,6 @@ class CollectionController extends Controller
 
             return $this->ErrorResponse($e->getMessage());
         }
-    }
-
-    // Temporary fix: the FE reads host credentials from the nested collection
-    // payload. This will be reworked once the FE fetches them from the
-    // collection host endpoints instead.
-    private function revealViewableHostCredentials(LengthAwarePaginator $collections): void
-    {
-        $collections->getCollection()
-            ->flatMap->host
-            ->filter(fn (CollectionHost $host) => Gate::allows('view', $host))
-            ->each->withCredentials();
     }
 
     protected function collectionsIndexQuery(Request $request): Builder
