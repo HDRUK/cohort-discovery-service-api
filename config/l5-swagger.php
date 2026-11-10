@@ -129,6 +129,13 @@ return [
             'analyser' => null,
 
             /**
+             * Reads our @OA docblock annotations, which l5-swagger 10+ ignores by default.
+             *
+             * @see \App\Support\DocBlockSwaggerBuilder
+             */
+            'builder_factory' => \App\Support\DocBlockSwaggerBuilder::class,
+
+            /**
              * analysis: defaults to a new \OpenApi\Analysis .
              *
              * @see \OpenApi\scan

@@ -9,21 +9,20 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
-        "darkaonline/l5-swagger": "9.0",
+        "php": "^8.4",
+        "darkaonline/l5-swagger": "^11.2",
+        "doctrine/annotations": "^2.0",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/guzzle": "^7.10",
-        "hdruk/claims-based-access-control": "^0.1.11",
-        "hdruk/laravel-messenger": "dev-main",
         "hdruk/laravel-model-states": "dev-main",
         "hdruk/laravel-plugin-core": "dev-main",
         "hdruk/laravel-search-and-filter": "dev-main",
-        "laravel/framework": "^12.4",
+        "laravel/framework": "^13.0",
         "laravel/horizon": "^5.33",
         "laravel/octane": "^2.12",
         "laravel/passport": "^13.0",
         "laravel/pennant": "^1.18",
-        "laravel/tinker": "^2.10.1",
+        "laravel/tinker": "^3.0",
         "lcobucci/jwt": "^5.6",
         "league/csv": "^9.27",
         "maatwebsite/excel": "^3.1",
@@ -40,7 +39,7 @@
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^11.5.3",
+        "phpunit/phpunit": "^12",
         "predis/predis": "^3.3",
         "spatie/laravel-horizon-watcher": "^1.1"
     },
@@ -111,10 +110,6 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/hdruk/claims-based-access-control"
-        },
-        {
-            "type": "vcs",
             "url": "https://github.com/hdruk/laravel-search-and-filter"
         },
         {
@@ -124,10 +119,6 @@
         {
             "type": "vcs",
             "url": "https://github.com/hdruk/laravel-workflow-states"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/hdruk/laravel-messenger"
         }
     ],
     "minimum-stability": "dev",
