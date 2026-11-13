@@ -33,6 +33,7 @@ class ConceptAncestor extends Model
         return $this->belongsTo(Concept::class, 'ancestor_concept_id');
     }
 
+    /** @return BelongsTo<Concept, $this> */
     public function descendant(): BelongsTo
     {
         return $this->belongsTo(Concept::class, 'descendant_concept_id');

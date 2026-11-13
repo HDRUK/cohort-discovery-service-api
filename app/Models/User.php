@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use DB;
-use Hdruk\ClaimsAccessControl\Traits\HasScopedClaims;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,7 +46,6 @@ class User extends Authenticatable implements OAuthenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
     use HasRoles;
-    use HasScopedClaims;
     use Notifiable;
     use Search;
 
