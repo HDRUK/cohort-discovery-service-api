@@ -84,7 +84,7 @@ class ClaimResolver
         }
 
         return collect(config($configKey, []))
-            ->filter(fn ($claimValue) => in_array(mb_strtolower((string) $claimValue), $wanted, true))
+            ->filter(fn ($idpValues) => array_intersect($this->normalise((array) $idpValues), $wanted) !== [])
             ->keys()
             ->all();
     }

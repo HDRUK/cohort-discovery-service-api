@@ -4,31 +4,26 @@ namespace Database\Seeders;
 
 use App\Models\Workgroup;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class WorkgroupSeeder extends Seeder
 {
-    private array $workgroups = [
-        'ADMIN',
-        'DEFAULT',
-        'CUSTODIAN',
-        'NON-UK-INDUSTRY',
-        'NON-UK-RESEARCH',
-        'OTHER',
-        'UK-INDUSTRY',
-        'UK-RESEARCH',
-        'NHS-SDE',
-    ];
-
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        foreach ($this->workgroups as $w) {
-            Workgroup::create([
-                'name' => $w,
-                'active' => 1,
-            ]);
+        foreach (config('workgroups.seed', []) as $name) {
+            $exists = Workgroup::query()
+                ->where(DB::raw('LOWER(name)'), mb_strtolower($name))
+                ->exists();
+
+            if (! $exists) {
+                Workgroup::create([
+                    'name' => mb_strtoupper($name),
+                    'active' => 1,
+                ]);
+            }
         }
     }
 }
