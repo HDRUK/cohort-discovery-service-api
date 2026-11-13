@@ -3,49 +3,18 @@
 namespace Tests\Unit;
 
 use App\Models\Workgroup;
-use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
 use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 use Tests\TestCase;
 
 class CBACTest extends TestCase
 {
-    private ClaimMappingService $claimMappingService;
-
     private ClaimResolverService $claimResolverService;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->resolveServices();
-    }
-
-    private function resolveServices(): void
-    {
-        $this->app->forgetInstance(ClaimMappingService::class);
-        $this->app->forgetInstance(ClaimResolverService::class);
-
-        $this->claimMappingService = app(ClaimMappingService::class);
         $this->claimResolverService = app(ClaimResolverService::class);
-    }
-
-    public function test_the_application_can_set_default_system_maps(): void
-    {
-        $this->assertNotEmpty($this->claimMappingService->getMap());
-        $this->assertArrayHasKey(
-            config('claims-access.default_system'),
-            $this->claimMappingService->getMap()
-        );
-
-        $localWorkgroups = array_keys(config('claimsaccesscontrol.workgroup_mappings'));
-        $curatedSystemMap = [
-            config('claims-access.default_system') => array_combine($localWorkgroups, $localWorkgroups),
-        ];
-
-        $this->assertEquals(
-            $curatedSystemMap,
-            $this->claimMappingService->getMap()
-        );
     }
 
     public function test_the_application_can_map_workgroups(): void
@@ -86,7 +55,6 @@ class CBACTest extends TestCase
             'uk-industry' => 'gsk',
             'non-uk-industry' => 'gsk',
         ]]);
-        $this->resolveServices();
 
         $claims['workgroups'] = [
             config('claims-access.default_system') => ['uk-research'],
@@ -105,7 +73,6 @@ class CBACTest extends TestCase
             'uk-industry' => 'gsk',
             'non-uk-industry' => 'gsk',
         ]]);
-        $this->resolveServices();
 
         $claims['workgroups'] = [
             config('claims-access.default_system') => ['uk-industry'],

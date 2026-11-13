@@ -9,8 +9,6 @@ use App\Listeners\FeatureFlagUpdatedListener;
 use App\Observers\CollectionObserver;
 use App\Observers\TaskObserver;
 use Carbon\CarbonInterval;
-use Hdruk\ClaimsAccessControl\Services\ClaimMappingService;
-use Hdruk\ClaimsAccessControl\Services\ClaimResolverService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -22,25 +20,6 @@ use Laravel\Pennant\Events\FeatureUpdatedForAllScopes;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        $this->app->singleton(ClaimMappingService::class, function () {
-            $localWorkgroups = array_keys(config('claimsaccesscontrol.workgroup_mappings', []));
-
-            return (new ClaimMappingService())
-                ->setMap(array_combine($localWorkgroups, $localWorkgroups));
-        });
-
-        $this->app->singleton(ClaimResolverService::class, function ($app) {
-            return new ClaimResolverService(
-                $app->make(ClaimMappingService::class)
-            );
-        });
-    }
-
     /**
      * Bootstrap any application services.
      */
