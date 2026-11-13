@@ -28,8 +28,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ClaimMappingService::class, function () {
+            $localWorkgroups = array_keys(config('claimsaccesscontrol.workgroup_mappings', []));
+
             return (new ClaimMappingService())
-                ->setMap(config('claimsaccesscontrol.workgroup_mappings'));
+                ->setMap(array_combine($localWorkgroups, $localWorkgroups));
         });
 
         $this->app->singleton(ClaimResolverService::class, function ($app) {
