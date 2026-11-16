@@ -129,12 +129,15 @@ class TermDirectoryService
     }
 
     /**
-     * The user's visible collections as id => name, optionally narrowed to requested
-     * public pids. Pids outside the visible set are dropped so they can never widen access.
+     * The user's visible collections as id => name, ordered by name, optionally narrowed
+     * to requested public pids. Pids outside the visible set are dropped so they can
+     * never widen access.
      */
     private function resolveCollections(Request $request): SupportCollection
     {
-        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('name', 'id');
+        $visible = Collection::visibleToUser(User::find(Auth::id()))
+            ->orderBy('name')
+            ->pluck('name', 'id');
 
         $requestedPids = (array) $request->input('collection_pid', []);
         if (empty($requestedPids)) {
@@ -147,8 +150,9 @@ class TermDirectoryService
     }
 
     /**
-     * Names of the collections behind a row's ncollections, alphabetical. Only ids in
-     * the caller's scoped set resolve, so a name can never leak from outside it.
+     * Names of the collections behind a row's ncollections, in the order of $collections
+     * (alphabetical). Only ids in the caller's scoped set resolve, so a name can never
+     * leak from outside it.
      *
      * @param  list<int>  $collectionIds
      * @param  SupportCollection<int, string>  $collections  id => name
@@ -158,7 +162,6 @@ class TermDirectoryService
     {
         return $collections
             ->only(array_unique($collectionIds))
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
             ->values()
             ->all();
     }
