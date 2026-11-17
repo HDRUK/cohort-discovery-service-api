@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\RefreshLatestDistributionsView;
 use App\Models\Collection;
+use App\Models\Custodian;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -198,6 +199,8 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertArrayHasKey('domain_mismatch', $item);
         $this->assertArrayHasKey('count', $item);
         $this->assertArrayHasKey('ncollections', $item);
+        $this->assertArrayHasKey('collection_names', $item);
+        $this->assertIsArray($item['collection_names']);
     }
 
     public function test_domain_defaults_to_reported_category_over_central(): void
@@ -481,6 +484,64 @@ class TermDirectoryControllerTest extends TestCase
         $this->assertEquals(1, $rows[self::CONCEPT_ID_A]['ncollections']);
     }
 
+    public function test_collection_names_list_the_collections_reporting_each_concept(): void
+    {
+        // The UI shows these names next to the count, so they must describe exactly the
+        // collections ncollections counts: alphabetical, and only those reporting the concept.
+        Collection::firstOrFail()->update(['name' => 'Zebra Cohort']);
+        $this->addCollectionReportingConceptA('Alpha Cohort', 7);
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $rows = collect($response->json('data.data'))->keyBy('concept_id');
+        $this->assertSame(['Alpha Cohort', 'Zebra Cohort'], $rows[self::CONCEPT_ID_A]['collection_names']);
+        $this->assertSame(['Zebra Cohort'], $rows[self::CONCEPT_ID_B]['collection_names']);
+    }
+
+    public function test_collection_names_exclude_zero_count_and_filtered_out_collections(): void
+    {
+        // A name must never appear for a collection that is not part of the row's
+        // aggregate: one reporting a zero count, or one excluded by the pid filter.
+        $first = Collection::firstOrFail();
+        $first->update(['name' => 'Zebra Cohort']);
+        $this->addCollectionReportingConceptA('Empty Cohort', 0);
+        $alpha = $this->addCollectionReportingConceptA('Alpha Cohort', 7);
+
+        $response = $this->actingAsJwt($this->user)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $rows = collect($response->json('data.data'))->keyBy('concept_id');
+        $this->assertSame(['Alpha Cohort', 'Zebra Cohort'], $rows[self::CONCEPT_ID_A]['collection_names']);
+
+        $response = $this->actingAsJwt($this->user)
+            ->getJson(self::BASE_URL . '?collection_pid[]=' . $alpha->pid);
+
+        $response->assertOk();
+        $this->assertSame(['Alpha Cohort'], $response->json('data.data.0.collection_names'));
+    }
+
+    public function test_collection_names_only_include_collections_visible_to_the_caller(): void
+    {
+        // Names are only safe to expose because they follow the same visibility scope as
+        // the counts: a non-admin must never learn the name of a collection they cannot see.
+        $custodian = Custodian::factory()->create();
+        $this->addCollectionReportingConceptA('Visible Cohort', 7)
+            ->update(['custodian_id' => $custodian->id]);
+        Collection::firstOrFail()->update(['name' => 'Hidden Cohort']);
+
+        $basicUser = User::factory()->create();
+        $basicUser->custodians()->attach($custodian->id);
+
+        $response = $this->actingAsJwt($basicUser)->getJson(self::BASE_URL);
+
+        $response->assertOk();
+        $rows = collect($response->json('data.data'))->keyBy('concept_id');
+        $this->assertSame(['Visible Cohort'], $rows[self::CONCEPT_ID_A]['collection_names']);
+        $this->assertEquals(1, $rows[self::CONCEPT_ID_A]['ncollections']);
+        $this->assertArrayNotHasKey(self::CONCEPT_ID_B, $rows->all());
+    }
+
     public function test_collection_pid_filter_combines_with_domain_filter(): void
     {
         $collection = Collection::firstOrFail();
@@ -676,6 +737,42 @@ class TermDirectoryControllerTest extends TestCase
             ->unique();
 
         $this->assertContains('ldm_concept_domain_collection_count_idx', $indexes);
+    }
+
+    /**
+     * Adds another collection whose latest distribution reports CONCEPT_ID_A, then
+     * rebuilds the snapshot.
+     */
+    private function addCollectionReportingConceptA(string $name, int $count): Collection
+    {
+        $collection = Collection::factory()->create(['name' => $name]);
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'task_id'       => $task->id,
+            'collection_id' => $collection->id,
+            'path'          => 'test/path',
+            'file_name'     => 'code.distribution',
+            'status'        => 'done',
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        DB::table('distributions')->insert([
+            'collection_id'  => $collection->id,
+            'result_file_id' => $resultFileId,
+            'concept_id'     => self::CONCEPT_ID_A,
+            'count'          => $count,
+            'name'           => 'CONCEPT_A',
+            'category'       => 'Condition',
+            'description'    => 'Concept A description',
+            'created_at'     => now(),
+            'updated_at'     => now(),
+        ]);
+
+        RefreshLatestDistributionsView::dispatchSync();
+
+        return $collection;
     }
 
     /**

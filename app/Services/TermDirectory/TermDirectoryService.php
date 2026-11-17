@@ -33,7 +33,10 @@ class TermDirectoryService
 
         $page = LengthAwarePaginator::resolveCurrentPage();
 
-        $collectionIds = $this->resolveCollectionIds($request);
+        // id => name of the collections in scope: the ids scope every query below, the
+        // names label each row's collections without a join or a second lookup.
+        $collections = $this->resolveCollections($request);
+        $collectionIds = $collections->keys();
 
         // Columns that define one aggregated concept row.
         $groupKeys = ['concept_id', 'domain_id'];
@@ -97,7 +100,7 @@ class TermDirectoryService
             'page' => $page,
         ]);
 
-        $rows = $pageRows->map(function ($row) use ($detail) {
+        $rows = $pageRows->map(function ($row) use ($detail, $collections) {
             $extra = $detail->get($this->termGroupKey($row));
 
             return [
@@ -109,6 +112,10 @@ class TermDirectoryService
                 'domain_mismatch' => (bool) $extra?->getAttribute('domain_mismatch'),
                 'count' => (int) $row->count,
                 'ncollections' => (int) $extra?->getAttribute('ncollections'),
+                'collection_names' => $this->collectionNames(
+                    $extra?->getAttribute('collection_ids') ?? [],
+                    $collections
+                ),
             ];
         })->all();
 
@@ -122,12 +129,15 @@ class TermDirectoryService
     }
 
     /**
-     * The user's visible collections, optionally narrowed to requested public pids.
-     * Pids outside the visible set are dropped so they can never widen access.
+     * The user's visible collections as id => name, ordered by name, optionally narrowed
+     * to requested public pids. Pids outside the visible set are dropped so they can
+     * never widen access.
      */
-    private function resolveCollectionIds(Request $request): SupportCollection
+    private function resolveCollections(Request $request): SupportCollection
     {
-        $visible = Collection::visibleToUser(User::find(Auth::id()))->pluck('id');
+        $visible = Collection::visibleToUser(User::find(Auth::id()))
+            ->orderBy('name')
+            ->pluck('name', 'id');
 
         $requestedPids = (array) $request->input('collection_pid', []);
         if (empty($requestedPids)) {
@@ -136,13 +146,34 @@ class TermDirectoryService
 
         $requested = Collection::whereIn('pid', $requestedPids)->pluck('id');
 
-        return $visible->intersect($requested)->values();
+        return $visible->only($requested->all());
     }
 
     /**
-     * The expensive per-group aggregates (DISTINCT count, MAX, GROUP_CONCAT), restricted
-     * to the concepts on the current page (~25) and keyed by termGroupKey. Same filters
-     * and group keys as phase A, so every page row's group is present.
+     * Names of the collections behind a row's ncollections, in the order of $collections
+     * (alphabetical). Only ids in the caller's scoped set resolve, so a name can never
+     * leak from outside it.
+     *
+     * @param  list<int>  $collectionIds
+     * @param  SupportCollection<int, string>  $collections  id => name
+     * @return list<string>
+     */
+    private function collectionNames(array $collectionIds, SupportCollection $collections): array
+    {
+        return $collections
+            ->only(array_unique($collectionIds))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The expensive per-group aggregates (DISTINCT count, MAX, GROUP_CONCAT, JSON_ARRAYAGG),
+     * restricted to the concepts on the current page (~25) and keyed by termGroupKey. Same
+     * filters and group keys as phase A, so every page row's group is present.
+     *
+     * collection_ids uses JSON_ARRAYAGG rather than GROUP_CONCAT because GROUP_CONCAT
+     * silently truncates at group_concat_max_len. It has no DISTINCT, so duplicates are
+     * removed in collectionNames().
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @param  list<string>  $groupKeys
@@ -159,6 +190,7 @@ class TermDirectoryService
             ->select(array_merge($groupKeys, [
                 DB::raw('MAX(concept_name) AS concept_name'),
                 DB::raw('COUNT(DISTINCT collection_id) AS ncollections'),
+                DB::raw('JSON_ARRAYAGG(collection_id) AS collection_ids'),
                 DB::raw('MAX(central_domain_id) AS central_domain_id'),
                 DB::raw('MAX(domain_mismatch) AS domain_mismatch'),
                 DB::raw('GROUP_CONCAT(DISTINCT reported_domain_id ORDER BY reported_domain_id) AS reported_domains'),
