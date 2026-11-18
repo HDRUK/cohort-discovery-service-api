@@ -3,6 +3,7 @@
 namespace App\Services\TokenSync;
 
 use App\Models\User;
+use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
@@ -61,7 +62,7 @@ class WorkgroupSyncerService
         $names = [];
 
         if ($this->policy->shouldEnsureDefaultWorkgroup()) {
-            $names[] = 'DEFAULT';
+            $names[] = Workgroup::DEFAULT_NAME;
         }
 
         if ($hasSdeApproval && $this->policy->shouldSyncSdeWorkgroupsFromClaim()) {

@@ -25,6 +25,8 @@ class Workgroup extends Model implements ValidatableModel
 {
     use Search;
 
+    public const DEFAULT_NAME = 'DEFAULT';
+
     public $timestamps = true;
 
     protected $fillable = [

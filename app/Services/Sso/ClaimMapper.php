@@ -3,6 +3,7 @@
 namespace App\Services\Sso;
 
 use App\Models\User;
+use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
@@ -82,7 +83,7 @@ class ClaimMapper
             return [];
         }
 
-        return $this->resolver->workgroupIdsForNames(['DEFAULT']);
+        return $this->resolver->workgroupIdsForNames([Workgroup::DEFAULT_NAME]);
     }
 
     private function syncRoles(

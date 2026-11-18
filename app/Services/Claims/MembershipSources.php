@@ -3,6 +3,7 @@
 namespace App\Services\Claims;
 
 use App\Enums\MembershipMode;
+use App\Enums\RestoreCondition;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Services\Authentication\LoginMethods;
@@ -18,12 +19,6 @@ class MembershipSources
     public const GATEWAY = 'gateway';
 
     public const GATEWAY_LABEL = 'HDR UK Gateway';
-
-    public const RESTORED_EVERY_SYNC = 'every_sync';
-
-    public const RESTORED_SDE_APPROVED = 'sde_approved';
-
-    private const DEFAULT_WORKGROUP = 'DEFAULT';
 
     private ?array $subjectProviders = null;
 
@@ -77,7 +72,7 @@ class MembershipSources
         }
 
         $restoredIds = collect($this->restoredOnSync(ClaimSyncPolicy::SUBJECT_WORKGROUPS))
-            ->where('when', self::RESTORED_EVERY_SYNC)
+            ->where('when', RestoreCondition::EVERY_SYNC->value)
             ->pluck('id');
 
         return [
@@ -96,7 +91,7 @@ class MembershipSources
         return match ($subject) {
             ClaimSyncPolicy::SUBJECT_WORKGROUPS => $this->restoredWorkgroups(),
             ClaimSyncPolicy::SUBJECT_ROLES => $this->policy->shouldEnsureDefaultRole()
-                ? $this->named(Role::query(), [RoleSyncFloor::DEFAULT_ROLE], self::RESTORED_EVERY_SYNC)
+                ? $this->named(Role::query(), [RoleSyncFloor::DEFAULT_ROLE], RestoreCondition::EVERY_SYNC)
                 : [],
             default => [],
         };
@@ -181,26 +176,26 @@ class MembershipSources
     private function restoredWorkgroups(): array
     {
         $restored = $this->policy->shouldEnsureDefaultWorkgroup()
-            ? $this->named(Workgroup::query(), [self::DEFAULT_WORKGROUP], self::RESTORED_EVERY_SYNC)
+            ? $this->named(Workgroup::query(), [Workgroup::DEFAULT_NAME], RestoreCondition::EVERY_SYNC)
             : [];
 
         if (ApplicationMode::isIntegrated() && $this->policy->shouldSyncSdeWorkgroupsFromClaim()) {
             $restored = array_merge(
                 $restored,
-                $this->named(Workgroup::query(), config('workgroups.sde_approved', []), self::RESTORED_SDE_APPROVED)
+                $this->named(Workgroup::query(), config('workgroups.sde_approved', []), RestoreCondition::SDE_APPROVED)
             );
         }
 
         return $restored;
     }
 
-    private function named(Builder $query, array $names, string $when): array
+    private function named(Builder $query, array $names, RestoreCondition $when): array
     {
         return $query
             ->whereIn(DB::raw('LOWER(name)'), array_map('mb_strtolower', $names))
             ->orderBy('id')
             ->pluck('name', 'id')
-            ->map(fn ($name, $id) => ['id' => $id, 'name' => $name, 'when' => $when])
+            ->map(fn ($name, $id) => ['id' => $id, 'name' => $name, 'when' => $when->value])
             ->values()
             ->all();
     }
