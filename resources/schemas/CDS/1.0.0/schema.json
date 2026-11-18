@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cohort-discovery.hdruk.ac.uk/schemas/CDS/1.0.0/schema.json",
+  "title": "Cohort Discovery Service collection",
+  "description": "Descriptive metadata for a collection that can be queried through the Cohort Discovery Service.",
+  "type": "object",
+  "required": ["summary"],
+  "properties": {
+    "summary": {
+      "title": "Summary",
+      "description": "What the collection is and where to find out more.",
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "The name researchers see in query results.",
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 255,
+          "examples": ["Synthetic diabetes cohort"]
+        },
+        "description": {
+          "title": "Description",
+          "description": "A short account of who is in the collection and how the data were gathered.",
+          "type": "string",
+          "maxLength": 65535,
+          "guidance": "Two or three sentences. Researchers read this before deciding whether to apply for access."
+        },
+        "url": {
+          "title": "External link",
+          "description": "A page elsewhere with more about the collection, such as its Gateway dataset page.",
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "examples": ["https://example.org/collections/diabetes"]
+        },
+        "keywords": {
+          "title": "Keywords",
+          "description": "Terms that help researchers find the collection.",
+          "type": "array",
+          "items": { "type": "string", "maxLength": 100 }
+        },
+        "contactPoint": {
+          "title": "Contact email",
+          "description": "A team mailbox for questions about the collection.",
+          "type": "string",
+          "format": "email",
+          "personalData": true,
+          "guidance": "Use a shared team address rather than a named person's email."
+        }
+      }
+    },
+    "coverage": {
+      "title": "Coverage",
+      "description": "Who and what period the collection covers.",
+      "type": "object",
+      "properties": {
+        "population": {
+          "title": "Population",
+          "description": "The people the collection describes.",
+          "type": "string",
+          "maxLength": 255,
+          "examples": ["Adults registered with a GP in Scotland"]
+        },
+        "geographicCoverage": {
+          "title": "Geographic coverage",
+          "type": "string",
+          "maxLength": 255,
+          "examples": ["Scotland"]
+        },
+        "startDate": {
+          "title": "Start date",
+          "type": "string",
+          "format": "date"
+        },
+        "endDate": {
+          "title": "End date",
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "access": {
+      "title": "Access",
+      "description": "How a researcher gets access once they have found a cohort.",
+      "type": "object",
+      "properties": {
+        "howToApply": {
+          "title": "How to apply",
+          "description": "The steps a researcher takes to request access.",
+          "type": "string",
+          "maxLength": 65535
+        },
+        "accessRights": {
+          "title": "Access rights",
+          "description": "A page setting out the terms of access.",
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "accessRoute": {
+          "title": "Access route",
+          "type": "string",
+          "enum": ["Trusted research environment", "Data release", "Federated analysis only"]
+        }
+      }
+    },
+    "landingPage": {
+      "title": "Landing page",
+      "description": "Extra content shown on the collection's page in Cohort Discovery.",
+      "type": "object",
+      "properties": {
+        "about": {
+          "title": "About",
+          "description": "A longer introduction to the collection.",
+          "type": "string",
+          "maxLength": 65535
+        },
+        "logoUrl": {
+          "title": "Logo URL",
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        }
+      }
+    }
+  }
+}

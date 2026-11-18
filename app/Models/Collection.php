@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\ValidatableModel;
 use App\Enums\DistributionQueryType;
 use App\Enums\TaskType;
+use App\Services\Collections\CollectionSchema;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\ResolvesByIdOrPid;
 use Hdruk\LaravelModelStates\Contracts\HasStateTransitions;
@@ -114,7 +115,11 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'is_synthetic',
         'location_enabled',
         'death_enabled',
+        'metadata',
+        'metadata_schema',
     ];
+
+    protected $hidden = ['metadata'];
 
     protected $casts = [
         'type' => QueryContextType::class,
@@ -125,6 +130,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         'is_synthetic' => 'boolean',
         'location_enabled' => 'boolean',
         'death_enabled' => 'boolean',
+        'metadata' => 'array',
     ];
 
     protected static array $searchableColumns = [
@@ -178,6 +184,23 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             self::STATUS_ACTIVE,
         ],
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Collection $collection) {
+            $columns = ['name', 'description', 'url'];
+            if ($collection->metadata !== null && ! $collection->isDirty($columns)) {
+                return;
+            }
+
+            $schema = app(CollectionSchema::class);
+            $collection->metadata = $schema->withColumns(
+                $collection->metadata ?? [],
+                $collection->only($columns)
+            );
+            $collection->metadata_schema ??= $schema->id();
+        });
+    }
 
     public function getValidationRules(string $context): array
     {
