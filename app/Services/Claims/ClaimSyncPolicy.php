@@ -2,6 +2,7 @@
 
 namespace App\Services\Claims;
 
+use App\Enums\MembershipMode;
 use Carbon\CarbonInterface;
 
 class ClaimSyncPolicy
@@ -20,20 +21,12 @@ class ClaimSyncPolicy
 
     public const SUBJECTS = [self::SUBJECT_WORKGROUPS, self::SUBJECT_ROLES, self::SUBJECT_CUSTODIANS];
 
-    public const MODE_INTERNAL = 'internal';
-
-    public const MODE_FIRST_LOGIN = 'first_login';
-
-    public const MODE_ADDITIVE = 'additive';
-
-    public const MODE_AUTHORITATIVE = 'authoritative';
-
-    public function editingMode(string $subject): string
+    public function editingMode(string $subject): MembershipMode
     {
         return match ($this->trustedModeOrNever($subject)) {
-            self::TRUST_FIRST_LOGIN => self::MODE_FIRST_LOGIN,
-            self::TRUST_ALWAYS => $this->isAuthoritative($subject) ? self::MODE_AUTHORITATIVE : self::MODE_ADDITIVE,
-            default => self::MODE_INTERNAL,
+            self::TRUST_FIRST_LOGIN => MembershipMode::FIRST_LOGIN,
+            self::TRUST_ALWAYS => $this->isAuthoritative($subject) ? MembershipMode::AUTHORITATIVE : MembershipMode::ADDITIVE,
+            default => MembershipMode::INTERNAL,
         };
     }
 

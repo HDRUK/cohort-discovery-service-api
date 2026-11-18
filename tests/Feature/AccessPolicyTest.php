@@ -155,6 +155,11 @@ class AccessPolicyTest extends TestCase
         $this->getJson(self::URL)->assertUnauthorized();
     }
 
+    public function test_a_non_admin_cannot_read_the_policy(): void
+    {
+        $this->actingAsJwt(User::factory()->create())->getJson(self::URL)->assertForbidden();
+    }
+
     public function test_a_password_only_users_workgroup_edit_logs_no_warning(): void
     {
         $this->useAuthoritativeWorkgroups();

@@ -2,6 +2,7 @@
 
 namespace App\Services\Claims;
 
+use App\Enums\MembershipMode;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Services\Authentication\LoginMethods;
@@ -41,12 +42,12 @@ class MembershipSources
 
         foreach (ClaimSyncPolicy::SUBJECTS as $subject) {
             $mode = $this->deploymentMode($subject);
-            $syncs = $mode !== ClaimSyncPolicy::MODE_INTERNAL;
+            $syncs = $mode !== MembershipMode::INTERNAL;
 
             $deployment[$subject] = [
-                'mode' => $mode,
+                'mode' => $mode->value,
                 'authoritative' => $syncs && $this->policy->isAuthoritative($subject),
-                'editable' => $this->isEditable($mode),
+                'editable' => $mode->isEditable(),
                 'restored_on_sync' => $syncs ? $this->restoredOnSync($subject) : [],
             ];
         }
@@ -71,7 +72,7 @@ class MembershipSources
     {
         $workgroups = $this->forUser($user)[ClaimSyncPolicy::SUBJECT_WORKGROUPS];
 
-        if ($workgroups['mode'] === ClaimSyncPolicy::MODE_INTERNAL) {
+        if ($workgroups['mode'] === MembershipMode::INTERNAL->value) {
             return null;
         }
 
@@ -109,31 +110,26 @@ class MembershipSources
             ? $this->subjectProviders($subject)
             : array_values(array_intersect($this->subjectProviders($subject), $linkedProviders));
 
-        $alreadySynced = $mode === ClaimSyncPolicy::MODE_FIRST_LOGIN && $user->claimsSyncedAt() !== null;
+        $alreadySynced = $mode === MembershipMode::FIRST_LOGIN && $user->claimsSyncedAt() !== null;
 
         if ($sources === [] || $alreadySynced) {
-            $mode = ClaimSyncPolicy::MODE_INTERNAL;
+            $mode = MembershipMode::INTERNAL;
         }
 
         return [
-            'mode' => $mode,
-            'editable' => $this->isEditable($mode),
-            'sources' => $mode === ClaimSyncPolicy::MODE_INTERNAL ? [] : $sources,
+            'mode' => $mode->value,
+            'editable' => $mode->isEditable(),
+            'sources' => $mode === MembershipMode::INTERNAL ? [] : $sources,
         ];
     }
 
-    private function deploymentMode(string $subject): string
+    private function deploymentMode(string $subject): MembershipMode
     {
         if ($this->subjectProviders($subject) === []) {
-            return ClaimSyncPolicy::MODE_INTERNAL;
+            return MembershipMode::INTERNAL;
         }
 
         return $this->policy->editingMode($subject);
-    }
-
-    private function isEditable(string $mode): bool
-    {
-        return $mode !== ClaimSyncPolicy::MODE_AUTHORITATIVE;
     }
 
     private function providerLabels(): array
@@ -203,8 +199,9 @@ class MembershipSources
         return $query
             ->whereIn(DB::raw('LOWER(name)'), array_map('mb_strtolower', $names))
             ->orderBy('id')
-            ->get(['id', 'name'])
-            ->map(fn ($model) => ['id' => (int) $model->id, 'name' => $model->name, 'when' => $when])
+            ->pluck('name', 'id')
+            ->map(fn ($name, $id) => ['id' => $id, 'name' => $name, 'when' => $when])
+            ->values()
             ->all();
     }
 }

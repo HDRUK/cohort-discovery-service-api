@@ -49,23 +49,16 @@ class UserController extends Controller
      *     )
      * )
      */
-    public function index(
-        Request $request,
-        ActivityLogger $activityLogger,
-        MembershipSources $membershipSources
-    ): JsonResponse {
+    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
+    {
         $this->authorize('viewAny', User::class);
 
         $users = User::with(['workgroups', 'custodians', 'roles', 'identities'])
             ->searchViaRequest()
             ->withStatus()
             ->applySorting()
-            ->get();
-
-        $users->each(fn (User $user) => $user->setAttribute(
-            'membership_sources',
-            $membershipSources->forUser($user)
-        ));
+            ->get()
+            ->append('membership_sources');
 
         $activityLogger->viewed('users', null, [
             'filters' => $request->query(),
@@ -97,18 +90,14 @@ class UserController extends Controller
      *     @OA\Response(response=404, description="User not found")
      * )
      */
-    public function show(
-        Request $request,
-        int $id,
-        ActivityLogger $activityLogger,
-        MembershipSources $membershipSources
-    ): JsonResponse {
+    public function show(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
+    {
         $this->authorize('view', User::class);
 
         // Stub
         $user = User::with('identities')->where('id', $id)->first();
         if ($user) {
-            $user->setAttribute('membership_sources', $membershipSources->forUser($user));
+            $user->append('membership_sources');
             $activityLogger->viewed('users', $user);
 
             return $this->OKResponse($user);

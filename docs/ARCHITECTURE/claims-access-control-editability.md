@@ -17,7 +17,7 @@ Both paths use `ClaimSyncPolicy`. Trust (`never`, `first_login`, `always`) and `
 
 ## Modes
 
-`MembershipSources` (`app/Services/Claims/MembershipSources.php`) gives each subject one of these modes:
+`MembershipSources` (`app/Services/Claims/MembershipSources.php`) gives each subject one of these modes, defined as the `App\Enums\MembershipMode` backed enum. The enum also owns the editable rule:
 
 | Mode | Rule | Editable |
 |---|---|---|
@@ -35,7 +35,7 @@ Both paths use `ClaimSyncPolicy`. Trust (`never`, `first_login`, `always`) and `
 
 ## Endpoints
 
-- **`GET /api/v1/access_policy`** (authenticated, `AccessPolicyController`) returns `MembershipSources::deployment()`:
+- **`GET /api/v1/access_policy`** (`AccessPolicyController`) returns `MembershipSources::deployment()`. It is admin-only, through the `viewAny` user policy, because only the admin screens need it:
   - `operation_mode`;
   - `providers` (slug → label, or `gateway`);
   - for each subject: `mode`, `authoritative`, `editable` and `restored_on_sync`.
@@ -43,7 +43,7 @@ Both paths use `ClaimSyncPolicy`. Trust (`never`, `first_login`, `always`) and `
 - **`membership_sources`** on users from `GET /api/v1/users` and `GET /api/v1/users/{id}` (`MembershipSources::forUser()`):
   - for each subject: `mode`, `editable` and `sources`;
   - it reads the eager-loaded `identities` relation, so the index adds no per-user queries;
-  - it is not a model accessor, so other user payloads (`/v1/user`, nested users) are unchanged.
+  - it is the `membership_sources` accessor on `User`, kept out of `$appends`. `UserController` opts in with `->append('membership_sources')`, so other user payloads (`/v1/user`, nested users) are unchanged.
 
 ## Entries restored on every sync
 

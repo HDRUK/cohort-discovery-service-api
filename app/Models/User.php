@@ -14,6 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use App\Services\Claims\MembershipSources;
 use App\Services\Submitters\QueryRateLimiter;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
@@ -206,6 +207,11 @@ class User extends Authenticatable implements OAuthenticatable
     public function getQueryQuotaAttribute(): array
     {
         return app(QueryRateLimiter::class)->usageSummary($this);
+    }
+
+    public function getMembershipSourcesAttribute(): array
+    {
+        return app(MembershipSources::class)->forUser($this);
     }
 
     public function roles(): BelongsToMany
