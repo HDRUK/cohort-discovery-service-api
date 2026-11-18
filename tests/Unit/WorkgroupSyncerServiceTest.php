@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Enums\ClaimTrust;
 use App\Models\User;
 use App\Models\Workgroup;
-use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\TokenSync\WorkgroupSyncerService;
 use Tests\TestCase;
 
@@ -29,7 +29,7 @@ class WorkgroupSyncerServiceTest extends TestCase
         parent::setUp();
 
         config([
-            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::ALWAYS->value,
             'claimsaccesscontrol.sync.workgroups.authoritative' => false,
             'claimsaccesscontrol.sync.workgroups.ensure_default' => false,
             'claimsaccesscontrol.sync.workgroups.sde_from_claim' => false,
@@ -234,7 +234,7 @@ class WorkgroupSyncerServiceTest extends TestCase
 
     public function test_no_sync_happens_when_claims_are_never_trusted(): void
     {
-        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::NEVER->value]);
 
         $user = $this->user();
 
@@ -247,17 +247,17 @@ class WorkgroupSyncerServiceTest extends TestCase
     {
         $user = $this->user();
 
-        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::NEVER->value]);
         $this->assertFalse($this->syncer->sync($user, ['uk-research'], false));
 
-        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN]);
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::FIRST_LOGIN->value]);
         $this->assertTrue($this->syncer->sync($user, ['uk-research'], false, null));
         $this->assertFalse($this->syncer->sync($user, ['uk-research'], false, now()));
     }
 
     public function test_first_login_trust_only_syncs_for_an_unsynced_user(): void
     {
-        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN]);
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::FIRST_LOGIN->value]);
 
         $user = $this->user();
 

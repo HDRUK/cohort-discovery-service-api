@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\ClaimTrust;
 use App\Exceptions\Sso\SsoLinkingException;
 use App\Models\Custodian;
 use App\Models\User;
@@ -9,7 +10,6 @@ use App\Models\UserIdentity;
 use App\Models\Workgroup;
 use App\Services\Sso\OidcAuthResult;
 use App\Services\Sso\OidcProviderConfig;
-use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\Sso\SsoUserResolver;
 use Illuminate\Support\Str;
 use Tests\Support\FakeIdp;
@@ -31,9 +31,9 @@ class SsoUserResolverTest extends TestCase
 
         config([
             'claimsaccesscontrol.sync.provision.defaults_on_create' => true,
-            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::NEVER->value,
             'claimsaccesscontrol.sync.workgroups.authoritative' => false,
-            'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_NEVER,
+            'claimsaccesscontrol.sync.roles.trust' => ClaimTrust::NEVER->value,
             'claimsaccesscontrol.sync.roles.authoritative' => false,
             'sso.providers.default' => FakeIdp::providerConfig(),
         ]);
@@ -160,7 +160,7 @@ class SsoUserResolverTest extends TestCase
                 'mapped-wg' => 'urn:wg:mapped',
                 'local-only' => 'urn:wg:local',
             ],
-            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::ALWAYS->value,
         ], $sync));
 
         return OidcProviderConfig::fromConfig('mapped');
@@ -175,7 +175,7 @@ class SsoUserResolverTest extends TestCase
     {
         Workgroup::firstOrCreate(['name' => 'MAPPED-WG'], ['active' => 1]);
 
-        $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        $this->withClaimMapping([], ['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::NEVER->value]);
 
         $user = $this->resolver->resolve($this->provider, $this->authResult([
             'email' => 'nomap@example.com',
@@ -356,7 +356,7 @@ class SsoUserResolverTest extends TestCase
             ['roles_claim' => 'groups'],
             [
                 'claimsaccesscontrol.role_mappings' => ['admin' => 'urn:group:cohort-admins'],
-                'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.roles.trust' => ClaimTrust::ALWAYS->value,
             ],
         );
 
@@ -375,7 +375,7 @@ class SsoUserResolverTest extends TestCase
 
         $provider = $this->withClaimMapping(
             ['custodians_claim' => 'teams'],
-            ['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS],
+            ['claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value],
         );
 
         $user = $this->resolver->resolve($provider, $this->authResult([
@@ -393,7 +393,7 @@ class SsoUserResolverTest extends TestCase
     {
         $provider = $this->withClaimMapping(
             ['custodians_claim' => 'teams'],
-            ['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS],
+            ['claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value],
         );
 
         $user = $this->resolver->resolve($provider, $this->authResult([
@@ -414,7 +414,7 @@ class SsoUserResolverTest extends TestCase
         $provider = $this->withClaimMapping(
             ['custodians_claim' => 'teams'],
             [
-                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value,
                 'claimsaccesscontrol.sync.custodians.authoritative' => true,
             ],
         );
@@ -444,7 +444,7 @@ class SsoUserResolverTest extends TestCase
         $provider = $this->withClaimMapping(
             ['custodians_claim' => 'teams'],
             [
-                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value,
                 'claimsaccesscontrol.sync.custodians.authoritative' => true,
             ],
         );
@@ -470,7 +470,7 @@ class SsoUserResolverTest extends TestCase
         $provider = $this->withClaimMapping(
             ['custodians_claim' => 'teams'],
             [
-                'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value,
                 'claimsaccesscontrol.sync.custodians.authoritative' => true,
             ],
         );
@@ -524,7 +524,7 @@ class SsoUserResolverTest extends TestCase
         $provider = $this->withClaimMapping(
             ['roles_claim' => 'groups'],
             [
-                'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+                'claimsaccesscontrol.sync.roles.trust' => ClaimTrust::ALWAYS->value,
                 'claimsaccesscontrol.sync.roles.authoritative' => true,
                 'claimsaccesscontrol.sync.roles.ensure_default' => true,
                 'claimsaccesscontrol.role_mappings' => ['admin' => 'urn:group:cohort-admins'],

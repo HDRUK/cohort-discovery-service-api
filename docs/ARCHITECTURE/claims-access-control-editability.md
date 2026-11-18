@@ -13,7 +13,9 @@ Claim sync only touches a user through one of two paths:
 
 Password sign-ins never sync. So on one deployment, a password-only user can be fully editable while an SSO-linked user is read-only.
 
-Both paths use `ClaimSyncPolicy`. Trust (`never`, `first_login`, `always`) and `authoritative` are set per subject in `config/claimsaccesscontrol.php`. The claim mapping is set per provider in `config/sso.php`. `users.claims_synced_at` is a single timestamp per user, shared by all subjects.
+Both paths use `ClaimSyncPolicy`. Trust (the `ClaimTrust` enum: `never`, `first_login`, `always`) and `authoritative` are set per subject in `config/claimsaccesscontrol.php`. The claim mapping is set per provider in `config/sso.php`. `users.claims_synced_at` is a single timestamp per user, shared by all subjects.
+
+An unrecognised trust value refuses to boot. `ClaimsAccessControlServiceProvider` checks every subject at registration, the same way `ApplicationModeServiceProvider` checks `APP_OPERATION_MODE`, so a typo can't quietly turn a sync off.
 
 ## Modes
 
@@ -21,7 +23,7 @@ Both paths use `ClaimSyncPolicy`. Trust (`never`, `first_login`, `always`) and `
 
 | Mode | Rule | Editable |
 |---|---|---|
-| `internal` | No claim source, or trust is `never` or an unknown value | yes |
+| `internal` | No claim source, or trust is `never` | yes |
 | `first_login` | Trust is `first_login`. Per user: only until `claims_synced_at` is set, then `internal` | yes |
 | `additive` | Trust is `always`, not authoritative (sync uses `syncWithoutDetaching`) | yes, but removing an entry the IdP asserts won't last |
 | `authoritative` | Trust is `always` and authoritative (sync uses `sync`) | no |

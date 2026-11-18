@@ -2,17 +2,12 @@
 
 namespace App\Services\Claims;
 
+use App\Enums\ClaimTrust;
 use App\Enums\MembershipMode;
 use Carbon\CarbonInterface;
 
 class ClaimSyncPolicy
 {
-    public const TRUST_NEVER = 'never';
-
-    public const TRUST_FIRST_LOGIN = 'first_login';
-
-    public const TRUST_ALWAYS = 'always';
-
     public const SUBJECT_WORKGROUPS = 'workgroups';
 
     public const SUBJECT_ROLES = 'roles';
@@ -24,28 +19,26 @@ class ClaimSyncPolicy
     public function editingMode(string $subject): MembershipMode
     {
         return match ($this->trustedModeOrNever($subject)) {
-            self::TRUST_FIRST_LOGIN => MembershipMode::FIRST_LOGIN,
-            self::TRUST_ALWAYS => $this->isAuthoritative($subject) ? MembershipMode::AUTHORITATIVE : MembershipMode::ADDITIVE,
-            default => MembershipMode::INTERNAL,
+            ClaimTrust::FIRST_LOGIN => MembershipMode::FIRST_LOGIN,
+            ClaimTrust::ALWAYS => $this->isAuthoritative($subject) ? MembershipMode::AUTHORITATIVE : MembershipMode::ADDITIVE,
+            ClaimTrust::NEVER => MembershipMode::INTERNAL,
         };
     }
 
     public function shouldSync(string $subject, ?CarbonInterface $claimsSyncedAt): bool
     {
         return match ($this->trustedModeOrNever($subject)) {
-            self::TRUST_ALWAYS => true,
-            self::TRUST_FIRST_LOGIN => $claimsSyncedAt === null,
-            default => false,
+            ClaimTrust::ALWAYS => true,
+            ClaimTrust::FIRST_LOGIN => $claimsSyncedAt === null,
+            ClaimTrust::NEVER => false,
         };
     }
 
-    public function trustedModeOrNever(string $subject): string
+    public function trustedModeOrNever(string $subject): ClaimTrust
     {
         $trust = config("claimsaccesscontrol.sync.{$subject}.trust");
 
-        $known = [self::TRUST_NEVER, self::TRUST_FIRST_LOGIN, self::TRUST_ALWAYS];
-
-        return in_array($trust, $known, true) ? $trust : self::TRUST_NEVER;
+        return (is_string($trust) ? ClaimTrust::tryFrom($trust) : null) ?? ClaimTrust::NEVER;
     }
 
     public function isAuthoritative(string $subject): bool

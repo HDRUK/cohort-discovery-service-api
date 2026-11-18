@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Claims;
 
+use App\Enums\ClaimTrust;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Models\Workgroup;
@@ -28,9 +29,9 @@ class MembershipSourcesTest extends TestCase
             'default' => $this->provider('Single Sign-On', rolesClaim: 'roles'),
         ]);
 
-        $this->trust(ClaimSyncPolicy::SUBJECT_WORKGROUPS, ClaimSyncPolicy::TRUST_FIRST_LOGIN, false);
-        $this->trust(ClaimSyncPolicy::SUBJECT_ROLES, ClaimSyncPolicy::TRUST_ALWAYS, true);
-        $this->trust(ClaimSyncPolicy::SUBJECT_CUSTODIANS, ClaimSyncPolicy::TRUST_NEVER, false);
+        $this->trust(ClaimSyncPolicy::SUBJECT_WORKGROUPS, ClaimTrust::FIRST_LOGIN->value, false);
+        $this->trust(ClaimSyncPolicy::SUBJECT_ROLES, ClaimTrust::ALWAYS->value, true);
+        $this->trust(ClaimSyncPolicy::SUBJECT_CUSTODIANS, ClaimTrust::NEVER->value, false);
 
         config([
             'claimsaccesscontrol.sync.workgroups.ensure_default' => true,
@@ -201,7 +202,7 @@ class MembershipSourcesTest extends TestCase
 
     public function test_additive_stays_editable(): void
     {
-        $this->trust(ClaimSyncPolicy::SUBJECT_ROLES, ClaimSyncPolicy::TRUST_ALWAYS, false);
+        $this->trust(ClaimSyncPolicy::SUBJECT_ROLES, ClaimTrust::ALWAYS->value, false);
 
         $this->assertSame(
             ['mode' => 'additive', 'editable' => true, 'sources' => ['default']],
@@ -240,7 +241,7 @@ class MembershipSourcesTest extends TestCase
 
     public function test_a_subject_nothing_syncs_is_never_reported_as_authoritative(): void
     {
-        $this->trust(ClaimSyncPolicy::SUBJECT_CUSTODIANS, ClaimSyncPolicy::TRUST_NEVER, true);
+        $this->trust(ClaimSyncPolicy::SUBJECT_CUSTODIANS, ClaimTrust::NEVER->value, true);
 
         $this->assertSame(
             ['internal', false],
@@ -277,7 +278,7 @@ class MembershipSourcesTest extends TestCase
 
     public function test_restored_on_sync_is_empty_for_a_subject_nothing_syncs(): void
     {
-        $this->trust(ClaimSyncPolicy::SUBJECT_WORKGROUPS, ClaimSyncPolicy::TRUST_NEVER, false);
+        $this->trust(ClaimSyncPolicy::SUBJECT_WORKGROUPS, ClaimTrust::NEVER->value, false);
 
         $this->assertSame([], $this->restoredNames('workgroups'));
     }

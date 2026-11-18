@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Enums\ClaimTrust;
 use App\Models\User;
-use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\TokenSync\RoleSyncerService;
 use Tests\TestCase;
 
@@ -16,7 +16,7 @@ class RoleSyncerServiceTest extends TestCase
         parent::setUp();
 
         config([
-            'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.roles.trust' => ClaimTrust::ALWAYS->value,
             'claimsaccesscontrol.sync.roles.authoritative' => true,
             'claimsaccesscontrol.sync.roles.ensure_default' => false,
         ]);
@@ -113,7 +113,7 @@ class RoleSyncerServiceTest extends TestCase
 
     public function test_no_sync_happens_when_roles_are_never_trusted(): void
     {
-        config(['claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        config(['claimsaccesscontrol.sync.roles.trust' => ClaimTrust::NEVER->value]);
         $user = User::factory()->create();
 
         $this->assertFalse($this->syncer->sync($user, ['SYSTEM_ADMIN']));

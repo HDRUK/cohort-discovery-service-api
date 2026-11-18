@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Enums\ClaimTrust;
 use App\Models\Custodian;
 use App\Models\User;
-use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\TokenSync\CustodianSyncerService;
 use DB;
 use Tests\TestCase;
@@ -18,7 +18,7 @@ class CustodianSyncerServiceTest extends TestCase
         parent::setUp();
 
         config([
-            'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::ALWAYS->value,
             'claimsaccesscontrol.sync.custodians.authoritative' => true,
         ]);
 
@@ -117,7 +117,7 @@ class CustodianSyncerServiceTest extends TestCase
 
     public function test_no_sync_happens_when_custodians_are_never_trusted(): void
     {
-        config(['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_NEVER]);
+        config(['claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::NEVER->value]);
         $user = User::factory()->create();
 
         $this->assertFalse($this->syncer->sync($user, [$this->team('ext-1', 'Acme Trust')]));
@@ -126,7 +126,7 @@ class CustodianSyncerServiceTest extends TestCase
 
     public function test_first_login_trust_only_syncs_for_an_unsynced_user(): void
     {
-        config(['claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN]);
+        config(['claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::FIRST_LOGIN->value]);
         $user = User::factory()->create();
 
         $this->assertTrue($this->syncer->sync($user, [$this->team('ext-1', 'Acme Trust')], null));

@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ClaimTrust;
 use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\UserIdentity;
 use App\Models\Workgroup;
-use App\Services\Claims\ClaimSyncPolicy;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\FakeIdp;
 use Tests\TestCase;
@@ -41,12 +41,12 @@ class AccessPolicyTest extends TestCase
                 'label' => 'Single Sign-On',
                 'claim_mapping' => ['workgroups_claim' => 'groups', 'roles_claim' => 'roles'],
             ])],
-            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_FIRST_LOGIN,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::FIRST_LOGIN->value,
             'claimsaccesscontrol.sync.workgroups.authoritative' => false,
             'claimsaccesscontrol.sync.workgroups.ensure_default' => true,
-            'claimsaccesscontrol.sync.roles.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.roles.trust' => ClaimTrust::ALWAYS->value,
             'claimsaccesscontrol.sync.roles.authoritative' => true,
-            'claimsaccesscontrol.sync.custodians.trust' => ClaimSyncPolicy::TRUST_NEVER,
+            'claimsaccesscontrol.sync.custodians.trust' => ClaimTrust::NEVER->value,
             'claimsaccesscontrol.sync.custodians.authoritative' => false,
         ]);
 
@@ -71,7 +71,7 @@ class AccessPolicyTest extends TestCase
     private function useAuthoritativeWorkgroups(): void
     {
         config([
-            'claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_ALWAYS,
+            'claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::ALWAYS->value,
             'claimsaccesscontrol.sync.workgroups.authoritative' => true,
         ]);
     }
@@ -205,7 +205,7 @@ class AccessPolicyTest extends TestCase
 
     public function test_removing_the_default_workgroup_is_flagged_as_restored_on_sync(): void
     {
-        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_ALWAYS]);
+        config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::ALWAYS->value]);
         $user = $this->ssoUser();
         $default = Workgroup::where('name', 'DEFAULT')->firstOrFail();
 
