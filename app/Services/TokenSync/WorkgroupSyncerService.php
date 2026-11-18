@@ -10,8 +10,6 @@ use Carbon\CarbonInterface;
 
 class WorkgroupSyncerService
 {
-    private array $nhsWorkgroups = ['NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH'];
-
     public function __construct(
         private readonly ActivityLogger $activity,
         private readonly ClaimResolver $resolver,
@@ -67,7 +65,7 @@ class WorkgroupSyncerService
         }
 
         if ($hasSdeApproval && $this->policy->shouldSyncSdeWorkgroupsFromClaim()) {
-            $names = array_merge($names, $this->nhsWorkgroups);
+            $names = array_merge($names, config('workgroups.sde_approved', []));
         }
 
         return $this->resolver->workgroupIdsForNames($names);

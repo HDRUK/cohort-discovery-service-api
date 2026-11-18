@@ -214,6 +214,24 @@ class WorkgroupSyncerServiceTest extends TestCase
         }
     }
 
+    public function test_sde_approval_adds_only_the_configured_workgroups(): void
+    {
+        config([
+            'claimsaccesscontrol.sync.workgroups.ensure_default' => false,
+            'claimsaccesscontrol.sync.workgroups.sde_from_claim' => true,
+            'workgroups.sde_approved' => ['nhs-sde'],
+        ]);
+
+        $user = $this->user();
+
+        $this->syncer->sync($user, [], true);
+
+        $this->assertSame(
+            [$this->workgroup('NHS-SDE')->id],
+            $user->workgroups()->pluck('workgroups.id')->all()
+        );
+    }
+
     public function test_no_sync_happens_when_claims_are_never_trusted(): void
     {
         config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimSyncPolicy::TRUST_NEVER]);

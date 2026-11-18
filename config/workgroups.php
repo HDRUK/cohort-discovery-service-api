@@ -12,4 +12,10 @@ return [
         'uk-research',
         'nhs-sde',
     ],
+
+    'sde_approved' => [
+        'nhs-sde',
+        'uk-industry',
+        'uk-research',
+    ],
 ];

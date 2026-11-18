@@ -18,6 +18,25 @@ class ClaimSyncPolicy
 
     public const SUBJECT_CUSTODIANS = 'custodians';
 
+    public const SUBJECTS = [self::SUBJECT_WORKGROUPS, self::SUBJECT_ROLES, self::SUBJECT_CUSTODIANS];
+
+    public const MODE_INTERNAL = 'internal';
+
+    public const MODE_FIRST_LOGIN = 'first_login';
+
+    public const MODE_ADDITIVE = 'additive';
+
+    public const MODE_AUTHORITATIVE = 'authoritative';
+
+    public function editingMode(string $subject): string
+    {
+        return match ($this->trustedModeOrNever($subject)) {
+            self::TRUST_FIRST_LOGIN => self::MODE_FIRST_LOGIN,
+            self::TRUST_ALWAYS => $this->isAuthoritative($subject) ? self::MODE_AUTHORITATIVE : self::MODE_ADDITIVE,
+            default => self::MODE_INTERNAL,
+        };
+    }
+
     public function shouldSync(string $subject, ?CarbonInterface $claimsSyncedAt): bool
     {
         return match ($this->trustedModeOrNever($subject)) {

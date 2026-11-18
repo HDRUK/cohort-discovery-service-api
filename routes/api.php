@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccessPolicyController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\ClickController;
 use App\Http\Controllers\Api\V1\CodeController;
@@ -83,6 +84,8 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
 
     Route::get('/v1/features', [FeatureController::class, 'index']);
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
+
+    Route::get('/v1/access_policy', [AccessPolicyController::class, 'index']);
 });
 
 

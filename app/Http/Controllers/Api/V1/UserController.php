@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Claims\MembershipSources;
 use App\Traits\Responses;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -48,8 +49,11 @@ class UserController extends Controller
      *     )
      * )
      */
-    public function index(Request $request, ActivityLogger $activityLogger): JsonResponse
-    {
+    public function index(
+        Request $request,
+        ActivityLogger $activityLogger,
+        MembershipSources $membershipSources
+    ): JsonResponse {
         $this->authorize('viewAny', User::class);
 
         $users = User::with(['workgroups', 'custodians', 'roles', 'identities'])
@@ -57,6 +61,11 @@ class UserController extends Controller
             ->withStatus()
             ->applySorting()
             ->get();
+
+        $users->each(fn (User $user) => $user->setAttribute(
+            'membership_sources',
+            $membershipSources->forUser($user)
+        ));
 
         $activityLogger->viewed('users', null, [
             'filters' => $request->query(),
@@ -88,13 +97,18 @@ class UserController extends Controller
      *     @OA\Response(response=404, description="User not found")
      * )
      */
-    public function show(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
-    {
+    public function show(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger,
+        MembershipSources $membershipSources
+    ): JsonResponse {
         $this->authorize('view', User::class);
 
         // Stub
-        $user = User::where('id', $id)->first();
+        $user = User::with('identities')->where('id', $id)->first();
         if ($user) {
+            $user->setAttribute('membership_sources', $membershipSources->forUser($user));
             $activityLogger->viewed('users', $user);
 
             return $this->OKResponse($user);
@@ -230,8 +244,12 @@ class UserController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function addToWorkgroup(Request $request, int $id, ActivityLogger $activityLogger): JsonResponse
-    {
+    public function addToWorkgroup(
+        Request $request,
+        int $id,
+        ActivityLogger $activityLogger,
+        MembershipSources $membershipSources
+    ): JsonResponse {
         $this->authorize('addToWorkgroup', User::class);
 
         $input = $request->validate([
@@ -260,6 +278,7 @@ class UserController extends Controller
                 'id' => $workgroup->id,
             ],
         ]);
+        $this->logClaimManagedEdit($activityLogger, $membershipSources, $user, $workgroup, 'attached');
 
         return $this->OKResponse([$userHasWorkgroup]);
     }
@@ -292,7 +311,8 @@ class UserController extends Controller
         Request $request,
         int $id,
         int $workgroupId,
-        ActivityLogger $activityLogger
+        ActivityLogger $activityLogger,
+        MembershipSources $membershipSources
     ): JsonResponse {
         $this->authorize('removeFromWorkgroup', User::class);
 
@@ -321,10 +341,25 @@ class UserController extends Controller
                     'id' => $workgroup->id,
                 ],
             ]);
+            $this->logClaimManagedEdit($activityLogger, $membershipSources, $user, $workgroup, 'detached');
 
             return $this->OKResponse([]);
         }
 
         return $this->BadRequestResponse();
+    }
+
+    private function logClaimManagedEdit(
+        ActivityLogger $activityLogger,
+        MembershipSources $membershipSources,
+        User $user,
+        Workgroup $workgroup,
+        string $action
+    ): void {
+        $warning = $membershipSources->workgroupEditWarning($user, $workgroup, $action);
+
+        if ($warning !== null) {
+            $activityLogger->custom('users', 'claim_managed_membership_edited', $user, $warning);
+        }
     }
 }
