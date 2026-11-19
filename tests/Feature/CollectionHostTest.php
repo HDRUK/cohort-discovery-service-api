@@ -27,6 +27,7 @@ class CollectionHostTest extends TestCase
         CustodianHasUser::truncate();
         Collection::truncate();
         CollectionHost::truncate();
+        CollectionHostHasCollection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->user = User::factory()->create();
@@ -93,7 +94,18 @@ class CollectionHostTest extends TestCase
             ->assertJsonPath('data.client_secret', $host->client_secret);
     }
 
-    public function test_it_lists_a_custodians_hosts_with_credentials_for_a_member()
+    public function test_it_lists_collection_hosts_without_credentials()
+    {
+        CollectionHost::factory()->create();
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL)
+            ->assertStatus(200)
+            ->assertJsonMissingPath('data.0.client_id')
+            ->assertJsonMissingPath('data.0.client_secret');
+    }
+
+    public function test_it_lists_a_custodians_hosts_without_credentials_for_a_member()
     {
         $this->user->removeRole('admin');
         $custodian = Custodian::factory()->create();
@@ -107,8 +119,41 @@ class CollectionHostTest extends TestCase
             ->getJson('/api/v1/custodians/'.$custodian->pid.'/collection_hosts');
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.0.client_id', $host->client_id)
-            ->assertJsonPath('data.0.client_secret', $host->client_secret);
+            ->assertJsonPath('data.0.id', $host->id)
+            ->assertJsonMissingPath('data.0.client_id')
+            ->assertJsonMissingPath('data.0.client_secret');
+    }
+
+    public function test_it_shows_credentials_to_a_custodian_member()
+    {
+        $this->user->removeRole('admin');
+        $custodian = Custodian::factory()->create();
+        $host = CollectionHost::factory()->create(['custodian_id' => $custodian->id]);
+        CustodianHasUser::create([
+            'user_id' => $this->user->id,
+            'custodian_id' => $custodian->id,
+        ]);
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$host->id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.client_id', $host->client_id)
+            ->assertJsonPath('data.client_secret', $host->client_secret);
+    }
+
+    public function test_it_forbids_showing_a_host_to_a_member_of_another_custodian()
+    {
+        $this->user->removeRole('admin');
+        $host = CollectionHost::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+        CustodianHasUser::create([
+            'user_id' => $this->user->id,
+            'custodian_id' => Custodian::factory()->create()->id,
+        ]);
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$host->id)
+            ->assertStatus(403)
+            ->assertJsonMissingPath('data.client_secret');
     }
 
     public function test_it_forbids_listing_a_custodians_hosts_for_a_non_member()

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use App\Enums\TaskType;
 use App\Services\QueryContext\QueryContextType;
 use App\Traits\ResolvesByIdOrPid;
@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,10 +52,9 @@ use Illuminate\Validation\Rule;
  *
  *     @OA\Property(
  *         property="host",
- *         type="array",
- *         description="Associated collection host(s)",
- *
- *         @OA\Items(ref="#/components/schemas/CollectionHost")
+ *         ref="#/components/schemas/CollectionHost",
+ *         nullable=true,
+ *         description="Associated collection host"
  *     ),
  *
  *     @OA\Property(
@@ -254,7 +254,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value);
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::DEMOGRAPHICS->value);
             }
         );
     }
@@ -265,7 +265,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value);
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::GENERIC->value);
             }
         );
     }
@@ -276,7 +276,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::DEMOGRAPHICS->value)
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::DEMOGRAPHICS->value)
                     ->whereHas('result');
             }
         );
@@ -288,7 +288,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['created_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('task_type', TaskType::B)
-                    ->whereRelation('submittedQuery', 'query_type', QueryType::GENERIC->value)
+                    ->whereRelation('submittedQuery', 'query_type', DistributionQueryType::GENERIC->value)
                     ->whereHas('result');
             }
         );
@@ -399,14 +399,16 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
         );
     }
 
-    public function host(): BelongsToMany
+    public function host(): HasOneThrough
     {
-        return $this->belongsToMany(
+        return $this->hasOneThrough(
             CollectionHost::class,
-            'collection_host_has_collections',
+            CollectionHostHasCollection::class,
             'collection_id',
+            'id',
+            'id',
             'collection_host_id'
-        )->limit(1);
+        );
     }
 
     public function config(): HasOne

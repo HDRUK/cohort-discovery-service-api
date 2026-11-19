@@ -159,6 +159,29 @@ class WorkgroupSyncerServiceTest extends TestCase
         $this->assertTrue($user->workgroups()->where('workgroups.id', $claimed->id)->exists());
     }
 
+    public function test_authoritative_sync_keeps_a_list_mapped_workgroup_until_none_of_its_values_is_claimed(): void
+    {
+        config([
+            'claimsaccesscontrol.sync.workgroups.authoritative' => true,
+            'claimsaccesscontrol.workgroup_mappings' => [
+                'uk-research' => ['ukri', 'ncs', 'breathe'],
+                'other' => 'other',
+            ],
+        ]);
+
+        $user = $this->user();
+        $ukResearch = $this->workgroup('UK-RESEARCH');
+
+        $this->syncer->sync($user, ['ukri', 'ncs'], false);
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $ukResearch->id)->exists());
+
+        $this->syncer->sync($user, ['breathe'], false);
+        $this->assertTrue($user->workgroups()->where('workgroups.id', $ukResearch->id)->exists());
+
+        $this->syncer->sync($user, ['other'], false);
+        $this->assertFalse($user->workgroups()->where('workgroups.id', $ukResearch->id)->exists());
+    }
+
     public function test_default_workgroup_is_added_when_configured(): void
     {
         config(['claimsaccesscontrol.sync.workgroups.ensure_default' => true]);

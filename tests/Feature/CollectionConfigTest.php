@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DistributionQueryType;
 use App\Models\Collection;
 use App\Models\CollectionConfig;
 use App\Models\User;
@@ -91,6 +92,23 @@ class CollectionConfigTest extends TestCase
         $this->assertTrue($content['collection_id'] === $collection->id);
     }
 
+    public function test_it_rejects_a_config_type_that_is_not_a_distribution_job_type(): void
+    {
+        $collection = Collection::factory()->create();
+
+        $this->payload['collection_id'] = $collection->id;
+        $this->payload['type'] = 'b';
+
+        $response = $this->actingAsJwt(
+            $this->user,
+            []
+        )
+            ->postJson(self::BASE_URL, $this->payload);
+        $response->assertStatus(422);
+
+        $this->assertDatabaseCount('collection_config', 0);
+    }
+
     public function test_it_can_update_collection_config(): void
     {
         $collection = Collection::factory()->create();
@@ -110,7 +128,9 @@ class CollectionConfigTest extends TestCase
 
         $this->payload['run_time_hour'] = 12;
         $this->payload['run_time_minute'] = 30;
-        $this->payload['type'] = ($this->payload['type'] === 'a' ? 'b' : 'a');
+        $this->payload['type'] = $this->payload['type'] === DistributionQueryType::GENERIC
+            ? DistributionQueryType::DEMOGRAPHICS->value
+            : DistributionQueryType::GENERIC->value;
 
         $response = $this->actingAsJwt(
             $this->user,

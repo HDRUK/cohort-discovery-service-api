@@ -84,6 +84,7 @@ class Task extends Model
         });
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class, 'collection_id', 'id');
@@ -99,7 +100,8 @@ class Task extends Model
         return $this->hasOne(Result::class);
     }
 
-    public function resultFiles()
+    /** @return HasMany<ResultFile, $this> */
+    public function resultFiles(): HasMany
     {
         return $this->hasMany(ResultFile::class);
     }

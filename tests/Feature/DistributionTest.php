@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use App\Models\Collection;
 use App\Models\Custodian;
 use App\Models\Query;
@@ -61,7 +61,7 @@ class DistributionTest extends TestCase
             ],
         ];
 
-        $type = QueryType::DEMOGRAPHICS->value;
+        $type = DistributionQueryType::DEMOGRAPHICS->value;
 
         $response = $this->actingAsJwt(
             $this->user,

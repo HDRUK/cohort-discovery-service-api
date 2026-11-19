@@ -25,6 +25,7 @@ class LatestDistribution extends Model
     protected $casts = [
         'count' => 'integer',
         'ncollections' => 'integer',
+        'collection_ids' => 'array',
         'domain_mismatch' => 'boolean',
     ];
 

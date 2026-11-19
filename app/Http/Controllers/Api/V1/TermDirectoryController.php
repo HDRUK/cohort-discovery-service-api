@@ -76,7 +76,7 @@ class TermDirectoryController extends Controller
      *      ),
      *     @OA\Response(
      *      response=200,
-     *      description="Paginated list of concepts")
+     *      description="Paginated list of concepts. Each row carries ncollections and collection_names, the count and alphabetical names of the caller's visible collections reporting the concept.")
      * )
      */
     public function index(Request $request, ActivityLogger $activityLogger, TermDirectoryService $termDirectory): JsonResponse

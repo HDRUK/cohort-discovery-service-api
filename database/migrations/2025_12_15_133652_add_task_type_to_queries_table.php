@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\QueryType;
+use App\Enums\DistributionQueryType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +11,7 @@ return new class () extends Migration {
         Schema::table('queries', function (Blueprint $table) {
             $table->enum(
                 'query_type',
-                array_map(fn (QueryType $case) => $case->value, QueryType::cases())
+                array_map(fn (DistributionQueryType $case) => $case->value, DistributionQueryType::cases())
             )
             ->nullable()
             ->after('definition');

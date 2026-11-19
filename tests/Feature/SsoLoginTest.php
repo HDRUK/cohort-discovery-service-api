@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\UserIdentity;
+use App\Models\Workgroup;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\FakeIdp;
 use Tests\TestCase;
@@ -161,6 +162,34 @@ class SsoLoginTest extends TestCase
         // Carries the provider slug so the frontend can offer RP-initiated logout
         $claims = $this->decodeJwtPayload($accessToken);
         $this->assertSame('default', $claims['user']['sso_provider']);
+    }
+
+    public function test_callback_gives_a_list_mapped_workgroup_for_any_one_of_its_groups(): void
+    {
+        Workgroup::updateOrCreate(['name' => 'UK-RESEARCH'], ['active' => 1]);
+
+        config([
+            'claimsaccesscontrol.workgroup_mappings' => [
+                'uk-research' => ['ukri', 'ncs', 'breathe'],
+            ],
+            'claimsaccesscontrol.sync.workgroups.trust' => 'always',
+        ]);
+
+        [$state, $nonce] = $this->startLogin();
+
+        (new FakeIdp())->fakeHttp([
+            'sub' => 'subject-breathe',
+            'email' => 'breathe.researcher@example.com',
+            'email_verified' => true,
+            'name' => 'Breathe Researcher',
+            'nonce' => $nonce,
+            'eduperson_entitlement' => ['breathe'],
+        ]);
+
+        $this->get($this->callbackUrl($state))->assertRedirect();
+
+        $user = User::where('email', 'breathe.researcher@example.com')->firstOrFail();
+        $this->assertTrue($user->workgroups()->where('name', 'UK-RESEARCH')->exists());
     }
 
     public function test_existing_identity_logs_in_without_creating_rows(): void

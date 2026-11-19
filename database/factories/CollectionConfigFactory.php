@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\TaskType;
+use App\Enums\DistributionQueryType;
 use App\Models\CollectionConfig;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -28,8 +28,8 @@ class CollectionConfigFactory extends Factory
             'run_time_frequency' => 1,
             'enabled' => $this->faker->randomElement([0, 1]),
             'type' => $this->faker->randomElement([
-                TaskType::A,
-                TaskType::B,
+                DistributionQueryType::GENERIC,
+                DistributionQueryType::DEMOGRAPHICS,
             ]),
         ];
     }
