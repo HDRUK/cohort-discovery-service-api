@@ -38,24 +38,24 @@ return [
     'sync' => [
         'workgroups' => [
             'trust' => env('CLAIM_SYNC_WORKGROUPS', 'first_login'),
-            'authoritative' => (bool) env('CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE', false),
-            'ensure_default' => (bool) env('CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP', true),
-            'sde_from_claim' => (bool) env('CLAIM_SYNC_SDE_WORKGROUPS_FROM_CLAIM', true),
+            'authoritative' => env('CLAIM_SYNC_WORKGROUPS_AUTHORITATIVE', false),
+            'ensure_default' => env('CLAIM_SYNC_ENSURE_DEFAULT_WORKGROUP', true),
+            'sde_from_claim' => env('CLAIM_SYNC_SDE_WORKGROUPS_FROM_CLAIM', true),
         ],
 
         'roles' => [
             'trust' => env('CLAIM_SYNC_ROLES', 'always'),
-            'authoritative' => (bool) env('CLAIM_SYNC_ROLES_AUTHORITATIVE', true),
-            'ensure_default' => (bool) env('CLAIM_SYNC_ENSURE_DEFAULT_ROLE', true),
+            'authoritative' => env('CLAIM_SYNC_ROLES_AUTHORITATIVE', true),
+            'ensure_default' => env('CLAIM_SYNC_ENSURE_DEFAULT_ROLE', true),
         ],
 
         'custodians' => [
             'trust' => env('CLAIM_SYNC_CUSTODIANS', 'always'),
-            'authoritative' => (bool) env('CLAIM_SYNC_CUSTODIANS_AUTHORITATIVE', true),
+            'authoritative' => env('CLAIM_SYNC_CUSTODIANS_AUTHORITATIVE', true),
         ],
 
         'provision' => [
-            'defaults_on_create' => (bool) env('CLAIM_PROVISION_DEFAULTS_ON_CREATE', true),
+            'defaults_on_create' => env('CLAIM_PROVISION_DEFAULTS_ON_CREATE', true),
         ],
     ],
 ];

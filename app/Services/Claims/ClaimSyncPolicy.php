@@ -43,26 +43,31 @@ class ClaimSyncPolicy
 
     public function isAuthoritative(string $subject): bool
     {
-        return (bool) config("claimsaccesscontrol.sync.{$subject}.authoritative", false);
+        return $this->flag("claimsaccesscontrol.sync.{$subject}.authoritative", false);
     }
 
     public function shouldEnsureDefaultWorkgroup(): bool
     {
-        return (bool) config('claimsaccesscontrol.sync.workgroups.ensure_default', true);
+        return $this->flag('claimsaccesscontrol.sync.workgroups.ensure_default', true);
     }
 
     public function shouldEnsureDefaultRole(): bool
     {
-        return (bool) config('claimsaccesscontrol.sync.roles.ensure_default', true);
+        return $this->flag('claimsaccesscontrol.sync.roles.ensure_default', true);
     }
 
     public function shouldSyncSdeWorkgroupsFromClaim(): bool
     {
-        return (bool) config('claimsaccesscontrol.sync.workgroups.sde_from_claim', true);
+        return $this->flag('claimsaccesscontrol.sync.workgroups.sde_from_claim', true);
     }
 
     public function shouldApplyDefaultsOnCreate(): bool
     {
-        return (bool) config('claimsaccesscontrol.sync.provision.defaults_on_create', true);
+        return $this->flag('claimsaccesscontrol.sync.provision.defaults_on_create', true);
+    }
+
+    private function flag(string $key, bool $default): bool
+    {
+        return filter_var(config($key, $default), FILTER_VALIDATE_BOOLEAN);
     }
 }

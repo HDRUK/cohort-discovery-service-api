@@ -100,6 +100,70 @@ class ClaimSyncPolicyTest extends TestCase
         $this->assertTrue(true, 'every trust value registers without throwing');
     }
 
+    public function test_a_misspelt_boolean_flag_refuses_to_boot(): void
+    {
+        config(['claimsaccesscontrol.sync.roles.authoritative' => 'flase']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('CLAIM_SYNC_ROLES_AUTHORITATIVE is [flase]; expected one of: true, false, 1, 0');
+
+        (new ClaimsAccessControlServiceProvider($this->app))->register();
+    }
+
+    public function test_a_missing_boolean_flag_refuses_to_boot(): void
+    {
+        config(['claimsaccesscontrol.sync.provision' => []]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('CLAIM_PROVISION_DEFAULTS_ON_CREATE is [NULL]');
+
+        (new ClaimsAccessControlServiceProvider($this->app))->register();
+    }
+
+    public function test_every_accepted_boolean_spelling_boots(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        foreach ([true, 'true', 1, '1', false, 'false', 0, '0'] as $value) {
+            config([
+                'claimsaccesscontrol.sync.workgroups.authoritative' => $value,
+                'claimsaccesscontrol.sync.workgroups.ensure_default' => $value,
+                'claimsaccesscontrol.sync.workgroups.sde_from_claim' => $value,
+                'claimsaccesscontrol.sync.roles.authoritative' => $value,
+                'claimsaccesscontrol.sync.roles.ensure_default' => $value,
+                'claimsaccesscontrol.sync.custodians.authoritative' => $value,
+                'claimsaccesscontrol.sync.provision.defaults_on_create' => $value,
+            ]);
+
+            (new ClaimsAccessControlServiceProvider($this->app))->register();
+        }
+    }
+
+    public function test_string_and_numeric_flags_read_as_the_boolean_they_spell(): void
+    {
+        foreach (['false', '0', 0, false] as $falsy) {
+            config(['claimsaccesscontrol.sync.workgroups.authoritative' => $falsy]);
+            $this->assertFalse($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS), var_export($falsy, true));
+        }
+
+        foreach (['true', '1', 1, true] as $truthy) {
+            config(['claimsaccesscontrol.sync.workgroups.authoritative' => $truthy]);
+            $this->assertTrue($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_WORKGROUPS), var_export($truthy, true));
+        }
+
+        config([
+            'claimsaccesscontrol.sync.workgroups.ensure_default' => 'false',
+            'claimsaccesscontrol.sync.roles.ensure_default' => 'false',
+            'claimsaccesscontrol.sync.workgroups.sde_from_claim' => 'false',
+            'claimsaccesscontrol.sync.provision.defaults_on_create' => 'false',
+        ]);
+
+        $this->assertFalse($this->policy->shouldEnsureDefaultWorkgroup());
+        $this->assertFalse($this->policy->shouldEnsureDefaultRole());
+        $this->assertFalse($this->policy->shouldSyncSdeWorkgroupsFromClaim());
+        $this->assertFalse($this->policy->shouldApplyDefaultsOnCreate());
+    }
+
     public function test_claims_synced_at_reaches_the_policy_as_a_carbon_instance(): void
     {
         $user = User::factory()->create();
