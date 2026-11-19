@@ -1,3 +1,16 @@
+## [1.18.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.17.0...v1.18.0) (2026-11-19)
+
+### ✨ Features
+
+* **DP-1042:** return collection names in term directory (#365) ([2933271](https://github.com/HDRUK/cohort-discovery-service-api/commit/2933271331642b967a241d9c7e29dc52b9123942)), closes [DP-1042](undefinedDP-1042)
+* **DP-1254:** map several IdP values to one workgroup or role (#364) ([b7ae0f9](https://github.com/HDRUK/cohort-discovery-service-api/commit/b7ae0f9e23a58c5b3f6dfc1165d929605564332b)), closes [DP-1254](undefinedDP-1254)
+
+### 🐛 Bug Fixes
+
+* **DP-1078:** queue scheduled concept jobs as distribution tasks (#361) ([efd8ed0](https://github.com/HDRUK/cohort-discovery-service-api/commit/efd8ed03a963bba4adb0789c1c8a5995c32af578)), closes [DP-1078](undefinedDP-1078)
+* **DP-1198:** one host per collection, credentials only on show (#363) ([1ef0b5b](https://github.com/HDRUK/cohort-discovery-service-api/commit/1ef0b5b0bcd61fe75efec9350f8f047baf464823)), closes [DP-1198](undefinedDP-1198)
+* **DP-1217:** give B-type tasks a longer timeout before auto-fail (#360) ([2c664fb](https://github.com/HDRUK/cohort-discovery-service-api/commit/2c664fbd096fbd34eaf08982abfdd23f21a84428)), closes [DP-1217](undefinedDP-1217)
+
 ## [1.17.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.16.0...v1.17.0) (2026-11-03)
 
 ### ✨ Features
