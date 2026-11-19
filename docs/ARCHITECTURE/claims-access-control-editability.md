@@ -17,6 +17,12 @@ Both paths use `ClaimSyncPolicy`. Trust (the `ClaimTrust` enum: `never`, `first_
 
 An unrecognised trust value refuses to boot. `ClaimsAccessControlServiceProvider` checks every subject at registration, the same way `ApplicationModeServiceProvider` checks `APP_OPERATION_MODE`, so a typo can't quietly turn a sync off.
 
+The boolean flags are checked at boot too. They are `authoritative`, `ensure_default`, `sde_from_claim` and `provision.defaults_on_create` (the provider's `FLAGS` map lists each one's env var).
+
+- Accepted values: `true`, `"true"`, `1`, `"1"`, `false`, `"false"`, `0` and `"0"`.
+- Anything else refuses to boot, including a missing key or a typo like `flase`. A plain `(bool)` cast used to read `flase` as true, which for `sde_from_claim` granted SDE workgroups.
+- `ClaimSyncPolicy` reads each flag with `FILTER_VALIDATE_BOOLEAN`, so `"false"` and `"0"` read as false.
+
 ## Modes
 
 `MembershipSources` (`app/Services/Claims/MembershipSources.php`) gives each subject one of these modes, defined as the `App\Enums\MembershipMode` backed enum. The enum also owns the editable rule:
@@ -46,6 +52,13 @@ An unrecognised trust value refuses to boot. `ClaimsAccessControlServiceProvider
   - for each subject: `mode`, `editable` and `sources`;
   - it reads the eager-loaded `identities` relation, so the index adds no per-user queries;
   - it is the `membership_sources` accessor on `User`, kept out of `$appends`. `UserController` opts in with `->append('membership_sources')`, so other user payloads (`/v1/user`, nested users) are unchanged.
+- **`identities`** on the same two endpoints: `GET /api/v1/users/{id}` now eager-loads it too, matching the index.
+  - Each entry has `id`, `user_id`, `provider`, `last_login_at` and timestamps.
+  - `provider_sub` and `email_at_link` are hidden by `UserIdentity::$hidden`.
+
+**Who can see this.** Both user endpoints are admin-only, through the `viewAny`/`view` user policy. A non-admin gets 403, even for their own id. `/v1/user`, the caller's own payload, carries neither `identities` nor `membership_sources`. `AccessPolicyTest` pins all of this.
+
+`MembershipSources` is bound `scoped`, so the users index shares one instance (and its per-request provider map) across every user.
 
 ## Entries restored on every sync
 
@@ -59,7 +72,9 @@ An unrecognised trust value refuses to boot. `ClaimsAccessControlServiceProvider
 
 `RoleSyncFloor` also keeps the last admin's `admin` role. It only ever keeps that role and never re-adds it, so it isn't listed.
 
-The SDE workgroup list lives in `config/workgroups.php` under `sde_approved`, next to `seed`. A deployment that mounts its own `workgroups.php` without that key gets no SDE workgroups. That is fine for standalone stacks, because SDE sync is integrated-only.
+The SDE workgroup list lives in `config/workgroups.php` under `sde_approved`, next to `seed`. A deployment can mount its own `workgroups.php` without that key, or with it set to `null`. In that case `Workgroup::sdeApprovedNames()` falls back to `Workgroup::SDE_APPROVED_NAMES` (`nhs-sde`, `uk-industry`, `uk-research`), so SDE sync doesn't quietly turn off.
+
+Names are matched through `ClaimResolver::normalise()`, the same as sync. A non-string or empty entry is skipped instead of breaking `/access_policy`.
 
 ## Enforcement and audit
 
@@ -74,11 +89,15 @@ When an admin adds or removes a workgroup for a user whose workgroups aren't `in
 - `mode`
 - `sources`
 - `authoritative`
-- `restored_on_sync` (a removed workgroup that the next sync will put back)
+- `restored_on_sync`, always `false` for `attached`. For `detached`:
+  - `true`: the next sync puts the workgroup back (`every_sync`, e.g. `DEFAULT`);
+  - `null`: unknown. This is an SDE workgroup (`sde_approved`). It comes back only if the user's Gateway token still carries SDE approval, which isn't stored;
+  - `false`: nothing restores it.
 
 Only workgroup membership has edit endpoints. For roles and custodians the policy is display-only.
 
 ## Tests
 
-- `tests/Unit/Claims/MembershipSourcesTest.php`: mode resolution, mixed providers, disabled providers, `first_login` before and after sync, integrated mode, `restored_on_sync`.
-- `tests/Feature/AccessPolicyTest.php`: the endpoint, the per-user block on users, query count on the index, the activity-log warning.
+- `tests/Unit/Claims/MembershipSourcesTest.php`: mode resolution, mixed providers, disabled providers, `first_login` before and after sync, integrated mode, `restored_on_sync`, an unknown result for SDE removals, the `sde_approved` fallback and malformed names.
+- `tests/Unit/Claims/ClaimSyncPolicyTest.php`: trust and boolean-flag validation at boot, and string/numeric flag parsing.
+- `tests/Feature/AccessPolicyTest.php`: the endpoint, the per-user block on users, query count on the index, the activity-log warning, and that non-admins can't see `identities` or `membership_sources`.
