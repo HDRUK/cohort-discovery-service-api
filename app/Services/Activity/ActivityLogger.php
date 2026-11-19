@@ -2,6 +2,7 @@
 
 namespace App\Services\Activity;
 
+use App\Enums\ClaimTrust;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -68,7 +69,7 @@ class ActivityLogger
         string $relation,
         array $changes,
         bool $authoritative,
-        string $trust,
+        ClaimTrust $trust,
         ?string $description = null,
     ): void {
         if ($changes['attached'] === [] && $changes['detached'] === []) {
@@ -78,7 +79,7 @@ class ActivityLogger
         $this->custom($logName, $event, $subject, [
             'relation' => $relation,
             'authoritative' => $authoritative,
-            'trust' => $trust,
+            'trust' => $trust->value,
             'attached' => array_values($changes['attached']),
             'detached' => array_values($changes['detached']),
         ], $description);

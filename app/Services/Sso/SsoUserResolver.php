@@ -5,6 +5,7 @@ namespace App\Services\Sso;
 use App\Exceptions\Sso\SsoLinkingException;
 use App\Models\User;
 use App\Models\UserIdentity;
+use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
@@ -116,7 +117,7 @@ class SsoUserResolver
         }
 
         $user->workgroups()->syncWithoutDetaching(
-            $this->resolver->workgroupIdsForNames(['DEFAULT'])
+            $this->resolver->workgroupIdsForNames([Workgroup::DEFAULT_NAME])
         );
 
         $user->assignRole('user');

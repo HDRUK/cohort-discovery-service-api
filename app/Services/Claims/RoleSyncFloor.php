@@ -6,7 +6,7 @@ use App\Models\User;
 
 class RoleSyncFloor
 {
-    private const DEFAULT_ROLE = 'user';
+    public const DEFAULT_ROLE = 'user';
 
     private const ADMIN_ROLE = 'admin';
 

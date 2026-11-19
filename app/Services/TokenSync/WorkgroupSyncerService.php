@@ -3,6 +3,7 @@
 namespace App\Services\TokenSync;
 
 use App\Models\User;
+use App\Models\Workgroup;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Claims\ClaimResolver;
 use App\Services\Claims\ClaimSyncPolicy;
@@ -10,8 +11,6 @@ use Carbon\CarbonInterface;
 
 class WorkgroupSyncerService
 {
-    private array $nhsWorkgroups = ['NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH'];
-
     public function __construct(
         private readonly ActivityLogger $activity,
         private readonly ClaimResolver $resolver,
@@ -63,11 +62,11 @@ class WorkgroupSyncerService
         $names = [];
 
         if ($this->policy->shouldEnsureDefaultWorkgroup()) {
-            $names[] = 'DEFAULT';
+            $names[] = Workgroup::DEFAULT_NAME;
         }
 
         if ($hasSdeApproval && $this->policy->shouldSyncSdeWorkgroupsFromClaim()) {
-            $names = array_merge($names, $this->nhsWorkgroups);
+            $names = array_merge($names, Workgroup::sdeApprovedNames());
         }
 
         return $this->resolver->workgroupIdsForNames($names);

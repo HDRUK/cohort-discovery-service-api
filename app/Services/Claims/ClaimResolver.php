@@ -89,7 +89,7 @@ class ClaimResolver
             ->all();
     }
 
-    private function normalise(array $values): array
+    public function normalise(array $values): array
     {
         return collect($values)
             ->filter(fn ($value) => is_string($value) && $value !== '')
