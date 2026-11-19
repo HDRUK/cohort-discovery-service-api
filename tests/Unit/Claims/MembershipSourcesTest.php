@@ -299,6 +299,48 @@ class MembershipSourcesTest extends TestCase
         $this->assertSame(['DEFAULT'], $this->restoredNames('workgroups'));
     }
 
+    public function test_removing_an_sde_workgroup_reports_restoration_as_unknown(): void
+    {
+        config(['system.operation_mode' => 'integrated']);
+        $user = $this->userWithIdentities();
+        $sources = app(MembershipSources::class);
+
+        $sde = Workgroup::where('name', 'NHS-SDE')->firstOrFail();
+        $other = Workgroup::updateOrCreate(['name' => 'OTHER'], ['active' => 1]);
+        $default = Workgroup::where('name', 'DEFAULT')->firstOrFail();
+
+        $this->assertNull($sources->workgroupEditWarning($user, $sde, 'detached')['restored_on_sync']);
+        $this->assertFalse($sources->workgroupEditWarning($user, $other, 'detached')['restored_on_sync']);
+        $this->assertTrue($sources->workgroupEditWarning($user, $default, 'detached')['restored_on_sync']);
+        $this->assertFalse($sources->workgroupEditWarning($user, $sde, 'attached')['restored_on_sync']);
+    }
+
+    public function test_one_instance_serves_the_whole_request(): void
+    {
+        $this->assertSame(app(MembershipSources::class), app(MembershipSources::class));
+    }
+
+    public function test_malformed_sde_names_are_skipped_rather_than_breaking_the_policy(): void
+    {
+        config([
+            'system.operation_mode' => 'integrated',
+            'workgroups.sde_approved' => ['nhs-sde', ['uk-research'], null, ''],
+        ]);
+
+        $this->assertSame(['DEFAULT', 'NHS-SDE'], $this->restoredNames('workgroups'));
+    }
+
+    public function test_sde_workgroups_fall_back_to_the_shipped_list_when_config_leaves_them_out(): void
+    {
+        config(['system.operation_mode' => 'integrated', 'workgroups' => ['seed' => []]]);
+
+        $this->assertEqualsCanonicalizing(['DEFAULT', 'NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH'], $this->restoredNames('workgroups'));
+
+        config(['workgroups.sde_approved' => null]);
+
+        $this->assertEqualsCanonicalizing(['DEFAULT', 'NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH'], $this->restoredNames('workgroups'));
+    }
+
     public function test_a_default_workgroup_missing_from_the_database_is_left_out(): void
     {
         \DB::beginTransaction();

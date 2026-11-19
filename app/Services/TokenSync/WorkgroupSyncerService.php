@@ -66,7 +66,7 @@ class WorkgroupSyncerService
         }
 
         if ($hasSdeApproval && $this->policy->shouldSyncSdeWorkgroupsFromClaim()) {
-            $names = array_merge($names, config('workgroups.sde_approved', []));
+            $names = array_merge($names, Workgroup::sdeApprovedNames());
         }
 
         return $this->resolver->workgroupIdsForNames($names);

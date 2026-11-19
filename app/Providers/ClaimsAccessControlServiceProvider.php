@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\ClaimTrust;
 use App\Services\Claims\ClaimSyncPolicy;
+use App\Services\Claims\MembershipSources;
 use Illuminate\Support\ServiceProvider;
 
 class ClaimsAccessControlServiceProvider extends ServiceProvider
@@ -11,6 +12,8 @@ class ClaimsAccessControlServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->assertTrustIsValid();
+
+        $this->app->scoped(MembershipSources::class);
     }
 
     private function assertTrustIsValid(): void

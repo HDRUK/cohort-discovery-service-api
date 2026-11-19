@@ -232,6 +232,37 @@ class WorkgroupSyncerServiceTest extends TestCase
         );
     }
 
+    public function test_sde_approval_falls_back_to_the_shipped_list_when_config_leaves_it_out(): void
+    {
+        config([
+            'claimsaccesscontrol.sync.workgroups.sde_from_claim' => true,
+            'workgroups' => ['seed' => []],
+        ]);
+
+        $user = $this->user();
+
+        $this->syncer->sync($user, [], true);
+
+        $this->assertEqualsCanonicalizing(
+            array_map(fn ($name) => $this->workgroup($name)->id, ['NHS-SDE', 'UK-INDUSTRY', 'UK-RESEARCH']),
+            $user->workgroups()->pluck('workgroups.id')->all()
+        );
+    }
+
+    public function test_sde_approval_survives_an_explicitly_null_sde_list(): void
+    {
+        config([
+            'claimsaccesscontrol.sync.workgroups.sde_from_claim' => true,
+            'workgroups.sde_approved' => null,
+        ]);
+
+        $user = $this->user();
+
+        $this->syncer->sync($user, [], true);
+
+        $this->assertSame(3, $user->workgroups()->count());
+    }
+
     public function test_no_sync_happens_when_claims_are_never_trusted(): void
     {
         config(['claimsaccesscontrol.sync.workgroups.trust' => ClaimTrust::NEVER->value]);

@@ -27,6 +27,8 @@ class Workgroup extends Model implements ValidatableModel
 
     public const DEFAULT_NAME = 'DEFAULT';
 
+    public const SDE_APPROVED_NAMES = ['nhs-sde', 'uk-industry', 'uk-research'];
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -42,6 +44,11 @@ class Workgroup extends Model implements ValidatableModel
         'id',
         'name',
     ];
+
+    public static function sdeApprovedNames(): array
+    {
+        return config('workgroups.sde_approved') ?? self::SDE_APPROVED_NAMES;
+    }
 
     public function getValidationRules(string $context): array
     {
