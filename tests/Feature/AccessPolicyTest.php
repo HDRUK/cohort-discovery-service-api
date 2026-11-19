@@ -150,6 +150,25 @@ class AccessPolicyTest extends TestCase
             ->assertJsonMissingPath('data.membership_sources');
     }
 
+    public function test_a_non_admin_sees_no_identities_or_membership_sources_on_their_own_payload(): void
+    {
+        $ssoUser = $this->ssoUser();
+
+        $this->actingAsJwt($ssoUser)->getJson('/api/v1/user')
+            ->assertOk()
+            ->assertJsonPath('data.id', $ssoUser->id)
+            ->assertJsonMissingPath('data.identities')
+            ->assertJsonMissingPath('data.membership_sources');
+    }
+
+    public function test_a_non_admin_cannot_read_identities_or_membership_sources_even_for_themselves(): void
+    {
+        $ssoUser = $this->ssoUser();
+
+        $this->actingAsJwt($ssoUser)->getJson(self::USERS_URL."/{$ssoUser->id}")->assertForbidden();
+        $this->actingAsJwt($ssoUser)->getJson(self::USERS_URL)->assertForbidden();
+    }
+
     public function test_an_unauthenticated_request_is_rejected(): void
     {
         $this->getJson(self::URL)->assertUnauthorized();
