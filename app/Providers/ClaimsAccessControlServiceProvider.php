@@ -19,7 +19,7 @@ class ClaimsAccessControlServiceProvider extends ServiceProvider
         'provision.defaults_on_create' => 'CLAIM_PROVISION_DEFAULTS_ON_CREATE',
     ];
 
-    public const ACCEPTED_FLAG_VALUES = [true, 'true', 1, '1', false, 'false', 0, '0'];
+    public const ACCEPTED_FLAG_VALUES = [true, 'true', 1, '1', false, 'false', 0, '0', ''];
 
     public function register(): void
     {
@@ -58,7 +58,7 @@ class ClaimsAccessControlServiceProvider extends ServiceProvider
             }
 
             throw new \RuntimeException(sprintf(
-                '%s is [%s]; expected one of: true, false, 1, 0 (claimsaccesscontrol.sync.%s).',
+                '%s is [%s]; expected one of: true, false, 1, 0, or blank for false (claimsaccesscontrol.sync.%s).',
                 $envName,
                 $this->describe($value),
                 $key

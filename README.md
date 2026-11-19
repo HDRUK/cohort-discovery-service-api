@@ -366,8 +366,13 @@ By default the local database is the authority and the IdP only proves identity.
 manages membership, it can drive three subjects instead - `workgroups`, `roles` and `custodians` -
 each governed by the same pair of settings, in both operation modes.
 
-**Trust** says when a claim is read at all: `never`, `first_login`, or `always`. An unrecognised
-value falls back to `never` rather than defaulting open.
+**Trust** says when a claim is read at all: `never`, `first_login`, or `always`. An unset variable
+uses its default; an unrecognised or blank value (or one missing from a mounted config) refuses to
+boot, naming the variable, so a typo can't quietly switch a sync off.
+
+The boolean `CLAIM_SYNC_*` / `CLAIM_PROVISION_*` flags are checked at boot as well: `true`, `false`,
+`1` or `0`. A variable that isn't set uses its default in `config/claimsaccesscontrol.php`; one that
+is set but blank reads as `false`, as it always has; anything else (`flase`, `yes`) refuses to boot.
 
 **Authoritative** says whether a sync may *remove* membership the claim did not mention. `false`
 only ever adds, so an admin's manual assignment survives the user's next login; `true` makes the

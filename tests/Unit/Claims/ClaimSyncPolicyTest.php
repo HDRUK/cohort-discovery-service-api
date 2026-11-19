@@ -139,6 +139,29 @@ class ClaimSyncPolicyTest extends TestCase
         }
     }
 
+    public function test_a_blank_boolean_flag_boots_and_reads_as_false_as_it_did_before_validation(): void
+    {
+        config([
+            'claimsaccesscontrol.sync.roles.authoritative' => '',
+            'claimsaccesscontrol.sync.workgroups.ensure_default' => '',
+        ]);
+
+        (new ClaimsAccessControlServiceProvider($this->app))->register();
+
+        $this->assertFalse($this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_ROLES));
+        $this->assertFalse($this->policy->shouldEnsureDefaultWorkgroup());
+    }
+
+    public function test_a_blank_trust_value_still_refuses_to_boot(): void
+    {
+        config(['claimsaccesscontrol.sync.roles.trust' => '']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('CLAIM_SYNC_ROLES is []');
+
+        (new ClaimsAccessControlServiceProvider($this->app))->register();
+    }
+
     public function test_string_and_numeric_flags_read_as_the_boolean_they_spell(): void
     {
         foreach (['false', '0', 0, false] as $falsy) {

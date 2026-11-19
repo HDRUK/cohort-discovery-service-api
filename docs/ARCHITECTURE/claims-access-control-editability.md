@@ -20,7 +20,9 @@ An unrecognised trust value refuses to boot. `ClaimsAccessControlServiceProvider
 The boolean flags are checked at boot too. They are `authoritative`, `ensure_default`, `sde_from_claim` and `provision.defaults_on_create` (the provider's `FLAGS` map lists each one's env var).
 
 - Accepted values: `true`, `"true"`, `1`, `"1"`, `false`, `"false"`, `0` and `"0"`.
-- Anything else refuses to boot, including a missing key or a typo like `flase`. A plain `(bool)` cast used to read `flase` as true, which for `sde_from_claim` granted SDE workgroups.
+- An env var that isn't set uses its `env()` default in `config/claimsaccesscontrol.php`.
+- One set but blank (`CLAIM_SYNC_ROLES_AUTHORITATIVE=`) reaches config as `""` and reads as false. That is what `(bool) ""` gave before, so deployment templates that render optional flags as blank keep their behaviour. Falling back to the default instead would silently flip the five flags that default to true.
+- Anything else refuses to boot, including a missing key in a mounted config or a typo like `flase`. A plain `(bool)` cast used to read `flase` as true, which for `sde_from_claim` granted SDE workgroups.
 - `ClaimSyncPolicy` reads each flag with `FILTER_VALIDATE_BOOLEAN`, so `"false"` and `"0"` read as false.
 
 ## Modes
