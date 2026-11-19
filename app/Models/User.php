@@ -37,6 +37,30 @@ use Spatie\Permission\Traits\HasRoles;
  *         type="object",
  *         description="This user's monthly query allowance (limit, used, remaining, and whether they're exempt from the cap)",
  *         example={"limit": 500, "used": 12, "remaining": 488, "unlimited": false}
+ *     ),
+ *     @OA\Property(
+ *         property="identities",
+ *         type="array",
+ *         description="The user's linked SSO identities. Only on GET /api/v1/users and /api/v1/users/{id} (admin only).",
+ *         @OA\Items(
+ *             type="object",
+ *             @OA\Property(property="id", type="integer", example=1),
+ *             @OA\Property(property="user_id", type="integer", example=3),
+ *             @OA\Property(property="provider", type="string", example="keycloak"),
+ *             @OA\Property(property="last_login_at", type="string", format="date-time", nullable=true, example="2026-11-19T11:16:56Z"),
+ *             @OA\Property(property="created_at", type="string", format="date-time", example="2026-11-19T11:16:56Z"),
+ *             @OA\Property(property="updated_at", type="string", format="date-time", example="2026-11-19T11:16:56Z")
+ *         )
+ *     ),
+ *     @OA\Property(
+ *         property="membership_sources",
+ *         type="object",
+ *         description="Per subject, whether an identity provider or the Gateway manages this user's memberships: mode (internal, first_login, additive, authoritative), editable, and the provider slugs it syncs from. Only on GET /api/v1/users and /api/v1/users/{id} (admin only).",
+ *         example={
+ *             "workgroups": {"mode": "authoritative", "editable": false, "sources": {"keycloak"}},
+ *             "roles": {"mode": "authoritative", "editable": false, "sources": {"keycloak"}},
+ *             "custodians": {"mode": "internal", "editable": true, "sources": {}}
+ *         }
  *     )
  * )
  */
