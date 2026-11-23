@@ -86,6 +86,7 @@ class FeatureController extends Controller
                 ->map(fn (array $flag, string $name) => [
                     'feature' => $name,
                     'global' => $flag['global'],
+                    'overridable' => $flag['overridable'],
                     'users' => $users
                         ->filter(fn (User $user) => array_key_exists($user->id, $flag['users']))
                         ->map(fn (User $user) => [
@@ -119,6 +120,10 @@ class FeatureController extends Controller
 
         if (! $this->featureNames()->contains($name)) {
             return $this->NotFoundResponse();
+        }
+
+        if ($this->resolver->isGlobalOnly($name)) {
+            return $this->ValidationErrorResponse(['feature' => ['This flag can only be set globally.']]);
         }
 
         try {

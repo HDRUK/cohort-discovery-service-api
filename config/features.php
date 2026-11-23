@@ -1,0 +1,33 @@
+<?php
+
+return [
+    'flags' => [
+        'query-builder' => true,
+        'query-builder-use-leave-confirmation' => true,
+        'query-builder-show-concept-stats' => false,
+        'query-builder-use-stats-in-ordering' => false,
+        'query-builder-use-collections-in-search' => false,
+        'constrain-for-bunny-v1' => true,
+        'query-builder-allow-nested-groups' => false,
+        'flatten-nested-groups' => true,
+        'query-nlp' => true,
+        'in-app-messenger' => false,
+        'admin-more-collection-details' => true,
+        'query-builder-use-value-as-number' => false,
+        'distribution-use-central-domain' => false,
+        'access-banner' => false,
+        'query-builder-use-location' => false,
+        'query-builder-use-death' => false,
+        'query-builder-use-demographic-rule' => false,
+        'click-tracking-anonymous' => false,
+        'query-builder-use-race' => true,
+        'query-rate-limit' => false,
+        'collection-task-backlog-limit' => false,
+    ],
+    'global_only' => [
+        'click-tracking-anonymous',
+        'flatten-nested-groups',
+        'collection-task-backlog-limit',
+        'distribution-use-central-domain',
+    ],
+];

@@ -6,7 +6,6 @@ use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
 use App\Models\User;
-use App\Models\Workgroup;
 use Illuminate\Cache\RateLimiter as CacheRateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -101,12 +100,10 @@ class ClickControllerTest extends TestCase
         ]);
     }
 
-    public function test_a_workgroup_override_makes_its_members_clicks_anonymous(): void
+    public function test_a_user_override_cannot_attribute_their_clicks_when_tracking_is_anonymous(): void
     {
-        Feature::deactivate('click-tracking-anonymous');
-        $workgroup = Workgroup::firstOrCreate(['name' => 'ANONYMOUS-CLICKS-TEST']);
-        $this->user->workgroups()->syncWithoutDetaching([$workgroup->id]);
-        Feature::for($workgroup)->activate('click-tracking-anonymous');
+        Feature::activate('click-tracking-anonymous');
+        Feature::for($this->user)->deactivate('click-tracking-anonymous');
 
         $task = $this->makeTask();
 

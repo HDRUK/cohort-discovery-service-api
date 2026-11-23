@@ -33,8 +33,9 @@ class FeatureResolver
             ->orderBy('name')
             ->get(['name', 'scope', 'value'])
             ->groupBy('name')
-            ->map(fn (Collection $rows) => [
+            ->map(fn (Collection $rows, string $name) => [
                 'global' => $this->decode($rows->firstWhere('scope', $globalScope)?->value ?? 'false'),
+                'overridable' => ! $this->isGlobalOnly($name),
                 'users' => $this->subjectValues($rows, User::class),
                 'workgroups' => $this->subjectValues($rows, Workgroup::class),
             ])
@@ -89,8 +90,12 @@ class FeatureResolver
 
         return $rows
             ->groupBy('name')
-            ->map(function (Collection $rows) use ($globalScope, $userScope) {
+            ->map(function (Collection $rows, string $name) use ($globalScope, $userScope) {
                 $values = $rows->mapWithKeys(fn ($row) => [$row->scope => $this->decode($row->value)]);
+
+                if ($this->isGlobalOnly($name)) {
+                    return $values->get($globalScope, false);
+                }
 
                 if ($userScope && $values->has($userScope)) {
                     return $values->get($userScope);
@@ -103,6 +108,11 @@ class FeatureResolver
                     : $workgroupValues->contains(true);
             })
             ->all();
+    }
+
+    public function isGlobalOnly(string $feature): bool
+    {
+        return in_array($feature, config('features.global_only'), true);
     }
 
     private function decode(string $value): bool

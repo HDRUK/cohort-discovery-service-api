@@ -15,6 +15,8 @@ class FeatureResolverTest extends TestCase
 
     private const OTHER_FLAG = 'query-rate-limit';
 
+    private const GLOBAL_ONLY_FLAG = 'click-tracking-anonymous';
+
     private User $user;
 
     private FeatureResolver $resolver;
@@ -132,6 +134,30 @@ class FeatureResolverTest extends TestCase
             [self::FLAG => true, self::OTHER_FLAG => true],
             collect($this->resolver->allFor($this->user))->sortKeys()->all()
         );
+    }
+
+    public function test_user_override_is_ignored_on_a_global_only_flag(): void
+    {
+        Feature::activate(self::GLOBAL_ONLY_FLAG);
+        Feature::for($this->user)->deactivate(self::GLOBAL_ONLY_FLAG);
+
+        $this->assertTrue($this->resolver->active(self::GLOBAL_ONLY_FLAG, $this->user));
+    }
+
+    public function test_workgroup_override_is_ignored_on_a_global_only_flag(): void
+    {
+        Feature::activate(self::GLOBAL_ONLY_FLAG);
+        Feature::for($this->workgroupWithUser('UK-RESEARCH-TEST'))->deactivate(self::GLOBAL_ONLY_FLAG);
+
+        $this->assertTrue($this->resolver->active(self::GLOBAL_ONLY_FLAG, $this->user));
+    }
+
+    public function test_all_for_reports_the_global_value_of_a_global_only_flag(): void
+    {
+        Feature::deactivate(self::GLOBAL_ONLY_FLAG);
+        Feature::for($this->user)->activate(self::GLOBAL_ONLY_FLAG);
+
+        $this->assertFalse($this->resolver->allFor($this->user)[self::GLOBAL_ONLY_FLAG]);
     }
 
     private function workgroupWithUser(string $name): Workgroup

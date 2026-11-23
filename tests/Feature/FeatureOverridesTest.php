@@ -17,6 +17,8 @@ class FeatureOverridesTest extends TestCase
 
     private const OTHER_FLAG = 'query-rate-limit';
 
+    private const GLOBAL_ONLY_FLAG = 'click-tracking-anonymous';
+
     private User $admin;
 
     private User $target;
@@ -104,6 +106,7 @@ class FeatureOverridesTest extends TestCase
                     [
                         'feature' => self::FLAG,
                         'global' => false,
+                        'overridable' => true,
                         'users' => [[
                             'id' => $this->target->id,
                             'name' => $this->target->name,
@@ -119,6 +122,7 @@ class FeatureOverridesTest extends TestCase
                     [
                         'feature' => self::OTHER_FLAG,
                         'global' => true,
+                        'overridable' => true,
                         'users' => [],
                         'workgroups' => [],
                     ],
@@ -201,6 +205,43 @@ class FeatureOverridesTest extends TestCase
             'properties->subject_id' => $this->workgroup->id,
             'properties->before->enabled' => true,
         ]);
+    }
+
+    public function test_listing_marks_global_only_flags(): void
+    {
+        Feature::deactivate(self::GLOBAL_ONLY_FLAG);
+
+        $flags = collect($this->actingAsJwt($this->admin)
+            ->getJson(self::BASE_URL.'/overrides')
+            ->assertOk()
+            ->json('data'))
+            ->keyBy('feature');
+
+        $this->assertFalse($flags[self::GLOBAL_ONLY_FLAG]['overridable']);
+        $this->assertTrue($flags[self::FLAG]['overridable']);
+    }
+
+    public function test_global_only_flags_cannot_be_overridden(): void
+    {
+        Feature::activate(self::GLOBAL_ONLY_FLAG);
+
+        $this->replaceOverrides(self::GLOBAL_ONLY_FLAG, [
+            'users' => [['id' => $this->target->id, 'enabled' => false]],
+            'workgroups' => [],
+        ])->assertUnprocessable();
+
+        $this->assertOverride($this->target, null, self::GLOBAL_ONLY_FLAG);
+    }
+
+    public function test_seeder_purges_overrides_of_global_only_flags(): void
+    {
+        Feature::activate(self::GLOBAL_ONLY_FLAG);
+        Feature::for($this->target)->deactivate(self::GLOBAL_ONLY_FLAG);
+
+        $this->seed(FeatureSeeder::class);
+
+        $this->assertOverride($this->target, null, self::GLOBAL_ONLY_FLAG);
+        $this->assertOverride(null, 'true', self::GLOBAL_ONLY_FLAG);
     }
 
     public function test_replacing_overrides_of_an_unknown_flag_is_not_found(): void
