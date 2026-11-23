@@ -67,7 +67,7 @@ class CustodianSyncerService
         Custodian::upsert(
             $rows,
             ['external_custodian_id'],
-            ['name', 'external_custodian_name']
+            ['external_custodian_id', 'name', 'external_custodian_name']
         );
 
         $externalIds = collect($rows)

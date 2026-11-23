@@ -8,6 +8,7 @@ use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\TokenSync\CustodianSyncerService;
 use DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class CustodianSyncerServiceTest extends TestCase
@@ -75,6 +76,17 @@ class CustodianSyncerServiceTest extends TestCase
         $this->assertSame([$existing->id], $user->custodians()->pluck('custodians.id')->all());
     }
 
+    public function test_a_custodian_matched_by_name_takes_the_gateway_team_id(): void
+    {
+        $imported = Custodian::factory()->create(['name' => 'Acme Trust', 'external_custodian_id' => null]);
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [(object) ['id' => 21, 'name' => 'Acme Trust']]);
+
+        $this->assertSame('21', $imported->refresh()->external_custodian_id);
+        $this->assertSame([$imported->id], $user->custodians()->pluck('custodians.id')->all());
+    }
+
     public function test_it_skips_entries_whose_id_is_neither_an_integer_nor_a_string(): void
     {
         $user = User::factory()->create();
@@ -99,15 +111,16 @@ class CustodianSyncerServiceTest extends TestCase
             (object) ['id' => true, 'name' => 'Bool Trust'],
         ]);
 
-        $this->assertDatabaseHas('activity_log', [
-            'log_name' => 'claims',
-            'description' => 'claims_rejected',
-            'subject_type' => User::class,
-            'subject_id' => $user->id,
-            'properties->relation' => 'custodians',
-            'properties->total' => 2,
-            'properties->rejected' => json_encode([['id' => true, 'name' => 'Bool Trust']]),
-        ]);
+        $activity = Activity::where('log_name', 'claims')
+            ->where('description', 'claims_rejected')
+            ->whereMorphedTo('subject', $user)
+            ->sole();
+
+        $this->assertEquals([
+            'relation' => 'custodians',
+            'rejected' => [['id' => true, 'name' => 'Bool Trust']],
+            'total' => 2,
+        ], $activity->properties->toArray());
     }
 
     public function test_a_claim_where_every_team_is_rejected_logs_an_error(): void
