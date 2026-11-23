@@ -8,6 +8,7 @@ use DB;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
+use Spatie\Permission\Models\Role;
 
 class FeatureResolver
 {
@@ -37,6 +38,7 @@ class FeatureResolver
                 'global' => $this->decode($rows->firstWhere('scope', $globalScope)?->value ?? 'false'),
                 'users' => $this->subjectValues($rows, User::class),
                 'workgroups' => $this->subjectValues($rows, Workgroup::class),
+                'roles' => $this->subjectValues($rows, Role::class),
             ])
             ->all();
     }
@@ -76,7 +78,19 @@ class FeatureResolver
             ...$user->workgroups()
                 ->get(['workgroups.id'])
                 ->map(fn (Workgroup $workgroup) => Feature::serializeScope($workgroup)),
+            ...$this->rolesOf($user)->map(fn (Role $role) => Feature::serializeScope($role)),
         ];
+    }
+
+    private function rolesOf(User $user): Collection
+    {
+        $roles = $user->roles()->get(['roles.id']);
+
+        if ($user->custodians()->exists()) {
+            $roles = $roles->merge(Role::where('name', 'custodian')->get(['id']));
+        }
+
+        return $roles->unique('id');
     }
 
     /**
@@ -96,11 +110,17 @@ class FeatureResolver
                     return $values->get($userScope);
                 }
 
-                $workgroupValues = $values->except(array_filter([$globalScope, $userScope]));
+                foreach ([Workgroup::class, Role::class] as $modelClass) {
+                    $scopedValues = $values->filter(
+                        fn (bool $value, string $scope) => str_starts_with($scope, $modelClass.'|')
+                    );
 
-                return $workgroupValues->isEmpty()
-                    ? $values->get($globalScope, false)
-                    : $workgroupValues->contains(true);
+                    if ($scopedValues->isNotEmpty()) {
+                        return $scopedValues->contains(true);
+                    }
+                }
+
+                return $values->get($globalScope, false);
             })
             ->all();
     }

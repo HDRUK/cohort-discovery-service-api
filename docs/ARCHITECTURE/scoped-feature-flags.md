@@ -1,6 +1,6 @@
 # Scoped feature flags
 
-Any feature flag can be switched on or off for a single workgroup or a single user, as well as globally. For example, location and death queries can be enabled only for members of one workgroup, while every other user keeps the global setting.
+Any feature flag can be switched on or off for a role, a workgroup or a single user, as well as globally. For example, location and death queries can be enabled only for members of one workgroup, while every other user keeps the global setting.
 
 ## How a flag resolves for a user
 
@@ -8,7 +8,14 @@ Any feature flag can be switched on or off for a single workgroup or a single us
 
 1. **User override:** if the user has one, use it, whether on or off.
 2. **Workgroup overrides:** if any of the user's workgroups has the flag **on**, it is on. Otherwise, if any has it **off**, it is off. "On" wins when a user's workgroups disagree.
-3. **Global value:** used when there are no overrides.
+3. **Role overrides:** the same rule across the user's roles.
+4. **Global value:** used when there are no overrides.
+
+The more specific level always wins, so a workgroup "off" beats a role "on", and a user override beats both.
+
+### The custodian role
+
+The `custodian` role also matches anyone who is a member of a custodian (`custodian_has_users`), whether or not they have the role. Custodian access everywhere else comes from that membership, so a `custodian` role rule means "every custodian member". For example, turning `query-builder-use-location` on for the `custodian` role lets custodian members test location on their collections before it is enabled for researchers. It applies to every location-enabled collection they can see, not only their own.
 
 Clearing an override deletes the row, so the user or workgroup falls back to the next level down. `workgroups.active` is not taken into account, which matches how it is treated elsewhere.
 
@@ -44,6 +51,7 @@ Overrides are ordinary Pennant rows in the existing `features` table:
 | Global | `__laravel_null` |
 | User | `App\Models\User\|{id}` |
 | Workgroup | `App\Models\Workgroup\|{id}` |
+| Role | `Spatie\Permission\Models\Role\|{id}` |
 
 Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()` and `->forget()`. `AppServiceProvider` still pins the default scope to null. Every `Feature::active()` call therefore keeps resolving globally, and only code that goes through `FeatureResolver` sees overrides.
 
@@ -52,11 +60,12 @@ Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()
 - **Read user-facing flags through `FeatureResolver`, never `Feature::for($user)->value()`.** If a flag has no `Feature::define` resolver, Pennant returns `false` when there is no row, so "no override" and "override off" look the same. Defining a resolver doesn't fix it, because Pennant would then store the fallback value and freeze it for that user. `FeatureResolver` reads the table directly instead.
 - **Never use `activateForEveryone` / `deactivateForEveryone` in application code.** They run `UPDATE features SET value = ? WHERE name = ?`, which overwrites every override. `PUT /v1/features/{name}` writes only the global row, with `Feature::for(null)->activate()`.
 - **Pennant must use the `database` store.** The resolver reads the `features` table directly.
-- **Model morph-map serialisation must stay off.** The overrides listing finds users and workgroups by the `App\Models\User|` and `App\Models\Workgroup|` scope prefixes. Turning on Pennant's `useMorphMap()` would change those prefixes.
+- **Model morph-map serialisation must stay off.** The resolver and the overrides listing tell users, workgroups and roles apart by the `App\Models\User|`, `App\Models\Workgroup|` and `Spatie\Permission\Models\Role|` scope prefixes. Turning on Pennant's `useMorphMap()` would change those prefixes.
 
 ### Clean-up
 
 - **Deleted users and workgroups:** the `HasFeatureOverrides` trait deletes their rows from a `deleted` model hook, because `scope` is a string with no foreign key.
+- **Deleted roles:** `AppServiceProvider` registers the same clean-up on `Role::deleted`, because the spatie `Role` model can't take the trait.
 - **Retired flags:** `FeatureSeeder` purges a retired flag across every scope, so its overrides go with it.
 
 ### Side effects
@@ -74,16 +83,17 @@ An override, which is `FeatureUpdated` with a user or workgroup scope, never tri
 |---|---|---|---|
 | GET | `/api/v1/features` | Any signed-in user | The caller's **effective** value for every flag: `{name: bool}`. |
 | PUT | `/api/v1/features/{name}` | Admin | Sets the global value. `{"enabled": bool}` |
-| GET | `/api/v1/features/overrides` | Admin | Every flag with its global value and overrides: `[{feature, global, users: [{id, name, email, enabled}], workgroups: [{id, name, enabled}]}]`, sorted by flag name. |
-| PUT | `/api/v1/features/{name}/overrides` | Admin | Replaces the flag's overrides: `{"users": [{"id": int, "enabled": bool}], "workgroups": [{"id": int, "enabled": bool}]}`. Anything not listed is cleared. Send empty arrays to clear them all. |
+| GET | `/api/v1/features/overrides` | Admin | Every flag with its global value and overrides: `[{feature, global, users: [{id, name, email, enabled}], workgroups: [{id, name, enabled}], roles: [{id, name, enabled}]}]`, sorted by flag name. |
+| PUT | `/api/v1/features/{name}/overrides` | Admin | Replaces the flag's overrides: `{"users": [{"id": int, "enabled": bool}], "workgroups": [...], "roles": [...]}`, each entry `{"id": int, "enabled": bool}`. Anything not listed is cleared. Send empty arrays to clear them all. |
+| GET | `/api/v1/roles` | Admin | Every role, `[{id, name}]`, for picking roles in override rules. |
 
-The overrides listing makes three queries in total, whatever the number of flags: one for the `features` rows, one for the users and one for the workgroups.
+The overrides listing makes four queries in total, whatever the number of flags: one for the `features` rows and one each for the users, workgroups and roles.
 
 Error responses for `PUT /overrides`:
 - An unknown flag returns 404.
-- An unknown or repeated user or workgroup id, a missing `enabled`, or a missing `users` or `workgroups` list returns 422.
+- An unknown or repeated user, workgroup or role id, a missing `enabled`, or a missing `users`, `workgroups` or `roles` list returns 422.
 
-Each change is written to the activity log under `feature_flags`, with event `override_set` or `override_cleared` and properties `{feature, subject_type, subject_id, before: {enabled}, after: {enabled}}`. `null` means "no override". Overrides that a request leaves as they were aren't logged.
+Each change is written to the activity log under `feature_flags`, with event `override_set` or `override_cleared` and properties `{feature, subject_type, subject_id, before: {enabled}, after: {enabled}}`. `subject_type` is `user`, `workgroup` or `role`. `null` means "no override". Overrides that a request leaves as they were aren't logged.
 
 ## Data protection
 

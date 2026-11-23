@@ -11,6 +11,7 @@ use App\Observers\TaskObserver;
 use Carbon\CarbonInterval;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +19,7 @@ use Laravel\Passport\Passport;
 use Laravel\Pennant\Feature;
 use Laravel\Pennant\Events\FeatureUpdated;
 use Laravel\Pennant\Events\FeatureUpdatedForAllScopes;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
         // React to feature-flag changes (see FeatureFlagUpdatedListener for the switch).
         Event::listen(FeatureUpdatedForAllScopes::class, FeatureFlagUpdatedListener::class);
         Event::listen(FeatureUpdated::class, FeatureFlagUpdatedListener::class);
+
+        Role::deleted(fn (Role $role) => DB::table('features')
+            ->where('scope', Feature::serializeScope($role))
+            ->delete());
 
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());

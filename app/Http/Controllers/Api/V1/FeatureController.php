@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Pennant\Feature;
+use Spatie\Permission\Models\Role;
 
 class FeatureController extends Controller
 {
@@ -80,6 +81,9 @@ class FeatureController extends Controller
         $workgroups = Workgroup::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['workgroups']))->unique())
             ->orderBy('name')
             ->get(['id', 'name']);
+        $roles = Role::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['roles']))->unique())
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return $this->OKResponse(
             $overrides
@@ -102,6 +106,15 @@ class FeatureController extends Controller
                             'id' => $workgroup->id,
                             'name' => $workgroup->name,
                             'enabled' => $flag['workgroups'][$workgroup->id],
+                        ])
+                        ->values()
+                        ->all(),
+                    'roles' => $roles
+                        ->filter(fn (Role $role) => array_key_exists($role->id, $flag['roles']))
+                        ->map(fn (Role $role) => [
+                            'id' => $role->id,
+                            'name' => $role->name,
+                            'enabled' => $flag['roles'][$role->id],
                         ])
                         ->values()
                         ->all(),
@@ -129,6 +142,9 @@ class FeatureController extends Controller
                 'workgroups' => ['present', 'array'],
                 'workgroups.*.id' => ['required', 'integer', 'distinct', 'exists:workgroups,id'],
                 'workgroups.*.enabled' => ['required', 'boolean'],
+                'roles' => ['present', 'array'],
+                'roles.*.id' => ['required', 'integer', 'distinct', 'exists:roles,id'],
+                'roles.*.enabled' => ['required', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
@@ -139,6 +155,7 @@ class FeatureController extends Controller
         DB::transaction(function () use ($name, $current, $validated, $activityLogger) {
             $this->syncOverrides($name, User::class, $current['users'], $validated['users'], $activityLogger);
             $this->syncOverrides($name, Workgroup::class, $current['workgroups'], $validated['workgroups'], $activityLogger);
+            $this->syncOverrides($name, Role::class, $current['roles'], $validated['roles'], $activityLogger);
         });
 
         return $this->OKResponse([]);
@@ -186,13 +203,17 @@ class FeatureController extends Controller
         ActivityLogger $activityLogger,
         string $event,
         string $name,
-        User|Workgroup $subject,
+        User|Workgroup|Role $subject,
         ?bool $before,
         ?bool $after
     ): void {
         $activityLogger->custom('feature_flags', $event, $subject, [
             'feature' => $name,
-            'subject_type' => $subject instanceof User ? 'user' : 'workgroup',
+            'subject_type' => match (true) {
+                $subject instanceof User => 'user',
+                $subject instanceof Workgroup => 'workgroup',
+                default => 'role',
+            },
             'subject_id' => $subject->id,
             'before' => ['enabled' => $before],
             'after' => ['enabled' => $after],
