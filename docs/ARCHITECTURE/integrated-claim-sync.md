@@ -23,7 +23,7 @@ The Gateway sends each team's `id` as an integer:
 ]
 ```
 
-`CustodianSyncerService` accepts an integer or string `id` and stores it as a string in `custodians.external_custodian_id`, which is the upsert key. An integer `21` and a previously stored `"21"` therefore resolve to the same custodian. Entries with any other `id` type, or without a string `name`, are skipped and logged as `Custodian claim sync skipped malformed entries`. If every entry is skipped the user's custodians are left unchanged rather than cleared.
+`CustodianSyncerService` accepts an integer or string `id` and stores it as a string in `custodians.external_custodian_id`, which is the upsert key. An integer `21` and a previously stored `"21"` therefore resolve to the same custodian. Entries with any other `id` type, or without a string `name`, are rejected. Each rejection writes a `claims_rejected` entry to the `claims` activity log, with the rejected entries and the claim's total, against the user. It also writes to the application log: an `error` when every team was rejected, because the user's custodians are then left unchanged rather than synced, and a `warning` when only some were. Rejection never throws, because `DecodeJwt` turns any exception into a `401` and would lock the user out over one bad entry.
 
 Before DP-1275 the syncer accepted string ids only, so every team from the Gateway was skipped and no custodian could be created or attached from the token.
 

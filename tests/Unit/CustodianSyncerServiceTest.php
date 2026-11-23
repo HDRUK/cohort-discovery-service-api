@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Claims\ClaimSyncPolicy;
 use App\Services\TokenSync\CustodianSyncerService;
 use DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class CustodianSyncerServiceTest extends TestCase
@@ -87,6 +88,51 @@ class CustodianSyncerServiceTest extends TestCase
 
         $this->assertSame(['Acme Trust'], Custodian::pluck('name')->all());
         $this->assertSame(['Acme Trust'], $user->custodians()->pluck('name')->all());
+    }
+
+    public function test_rejected_teams_are_written_to_the_activity_log(): void
+    {
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [
+            (object) ['id' => 21, 'name' => 'Acme Trust'],
+            (object) ['id' => true, 'name' => 'Bool Trust'],
+        ]);
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'claims',
+            'description' => 'claims_rejected',
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'properties->relation' => 'custodians',
+            'properties->total' => 2,
+            'properties->rejected' => json_encode([['id' => true, 'name' => 'Bool Trust']]),
+        ]);
+    }
+
+    public function test_a_claim_where_every_team_is_rejected_logs_an_error(): void
+    {
+        Log::spy();
+        $user = User::factory()->create();
+
+        $this->assertFalse($this->syncer->sync($user, [(object) ['id' => true, 'name' => 'Bool Trust']]));
+
+        Log::shouldHaveReceived('error')->once();
+        Log::shouldNotHaveReceived('warning');
+    }
+
+    public function test_a_claim_where_only_some_teams_are_rejected_logs_a_warning(): void
+    {
+        Log::spy();
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [
+            (object) ['id' => 21, 'name' => 'Acme Trust'],
+            (object) ['id' => true, 'name' => 'Bool Trust'],
+        ]);
+
+        Log::shouldHaveReceived('warning')->once();
+        Log::shouldNotHaveReceived('error');
     }
 
     public function test_it_upserts_on_the_external_id_rather_than_creating_duplicates(): void

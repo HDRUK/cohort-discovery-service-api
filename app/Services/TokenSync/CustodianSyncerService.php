@@ -29,15 +29,10 @@ class CustodianSyncerService
             return false;
         }
 
-        $valid = collect($custodians)->filter(
-            fn ($t) => is_object($t) && isset($t->id, $t->name) && (is_int($t->id) || is_string($t->id)) && is_string($t->name)
-        );
+        [$valid, $rejected] = collect($custodians)->partition(fn ($team) => $this->isWellFormedTeam($team));
 
-        if ($valid->count() !== count($custodians)) {
-            \Log::warning("Custodian claim sync skipped malformed entries for user {$user->id}", [
-                'valid' => $valid->count(),
-                'total' => count($custodians),
-            ]);
+        if ($rejected->isNotEmpty()) {
+            $this->reportRejectedTeams($user, $rejected->values()->all(), count($custodians));
         }
 
         if ($custodians !== [] && $valid->isEmpty()) {
@@ -101,5 +96,32 @@ class CustodianSyncerService
         );
 
         return true;
+    }
+
+    private function isWellFormedTeam(mixed $team): bool
+    {
+        if (! is_object($team) || ! is_string($team->name ?? null)) {
+            return false;
+        }
+
+        $id = $team->id ?? null;
+
+        return is_int($id) || is_string($id);
+    }
+
+    private function reportRejectedTeams(User $user, array $rejected, int $total): void
+    {
+        $context = ['rejected' => $rejected, 'total' => $total];
+
+        if (count($rejected) === $total) {
+            \Log::error("Custodian claim sync rejected every team for user {$user->id}; custodians left unchanged", $context);
+        } else {
+            \Log::warning("Custodian claim sync rejected some teams for user {$user->id}", $context);
+        }
+
+        $this->activity->custom('claims', 'claims_rejected', $user, [
+            'relation' => 'custodians',
+            ...$context,
+        ], 'claims_rejected');
     }
 }
