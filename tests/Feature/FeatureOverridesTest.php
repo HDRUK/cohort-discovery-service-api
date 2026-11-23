@@ -13,9 +13,9 @@ class FeatureOverridesTest extends TestCase
 {
     private const BASE_URL = '/api/v1/features';
 
-    private const SCOPABLE = 'query-builder-use-location';
+    private const FLAG = 'query-builder-use-location';
 
-    private const GLOBAL_ONLY = 'query-rate-limit';
+    private const OTHER_FLAG = 'query-rate-limit';
 
     private User $admin;
 
@@ -28,7 +28,6 @@ class FeatureOverridesTest extends TestCase
         parent::setUp();
 
         config()->set('pennant.default', 'database');
-        config()->set('features.scopable', [self::SCOPABLE]);
 
         $this->enableMiddleware();
 
@@ -45,17 +44,17 @@ class FeatureOverridesTest extends TestCase
         $this->target = User::factory()->create();
         $this->workgroup = Workgroup::firstOrCreate(['name' => 'UK-RESEARCH-TEST']);
 
-        Feature::deactivate(self::SCOPABLE);
-        Feature::deactivate(self::GLOBAL_ONLY);
+        Feature::deactivate(self::FLAG);
+        Feature::activate(self::OTHER_FLAG);
     }
 
     public function test_global_toggle_leaves_overrides_in_place(): void
     {
-        Feature::for($this->target)->activate(self::SCOPABLE);
-        Feature::for($this->workgroup)->deactivate(self::SCOPABLE);
+        Feature::for($this->target)->activate(self::FLAG);
+        Feature::for($this->workgroup)->deactivate(self::FLAG);
 
         $this->actingAsJwt($this->admin)
-            ->putJson(self::BASE_URL.'/'.self::SCOPABLE, ['enabled' => true])
+            ->putJson(self::BASE_URL.'/'.self::FLAG, ['enabled' => true])
             ->assertOk();
 
         $this->assertOverride($this->target, 'true');
@@ -65,7 +64,7 @@ class FeatureOverridesTest extends TestCase
 
     public function test_deleting_a_workgroup_removes_its_overrides(): void
     {
-        Feature::for($this->workgroup)->activate(self::SCOPABLE);
+        Feature::for($this->workgroup)->activate(self::FLAG);
 
         $this->workgroup->delete();
 
@@ -74,7 +73,7 @@ class FeatureOverridesTest extends TestCase
 
     public function test_deleting_a_user_removes_their_overrides(): void
     {
-        Feature::for($this->target)->activate(self::SCOPABLE);
+        Feature::for($this->target)->activate(self::FLAG);
 
         $this->target->delete();
 
@@ -91,123 +90,175 @@ class FeatureOverridesTest extends TestCase
         $this->assertDatabaseMissing('features', ['name' => 'retired-flag']);
     }
 
-    public function test_admin_can_list_overrides_of_every_scopable_flag(): void
+    public function test_admin_can_list_every_flag_with_its_overrides(): void
     {
-        Feature::for($this->target)->activate(self::SCOPABLE);
-        Feature::for($this->workgroup)->deactivate(self::SCOPABLE);
-        Feature::for($this->target)->activate(self::GLOBAL_ONLY);
+        Feature::for($this->target)->activate(self::FLAG);
+        Feature::for($this->workgroup)->deactivate(self::FLAG);
 
         $this->actingAsJwt($this->admin)
             ->getJson(self::BASE_URL.'/overrides')
             ->assertOk()
             ->assertExactJson([
                 'message' => 'success',
-                'data' => [[
-                    'feature' => self::SCOPABLE,
-                    'global' => false,
-                    'users' => [[
-                        'id' => $this->target->id,
-                        'name' => $this->target->name,
-                        'email' => $this->target->email,
-                        'enabled' => true,
-                    ]],
-                    'workgroups' => [[
-                        'id' => $this->workgroup->id,
-                        'name' => $this->workgroup->name,
-                        'enabled' => false,
-                    ]],
-                ]],
+                'data' => [
+                    [
+                        'feature' => self::FLAG,
+                        'global' => false,
+                        'users' => [[
+                            'id' => $this->target->id,
+                            'name' => $this->target->name,
+                            'email' => $this->target->email,
+                            'enabled' => true,
+                        ]],
+                        'workgroups' => [[
+                            'id' => $this->workgroup->id,
+                            'name' => $this->workgroup->name,
+                            'enabled' => false,
+                        ]],
+                    ],
+                    [
+                        'feature' => self::OTHER_FLAG,
+                        'global' => true,
+                        'users' => [],
+                        'workgroups' => [],
+                    ],
+                ],
             ]);
     }
 
-    public function test_admin_can_set_and_clear_a_user_override(): void
+    public function test_replacing_overrides_sets_changes_and_clears_them(): void
     {
-        $url = $this->overridesUrl().'/users/'.$this->target->id;
+        $kept = User::factory()->create();
+        $removed = User::factory()->create();
+        Feature::for($kept)->activate(self::FLAG);
+        Feature::for($removed)->activate(self::FLAG);
+        Feature::for($this->workgroup)->deactivate(self::FLAG);
 
-        $this->actingAsJwt($this->admin)->putJson($url, ['enabled' => true])->assertOk();
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [
+                ['id' => $kept->id, 'enabled' => true],
+                ['id' => $this->target->id, 'enabled' => false],
+            ],
+            'workgroups' => [
+                ['id' => $this->workgroup->id, 'enabled' => true],
+            ],
+        ])->assertOk();
 
-        $this->assertOverride($this->target, 'true');
+        $this->assertOverride($kept, 'true');
+        $this->assertOverride($this->target, 'false');
+        $this->assertOverride($removed, null);
+        $this->assertOverride($this->workgroup, 'true');
+        $this->assertOverride(null, 'false');
+    }
+
+    public function test_replacing_with_no_overrides_clears_them_all(): void
+    {
+        Feature::for($this->target)->activate(self::FLAG);
+        Feature::for($this->workgroup)->activate(self::FLAG);
+
+        $this->replaceOverrides(self::FLAG, ['users' => [], 'workgroups' => []])->assertOk();
+
+        $this->assertOverride($this->target, null);
+        $this->assertOverride($this->workgroup, null);
+    }
+
+    public function test_any_flag_can_be_overridden(): void
+    {
+        $this->replaceOverrides(self::OTHER_FLAG, [
+            'users' => [['id' => $this->target->id, 'enabled' => false]],
+            'workgroups' => [],
+        ])->assertOk();
+
+        $this->assertOverride($this->target, 'false', self::OTHER_FLAG);
+    }
+
+    public function test_only_changed_overrides_are_logged(): void
+    {
+        $unchanged = User::factory()->create();
+        Feature::for($unchanged)->activate(self::FLAG);
+        Feature::for($this->workgroup)->activate(self::FLAG);
+
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [
+                ['id' => $unchanged->id, 'enabled' => true],
+                ['id' => $this->target->id, 'enabled' => true],
+            ],
+            'workgroups' => [],
+        ])->assertOk();
+
+        $this->assertDatabaseCount('activity_log', 2);
         $this->assertDatabaseHas('activity_log', [
             'log_name' => 'feature_flags',
             'event' => 'override_set',
-            'properties->feature' => self::SCOPABLE,
+            'properties->feature' => self::FLAG,
             'properties->subject_type' => 'user',
             'properties->subject_id' => $this->target->id,
             'properties->after->enabled' => true,
         ]);
-
-        $this->actingAsJwt($this->admin)->deleteJson($url)->assertOk();
-
-        $this->assertOverride($this->target, null);
         $this->assertDatabaseHas('activity_log', [
             'event' => 'override_cleared',
-            'properties->subject_type' => 'user',
+            'properties->subject_type' => 'workgroup',
+            'properties->subject_id' => $this->workgroup->id,
             'properties->before->enabled' => true,
         ]);
     }
 
-    public function test_admin_can_set_and_clear_a_workgroup_override(): void
+    public function test_replacing_overrides_of_an_unknown_flag_is_not_found(): void
     {
-        $url = $this->overridesUrl().'/workgroups/'.$this->workgroup->id;
+        $this->replaceOverrides('unknown-flag', ['users' => [], 'workgroups' => []])->assertNotFound();
 
-        $this->actingAsJwt($this->admin)->putJson($url, ['enabled' => false])->assertOk();
-
-        $this->assertOverride($this->workgroup, 'false');
-
-        $this->actingAsJwt($this->admin)->deleteJson($url)->assertOk();
-
-        $this->assertOverride($this->workgroup, null);
+        $this->assertDatabaseMissing('features', ['name' => 'unknown-flag']);
     }
 
-    public function test_clearing_a_missing_override_is_not_logged(): void
+    public function test_replacing_overrides_rejects_unknown_and_duplicate_subjects(): void
     {
-        $this->actingAsJwt($this->admin)
-            ->deleteJson($this->overridesUrl().'/users/'.$this->target->id)
-            ->assertOk();
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [['id' => 999999, 'enabled' => true]],
+            'workgroups' => [],
+        ])->assertUnprocessable();
 
-        $this->assertDatabaseCount('activity_log', 0);
-    }
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [
+                ['id' => $this->target->id, 'enabled' => true],
+                ['id' => $this->target->id, 'enabled' => false],
+            ],
+            'workgroups' => [],
+        ])->assertUnprocessable();
 
-    public function test_non_admin_cannot_manage_overrides(): void
-    {
-        $url = $this->overridesUrl().'/users/'.$this->target->id;
-
-        $this->actingAsJwt($this->target)->getJson(self::BASE_URL.'/overrides')->assertForbidden();
-        $this->actingAsJwt($this->target)->putJson($url, ['enabled' => true])->assertForbidden();
-        $this->actingAsJwt($this->target)->deleteJson($url)->assertForbidden();
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [['id' => $this->target->id]],
+            'workgroups' => [],
+        ])->assertUnprocessable();
 
         $this->assertOverride($this->target, null);
     }
 
-    public function test_flags_that_are_not_scopable_cannot_be_overridden(): void
+    public function test_replacing_overrides_requires_both_lists(): void
     {
-        $this->actingAsJwt($this->admin)
-            ->putJson(self::BASE_URL.'/'.self::GLOBAL_ONLY.'/overrides/users/'.$this->target->id, ['enabled' => true])
-            ->assertUnprocessable();
-
-        $this->assertOverride($this->target, null, self::GLOBAL_ONLY);
+        $this->replaceOverrides(self::FLAG, ['users' => []])->assertUnprocessable();
     }
 
-    public function test_override_for_an_unknown_subject_is_not_found(): void
+    public function test_non_admin_cannot_manage_overrides(): void
     {
-        $this->actingAsJwt($this->admin)
-            ->putJson($this->overridesUrl().'/users/999999', ['enabled' => true])
-            ->assertNotFound();
+        $this->actingAsJwt($this->target)->getJson(self::BASE_URL.'/overrides')->assertForbidden();
+
+        $this->actingAsJwt($this->target)
+            ->putJson(self::BASE_URL.'/'.self::FLAG.'/overrides', [
+                'users' => [['id' => $this->target->id, 'enabled' => true]],
+                'workgroups' => [],
+            ])
+            ->assertForbidden();
+
+        $this->assertOverride($this->target, null);
     }
 
-    public function test_override_requires_enabled(): void
+    private function replaceOverrides(string $feature, array $payload): \Illuminate\Testing\TestResponse
     {
-        $this->actingAsJwt($this->admin)
-            ->putJson($this->overridesUrl().'/users/'.$this->target->id, [])
-            ->assertUnprocessable();
+        return $this->actingAsJwt($this->admin)
+            ->putJson(self::BASE_URL.'/'.$feature.'/overrides', $payload);
     }
 
-    private function overridesUrl(): string
-    {
-        return self::BASE_URL.'/'.self::SCOPABLE.'/overrides';
-    }
-
-    private function assertOverride(User|Workgroup|null $subject, ?string $value, string $feature = self::SCOPABLE): void
+    private function assertOverride(User|Workgroup|null $subject, ?string $value, string $feature = self::FLAG): void
     {
         $this->assertSame(
             $value,

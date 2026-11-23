@@ -29,6 +29,7 @@ class QueryRateLimitTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('pennant.default', 'database');
         $this->enableMiddleware();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
@@ -81,6 +82,18 @@ class QueryRateLimitTest extends TestCase
 
         $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
             ->assertStatus(429);
+    }
+
+    public function test_user_override_off_exempts_the_user(): void
+    {
+        Feature::activate('query-rate-limit');
+        Feature::for($this->user)->deactivate('query-rate-limit');
+
+        $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
+            ->assertCreated();
+
+        $this->actingAsJwt($this->user)->postJson(self::BASE_URL, $this->submitPayload())
+            ->assertCreated();
     }
 
     public function test_admin_role_is_exempt(): void

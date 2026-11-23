@@ -28,6 +28,7 @@ class QueryParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Config::set('pennant.default', 'database');
         Config::set('services.nlp.base_uri', self::NLP_BASE);
         Feature::deactivateForEveryone('query-builder-use-stats-in-ordering');
         Feature::deactivateForEveryone('query-builder-use-collections-in-search');

@@ -83,13 +83,9 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::delete('/v1/custodians/{custodianId}/networks/{networkId}', [CustodianController::class, 'unlinkFromNetwork']);
 
     Route::get('/v1/features', [FeatureController::class, 'index']);
-    Route::get('/v1/features/global', [FeatureController::class, 'global']);
     Route::get('/v1/features/overrides', [FeatureController::class, 'overrides']);
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
-    Route::put('/v1/features/{name}/overrides/users/{userId}', [FeatureController::class, 'setUserOverride'])->whereNumber('userId');
-    Route::delete('/v1/features/{name}/overrides/users/{userId}', [FeatureController::class, 'clearUserOverride'])->whereNumber('userId');
-    Route::put('/v1/features/{name}/overrides/workgroups/{workgroupId}', [FeatureController::class, 'setWorkgroupOverride'])->whereNumber('workgroupId');
-    Route::delete('/v1/features/{name}/overrides/workgroups/{workgroupId}', [FeatureController::class, 'clearWorkgroupOverride'])->whereNumber('workgroupId');
+    Route::put('/v1/features/{name}/overrides', [FeatureController::class, 'replaceOverrides']);
 
     Route::get('/v1/access_policy', [AccessPolicyController::class, 'index']);
 });

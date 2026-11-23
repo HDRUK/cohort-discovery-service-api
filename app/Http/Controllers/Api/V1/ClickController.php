@@ -6,13 +6,14 @@ use Closure;
 use App\Http\Controllers\Controller;
 use App\Rules\IdOrUuid;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Features\FeatureResolver;
 use App\Traits\Responses;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Laravel\Pennant\Feature;
 
 class ClickController extends Controller
 {
@@ -52,7 +53,7 @@ class ClickController extends Controller
      *     @OA\Response(response=500, description="Unexpected error")
      * )
      */
-    public function store(Request $request, ActivityLogger $activityLogger): JsonResponse
+    public function store(Request $request, ActivityLogger $activityLogger, FeatureResolver $featureResolver): JsonResponse
     {
         // Must stay outside the try, or the catch-all below swallows the 422.
         $validated = $request->validate([
@@ -86,7 +87,7 @@ class ClickController extends Controller
                 subject: $subject,
                 properties: array_merge($validated['properties'] ?? [], ['subject_type' => $validated['subject_type']]),
                 description: $validated['description'] ?? null,
-                anonymous: Feature::active('click-tracking-anonymous'),
+                anonymous: $featureResolver->active('click-tracking-anonymous', Auth::user()),
             );
 
             return $this->OKResponse(null);

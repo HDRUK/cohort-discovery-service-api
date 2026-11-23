@@ -5,18 +5,12 @@ namespace App\Services\Features;
 use App\Models\User;
 use App\Models\Workgroup;
 use DB;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
 
 class FeatureResolver
 {
-    public function isScopable(string $feature): bool
-    {
-        return in_array($feature, config('features.scopable', []), true);
-    }
-
     public function active(string $feature, ?User $user): bool
     {
         return $this->resolve($this->rowsFor($user, $feature), $user)[$feature] ?? false;
@@ -30,30 +24,31 @@ class FeatureResolver
         return $this->resolve($this->rowsFor($user), $user);
     }
 
-    public function overrideFor(string $feature, Model $subject): ?bool
+    public function overrides(?string $feature = null): array
     {
-        $value = DB::table('features')
-            ->where('name', $feature)
-            ->where('scope', Feature::serializeScope($subject))
-            ->value('value');
+        $globalScope = Feature::serializeScope(null);
 
-        return $value === null ? null : $this->decode($value);
+        return DB::table('features')
+            ->when($feature, fn ($query) => $query->where('name', $feature))
+            ->orderBy('name')
+            ->get(['name', 'scope', 'value'])
+            ->groupBy('name')
+            ->map(fn (Collection $rows) => [
+                'global' => $this->decode($rows->firstWhere('scope', $globalScope)?->value ?? 'false'),
+                'users' => $this->subjectValues($rows, User::class),
+                'workgroups' => $this->subjectValues($rows, Workgroup::class),
+            ])
+            ->all();
     }
 
-    /**
-     * @param  class-string<Model>  $modelClass
-     * @return array<int, bool>
-     */
-    public function overridesOf(string $feature, string $modelClass): array
+    private function subjectValues(Collection $rows, string $modelClass): array
     {
         $scopePrefix = $modelClass.'|';
 
-        return DB::table('features')
-            ->where('name', $feature)
-            ->pluck('value', 'scope')
-            ->filter(fn (string $value, string $scope) => str_starts_with($scope, $scopePrefix))
-            ->mapWithKeys(fn (string $value, string $scope) => [
-                (int) Str::after($scope, $scopePrefix) => $this->decode($value),
+        return $rows
+            ->filter(fn ($row) => str_starts_with($row->scope, $scopePrefix))
+            ->mapWithKeys(fn ($row) => [
+                (int) Str::after($row->scope, $scopePrefix) => $this->decode($row->value),
             ])
             ->all();
     }
@@ -94,13 +89,8 @@ class FeatureResolver
 
         return $rows
             ->groupBy('name')
-            ->map(function (Collection $rows, string $name) use ($globalScope, $userScope) {
+            ->map(function (Collection $rows) use ($globalScope, $userScope) {
                 $values = $rows->mapWithKeys(fn ($row) => [$row->scope => $this->decode($row->value)]);
-                $global = $values->get($globalScope, false);
-
-                if (! $this->isScopable($name)) {
-                    return $global;
-                }
 
                 if ($userScope && $values->has($userScope)) {
                     return $values->get($userScope);
@@ -108,7 +98,9 @@ class FeatureResolver
 
                 $workgroupValues = $values->except(array_filter([$globalScope, $userScope]));
 
-                return $workgroupValues->isEmpty() ? $global : $workgroupValues->contains(true);
+                return $workgroupValues->isEmpty()
+                    ? $values->get($globalScope, false)
+                    : $workgroupValues->contains(true);
             })
             ->all();
     }

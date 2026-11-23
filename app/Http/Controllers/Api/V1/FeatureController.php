@@ -11,6 +11,7 @@ use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Pennant\Feature;
 
@@ -28,21 +29,6 @@ class FeatureController extends Controller
 
         $data = $this->featureNames()
             ->mapWithKeys(fn (string $name) => [$name => $effective[$name] ?? false])
-            ->all();
-
-        return $this->OKResponse($data);
-    }
-
-    public function global(Request $request): JsonResponse
-    {
-        if (! $this->isAdmin()) {
-            return $this->ForbiddenResponse();
-        }
-
-        $data = $this->featureNames()
-            ->mapWithKeys(fn (string $name) => [
-                $name => (bool) Feature::for(null)->value($name),
-            ])
             ->all();
 
         return $this->OKResponse($data);
@@ -86,124 +72,114 @@ class FeatureController extends Controller
             return $this->ForbiddenResponse();
         }
 
+        $overrides = collect($this->resolver->overrides());
+
+        $users = User::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['users']))->unique())
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+        $workgroups = Workgroup::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['workgroups']))->unique())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return $this->OKResponse(
-            collect(config('features.scopable', []))
-                ->map(fn (string $name) => $this->overridesFor($name))
+            $overrides
+                ->map(fn (array $flag, string $name) => [
+                    'feature' => $name,
+                    'global' => $flag['global'],
+                    'users' => $users
+                        ->filter(fn (User $user) => array_key_exists($user->id, $flag['users']))
+                        ->map(fn (User $user) => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'enabled' => $flag['users'][$user->id],
+                        ])
+                        ->values()
+                        ->all(),
+                    'workgroups' => $workgroups
+                        ->filter(fn (Workgroup $workgroup) => array_key_exists($workgroup->id, $flag['workgroups']))
+                        ->map(fn (Workgroup $workgroup) => [
+                            'id' => $workgroup->id,
+                            'name' => $workgroup->name,
+                            'enabled' => $flag['workgroups'][$workgroup->id],
+                        ])
+                        ->values()
+                        ->all(),
+                ])
+                ->values()
                 ->all()
         );
     }
 
-    public function setUserOverride(Request $request, string $name, int $userId, ActivityLogger $activityLogger): JsonResponse
-    {
-        return $this->setOverride($request, $name, User::find($userId), $activityLogger);
-    }
-
-    public function clearUserOverride(Request $request, string $name, int $userId, ActivityLogger $activityLogger): JsonResponse
-    {
-        return $this->clearOverride($name, User::find($userId), $activityLogger);
-    }
-
-    public function setWorkgroupOverride(Request $request, string $name, int $workgroupId, ActivityLogger $activityLogger): JsonResponse
-    {
-        return $this->setOverride($request, $name, Workgroup::find($workgroupId), $activityLogger);
-    }
-
-    public function clearWorkgroupOverride(Request $request, string $name, int $workgroupId, ActivityLogger $activityLogger): JsonResponse
-    {
-        return $this->clearOverride($name, Workgroup::find($workgroupId), $activityLogger);
-    }
-
-    private function setOverride(Request $request, string $name, User|Workgroup|null $subject, ActivityLogger $activityLogger): JsonResponse
+    public function replaceOverrides(Request $request, string $name, ActivityLogger $activityLogger): JsonResponse
     {
         if (! $this->isAdmin()) {
             return $this->ForbiddenResponse();
         }
 
-        if (! $this->resolver->isScopable($name)) {
-            return $this->notScopableResponse();
-        }
-
-        if (! $subject) {
+        if (! $this->featureNames()->contains($name)) {
             return $this->NotFoundResponse();
         }
 
         try {
             $validated = $request->validate([
-                'enabled' => ['required', 'boolean'],
+                'users' => ['present', 'array'],
+                'users.*.id' => ['required', 'integer', 'distinct', 'exists:users,id'],
+                'users.*.enabled' => ['required', 'boolean'],
+                'workgroups' => ['present', 'array'],
+                'workgroups.*.id' => ['required', 'integer', 'distinct', 'exists:workgroups,id'],
+                'workgroups.*.enabled' => ['required', 'boolean'],
             ]);
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
         }
 
-        $before = $this->resolver->overrideFor($name, $subject);
-        $after = (bool) $validated['enabled'];
+        $current = $this->resolver->overrides($name)[$name];
 
-        if ($after) {
-            Feature::for($subject)->activate($name);
-        } else {
-            Feature::for($subject)->deactivate($name);
-        }
-
-        $this->logOverride($activityLogger, 'override_set', $name, $subject, $before, $after);
+        DB::transaction(function () use ($name, $current, $validated, $activityLogger) {
+            $this->syncOverrides($name, User::class, $current['users'], $validated['users'], $activityLogger);
+            $this->syncOverrides($name, Workgroup::class, $current['workgroups'], $validated['workgroups'], $activityLogger);
+        });
 
         return $this->OKResponse([]);
     }
 
-    private function clearOverride(string $name, User|Workgroup|null $subject, ActivityLogger $activityLogger): JsonResponse
-    {
-        if (! $this->isAdmin()) {
-            return $this->ForbiddenResponse();
+    private function syncOverrides(
+        string $name,
+        string $modelClass,
+        array $current,
+        array $wanted,
+        ActivityLogger $activityLogger
+    ): void {
+        $wanted = collect($wanted)->mapWithKeys(fn (array $override) => [
+            (int) $override['id'] => (bool) $override['enabled'],
+        ]);
+
+        $subjects = $modelClass::whereIn('id', $wanted->keys()->merge(array_keys($current))->unique())->get();
+
+        foreach ($subjects as $subject) {
+            $before = $current[$subject->id] ?? null;
+            $after = $wanted->get($subject->id);
+
+            if ($before === $after) {
+                continue;
+            }
+
+            match ($after) {
+                true => Feature::for($subject)->activate($name),
+                false => Feature::for($subject)->deactivate($name),
+                null => Feature::for($subject)->forget($name),
+            };
+
+            $this->logOverride(
+                $activityLogger,
+                $after === null ? 'override_cleared' : 'override_set',
+                $name,
+                $subject,
+                $before,
+                $after
+            );
         }
-
-        if (! $this->resolver->isScopable($name)) {
-            return $this->notScopableResponse();
-        }
-
-        if (! $subject) {
-            return $this->NotFoundResponse();
-        }
-
-        $before = $this->resolver->overrideFor($name, $subject);
-
-        if ($before === null) {
-            return $this->OKResponse([]);
-        }
-
-        Feature::for($subject)->forget($name);
-
-        $this->logOverride($activityLogger, 'override_cleared', $name, $subject, $before, null);
-
-        return $this->OKResponse([]);
-    }
-
-    private function overridesFor(string $name): array
-    {
-        $userOverrides = $this->resolver->overridesOf($name, User::class);
-        $workgroupOverrides = $this->resolver->overridesOf($name, Workgroup::class);
-
-        return [
-            'feature' => $name,
-            'global' => (bool) Feature::for(null)->value($name),
-            'users' => User::whereIn('id', array_keys($userOverrides))
-                ->orderBy('name')
-                ->get(['id', 'name', 'email'])
-                ->map(fn (User $user) => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'enabled' => $userOverrides[$user->id],
-                ])
-                ->all(),
-            'workgroups' => Workgroup::whereIn('id', array_keys($workgroupOverrides))
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn (Workgroup $workgroup) => [
-                    'id' => $workgroup->id,
-                    'name' => $workgroup->name,
-                    'enabled' => $workgroupOverrides[$workgroup->id],
-                ])
-                ->all(),
-        ];
     }
 
     private function logOverride(
@@ -225,7 +201,7 @@ class FeatureController extends Controller
 
     private function featureNames(): \Illuminate\Support\Collection
     {
-        return \DB::table('features')
+        return DB::table('features')
             ->distinct('name')
             ->orderBy('name')
             ->pluck('name');
@@ -234,12 +210,5 @@ class FeatureController extends Controller
     private function isAdmin(): bool
     {
         return (bool) Auth::user()?->hasRole('admin');
-    }
-
-    private function notScopableResponse(): JsonResponse
-    {
-        return $this->ValidationErrorResponse([
-            'name' => ['This feature flag can only be set globally.'],
-        ]);
     }
 }
