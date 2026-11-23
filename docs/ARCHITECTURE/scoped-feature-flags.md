@@ -33,6 +33,8 @@ For these flags:
 
 Every flag is overridable unless it is listed. Add a flag to `global_only` if an override would track individuals, or if the flag is read anywhere without a user. The values are literals rather than `env()`, so a deployment can't switch this off.
 
+Flags can't be scoped to collections. Behaviour that depends on the collection a query runs against is a collection capability, checked alongside the flag. See `collection-capabilities.md`.
+
 ## Where overrides take effect
 
 Overrides only change behaviour where the code asks `FeatureResolver` with a user. `GET /api/v1/features` does, so the web app always sees the user's effective value for every flag.
