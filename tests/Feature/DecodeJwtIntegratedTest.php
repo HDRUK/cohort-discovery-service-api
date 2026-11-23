@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ClaimTrust;
 use App\Models\Custodian;
 use App\Models\User;
+use App\Services\Claims\ClaimSyncPolicy;
 use App\Support\ApplicationMode;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
@@ -21,7 +21,7 @@ class DecodeJwtIntegratedTest extends TestCase
 
         Config::set('system.operation_mode', ApplicationMode::INTEGRATED);
         Config::set('integrated.jwt_secret', Config::get('api.jwt_secret', 'test_secret'));
-        Config::set('claimsaccesscontrol.sync.custodians.trust', ClaimTrust::ALWAYS->value);
+        Config::set('claimsaccesscontrol.sync.custodians.trust', ClaimSyncPolicy::TRUST_ALWAYS);
         Config::set('claimsaccesscontrol.sync.custodians.authoritative', true);
 
         $this->enableMiddleware();

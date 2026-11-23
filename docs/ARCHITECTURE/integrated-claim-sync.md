@@ -33,4 +33,4 @@ Before DP-1275 the syncer accepted string ids only, so every team from the Gatew
 
 ## Configuration
 
-Trust and authority per subject are set in `config/claimsaccesscontrol.php` under `sync`, via the `CLAIM_SYNC_*` environment variables. See `claims-access-control-editability.md` for how these modes surface to admins.
+Trust and authority per subject are set in `config/claimsaccesscontrol.php` under `sync`, via the `CLAIM_SYNC_*` environment variables.
