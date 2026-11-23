@@ -111,7 +111,16 @@ class CustodianSyncerService
 
     private function linkUnlinkedCustodiansByName(array $rows): void
     {
+        $alreadyLinked = Custodian::query()
+            ->whereIn('external_custodian_id', array_column($rows, 'external_custodian_id'))
+            ->pluck('external_custodian_id')
+            ->all();
+
         foreach ($rows as $row) {
+            if (in_array($row['external_custodian_id'], $alreadyLinked, true)) {
+                continue;
+            }
+
             Custodian::query()
                 ->whereNull('external_custodian_id')
                 ->where('name', $row['name'])

@@ -100,6 +100,18 @@ class CustodianSyncerServiceTest extends TestCase
         Log::shouldHaveReceived('warning')->once();
     }
 
+    public function test_a_linked_team_sent_with_an_unlinked_custodians_name_stays_on_its_own_custodian(): void
+    {
+        $linked = Custodian::factory()->create(['name' => 'Acme Trust', 'external_custodian_id' => '21']);
+        $unlinked = Custodian::factory()->create(['name' => 'Beta Trust', 'external_custodian_id' => null]);
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [(object) ['id' => 21, 'name' => 'Beta Trust']]);
+
+        $this->assertNull($unlinked->refresh()->external_custodian_id);
+        $this->assertSame([$linked->id], $user->custodians()->pluck('custodians.id')->all());
+    }
+
     public function test_it_skips_entries_whose_id_is_neither_an_integer_nor_a_string(): void
     {
         $user = User::factory()->create();
