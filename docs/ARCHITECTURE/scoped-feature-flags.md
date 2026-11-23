@@ -24,6 +24,7 @@ With no user (queued jobs, console commands, BUNNY polling) only the global valu
 | `flatten-nested-groups` | Read in translate and in BUNNY polling, which must agree. |
 | `collection-task-backlog-limit` | Read in BUNNY polling, the backlog monitor, distributions and query submission. |
 | `distribution-use-central-domain` | Read only in a queued job. |
+| `constrain-for-bunny-v1` | Describes what the collections' BUNNY can run, not who is asking. An override could let someone build queries that BUNNY v1 can't run, and the API doesn't check them. See `collection-capabilities.md`. |
 
 For these flags:
 - `FeatureResolver` returns the global value and ignores any override rows.

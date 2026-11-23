@@ -59,7 +59,7 @@ Either route needs a change on the BUNNY side first.
 
 ## Worked example: `constrain-for-bunny-v1`
 
-Today this is a global flag, and only the web app reads it. When it is on, the query builder allows an age constraint **or** a time constraint on a rule, not both, and makes timeframes one-directional. The API doesn't check it.
+Today this is a global-only flag, and only the web app reads it. When it is on, the query builder allows an age constraint **or** a time constraint on a rule, not both, and makes timeframes one-directional. The API doesn't check it.
 
 As a capability it would work like this:
 1. BUNNY reports its version, through the metadata file or a polling header.

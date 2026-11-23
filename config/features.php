@@ -29,5 +29,6 @@ return [
         'flatten-nested-groups',
         'collection-task-backlog-limit',
         'distribution-use-central-domain',
+        'constrain-for-bunny-v1',
     ],
 ];

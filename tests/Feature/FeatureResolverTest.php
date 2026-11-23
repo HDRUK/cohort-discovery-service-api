@@ -152,6 +152,14 @@ class FeatureResolverTest extends TestCase
         $this->assertTrue($this->resolver->active(self::GLOBAL_ONLY_FLAG, $this->user));
     }
 
+    public function test_user_override_cannot_lift_the_bunny_v1_constraints(): void
+    {
+        Feature::activate('constrain-for-bunny-v1');
+        Feature::for($this->user)->deactivate('constrain-for-bunny-v1');
+
+        $this->assertTrue($this->resolver->active('constrain-for-bunny-v1', $this->user));
+    }
+
     public function test_all_for_reports_the_global_value_of_a_global_only_flag(): void
     {
         Feature::deactivate(self::GLOBAL_ONLY_FLAG);
