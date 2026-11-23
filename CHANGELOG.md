@@ -1,3 +1,9 @@
+## [1.18.1](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.18.0...v1.18.1) (2026-11-23)
+
+### 🐛 Bug Fixes
+
+* **DP-1275:** sync Gateway teams sent with integer ids (#368) ([1e838ff](https://github.com/HDRUK/cohort-discovery-service-api/commit/1e838ff9f8542ebab34ded487ff054b031c712ec)), closes [DP-1275](undefinedDP-1275) [Gateway](undefinedGateway)
+
 ## [1.18.0](https://github.com/HDRUK/cohort-discovery-service-api/compare/v1.17.0...v1.18.0) (2026-11-19)
 
 ### ✨ Features

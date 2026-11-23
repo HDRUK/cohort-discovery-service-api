@@ -156,20 +156,13 @@ class ImportUsersFromCsv extends Command
 
     private function getOrCreateCustodian(string $custodianName): Custodian
     {
-        $custodian = Custodian::firstOrCreate(
+        return Custodian::firstOrCreate(
             ['name' => $custodianName],
             [
                 'external_custodian_id'   => null,
                 'external_custodian_name' => null,
             ]
         );
-
-        $custodian->update([
-            'external_custodian_id'   => $custodian->id,
-            'external_custodian_name' => $custodian->name,
-        ]);
-
-        return $custodian;
     }
 
     /**
