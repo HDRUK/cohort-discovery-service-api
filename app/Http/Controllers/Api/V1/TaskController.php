@@ -810,16 +810,7 @@ class TaskController extends Controller
                 return $this->NotFoundResponse();
             }
 
-            $this->authorize('update', $originalTask->submittedQuery);
-
-            $collectionIsVisible = Collection::query()
-                ->visibleToUser(Auth::user())
-                ->whereKey($originalTask->collection_id)
-                ->exists();
-
-            if (! $collectionIsVisible) {
-                return $this->ForbiddenResponse();
-            }
+            $this->authorize('rerun', $originalTask);
 
             $query = $originalTask->submittedQuery;
             $collection = $originalTask->collection;

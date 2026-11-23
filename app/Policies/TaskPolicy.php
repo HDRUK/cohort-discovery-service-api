@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Collection;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\CustodianHasUser;
@@ -33,5 +34,11 @@ class TaskPolicy
         $query = $task->submittedQuery;
 
         return $query->user_id === $user->id;
+    }
+
+    public function rerun(User $user, Task $task): bool
+    {
+        return $user->can('update', $task->submittedQuery)
+            && Collection::query()->visibleToUser($user)->whereKey($task->collection_id)->exists();
     }
 }
