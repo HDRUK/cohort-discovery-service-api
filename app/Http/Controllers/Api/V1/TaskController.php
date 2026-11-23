@@ -805,6 +805,15 @@ class TaskController extends Controller
             $originalTask = Task::where('pid', $pid)
                 ->first();
 
+            $collectionIsVisible = Collection::query()
+                ->visibleToUser(Auth::user())
+                ->whereKey($originalTask->collection_id)
+                ->exists();
+
+            if (! $collectionIsVisible) {
+                return $this->ForbiddenResponse();
+            }
+
             $query = $originalTask->submittedQuery;
             $collection = $originalTask->collection;
 

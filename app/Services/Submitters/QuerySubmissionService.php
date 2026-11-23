@@ -6,11 +6,13 @@ use App\Enums\MissingDataTable;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use App\Models\User;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionBacklogLimiter;
 use App\Support\QueryDefinitionInspector;
 use Carbon\Carbon;
 use DB;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
 
@@ -31,12 +33,15 @@ class QuerySubmissionService
 
     public function handle(array $data, int $userId): array
     {
+        $user = User::findOrFail($userId);
+        $this->ensureCollectionsVisibleTo($user, $data['collection_filter'] ?? []);
+
         // Wrapped in a transaction to ensure nothing is orphaned on failure
         // which could prevent the system from functioning properly when
         // this many moving parts are in play (Queries/Tasks/Observers and Jobs).
         //
         try {
-            return DB::transaction(function () use ($data, $userId) {
+            return DB::transaction(function () use ($data, $userId, $user) {
                 // Generate the query
                 $query = Query::create([
                     'pid' => Str::uuid(),
@@ -51,6 +56,7 @@ class QuerySubmissionService
 
                 // Get relevant collections
                 $collections = Collection::query()
+                    ->visibleToUser($user)
                     ->when(! empty($data['collection_filter']), function ($q) use ($data) {
                         $q->whereIn('pid', $data['collection_filter']);
                     })
@@ -132,6 +138,22 @@ class QuerySubmissionService
                 'task_count' => null,
                 'task_pids' => null,
             ];
+        }
+    }
+
+    private function ensureCollectionsVisibleTo(User $user, array $collectionPids): void
+    {
+        if (empty($collectionPids)) {
+            return;
+        }
+
+        $hasHiddenCollection = Collection::query()
+            ->whereIn('pid', $collectionPids)
+            ->whereNotIn('collections.id', Collection::query()->visibleToUser($user)->select('collections.id'))
+            ->exists();
+
+        if ($hasHiddenCollection) {
+            throw new AuthorizationException('One or more collections are not available to this user.');
         }
     }
 

@@ -6,6 +6,7 @@ use App\Enums\TaskType;
 use App\Models\Collection;
 use App\Models\Query;
 use App\Models\Task;
+use App\Models\User;
 use App\Services\Submitters\QuerySubmissionService;
 use DB;
 use Illuminate\Support\Facades\Queue;
@@ -13,6 +14,8 @@ use Tests\TestCase;
 
 class QuerySubmissionServiceTest extends TestCase
 {
+    private User $admin;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -22,6 +25,9 @@ class QuerySubmissionServiceTest extends TestCase
         Collection::truncate();
         Task::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $this->admin = User::factory()->create();
+        $this->admin->assignRole('admin');
     }
 
     public function test_it_creates_a_query_and_tasks_for_collections(): void
@@ -41,7 +47,7 @@ class QuerySubmissionServiceTest extends TestCase
         $service = app(QuerySubmissionService::class);
 
         // Run
-        $result = $service->handle($data, 1);
+        $result = $service->handle($data, $this->admin->id);
 
         $this->assertArrayHasKey('query_pid', $result);
         $this->assertEquals(2, $result['task_count']);
@@ -62,7 +68,7 @@ class QuerySubmissionServiceTest extends TestCase
         ];
 
         $service = app(QuerySubmissionService::class);
-        $result = $service->handle($data, 1);
+        $result = $service->handle($data, $this->admin->id);
 
         $this->assertArrayHasKey('query_pid', $result);
         $this->assertEquals(0, $result['task_count']);

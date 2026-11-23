@@ -12,9 +12,12 @@ use Carbon\Carbon;
 use DB;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class QueryRateLimitTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/queries';
 
     private const RERUN_URL = '/api/v1/query/re-run';
@@ -47,6 +50,7 @@ class QueryRateLimitTest extends TestCase
     private function submitPayload(): array
     {
         $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($this->user, $collection);
 
         return [
             'name' => 'Test Query',

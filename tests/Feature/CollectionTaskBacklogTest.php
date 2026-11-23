@@ -12,9 +12,12 @@ use Carbon\Carbon;
 use DB;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class CollectionTaskBacklogTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/queries';
 
     private const LIMIT = 2;
@@ -59,6 +62,8 @@ class CollectionTaskBacklogTest extends TestCase
 
     private function submit(array $collectionPids): \Illuminate\Testing\TestResponse
     {
+        $this->grantCollectionAccess($this->user, ...Collection::whereIn('pid', $collectionPids)->get());
+
         return $this->actingAsJwt($this->user)->postJson(self::BASE_URL, [
             'name' => 'Test Query',
             'definition' => ['some' => 'definition'],

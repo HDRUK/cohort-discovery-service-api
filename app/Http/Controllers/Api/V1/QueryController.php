@@ -240,6 +240,8 @@ class QueryController extends Controller
             }
 
             return $this->CreatedResponse($result);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@store - failed: ' . json_encode($validated));
 
@@ -571,6 +573,8 @@ class QueryController extends Controller
             ]);
 
             return $this->OKResponse($result);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@duplicateAndReRun/' . $validated['key'] . ' - failed: ' .
                 json_encode($validated) . ' and duplicate: ' . json_encode($query) . ' (exception: ' . $e->getMessage() . ')');
