@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Custodian;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Services\Features\FeatureResolver;
 use DB;
 use Laravel\Pennant\Feature;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class FeatureResolverTest extends TestCase
@@ -30,8 +28,6 @@ class FeatureResolverTest extends TestCase
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
         DB::table('user_has_workgroups')->truncate();
-        DB::table('user_has_roles')->truncate();
-        DB::table('custodian_has_users')->truncate();
         DB::table('features')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
@@ -136,64 +132,6 @@ class FeatureResolverTest extends TestCase
             [self::FLAG => true, self::OTHER_FLAG => true],
             collect($this->resolver->allFor($this->user))->sortKeys()->all()
         );
-    }
-
-    public function test_role_override_on_beats_global_off(): void
-    {
-        Feature::deactivate(self::FLAG);
-        $this->user->assignRole('user');
-        Feature::for(Role::findByName('user'))->activate(self::FLAG);
-
-        $this->assertTrue($this->resolver->active(self::FLAG, $this->user));
-    }
-
-    public function test_workgroup_override_off_beats_role_on(): void
-    {
-        Feature::deactivate(self::FLAG);
-        $this->user->assignRole('user');
-        Feature::for(Role::findByName('user'))->activate(self::FLAG);
-        Feature::for($this->workgroupWithUser('UK-INDUSTRY-TEST'))->deactivate(self::FLAG);
-
-        $this->assertFalse($this->resolver->active(self::FLAG, $this->user));
-    }
-
-    public function test_user_override_off_beats_role_on(): void
-    {
-        Feature::deactivate(self::FLAG);
-        $this->user->assignRole('user');
-        Feature::for(Role::findByName('user'))->activate(self::FLAG);
-        Feature::for($this->user)->deactivate(self::FLAG);
-
-        $this->assertFalse($this->resolver->active(self::FLAG, $this->user));
-    }
-
-    public function test_any_role_on_wins_over_another_role_off(): void
-    {
-        Feature::deactivate(self::FLAG);
-        $this->user->assignRole('user');
-        $this->user->assignRole('admin');
-        Feature::for(Role::findByName('user'))->deactivate(self::FLAG);
-        Feature::for(Role::findByName('admin'))->activate(self::FLAG);
-
-        $this->assertTrue($this->resolver->active(self::FLAG, $this->user));
-    }
-
-    public function test_custodian_members_match_the_custodian_role(): void
-    {
-        Feature::deactivate(self::FLAG);
-        Feature::for(Role::findByName('custodian'))->activate(self::FLAG);
-        $this->user->custodians()->attach(Custodian::factory()->create()->id);
-
-        $this->assertTrue($this->resolver->active(self::FLAG, $this->user));
-    }
-
-    public function test_custodian_role_override_does_not_apply_to_other_users(): void
-    {
-        Feature::deactivate(self::FLAG);
-        $this->user->assignRole('user');
-        Feature::for(Role::findByName('custodian'))->activate(self::FLAG);
-
-        $this->assertFalse($this->resolver->active(self::FLAG, $this->user));
     }
 
     private function workgroupWithUser(string $name): Workgroup

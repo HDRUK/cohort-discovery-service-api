@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\TaskType;
 use App\Models\Collection;
-use App\Models\Custodian;
 use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
@@ -12,7 +11,6 @@ use App\Models\User;
 use App\Models\Workgroup;
 use DB;
 use Laravel\Pennant\Feature;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\GrantsCollectionAccess;
 
@@ -104,24 +102,6 @@ class QueryBlockingTest extends TestCase
             'Location data not yet available',
             Result::where('task_id', $nonMemberTask->id)->value('message')
         );
-    }
-
-    public function test_custodian_role_override_enables_location_for_custodian_members(): void
-    {
-        Feature::deactivate('query-builder-use-location');
-        Feature::for(Role::findByName('custodian'))->activate('query-builder-use-location');
-
-        $custodian = Custodian::factory()->create();
-        $collection = $this->makeCollection(['location_enabled' => true, 'custodian_id' => $custodian->id]);
-
-        $member = User::factory()->create();
-        $member->assignRole('user');
-        $member->custodians()->attach($custodian->id);
-
-        $this->user = $member;
-        $this->submit($this->leaf('Location'), [$collection]);
-
-        $this->assertNull(Task::latest('id')->first()->failed_at);
     }
 
     public function test_user_override_off_blocks_death_despite_global_on(): void

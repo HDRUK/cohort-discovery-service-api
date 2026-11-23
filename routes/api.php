@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\V1\OmopController;
 use App\Http\Controllers\Api\V1\QueryController;
 use App\Http\Controllers\Api\V1\QueryParserController;
 use App\Http\Controllers\Api\V1\RegressionTestController;
-use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\ServiceCallerController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TermDirectoryController;
@@ -87,8 +86,6 @@ Route::middleware(['decode.jwt', /*'cbac:admin'*/])->group(function () {
     Route::get('/v1/features/overrides', [FeatureController::class, 'overrides']);
     Route::put('/v1/features/{name}', [FeatureController::class, 'update']);
     Route::put('/v1/features/{name}/overrides', [FeatureController::class, 'replaceOverrides']);
-
-    Route::get('/v1/roles', [RoleController::class, 'index']);
 
     Route::get('/v1/access_policy', [AccessPolicyController::class, 'index']);
 });
