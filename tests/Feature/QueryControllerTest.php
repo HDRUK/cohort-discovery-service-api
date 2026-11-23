@@ -10,9 +10,12 @@ use App\Models\User;
 use DB;
 use Str;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class QueryControllerTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/queries';
 
     private const QUERY_URL = '/api/v1/query';
@@ -29,6 +32,7 @@ class QueryControllerTest extends TestCase
         Query::truncate();
         Collection::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $this->resetCollectionAccess();
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -249,6 +253,95 @@ class QueryControllerTest extends TestCase
             $this->assertEquals($t->query_id, $query->id);
             $this->assertEquals($t->completed_at, null);
         }
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_submitting_to_a_collection_the_user_cannot_see(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $collection = Collection::factory()->bunny()->create();
+
+        $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, [
+                'name' => 'Hidden collection query',
+                'definition' => ['some' => 'definition'],
+                'collection_filter' => [$collection->pid],
+                'task_type' => TaskType::A,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('queries', 0);
+        $this->assertDatabaseCount('tasks', 0);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_rerunning_a_query_once_its_collection_is_no_longer_visible(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($user, $collection);
+
+        $pid = $this->actingAsJwt($user)
+            ->postJson(self::BASE_URL, [
+                'name' => 'Visible collection query',
+                'definition' => ['some' => 'definition'],
+                'collection_filter' => [$collection->pid],
+                'task_type' => TaskType::A,
+            ])
+            ->assertCreated()
+            ->json('data.query_pid');
+
+        $user->workgroups()->detach();
+
+        $this->actingAsJwt($user)
+            ->getJson(self::QUERY_URL.'/re-run/'.$pid)
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('queries', 1);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_rerunning_another_users_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $owner = User::factory()->create();
+        $owner->assignRole('user');
+        $other = User::factory()->create();
+        $other->assignRole('user');
+        $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($owner, $collection);
+        $this->grantCollectionAccess($other, $collection);
+
+        $query = Query::factory()->create(['user_id' => $owner->id]);
+        Task::factory()->create(['query_id' => $query->id, 'collection_id' => $collection->id]);
+
+        $this->actingAsJwt($other)
+            ->getJson(self::QUERY_URL.'/re-run/'.$query->pid)
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('queries', 1);
+        $this->assertDatabaseCount('tasks', 1);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_not_found_when_rerunning_an_unknown_query(): void
+    {
+        $this->disableObservers();
+        $this->enableMiddleware();
+
+        $this->actingAsJwt($this->user)
+            ->getJson(self::QUERY_URL.'/re-run/'.Str::uuid())
+            ->assertNotFound();
     }
 
     #[\PHPUnit\Framework\Attributes\Test]

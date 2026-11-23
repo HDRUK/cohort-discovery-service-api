@@ -547,7 +547,9 @@ class QueryController extends Controller
         try {
             $query = Query::with('tasks.collection')
                 ->whereIdOrPid($key)
-                ->first();
+                ->firstOrFail();
+
+            $this->authorize('view', $query);
 
             if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
                 $activityLogger->custom('queries', 'rate_limit_exceeded', $query, [

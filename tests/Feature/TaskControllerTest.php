@@ -18,10 +18,14 @@ use Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class TaskControllerTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/task';
 
     private User $adminUser;
@@ -30,6 +34,7 @@ class TaskControllerTest extends TestCase
     {
         parent::setUp();
         CollectionHostHasCollection::truncate();
+        $this->resetCollectionAccess();
         $this->enableObservers();
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole('admin');
@@ -1075,4 +1080,76 @@ class TaskControllerTest extends TestCase
         ]);
     }
 
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_rerunning_a_task_for_a_collection_the_user_cannot_see(): void
+    {
+        $this->enableMiddleware();
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $task = $this->taskOwnedBy($user, Collection::factory()->bunny()->create());
+
+        $this->actingAsJwt($user)
+            ->getJson(self::BASE_URL.'/re-run/'.$task->pid)
+            ->assertForbidden();
+
+        $this->assertSame(0, Task::where('query_id', $task->query_id)->whereKeyNot($task->id)->count());
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_reruns_a_task_for_a_collection_the_user_can_see(): void
+    {
+        $this->enableMiddleware();
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($user, $collection);
+        $task = $this->taskOwnedBy($user, $collection);
+
+        $this->actingAsJwt($user)
+            ->getJson(self::BASE_URL.'/re-run/'.$task->pid)
+            ->assertOk();
+
+        $this->assertSame(1, Task::where('query_id', $task->query_id)->whereKeyNot($task->id)->count());
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_forbids_rerunning_another_users_task(): void
+    {
+        $this->enableMiddleware();
+        $owner = User::factory()->create();
+        $owner->assignRole('user');
+        $other = User::factory()->create();
+        $other->assignRole('user');
+        $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($owner, $collection);
+        $this->grantCollectionAccess($other, $collection);
+        $task = $this->taskOwnedBy($owner, $collection);
+
+        $this->actingAsJwt($other)
+            ->getJson(self::BASE_URL.'/re-run/'.$task->pid)
+            ->assertForbidden();
+
+        $this->assertSame(0, Task::where('query_id', $task->query_id)->whereKeyNot($task->id)->count());
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_not_found_when_rerunning_an_unknown_task(): void
+    {
+        $this->enableMiddleware();
+        $user = User::factory()->create();
+        $user->assignRole('user');
+
+        $this->actingAsJwt($user)
+            ->getJson(self::BASE_URL.'/re-run/'.Str::uuid())
+            ->assertNotFound();
+    }
+
+    private function taskOwnedBy(User $user, Collection $collection): Task
+    {
+        return Task::factory()->create([
+            'query_id' => Query::factory()->create(['user_id' => $user->id])->id,
+            'collection_id' => $collection->id,
+        ]);
+    }
 }
