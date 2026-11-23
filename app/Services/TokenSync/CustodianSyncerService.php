@@ -30,7 +30,7 @@ class CustodianSyncerService
         }
 
         $valid = collect($custodians)->filter(
-            fn ($t) => is_object($t) && isset($t->id, $t->name) && is_string($t->id) && is_string($t->name)
+            fn ($t) => is_object($t) && isset($t->id, $t->name) && (is_int($t->id) || is_string($t->id)) && is_string($t->name)
         );
 
         if ($valid->count() !== count($custodians)) {
@@ -47,7 +47,7 @@ class CustodianSyncerService
         $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS);
 
         $rows = $valid->map(fn ($t) => [
-            'external_custodian_id' => $t->id,
+            'external_custodian_id' => (string) $t->id,
             'name' => $t->name,
             'external_custodian_name' => $t->name,
         ])->values()->all();

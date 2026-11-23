@@ -50,6 +50,45 @@ class CustodianSyncerServiceTest extends TestCase
         );
     }
 
+    public function test_it_creates_and_attaches_custodians_from_integer_gateway_team_ids(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue($this->syncer->sync($user, [
+            (object) ['id' => 21, 'name' => 'Acme Trust'],
+            (object) ['id' => 22, 'name' => 'Beta Trust'],
+        ]));
+
+        $this->assertSame('21', $this->custodianNamed('Acme Trust')->external_custodian_id);
+        $this->assertEqualsCanonicalizing(['Acme Trust', 'Beta Trust'], $user->custodians()->pluck('name')->all());
+    }
+
+    public function test_an_integer_team_id_matches_a_custodian_stored_with_the_same_id_as_a_string(): void
+    {
+        $existing = Custodian::factory()->create(['name' => 'Acme Trust', 'external_custodian_id' => '21']);
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [(object) ['id' => 21, 'name' => 'Acme Trust']]);
+
+        $this->assertSame(1, Custodian::where('external_custodian_id', '21')->count());
+        $this->assertSame([$existing->id], $user->custodians()->pluck('custodians.id')->all());
+    }
+
+    public function test_it_skips_entries_whose_id_is_neither_an_integer_nor_a_string(): void
+    {
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [
+            (object) ['id' => 21, 'name' => 'Acme Trust'],
+            (object) ['id' => true, 'name' => 'Bool Trust'],
+            (object) ['id' => 2.5, 'name' => 'Float Trust'],
+            (object) ['id' => ['x'], 'name' => 'Array Trust'],
+        ]);
+
+        $this->assertSame(['Acme Trust'], Custodian::pluck('name')->all());
+        $this->assertSame(['Acme Trust'], $user->custodians()->pluck('name')->all());
+    }
+
     public function test_it_upserts_on_the_external_id_rather_than_creating_duplicates(): void
     {
         $user = User::factory()->create();
