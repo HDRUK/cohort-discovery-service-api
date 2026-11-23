@@ -29,15 +29,10 @@ class CustodianSyncerService
             return false;
         }
 
-        $valid = collect($custodians)->filter(
-            fn ($t) => is_object($t) && isset($t->id, $t->name) && is_string($t->id) && is_string($t->name)
-        );
+        [$valid, $rejected] = collect($custodians)->partition(fn ($team) => $this->isWellFormedTeam($team));
 
-        if ($valid->count() !== count($custodians)) {
-            \Log::warning("Custodian claim sync skipped malformed entries for user {$user->id}", [
-                'valid' => $valid->count(),
-                'total' => count($custodians),
-            ]);
+        if ($rejected->isNotEmpty()) {
+            $this->reportRejectedTeams($user, $rejected->values()->all(), count($custodians));
         }
 
         if ($custodians !== [] && $valid->isEmpty()) {
@@ -47,7 +42,7 @@ class CustodianSyncerService
         $authoritative = $this->policy->isAuthoritative(ClaimSyncPolicy::SUBJECT_CUSTODIANS);
 
         $rows = $valid->map(fn ($t) => [
-            'external_custodian_id' => $t->id,
+            'external_custodian_id' => (string) $t->id,
             'name' => $t->name,
             'external_custodian_name' => $t->name,
         ])->values()->all();
@@ -69,6 +64,8 @@ class CustodianSyncerService
             return true;
         }
 
+        $this->linkUnlinkedCustodiansByName($rows);
+
         Custodian::upsert(
             $rows,
             ['external_custodian_id'],
@@ -80,10 +77,19 @@ class CustodianSyncerService
             ->values()
             ->all();
 
-        $custodianIds = Custodian::query()
+        $linked = Custodian::query()
             ->whereIn('external_custodian_id', $externalIds)
-            ->pluck('id')
-            ->all();
+            ->pluck('id', 'external_custodian_id');
+
+        $unlinkable = array_values(array_diff($externalIds, $linked->keys()->all()));
+
+        if ($unlinkable !== []) {
+            \Log::warning("Custodian claim sync could not link teams for user {$user->id}: a custodian with the same name is linked to another team", [
+                'external_custodian_ids' => $unlinkable,
+            ]);
+        }
+
+        $custodianIds = $linked->values()->all();
 
         $changes = $authoritative
             ? $user->custodians()->sync($custodianIds)
@@ -101,5 +107,54 @@ class CustodianSyncerService
         );
 
         return true;
+    }
+
+    private function linkUnlinkedCustodiansByName(array $rows): void
+    {
+        $alreadyLinked = Custodian::query()
+            ->whereIn('external_custodian_id', array_column($rows, 'external_custodian_id'))
+            ->pluck('external_custodian_id')
+            ->all();
+
+        foreach ($rows as $row) {
+            if (in_array($row['external_custodian_id'], $alreadyLinked, true)) {
+                continue;
+            }
+
+            Custodian::query()
+                ->whereNull('external_custodian_id')
+                ->where('name', $row['name'])
+                ->update([
+                    'external_custodian_id' => $row['external_custodian_id'],
+                    'external_custodian_name' => $row['external_custodian_name'],
+                ]);
+        }
+    }
+
+    private function isWellFormedTeam(mixed $team): bool
+    {
+        if (! is_object($team) || ! is_string($team->name ?? null)) {
+            return false;
+        }
+
+        $id = $team->id ?? null;
+
+        return is_int($id) || is_string($id);
+    }
+
+    private function reportRejectedTeams(User $user, array $rejected, int $total): void
+    {
+        $context = ['rejected' => $rejected, 'total' => $total];
+
+        if (count($rejected) === $total) {
+            \Log::error("Custodian claim sync rejected every team for user {$user->id}; custodians left unchanged", $context);
+        } else {
+            \Log::warning("Custodian claim sync rejected some teams for user {$user->id}", $context);
+        }
+
+        $this->activity->custom('claims', 'claims_rejected', $user, [
+            'relation' => 'custodians',
+            ...$context,
+        ], 'claims_rejected');
     }
 }

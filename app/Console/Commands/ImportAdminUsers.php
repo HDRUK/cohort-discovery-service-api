@@ -58,11 +58,6 @@ class ImportAdminUsers extends Command
             ]
         );
 
-        $this->custodian->update([
-            'external_custodian_id'   => $this->custodian->id,
-            'external_custodian_name' => $this->custodian->name,
-        ]);
-
         if ($file) {
             $result = $this->importFromFile($file);
         } else {
