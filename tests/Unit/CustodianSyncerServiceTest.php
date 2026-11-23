@@ -87,6 +87,19 @@ class CustodianSyncerServiceTest extends TestCase
         $this->assertSame([$imported->id], $user->custodians()->pluck('custodians.id')->all());
     }
 
+    public function test_a_team_cannot_take_over_a_same_named_custodian_linked_to_another_team(): void
+    {
+        Log::spy();
+        $linked = Custodian::factory()->create(['name' => 'Acme Trust', 'external_custodian_id' => '21']);
+        $user = User::factory()->create();
+
+        $this->syncer->sync($user, [(object) ['id' => 35, 'name' => 'Acme Trust']]);
+
+        $this->assertSame('21', $linked->refresh()->external_custodian_id);
+        $this->assertSame(0, $user->custodians()->count());
+        Log::shouldHaveReceived('warning')->once();
+    }
+
     public function test_it_skips_entries_whose_id_is_neither_an_integer_nor_a_string(): void
     {
         $user = User::factory()->create();

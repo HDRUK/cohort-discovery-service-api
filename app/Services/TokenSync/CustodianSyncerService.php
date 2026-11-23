@@ -64,10 +64,12 @@ class CustodianSyncerService
             return true;
         }
 
+        $this->linkUnlinkedCustodiansByName($rows);
+
         Custodian::upsert(
             $rows,
             ['external_custodian_id'],
-            ['external_custodian_id', 'name', 'external_custodian_name']
+            ['name', 'external_custodian_name']
         );
 
         $externalIds = collect($rows)
@@ -75,10 +77,19 @@ class CustodianSyncerService
             ->values()
             ->all();
 
-        $custodianIds = Custodian::query()
+        $linked = Custodian::query()
             ->whereIn('external_custodian_id', $externalIds)
-            ->pluck('id')
-            ->all();
+            ->pluck('id', 'external_custodian_id');
+
+        $unlinkable = array_values(array_diff($externalIds, $linked->keys()->all()));
+
+        if ($unlinkable !== []) {
+            \Log::warning("Custodian claim sync could not link teams for user {$user->id}: a custodian with the same name is linked to another team", [
+                'external_custodian_ids' => $unlinkable,
+            ]);
+        }
+
+        $custodianIds = $linked->values()->all();
 
         $changes = $authoritative
             ? $user->custodians()->sync($custodianIds)
@@ -96,6 +107,19 @@ class CustodianSyncerService
         );
 
         return true;
+    }
+
+    private function linkUnlinkedCustodiansByName(array $rows): void
+    {
+        foreach ($rows as $row) {
+            Custodian::query()
+                ->whereNull('external_custodian_id')
+                ->where('name', $row['name'])
+                ->update([
+                    'external_custodian_id' => $row['external_custodian_id'],
+                    'external_custodian_name' => $row['external_custodian_name'],
+                ]);
+        }
     }
 
     private function isWellFormedTeam(mixed $team): bool
