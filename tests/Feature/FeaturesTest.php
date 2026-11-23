@@ -110,6 +110,44 @@ class FeaturesTest extends TestCase
         $this->assertDatabaseCount('activity_log', 2);
     }
 
+    public function test_list_returns_the_callers_effective_values(): void
+    {
+        config()->set('features.scopable', ['query-builder-use-location']);
+        Feature::deactivate('query-builder-use-location');
+
+        $member = User::factory()->create();
+        Feature::for($member)->activate('query-builder-use-location');
+
+        $this->actingAsJwt($member, [])
+            ->getJson(self::BASE_URL)
+            ->assertOk()
+            ->assertJsonPath('data.query-builder-use-location', true);
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL)
+            ->assertOk()
+            ->assertJsonPath('data.query-builder-use-location', false);
+    }
+
+    public function test_global_list_returns_global_values_for_admins_only(): void
+    {
+        config()->set('features.scopable', ['query-builder-use-location']);
+        Feature::deactivate('query-builder-use-location');
+        Feature::for($this->user)->activate('query-builder-use-location');
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/global')
+            ->assertOk()
+            ->assertExactJson([
+                'message' => 'success',
+                'data' => ['query-builder-use-location' => false],
+            ]);
+
+        $this->actingAsJwt(User::factory()->create(), [])
+            ->getJson(self::BASE_URL.'/global')
+            ->assertForbidden();
+    }
+
     public function test_it_prevents_creating_new_feature(): void
     {
         $response = $this->actingAsJwt($this->user, [])

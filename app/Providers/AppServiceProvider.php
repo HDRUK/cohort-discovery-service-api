@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\Feature;
+use Laravel\Pennant\Events\FeatureUpdated;
 use Laravel\Pennant\Events\FeatureUpdatedForAllScopes;
 
 class AppServiceProvider extends ServiceProvider
@@ -53,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
 
         // React to feature-flag changes (see FeatureFlagUpdatedListener for the switch).
         Event::listen(FeatureUpdatedForAllScopes::class, FeatureFlagUpdatedListener::class);
+        Event::listen(FeatureUpdated::class, FeatureFlagUpdatedListener::class);
 
         RateLimiter::for('polling', function (Request $request) {
             return Limit::perMinute(config('api.rate_limit'))->by($request->ip());

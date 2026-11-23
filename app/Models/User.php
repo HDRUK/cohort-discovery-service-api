@@ -16,6 +16,7 @@ use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use App\Services\Claims\MembershipSources;
 use App\Services\Submitters\QueryRateLimiter;
+use App\Traits\HasFeatureOverrides;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -70,6 +71,7 @@ class User extends Authenticatable implements OAuthenticatable
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+    use HasFeatureOverrides;
     use HasRoles;
     use Notifiable;
     use Search;
