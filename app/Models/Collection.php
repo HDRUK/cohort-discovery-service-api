@@ -314,22 +314,7 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
             ['updated_at' => 'max', 'id' => 'max'],
             function (Builder $q) {
                 $q->where('file_name', 'code.distribution')
-                    ->where('status', 'done')
-                    ->whereExists(
-                        fn ($distributions) => $distributions
-                            ->selectRaw('1')
-                            ->from('distributions')
-                            ->where('distributions.concept_id', '>', 0)
-                            ->where(
-                                fn ($ownedByFile) => $ownedByFile
-                                    ->whereColumn('distributions.result_file_id', 'result_files.id')
-                                    ->orWhere(
-                                        fn ($predatesResultFileId) => $predatesResultFileId
-                                            ->whereNull('distributions.result_file_id')
-                                            ->whereColumn('distributions.task_id', 'result_files.task_id')
-                                    )
-                            )
-                    );
+                    ->where('status', 'done');
             }
         );
     }

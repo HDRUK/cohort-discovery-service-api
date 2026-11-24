@@ -893,12 +893,12 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_metadata.protocol', 'Protocol Z');
     }
 
-    public function test_details_ignore_a_newer_empty_concept_scan(): void
+    public function test_details_ignore_a_newer_failed_concept_scan(): void
     {
         $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
 
-        $goodFileId = $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
-        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
+        $goodFileId = $this->createConceptScan($collection, status: 'done', conceptCount: 2, createdAt: now()->subHour());
+        $this->createConceptScan($collection, status: 'failed', conceptCount: 0, createdAt: now());
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
@@ -909,12 +909,12 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_successful_concept_result_file.task.id', fn ($id) => $id !== null);
     }
 
-    public function test_details_use_the_latest_concept_scan_when_it_has_rows(): void
+    public function test_details_use_the_latest_concept_scan_when_it_succeeded(): void
     {
         $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
 
-        $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
-        $latestFileId = $this->createConceptScan($collection, rowsProcessed: 7, conceptCount: 3, createdAt: now());
+        $this->createConceptScan($collection, status: 'done', conceptCount: 2, createdAt: now()->subHour());
+        $latestFileId = $this->createConceptScan($collection, status: 'done', conceptCount: 3, createdAt: now());
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
@@ -924,11 +924,11 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_successful_concept_result_file.id', $latestFileId);
     }
 
-    public function test_details_have_no_successful_concept_scan_when_every_scan_is_empty(): void
+    public function test_details_have_no_successful_concept_scan_when_every_scan_failed(): void
     {
         $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
 
-        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
+        $this->createConceptScan($collection, status: 'failed', conceptCount: 0, createdAt: now());
 
         $response = $this->actingAsJwt($this->user, [])
             ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
@@ -938,51 +938,7 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_successful_concept_result_file', null);
     }
 
-    public function test_details_judge_a_concept_scan_by_its_concepts_not_its_row_count(): void
-    {
-        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
-
-        $fileWithUnrecordedRowCount = $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 2, createdAt: now());
-
-        $response = $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
-
-        $response->assertStatus(200);
-        $response->assertJsonPath('data.nconcepts', 2);
-        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $fileWithUnrecordedRowCount);
-    }
-
-    public function test_details_ignore_a_newer_scan_whose_rows_have_no_concepts(): void
-    {
-        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
-
-        $goodFileId = $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
-        $this->createConceptScan($collection, rowsProcessed: 4, conceptCount: 4, createdAt: now(), conceptId: null);
-
-        $response = $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
-
-        $response->assertStatus(200);
-        $response->assertJsonPath('data.nconcepts', 2);
-        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $goodFileId);
-    }
-
-    public function test_details_keep_a_scan_whose_rows_predate_result_file_ids(): void
-    {
-        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
-
-        $legacyFileId = $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 2, createdAt: now()->subHour(), linkedToResultFile: false);
-        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
-
-        $response = $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
-
-        $response->assertStatus(200);
-        $response->assertJsonPath('data.nconcepts', 2);
-        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $legacyFileId);
-    }
-
-    private function createConceptScan(Collection $collection, int $rowsProcessed, int $conceptCount, Carbon $createdAt, ?int $conceptId = 1000, bool $linkedToResultFile = true): int
+    private function createConceptScan(Collection $collection, string $status, int $conceptCount, Carbon $createdAt): int
     {
         $task = Task::factory()->create(['collection_id' => $collection->id]);
 
@@ -992,8 +948,8 @@ class CollectionTest extends TestCase
             'collection_id' => $collection->id,
             'path' => 'test/'.Str::uuid(),
             'file_name' => 'code.distribution',
-            'status' => 'done',
-            'rows_processed' => $rowsProcessed,
+            'status' => $status,
+            'rows_processed' => $conceptCount,
             'created_at' => $createdAt,
             'updated_at' => $createdAt,
         ]);
@@ -1003,8 +959,8 @@ class CollectionTest extends TestCase
             $rows[] = [
                 'collection_id' => $collection->id,
                 'task_id' => $task->id,
-                'result_file_id' => $linkedToResultFile ? $resultFileId : null,
-                'concept_id' => $conceptId === null ? null : $conceptId + $i,
+                'result_file_id' => $resultFileId,
+                'concept_id' => 1000 + $i,
                 'count' => 10,
                 'name' => 'CONCEPT_'.$i,
                 'category' => 'Condition',
