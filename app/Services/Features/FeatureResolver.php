@@ -13,12 +13,11 @@ class FeatureResolver
 {
     public function active(string $feature, ?User $user): bool
     {
+        $user = $this->isGlobalOnly($feature) ? null : $user;
+
         return $this->resolve($this->rowsFor($user, $feature), $user)[$feature] ?? false;
     }
 
-    /**
-     * @return array<string, bool>
-     */
     public function allFor(?User $user): array
     {
         return $this->resolve($this->rowsFor($user), $user);
@@ -62,9 +61,6 @@ class FeatureResolver
             ->get(['name', 'scope', 'value']);
     }
 
-    /**
-     * @return array<int, string>
-     */
     private function scopesFor(?User $user): array
     {
         if (! $user) {
@@ -74,15 +70,17 @@ class FeatureResolver
         return [
             Feature::serializeScope(null),
             Feature::serializeScope($user),
-            ...$user->workgroups()
-                ->get(['workgroups.id'])
-                ->map(fn (Workgroup $workgroup) => Feature::serializeScope($workgroup)),
+            ...$this->workgroupsOf($user)->map(fn (Workgroup $workgroup) => Feature::serializeScope($workgroup)),
         ];
     }
 
-    /**
-     * @return array<string, bool>
-     */
+    private function workgroupsOf(User $user): Collection
+    {
+        return $user->relationLoaded('workgroups')
+            ? $user->workgroups
+            : $user->workgroups()->get(['workgroups.id']);
+    }
+
     private function resolve(Collection $rows, ?User $user): array
     {
         $globalScope = Feature::serializeScope(null);

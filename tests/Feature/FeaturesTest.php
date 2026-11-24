@@ -110,6 +110,18 @@ class FeaturesTest extends TestCase
         $this->assertDatabaseCount('activity_log', 2);
     }
 
+    public function test_updating_an_unknown_flag_is_not_found(): void
+    {
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL . '/unknown-flag', [
+                'enabled' => true,
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('features', ['name' => 'unknown-flag']);
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
     public function test_list_returns_the_callers_effective_values(): void
     {
         Feature::deactivate('query-builder-use-location');

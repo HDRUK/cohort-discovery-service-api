@@ -40,6 +40,10 @@ class FeatureController extends Controller
             return $this->ForbiddenResponse();
         }
 
+        if (! $this->featureNames()->contains($name)) {
+            return $this->NotFoundResponse();
+        }
+
         try {
             $validated = $request->validate([
                 'enabled' => ['required', 'boolean'],
@@ -139,14 +143,24 @@ class FeatureController extends Controller
             return $this->ValidationErrorResponse($e->errors());
         }
 
-        $current = $this->resolver->overrides($name)[$name];
+        DB::transaction(function () use ($name, $validated, $activityLogger) {
+            $this->lockGlobalRow($name);
+            $current = $this->resolver->overrides($name)[$name];
 
-        DB::transaction(function () use ($name, $current, $validated, $activityLogger) {
             $this->syncOverrides($name, User::class, $current['users'], $validated['users'], $activityLogger);
             $this->syncOverrides($name, Workgroup::class, $current['workgroups'], $validated['workgroups'], $activityLogger);
         });
 
         return $this->OKResponse([]);
+    }
+
+    private function lockGlobalRow(string $name): void
+    {
+        DB::table('features')
+            ->where('name', $name)
+            ->where('scope', Feature::serializeScope(null))
+            ->lockForUpdate()
+            ->first();
     }
 
     private function syncOverrides(

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RefreshLatestDistributionsView;
 use App\Models\User;
 use App\Models\Workgroup;
 use Database\Seeders\FeatureSeeder;
 use DB;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
@@ -242,6 +244,16 @@ class FeatureOverridesTest extends TestCase
 
         $this->assertOverride($this->target, null, self::GLOBAL_ONLY_FLAG);
         $this->assertOverride(null, 'true', self::GLOBAL_ONLY_FLAG);
+    }
+
+    public function test_seeding_a_new_flag_does_not_refresh_the_distributions_view(): void
+    {
+        Queue::fake();
+
+        $this->seed(FeatureSeeder::class);
+
+        Queue::assertNotPushed(RefreshLatestDistributionsView::class);
+        $this->assertOverride(null, 'false', 'distribution-use-central-domain');
     }
 
     public function test_replacing_overrides_of_an_unknown_flag_is_not_found(): void

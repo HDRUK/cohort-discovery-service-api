@@ -32,7 +32,7 @@ For these flags:
 - The overrides listing returns `overridable: false`.
 - `FeatureSeeder` deletes any override rows they have, so stale overrides can't come back if a flag is later made overridable.
 
-Every flag is overridable unless it is listed. Add a flag to `global_only` if an override would track individuals, or if the flag is read anywhere without a user. The values are literals rather than `env()`, so a deployment can't switch this off.
+Every flag is overridable unless it is listed. Add a flag to `global_only` if an override would track individuals, or if the flag is read anywhere without a user. The values are literals rather than `env()`, so a deployment can't switch this off. A test fails if `global_only` names a flag that isn't in `flags`, so a typo can't silently leave a flag overridable.
 
 Flags can't be scoped to collections. Behaviour that depends on the collection a query runs against is a collection capability, checked alongside the flag. See `collection-capabilities.md`.
 
@@ -89,14 +89,14 @@ Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()
 - `FeatureUpdated` with a null scope
 - `FeatureUpdatedForAllScopes`
 
-An override, which is `FeatureUpdated` with a user or workgroup scope, never triggers a side effect such as the distributions view refresh.
+An override, which is `FeatureUpdated` with a user or workgroup scope, never triggers a side effect such as the distributions view refresh. `FeatureSeeder` writes a new flag's global row straight to the table, so seeding a flag doesn't trigger one either.
 
 ## Endpoints
 
 | Method | Path | Who | Does |
 |---|---|---|---|
 | GET | `/api/v1/features` | Any signed-in user | The caller's **effective** value for every flag: `{name: bool}`. |
-| PUT | `/api/v1/features/{name}` | Admin | Sets the global value. `{"enabled": bool}` |
+| PUT | `/api/v1/features/{name}` | Admin | Sets the global value of an existing flag. `{"enabled": bool}`. An unknown flag returns 404, so a mistyped name can't create a new flag. |
 | GET | `/api/v1/features/overrides` | Admin | Every flag with its global value and overrides: `[{feature, global, overridable, users: [{id, name, email, enabled}], workgroups: [{id, name, enabled}]}]`, sorted by flag name. |
 | PUT | `/api/v1/features/{name}/overrides` | Admin | Replaces the flag's overrides: `{"users": [{"id": int, "enabled": bool}], "workgroups": [{"id": int, "enabled": bool}]}`. Anything not listed is cleared. Send empty arrays to clear them all. |
 
@@ -106,6 +106,8 @@ Error responses for `PUT /overrides`:
 - An unknown flag returns 404.
 - A global-only flag returns 422.
 - An unknown or repeated user or workgroup id, a missing `enabled`, or a missing `users` or `workgroups` list returns 422.
+
+The request locks the flag's global row while it reads and replaces the overrides. Two admins saving the same flag at once are handled one after the other, and the second save replaces the first.
 
 Each change is written to the activity log under `feature_flags`, with event `override_set` or `override_cleared` and properties `{feature, subject_type, subject_id, before: {enabled}, after: {enabled}}`. `null` means "no override". Overrides that a request leaves as they were aren't logged.
 

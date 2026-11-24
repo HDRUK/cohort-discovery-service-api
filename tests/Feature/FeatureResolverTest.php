@@ -168,6 +168,37 @@ class FeatureResolverTest extends TestCase
         $this->assertFalse($this->resolver->allFor($this->user)[self::GLOBAL_ONLY_FLAG]);
     }
 
+    public function test_every_global_only_flag_is_a_known_flag(): void
+    {
+        $this->assertSame([], array_values(array_diff(
+            config('features.global_only'),
+            array_keys(config('features.flags'))
+        )));
+    }
+
+    public function test_a_global_only_flag_is_read_from_the_global_row_alone(): void
+    {
+        Feature::activate(self::GLOBAL_ONLY_FLAG);
+        $this->workgroupWithUser('UK-RESEARCH-TEST');
+
+        DB::enableQueryLog();
+        $this->resolver->active(self::GLOBAL_ONLY_FLAG, $this->user);
+
+        $this->assertCount(1, DB::getQueryLog());
+    }
+
+    public function test_workgroups_already_loaded_on_the_user_are_reused(): void
+    {
+        Feature::deactivate(self::FLAG);
+        Feature::for($this->workgroupWithUser('UK-RESEARCH-TEST'))->activate(self::FLAG);
+        $this->user->load('workgroups');
+
+        DB::enableQueryLog();
+
+        $this->assertTrue($this->resolver->active(self::FLAG, $this->user));
+        $this->assertCount(1, DB::getQueryLog());
+    }
+
     private function workgroupWithUser(string $name): Workgroup
     {
         $workgroup = Workgroup::firstOrCreate(['name' => $name]);
