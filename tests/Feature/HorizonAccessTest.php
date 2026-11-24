@@ -8,59 +8,63 @@ use Tests\TestCase;
 
 class HorizonAccessTest extends TestCase
 {
+    private const SECRET = 'correct-horse-battery-staple';
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config([
             'app.env' => 'production',
-            'horizon.secret' => 'correct-horse-battery-staple',
+            'horizon.secret' => self::SECRET,
         ]);
+
+        $this->enableMiddleware();
     }
 
-    private function viewHorizonWithKey(?string $key): bool
+    public function test_no_credentials_are_challenged_for_basic_auth(): void
     {
-        $query = $key === null ? [] : ['key' => $key];
-        app()->instance('request', Request::create('/horizon', 'GET', $query));
-
-        return Gate::forUser(null)->allows('viewHorizon');
+        $this->get('/horizon')
+            ->assertUnauthorized()
+            ->assertHeader('WWW-Authenticate', 'Basic realm="Horizon"');
     }
 
-    public function test_no_key_is_denied(): void
+    public function test_the_secret_in_the_query_string_no_longer_grants_access(): void
     {
-        $this->assertFalse($this->viewHorizonWithKey(null));
+        $this->get('/horizon?key='.self::SECRET)->assertUnauthorized();
     }
 
-    public function test_wrong_key_is_denied(): void
+    public function test_a_wrong_password_is_challenged(): void
     {
-        $this->assertFalse($this->viewHorizonWithKey('wrong'));
+        $this->withBasicAuth('', 'wrong')->get('/horizon')->assertUnauthorized();
     }
 
-    public function test_correct_key_is_allowed(): void
+    public function test_an_unset_secret_denies_an_empty_password(): void
     {
-        $this->assertTrue($this->viewHorizonWithKey('correct-horse-battery-staple'));
-    }
-
-    public function test_dashboard_api_calls_are_allowed_after_a_correct_key_without_repeating_it(): void
-    {
-        $this->assertTrue($this->viewHorizonWithKey('correct-horse-battery-staple'));
-
-        $this->assertTrue($this->viewHorizonWithKey(null));
-    }
-
-    public function test_a_wrong_key_does_not_grant_access_to_later_calls(): void
-    {
-        $this->assertFalse($this->viewHorizonWithKey('wrong'));
-
-        $this->assertFalse($this->viewHorizonWithKey(null));
-    }
-
-    public function test_unsetting_the_secret_denies_even_a_previously_authorised_session(): void
-    {
-        $this->assertTrue($this->viewHorizonWithKey('correct-horse-battery-staple'));
-
         config(['horizon.secret' => '']);
 
-        $this->assertFalse($this->viewHorizonWithKey(null));
+        $this->withBasicAuth('', '')->get('/horizon')->assertUnauthorized();
+    }
+
+    public function test_the_secret_as_the_basic_auth_password_is_allowed(): void
+    {
+        $this->withBasicAuth('', self::SECRET)->get('/horizon')->assertOk();
+    }
+
+    public function test_dashboard_api_calls_are_allowed_with_the_same_credentials(): void
+    {
+        $dashboardApiCall = Request::create('/horizon/api/stats', 'GET', server: [
+            'HTTP_AUTHORIZATION' => 'Basic '.base64_encode(':'.self::SECRET),
+        ]);
+        app()->instance('request', $dashboardApiCall);
+
+        $this->assertTrue(Gate::forUser(null)->allows('viewHorizon'));
+    }
+
+    public function test_outside_production_no_credentials_are_needed(): void
+    {
+        config(['app.env' => 'staging']);
+
+        $this->get('/horizon')->assertOk();
     }
 }
