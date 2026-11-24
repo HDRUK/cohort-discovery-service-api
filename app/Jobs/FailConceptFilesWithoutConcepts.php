@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Distribution;
 use App\Models\ResultFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,7 +29,12 @@ class FailConceptFilesWithoutConcepts implements ShouldQueue
             ->where('status', ResultFile::STATUS_DONE)
             ->lazyById()
             ->each(function (ResultFile $file) {
-                if ($this->hasConcepts($file)) {
+                $hasConcepts = Distribution::query()
+                    ->where('task_id', $file->task_id)
+                    ->where('concept_id', '>', 0)
+                    ->exists();
+
+                if ($hasConcepts) {
                     return;
                 }
 
@@ -42,18 +48,5 @@ class FailConceptFilesWithoutConcepts implements ShouldQueue
 
         RefreshDistributionConceptsView::dispatch();
         RefreshLatestDistributionsView::dispatch();
-    }
-
-    private function hasConcepts(ResultFile $file): bool
-    {
-        return DB::table('distributions')
-            ->where('concept_id', '>', 0)
-            ->where('result_file_id', $file->id)
-            ->exists()
-            || DB::table('distributions')
-                ->where('concept_id', '>', 0)
-                ->whereNull('result_file_id')
-                ->where('task_id', $file->task_id)
-                ->exists();
     }
 }
