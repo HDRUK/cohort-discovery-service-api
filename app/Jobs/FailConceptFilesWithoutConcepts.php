@@ -51,15 +51,15 @@ class FailConceptFilesWithoutConcepts implements ShouldQueue
                     ->selectRaw('1')
                     ->from('distributions')
                     ->where('distributions.concept_id', '>', 0)
-                    ->where(
-                        fn ($ownedByFile) => $ownedByFile
-                            ->whereColumn('distributions.result_file_id', 'result_files.id')
-                            ->orWhere(
-                                fn ($predatesResultFileId) => $predatesResultFileId
-                                    ->whereNull('distributions.result_file_id')
-                                    ->whereColumn('distributions.task_id', 'result_files.task_id')
-                            )
-                    )
+                    ->whereColumn('distributions.result_file_id', 'result_files.id')
+            )
+            ->whereNotExists(
+                fn ($distributions) => $distributions
+                    ->selectRaw('1')
+                    ->from('distributions')
+                    ->where('distributions.concept_id', '>', 0)
+                    ->whereNull('distributions.result_file_id')
+                    ->whereColumn('distributions.task_id', 'result_files.task_id')
             )
             ->update([
                 'status' => ResultFile::STATUS_FAILED,
