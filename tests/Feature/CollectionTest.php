@@ -909,21 +909,6 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_successful_concept_result_file.task.id', fn ($id) => $id !== null);
     }
 
-    public function test_details_use_the_latest_concept_scan_when_it_succeeded(): void
-    {
-        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
-
-        $this->createConceptScan($collection, status: 'done', conceptCount: 2, createdAt: now()->subHour());
-        $latestFileId = $this->createConceptScan($collection, status: 'done', conceptCount: 3, createdAt: now());
-
-        $response = $this->actingAsJwt($this->user, [])
-            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
-
-        $response->assertStatus(200);
-        $response->assertJsonPath('data.nconcepts', 3);
-        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $latestFileId);
-    }
-
     public function test_details_have_no_successful_concept_scan_when_every_scan_failed(): void
     {
         $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);

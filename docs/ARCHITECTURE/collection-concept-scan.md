@@ -6,17 +6,15 @@ The collection details endpoint (`GET /api/v1/collections/{pid}/details`) report
 
 A `code.distribution` result file is successful when its status is `done`. `Collection::latestSuccessfulConceptResultFile` returns the newest such file, ordered by `updated_at` then `id`.
 
-The status is decided once, at ingest. `ProcessDistributionFile` marks a `code.distribution` file `failed` with the error `No concepts found in file` when none of its rows carries a concept id greater than 0. That covers a header-only file from BUNNY, and a file whose codes are all unmapped. `rows_processed` still records how many rows were read. The views are not refreshed for a failed file.
+The status is decided once, at ingest. `ProcessDistributionFile` marks a `code.distribution` file `failed` with the error `No concepts found in file` when none of its rows carries a concept id greater than 0. That covers a header-only file from BUNNY, and a file whose codes are all unmapped. `rows_processed` still records how many rows were read.
 
 Other distribution files, such as `demographics.distribution`, are not held to this rule.
 
-The file is marked `done` before the two view refresh jobs are dispatched, so the refresh always sees it as successful.
+For a failed file no view refresh is dispatched. For a done file the file is marked `done` before the two refresh jobs are dispatched, because they select by status.
 
-## Existing files
+## Files ingested before this rule
 
-Files ingested before this rule are `done` even when empty. The migration `2026_11_24_100000_fail_existing_concept_files_without_concepts` marks each such file `failed` with the same error. A row belongs to a file through `result_file_id`, or through `task_id` when `result_file_id` is NULL, because that column was added later as nullable with no backfill. The migration has no `down`: it cannot tell which files it changed.
-
-Until the migration has run, an old empty scan can still win as the latest `done` file.
+Nothing rewrites them. An empty `code.distribution` file ingested earlier stays `done`, so it keeps being the latest successful scan until a newer scan succeeds. The web flags such a file as `Empty (0 rows)`. There is no backfill: it would rewrite a large table for a case that corrects itself on the next good scan.
 
 ## Response shape
 
