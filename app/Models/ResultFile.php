@@ -109,11 +109,12 @@ class ResultFile extends Model
         $this->update($attrs);
     }
 
-    public function markFailed(string $message): void
+    public function markFailed(string $message, int $rowsProcessed = 0): void
     {
         $this->update([
             'status' => self::STATUS_FAILED,
             'error' => $message,
+            'rows_processed' => $rowsProcessed,
         ]);
     }
 }

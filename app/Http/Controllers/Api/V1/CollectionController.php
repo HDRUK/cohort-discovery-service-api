@@ -541,6 +541,7 @@ class CollectionController extends Controller
                     'modelState.state',
                     'workgroups',
                     'latestMetadata',
+                    'latestSuccessfulConceptResultFile.task',
                     'resultFiles' => function ($query) {
                         $query->with('task')->orderByDesc('updated_at');
                     },

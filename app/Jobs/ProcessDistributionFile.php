@@ -25,6 +25,8 @@ class ProcessDistributionFile implements ShouldQueue
 
     private string $tag = 'ProcessDistributionFile';
 
+    private const NO_CONCEPTS_ERROR = 'No concepts found in file';
+
     public $timeout = 120;
     public $tries = 2;
     public $backoff = 10;
@@ -72,6 +74,7 @@ class ProcessDistributionFile implements ShouldQueue
         $batch  = [];
 
         $rowsSeen = 0;
+        $conceptsSeen = 0;
         $skipped = [
             'bad_header'        => 0,
             'col_mismatch'      => 0,
@@ -174,6 +177,9 @@ class ProcessDistributionFile implements ShouldQueue
                 $conceptId = $this->normaliseStrictInt($row[$codeField] ?? $row['CODE']);
 
                 $rowsSeen++;
+                if ($conceptId !== null && $conceptId > 0) {
+                    $conceptsSeen++;
+                }
 
                 $base = [
                     'collection_id'  => $file->collection_id,
@@ -253,6 +259,21 @@ class ProcessDistributionFile implements ShouldQueue
                 $this->persistBatchUpsert($batch);
             }
 
+            if ($file->file_name === 'code.distribution' && $conceptsSeen === 0) {
+                $file->markFailed(self::NO_CONCEPTS_ERROR, $rowsSeen);
+
+                Log::warning('[' . $this->tag . '] no concepts in file, marked failed', [
+                    'result_file_id' => $file->id,
+                    'task_id'        => $file->task_id,
+                    'rows_seen'      => $rowsSeen,
+                    'skipped'        => $skipped,
+                ]);
+
+                return;
+            }
+
+            $file->markDone($rowsSeen);
+
             Log::info('[' . $this->tag . ']  Refreshing DistributionConcepts view');
             RefreshDistributionConceptsView::dispatch();
 
@@ -260,8 +281,6 @@ class ProcessDistributionFile implements ShouldQueue
                 Log::info('[' . $this->tag . '] Refreshing latest_distributions view');
                 RefreshLatestDistributionsView::dispatch();
             }
-
-            $file->markDone($rowsSeen);
 
             Log::info('[' . $this->tag . '] finished', [
                 'result_file_id' => $file->id,
