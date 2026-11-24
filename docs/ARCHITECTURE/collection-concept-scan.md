@@ -14,7 +14,11 @@ For a failed file no view refresh is dispatched. For a done file the file is mar
 
 ## Files ingested before this rule
 
-Nothing rewrites them. An empty `code.distribution` file ingested earlier stays `done`, so it keeps being the latest successful scan until a newer scan succeeds. The web flags such a file as `Empty (0 rows)`. There is no backfill: it would rewrite a large table for a case that corrects itself on the next good scan.
+Empty `code.distribution` files ingested earlier are still `done`. The deployment step `2026_11_24_000001_fail_concept_files_without_concepts`, run by `deploy:run`, dispatches `FailConceptFilesWithoutConcepts` onto the queue (Horizon). The job works through the `done` `code.distribution` files in chunks of 100, marking each one with no concepts `failed` with the same error and leaving `updated_at` unchanged. It then queues itself for the next chunk, so no run is long, and when no files are left it dispatches the two view refreshes so the term directory picks up each collection's last good scan.
+
+A row belongs to a file through `result_file_id`, or through `task_id` when `result_file_id` is NULL, because that column was added later as nullable with no backfill.
+
+The job is idempotent, so it can be run again by hand with `FailConceptFilesWithoutConcepts::dispatch()`. A deployment step is recorded as run once the job is dispatched, so a job that later fails is not retried by the next deploy. Until the job has finished, an old empty scan can still win as the latest `done` file.
 
 ## Response shape
 

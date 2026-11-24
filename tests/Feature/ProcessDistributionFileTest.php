@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\FailConceptFilesWithoutConcepts;
 use App\Jobs\ProcessDistributionFile;
 use App\Jobs\RefreshDistributionConceptsView;
 use App\Jobs\RefreshLatestDistributionsView;
@@ -60,6 +61,53 @@ class ProcessDistributionFileTest extends TestCase
         $this->assertSame(ResultFile::STATUS_DONE, $file->status);
         $this->assertSame(1, $file->rows_processed);
         Queue::assertPushed(RefreshDistributionConceptsView::class);
+    }
+
+    public function test_the_backfill_fails_only_done_code_files_that_have_no_concepts(): void
+    {
+        $empty = $this->insertDoneCodeFile();
+        $withConcepts = $this->insertDoneCodeFile(conceptLinkedToFile: true);
+        $predatingResultFileIds = $this->insertDoneCodeFile(conceptLinkedToFile: false);
+
+        (new FailConceptFilesWithoutConcepts())->handle();
+
+        $this->assertDatabaseHas('result_files', ['id' => $empty, 'status' => 'failed', 'error' => 'No concepts found in file']);
+        $this->assertDatabaseHas('result_files', ['id' => $withConcepts, 'status' => 'done']);
+        $this->assertDatabaseHas('result_files', ['id' => $predatingResultFileIds, 'status' => 'done']);
+    }
+
+    private function insertDoneCodeFile(?bool $conceptLinkedToFile = null): int
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
+        $id = DB::table('result_files')->insertGetId([
+            'pid' => (string) Str::uuid(),
+            'task_id' => $task->id,
+            'collection_id' => $collection->id,
+            'path' => 'test/'.Str::uuid(),
+            'file_name' => 'code.distribution',
+            'status' => 'done',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($conceptLinkedToFile !== null) {
+            DB::table('distributions')->insert([
+                'collection_id' => $collection->id,
+                'task_id' => $task->id,
+                'result_file_id' => $conceptLinkedToFile ? $id : null,
+                'concept_id' => 201826,
+                'count' => 10,
+                'name' => 'CONCEPT',
+                'category' => 'Condition',
+                'description' => 'Concept',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return $id;
     }
 
     private function storeCodeFile(array $lines): ResultFile
