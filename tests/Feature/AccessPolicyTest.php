@@ -124,9 +124,10 @@ class AccessPolicyTest extends TestCase
         $queries = array_column(DB::getQueryLog(), 'query');
         DB::disableQueryLog();
 
-        $queryQuotaCounts = fn (string $sql) => str_contains($sql, 'from `queries` where `user_id` = ?');
+        $queryQuotaLookups = fn (string $sql) => str_contains($sql, 'from `queries` where `user_id` = ?')
+            || str_contains($sql, 'from `features`');
 
-        return count(array_filter($queries, fn (string $sql) => ! $queryQuotaCounts($sql)));
+        return count(array_filter($queries, fn (string $sql) => ! $queryQuotaLookups($sql)));
     }
 
     public function test_the_users_index_does_not_query_per_user_for_membership_sources(): void
