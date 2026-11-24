@@ -14,11 +14,11 @@ For a failed file no view refresh is dispatched. For a done file the file is mar
 
 ## Files ingested before this rule
 
-Empty `code.distribution` files ingested earlier are still `done`. The deployment step `2026_11_24_000001_fail_concept_files_without_concepts`, run by `deploy:run`, dispatches `FailConceptFilesWithoutConcepts` onto the queue (Horizon). The job works through the `done` `code.distribution` files in chunks of 100, marking each one with no concepts `failed` with the same error and leaving `updated_at` unchanged. It then queues itself for the next chunk, so no run is long, and when no files are left it dispatches the two view refreshes so the term directory picks up each collection's last good scan.
+Empty `code.distribution` files ingested earlier are still `done`. The deployment step `2026_11_24_000001_fail_concept_files_without_concepts`, run by `deploy:run`, dispatches `FailConceptFilesWithoutConcepts` onto the queue (Horizon). The step itself returns immediately. The job visits the `done` `code.distribution` files one at a time, checks each with an indexed `exists()` lookup, and marks any with no concepts `failed` with the same error, leaving `updated_at` unchanged. Every file is its own small statement, so there is no long query or transaction to hit a timeout. When it has been through every file it dispatches the two view refreshes, so the term directory picks up each collection's last good scan.
 
 A row belongs to a file through `result_file_id`, or through `task_id` when `result_file_id` is NULL, because that column was added later as nullable with no backfill.
 
-The job is idempotent, so it can be run again by hand with `FailConceptFilesWithoutConcepts::dispatch()`. A deployment step is recorded as run once the job is dispatched, so a job that later fails is not retried by the next deploy. Until the job has finished, an old empty scan can still win as the latest `done` file.
+The job is idempotent and resumable, because a file it has failed is no longer `done`, so it can be run again by hand with `FailConceptFilesWithoutConcepts::dispatch()`. If the number of files ever made one run too long, the next step would be one job per file in a batch (`job_batches` already exists). A deployment step is recorded as run once the job is dispatched, so a job that later fails is not retried by the next deploy. Until the job has finished, an old empty scan can still win as the latest `done` file.
 
 ## Response shape
 

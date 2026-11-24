@@ -17,55 +17,43 @@ class FailConceptFilesWithoutConcepts implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    private const CHUNK_SIZE = 100;
     private const NO_CONCEPTS_ERROR = 'No concepts found in file';
 
-    public $timeout = 300;
     public $tries = 1;
-
-    public function __construct(private int $afterId = 0)
-    {
-    }
 
     public function handle(): void
     {
-        $ids = ResultFile::query()
+        ResultFile::query()
             ->where('file_name', 'code.distribution')
             ->where('status', ResultFile::STATUS_DONE)
-            ->where('id', '>', $this->afterId)
-            ->orderBy('id')
-            ->limit(self::CHUNK_SIZE)
-            ->pluck('id');
+            ->lazyById()
+            ->each(function (ResultFile $file) {
+                if ($this->hasConcepts($file)) {
+                    return;
+                }
 
-        if ($ids->isEmpty()) {
-            RefreshDistributionConceptsView::dispatch();
-            RefreshLatestDistributionsView::dispatch();
+                DB::table('result_files')
+                    ->where('id', $file->id)
+                    ->update([
+                        'status' => ResultFile::STATUS_FAILED,
+                        'error' => self::NO_CONCEPTS_ERROR,
+                    ]);
+            });
 
-            return;
-        }
+        RefreshDistributionConceptsView::dispatch();
+        RefreshLatestDistributionsView::dispatch();
+    }
 
-        DB::table('result_files')
-            ->whereIn('id', $ids)
-            ->whereNotExists(
-                fn ($distributions) => $distributions
-                    ->selectRaw('1')
-                    ->from('distributions')
-                    ->where('distributions.concept_id', '>', 0)
-                    ->whereColumn('distributions.result_file_id', 'result_files.id')
-            )
-            ->whereNotExists(
-                fn ($distributions) => $distributions
-                    ->selectRaw('1')
-                    ->from('distributions')
-                    ->where('distributions.concept_id', '>', 0)
-                    ->whereNull('distributions.result_file_id')
-                    ->whereColumn('distributions.task_id', 'result_files.task_id')
-            )
-            ->update([
-                'status' => ResultFile::STATUS_FAILED,
-                'error' => self::NO_CONCEPTS_ERROR,
-            ]);
-
-        self::dispatch($ids->last());
+    private function hasConcepts(ResultFile $file): bool
+    {
+        return DB::table('distributions')
+            ->where('concept_id', '>', 0)
+            ->where('result_file_id', $file->id)
+            ->exists()
+            || DB::table('distributions')
+                ->where('concept_id', '>', 0)
+                ->whereNull('result_file_id')
+                ->where('task_id', $file->task_id)
+                ->exists();
     }
 }
