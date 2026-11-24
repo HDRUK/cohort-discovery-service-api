@@ -547,7 +547,11 @@ class QueryController extends Controller
         try {
             $query = Query::with('tasks.collection')
                 ->whereIdOrPid($key)
-                ->firstOrFail();
+                ->first();
+
+            if (! $query) {
+                return $this->NotFoundResponse();
+            }
 
             $this->authorize('view', $query);
 
