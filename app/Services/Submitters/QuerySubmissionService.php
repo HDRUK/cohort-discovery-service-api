@@ -34,7 +34,10 @@ class QuerySubmissionService
     public function handle(array $data, int $userId): array
     {
         $user = User::findOrFail($userId);
-        $this->ensureCollectionsVisibleTo($user, $data['collection_filter'] ?? []);
+
+        if (! $this->allCollectionsVisibleTo($user, $data['collection_filter'] ?? [])) {
+            throw new AuthorizationException('One or more collections are not available to this user.');
+        }
 
         // Wrapped in a transaction to ensure nothing is orphaned on failure
         // which could prevent the system from functioning properly when
@@ -141,20 +144,16 @@ class QuerySubmissionService
         }
     }
 
-    private function ensureCollectionsVisibleTo(User $user, array $collectionPids): void
+    private function allCollectionsVisibleTo(User $user, array $collectionPids): bool
     {
         if (empty($collectionPids)) {
-            return;
+            return true;
         }
 
-        $hasHiddenCollection = Collection::query()
+        return ! Collection::query()
             ->whereIn('pid', $collectionPids)
             ->whereNotIn('collections.id', Collection::query()->visibleToUser($user)->select('collections.id'))
             ->exists();
-
-        if ($hasHiddenCollection) {
-            throw new AuthorizationException('One or more collections are not available to this user.');
-        }
     }
 
     private function recordBacklogBlock(Collection $collection, Query $query, int $pendingCount): void
