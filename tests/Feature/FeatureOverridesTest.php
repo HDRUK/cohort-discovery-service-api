@@ -114,6 +114,25 @@ class FeatureOverridesTest extends TestCase
         $this->assertTrue($listed[self::FLAG]['overridable']);
     }
 
+    public function test_the_features_endpoint_returns_the_callers_effective_values(): void
+    {
+        $other = User::factory()->create();
+        $on = Workgroup::create(['name' => 'EFFECTIVE-ON']);
+        $off = Workgroup::create(['name' => 'EFFECTIVE-OFF']);
+        $this->target->workgroups()->attach([$on->id, $off->id]);
+        Feature::for($on)->activate(self::FLAG);
+        Feature::for($off)->deactivate(self::FLAG);
+        Feature::for($this->target)->deactivate(self::OTHER_FLAG);
+
+        $targetFlags = $this->actingAsJwt($this->target)->getJson(self::BASE_URL)->assertOk()->json('data');
+        $otherFlags = $this->actingAsJwt($other)->getJson(self::BASE_URL)->assertOk()->json('data');
+
+        $this->assertTrue($targetFlags[self::FLAG]);
+        $this->assertFalse($targetFlags[self::OTHER_FLAG]);
+        $this->assertFalse($otherFlags[self::FLAG]);
+        $this->assertTrue($otherFlags[self::OTHER_FLAG]);
+    }
+
     public function test_the_resolver_does_not_query_per_user(): void
     {
         User::factory()->count(4)->create();

@@ -26,8 +26,8 @@ class RuleBuilderService
     private bool $hasEntityTimeConstraints = false;
 
     public function __construct(
-        private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder(),
-        private FeatureResolver $featureResolver = new FeatureResolver()
+        private FeatureResolver $featureResolver,
+        private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder()
     ) {
     }
 

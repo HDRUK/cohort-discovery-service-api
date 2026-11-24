@@ -79,7 +79,7 @@ Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()
 
 ### Clean-up
 
-- **Deleted users and workgroups:** the `HasFeatureOverrides` trait deletes their rows from a `deleted` model hook, because `scope` is a string with no foreign key.
+- **Deleted users and workgroups:** the `HasFeatureOverrides` trait deletes their rows from a `deleted` model hook, because `scope` is a string with no foreign key. Mass deletes (`User::where(...)->delete()`) and raw SQL don't fire model events, so they leave orphaned override rows behind. The rows are harmless, because nothing resolves to a user or workgroup that no longer exists, but they are never cleaned up.
 - **Retired flags:** `FeatureSeeder` purges a retired flag across every scope, so its overrides go with it.
 - **Global-only flags:** `FeatureSeeder` deletes their override rows and keeps the global row.
 
