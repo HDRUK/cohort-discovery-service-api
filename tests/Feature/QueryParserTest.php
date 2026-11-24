@@ -203,6 +203,23 @@ class QueryParserTest extends TestCase
         ], $parsed['demographics']);
     }
 
+    public function test_demographics_age_is_null_when_query_has_no_age(): void
+    {
+        Feature::for(null)->activate('query-builder-use-demographic-rule');
+
+        $nlpResponse = $this->demographicNlpResponse();
+        $nlpResponse['age_constraints'] = [];
+
+        Http::fake([self::NLP_BASE . '/extract*' => Http::response($nlpResponse, 200)]);
+
+        $response = $this->postJson(self::BASE_URL, ['query' => 'women with ca125 who died'])->assertOk();
+
+        // No age in the text must stay "no age". Filling in the full range would
+        // look the same as a real age, so the web could not tell a search that
+        // found nothing apart from one that found an age.
+        $this->assertNull($this->parsedResult($response)['demographics']['age']);
+    }
+
     public function test_demographics_use_default_max_matches_when_flag_active(): void
     {
         Feature::for(null)->activate('query-builder-use-demographic-rule');
