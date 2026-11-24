@@ -36,6 +36,12 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
             $key = (string) request()->query('key', '');
             $secret = (string) config('horizon.secret', '');
             if ($secret !== '' && $key !== '' && hash_equals($secret, $key)) {
+                session()->put('horizon_authorised_for', hash('sha256', $secret));
+
+                return true;
+            }
+
+            if ($secret !== '' && hash_equals(hash('sha256', $secret), (string) session('horizon_authorised_for', ''))) {
                 return true;
             }
 
