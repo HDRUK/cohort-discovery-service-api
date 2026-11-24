@@ -10,6 +10,7 @@ use App\Models\CollectionHost;
 use App\Models\CollectionHostHasCollection;
 use App\Models\CustodianHasUser;
 use App\Models\Custodian;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\UserHasWorkgroup;
 use App\Models\Workgroup;
@@ -45,6 +46,9 @@ class CollectionTest extends TestCase
         UserHasWorkgroup::truncate();
         WorkgroupHasCollection::truncate();
         CollectionActivityLog::truncate();
+        Task::truncate();
+        DB::table('result_files')->truncate();
+        DB::table('distributions')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $this->enableMiddleware();
@@ -887,6 +891,103 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_metadata.os', 'Linux');
         $response->assertJsonPath('data.latest_metadata.biobank', 'Demo Bank');
         $response->assertJsonPath('data.latest_metadata.protocol', 'Protocol Z');
+    }
+
+    public function test_details_ignore_a_newer_empty_concept_scan(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $goodFileId = $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
+        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 2);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $goodFileId);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.task.id', fn ($id) => $id !== null);
+    }
+
+    public function test_details_use_the_latest_concept_scan_when_it_has_rows(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
+        $latestFileId = $this->createConceptScan($collection, rowsProcessed: 7, conceptCount: 3, createdAt: now());
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 3);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $latestFileId);
+    }
+
+    public function test_details_have_no_successful_concept_scan_when_every_scan_is_empty(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 0);
+        $response->assertJsonPath('data.latest_successful_concept_result_file', null);
+    }
+
+    public function test_details_judge_a_concept_scan_by_its_concepts_not_its_row_count(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $fileWithUnrecordedRowCount = $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 2, createdAt: now());
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 2);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $fileWithUnrecordedRowCount);
+    }
+
+    private function createConceptScan(Collection $collection, int $rowsProcessed, int $conceptCount, Carbon $createdAt): int
+    {
+        $task = Task::factory()->create(['collection_id' => $collection->id]);
+
+        $resultFileId = DB::table('result_files')->insertGetId([
+            'pid' => (string) Str::uuid(),
+            'task_id' => $task->id,
+            'collection_id' => $collection->id,
+            'path' => 'test/'.Str::uuid(),
+            'file_name' => 'code.distribution',
+            'status' => 'done',
+            'rows_processed' => $rowsProcessed,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
+
+        $rows = [];
+        for ($i = 1; $i <= $conceptCount; $i++) {
+            $rows[] = [
+                'collection_id' => $collection->id,
+                'task_id' => $task->id,
+                'result_file_id' => $resultFileId,
+                'concept_id' => 1000 + $i,
+                'count' => 10,
+                'name' => 'CONCEPT_'.$i,
+                'category' => 'Condition',
+                'description' => 'Concept '.$i,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ];
+        }
+        if ($rows !== []) {
+            DB::table('distributions')->insert($rows);
+        }
+
+        return $resultFileId;
     }
 
     // public function test_it_can_list_collections_integrated_mode(): void
