@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RefreshLatestDistributionsView;
 use App\Models\User;
 use App\Models\Workgroup;
 use App\Services\Features\FeatureResolver;
 use Database\Seeders\FeatureSeeder;
 use DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Pennant\Feature;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -166,6 +168,16 @@ class FeatureOverridesTest extends TestCase
         $this->assertDatabaseMissing('features', ['name' => 'retired-flag']);
         $this->assertOverride($this->target, null, self::GLOBAL_ONLY_FLAG);
         $this->assertOverride(null, 'true', self::GLOBAL_ONLY_FLAG);
+    }
+
+    public function test_seeding_a_new_flag_does_not_dispatch_a_distributions_refresh(): void
+    {
+        Queue::fake();
+
+        $this->seed(FeatureSeeder::class);
+
+        Queue::assertNotPushed(RefreshLatestDistributionsView::class);
+        $this->assertOverride(null, 'false', 'distribution-use-central-domain');
     }
 
     public function test_admin_can_list_every_flag_with_its_overrides(): void

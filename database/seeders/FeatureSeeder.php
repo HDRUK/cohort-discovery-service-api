@@ -26,15 +26,19 @@ class FeatureSeeder extends Seeder
                 continue;
             }
 
-            if ($flag['default']) {
-                Feature::activate($name);
-            } else {
-                Feature::deactivate($name);
-            }
+            \DB::table('features')->insert([
+                'name' => $name,
+                'scope' => Feature::serializeScope(null),
+                'value' => json_encode($flag['default']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         $this->purgeRetiredFeatures();
         $this->purgeOverridesOfGlobalOnlyFeatures();
+
+        Feature::flushCache();
     }
 
     private function purgeRetiredFeatures(): void
