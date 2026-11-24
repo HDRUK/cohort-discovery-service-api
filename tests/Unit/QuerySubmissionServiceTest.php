@@ -12,6 +12,7 @@ use App\Services\Submitters\QuerySubmissionService;
 use DB;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Queue;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 use Tests\Traits\GrantsCollectionAccess;
 
@@ -99,6 +100,28 @@ class QuerySubmissionServiceTest extends TestCase
         $this->grantCollectionAccess($this->user, $visible);
 
         $this->assertRefused([$visible->pid, $hidden->pid]);
+    }
+
+    public function test_a_refused_submission_is_written_to_the_activity_log(): void
+    {
+        $visible = $this->activeCollection();
+        $hidden = $this->activeCollection();
+        $this->grantCollectionAccess($this->user, $visible);
+
+        $this->assertRefused([$visible->pid, $hidden->pid]);
+
+        $activity = Activity::where('log_name', 'queries')
+            ->where('event', 'failed')
+            ->sole();
+
+        $this->assertEquals([
+            'user_id' => $this->user->id,
+            'requested_collection_pids' => [$visible->pid, $hidden->pid],
+            'error' => [
+                'class' => AuthorizationException::class,
+                'message' => 'One or more collections are not available to this user.',
+            ],
+        ], $activity->properties->toArray());
     }
 
     public function test_it_refuses_an_inactive_collection_to_a_workgroup_member(): void

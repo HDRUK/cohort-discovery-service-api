@@ -36,7 +36,14 @@ class QuerySubmissionService
         $user = User::findOrFail($userId);
 
         if (! $this->allCollectionsVisibleTo($user, $data['collection_filter'] ?? [])) {
-            throw new AuthorizationException('One or more collections are not available to this user.');
+            $exception = new AuthorizationException('One or more collections are not available to this user.');
+
+            $this->activityLogger->failed('queries', null, $exception, [
+                'user_id' => $user->id,
+                'requested_collection_pids' => $data['collection_filter'],
+            ]);
+
+            throw $exception;
         }
 
         // Wrapped in a transaction to ensure nothing is orphaned on failure
