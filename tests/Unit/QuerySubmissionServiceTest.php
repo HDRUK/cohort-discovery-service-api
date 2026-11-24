@@ -32,6 +32,7 @@ class QuerySubmissionServiceTest extends TestCase
         Query::truncate();
         Collection::truncate();
         Task::truncate();
+        DB::table('activity_log')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $this->resetCollectionAccess();
 
