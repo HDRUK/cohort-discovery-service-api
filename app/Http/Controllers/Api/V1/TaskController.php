@@ -19,6 +19,7 @@ use App\Support\CollectionPollTarget;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -805,6 +806,12 @@ class TaskController extends Controller
             $originalTask = Task::where('pid', $pid)
                 ->first();
 
+            if (! $originalTask) {
+                return $this->NotFoundResponse();
+            }
+
+            $this->authorize('rerun', $originalTask);
+
             $query = $originalTask->submittedQuery;
             $collection = $originalTask->collection;
 
@@ -821,6 +828,8 @@ class TaskController extends Controller
             ]);
 
             return $this->OKResponse($task);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
 
             return $this->ErrorResponse($e->getMessage());

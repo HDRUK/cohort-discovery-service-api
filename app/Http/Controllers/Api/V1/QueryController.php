@@ -240,6 +240,8 @@ class QueryController extends Controller
             }
 
             return $this->CreatedResponse($result);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@store - failed: ' . json_encode($validated));
 
@@ -547,6 +549,12 @@ class QueryController extends Controller
                 ->whereIdOrPid($key)
                 ->first();
 
+            if (! $query) {
+                return $this->NotFoundResponse();
+            }
+
+            $this->authorize('view', $query);
+
             if ($rateLimiter->hasReachedMonthlyLimit(Auth::user())) {
                 $activityLogger->custom('queries', 'rate_limit_exceeded', $query, [
                     'monthly_limit' => config('api.monthly_query_limit'),
@@ -571,6 +579,8 @@ class QueryController extends Controller
             ]);
 
             return $this->OKResponse($result);
+        } catch (AuthorizationException $e) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             \Log::error('QueryController@duplicateAndReRun/' . $validated['key'] . ' - failed: ' .
                 json_encode($validated) . ' and duplicate: ' . json_encode($query) . ' (exception: ' . $e->getMessage() . ')');

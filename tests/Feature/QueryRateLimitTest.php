@@ -10,11 +10,15 @@ use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
 use DB;
+use Illuminate\Support\Str;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class QueryRateLimitTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/queries';
 
     private const RERUN_URL = '/api/v1/query/re-run';
@@ -47,6 +51,7 @@ class QueryRateLimitTest extends TestCase
     private function submitPayload(): array
     {
         $collection = Collection::factory()->bunny()->create();
+        $this->grantCollectionAccess($this->user, $collection);
 
         return [
             'name' => 'Test Query',
@@ -116,6 +121,13 @@ class QueryRateLimitTest extends TestCase
         $this->actingAsJwt($this->user)
             ->getJson(self::RERUN_URL.'/'.$queryPid)
             ->assertStatus(429);
+    }
+
+    public function test_rerun_of_unknown_query_returns_not_found(): void
+    {
+        $this->actingAsJwt($this->user)
+            ->getJson(self::RERUN_URL.'/'.Str::uuid())
+            ->assertNotFound();
     }
 
     public function test_count_resets_across_calendar_month_boundary(): void
