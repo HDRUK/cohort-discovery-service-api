@@ -319,8 +319,16 @@ class Collection extends Model implements HasStateTransitions, ValidatableModel
                         fn ($distributions) => $distributions
                             ->selectRaw('1')
                             ->from('distributions')
-                            ->whereColumn('distributions.result_file_id', 'result_files.id')
                             ->where('distributions.concept_id', '>', 0)
+                            ->where(
+                                fn ($ownedByFile) => $ownedByFile
+                                    ->whereColumn('distributions.result_file_id', 'result_files.id')
+                                    ->orWhere(
+                                        fn ($predatesResultFileId) => $predatesResultFileId
+                                            ->whereNull('distributions.result_file_id')
+                                            ->whereColumn('distributions.task_id', 'result_files.task_id')
+                                    )
+                            )
                     );
             }
         );

@@ -952,7 +952,37 @@ class CollectionTest extends TestCase
         $response->assertJsonPath('data.latest_successful_concept_result_file.id', $fileWithUnrecordedRowCount);
     }
 
-    private function createConceptScan(Collection $collection, int $rowsProcessed, int $conceptCount, Carbon $createdAt): int
+    public function test_details_ignore_a_newer_scan_whose_rows_have_no_concepts(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $goodFileId = $this->createConceptScan($collection, rowsProcessed: 5, conceptCount: 2, createdAt: now()->subHour());
+        $this->createConceptScan($collection, rowsProcessed: 4, conceptCount: 4, createdAt: now(), conceptId: null);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 2);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $goodFileId);
+    }
+
+    public function test_details_keep_a_scan_whose_rows_predate_result_file_ids(): void
+    {
+        $collection = Collection::factory()->create(['custodian_id' => Custodian::factory()->create()->id]);
+
+        $legacyFileId = $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 2, createdAt: now()->subHour(), linkedToResultFile: false);
+        $this->createConceptScan($collection, rowsProcessed: 0, conceptCount: 0, createdAt: now());
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$collection->pid.'/details');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.nconcepts', 2);
+        $response->assertJsonPath('data.latest_successful_concept_result_file.id', $legacyFileId);
+    }
+
+    private function createConceptScan(Collection $collection, int $rowsProcessed, int $conceptCount, Carbon $createdAt, ?int $conceptId = 1000, bool $linkedToResultFile = true): int
     {
         $task = Task::factory()->create(['collection_id' => $collection->id]);
 
@@ -973,8 +1003,8 @@ class CollectionTest extends TestCase
             $rows[] = [
                 'collection_id' => $collection->id,
                 'task_id' => $task->id,
-                'result_file_id' => $resultFileId,
-                'concept_id' => 1000 + $i,
+                'result_file_id' => $linkedToResultFile ? $resultFileId : null,
+                'concept_id' => $conceptId === null ? null : $conceptId + $i,
                 'count' => 10,
                 'name' => 'CONCEPT_'.$i,
                 'category' => 'Condition',

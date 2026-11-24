@@ -7,9 +7,11 @@ The collection details endpoint (`GET /api/v1/collections/{pid}/details`) report
 `Collection::latestSuccessfulConceptResultFile` returns the newest `code.distribution` result file that is:
 
 - `status = done`, and
-- backed by at least one `distributions` row with `concept_id > 0`.
+- backed by at least one `distributions` row with `concept_id > 0`. A row belongs to the file through `result_file_id`, or through `task_id` when `result_file_id` is NULL.
 
 A file can be `done` and still empty. `ProcessDistributionFile` marks a file `done` once it has been read, even when BUNNY returned a header-only file or every row was skipped. Such a file is not a successful scan, so it never replaces an earlier scan that had concepts.
+
+`distributions.result_file_id` was added later as a nullable column with no backfill, so rows written before it carry only `task_id`. Matching on `result_file_id` alone would make those scans look empty, which is why the NULL case falls back to `task_id`.
 
 `result_files.rows_processed` is deliberately not used for this rule. The column is `NOT NULL DEFAULT 0`, so files that predate it or were inserted without it would read as empty.
 
