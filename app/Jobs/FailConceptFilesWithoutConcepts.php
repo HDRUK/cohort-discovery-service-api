@@ -27,6 +27,9 @@ class FailConceptFilesWithoutConcepts implements ShouldQueue
         ResultFile::query()
             ->where('file_name', 'code.distribution')
             ->where('status', ResultFile::STATUS_DONE)
+            // lazyById() streams the rows one at a time, fetching them in pages
+            // keyed on "id > last seen id". This job changes status while it
+            // iterates, so offset paging (lazy()/chunk()) would skip rows.
             ->lazyById()
             ->each(function (ResultFile $file) {
                 $hasConcepts = Distribution::query()
