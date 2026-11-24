@@ -33,7 +33,7 @@ class FeatureResolver
             ->get(['name', 'scope', 'value'])
             ->groupBy('name')
             ->map(fn (Collection $rows, string $name) => [
-                'global' => $this->decode($rows->firstWhere('scope', $globalScope)?->value ?? 'false'),
+                'global' => $this->decode($rows->where('scope', $globalScope)->pluck('value')->first() ?? 'false'),
                 'overridable' => ! $this->isGlobalOnly($name),
                 'users' => $this->subjectValues($rows, User::class),
                 'workgroups' => $this->subjectValues($rows, Workgroup::class),

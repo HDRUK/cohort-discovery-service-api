@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workgroup;
 use Database\Seeders\FeatureSeeder;
 use DB;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
@@ -68,20 +69,24 @@ class FeatureOverridesTest extends TestCase
 
     public function test_deleting_a_workgroup_removes_its_overrides(): void
     {
-        Feature::for($this->workgroup)->activate(self::FLAG);
+        $this->enableModelEvents();
+        $workgroup = Workgroup::create(['name' => 'UK-RESEARCH-DELETED']);
+        Feature::for($workgroup)->activate(self::FLAG);
 
-        $this->workgroup->delete();
+        $workgroup->delete();
 
-        $this->assertDatabaseMissing('features', ['scope' => Feature::serializeScope($this->workgroup)]);
+        $this->assertDatabaseMissing('features', ['scope' => Feature::serializeScope($workgroup)]);
     }
 
     public function test_deleting_a_user_removes_their_overrides(): void
     {
-        Feature::for($this->target)->activate(self::FLAG);
+        $this->enableModelEvents();
+        $user = User::factory()->create();
+        Feature::for($user)->activate(self::FLAG);
 
-        $this->target->delete();
+        $user->delete();
 
-        $this->assertDatabaseMissing('features', ['scope' => Feature::serializeScope($this->target)]);
+        $this->assertDatabaseMissing('features', ['scope' => Feature::serializeScope($user)]);
     }
 
     public function test_seeder_purges_overrides_of_retired_flags(): void
@@ -303,6 +308,12 @@ class FeatureOverridesTest extends TestCase
             ->assertForbidden();
 
         $this->assertOverride($this->target, null);
+    }
+
+    private function enableModelEvents(): void
+    {
+        $this->enableObservers();
+        Model::clearBootedModels();
     }
 
     private function replaceOverrides(string $feature, array $payload): \Illuminate\Testing\TestResponse
