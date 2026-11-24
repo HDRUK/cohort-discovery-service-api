@@ -100,6 +100,26 @@ class ClickControllerTest extends TestCase
         ]);
     }
 
+    public function test_a_user_override_cannot_attribute_their_clicks_when_tracking_is_anonymous(): void
+    {
+        Feature::activate('click-tracking-anonymous');
+        Feature::for($this->user)->deactivate('click-tracking-anonymous');
+
+        $task = $this->makeTask();
+
+        $this->postClick([
+            'subject_type' => 'task',
+            'subject_id' => $task->id,
+            'action' => 'clicked_collection_link',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('activity_log', [
+            'event' => 'clicked_collection_link',
+            'subject_id' => $task->id,
+            'causer_id' => null,
+        ]);
+    }
+
     public function test_subject_id_accepts_a_pid(): void
     {
         $task = $this->makeTask();

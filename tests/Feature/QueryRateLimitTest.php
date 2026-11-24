@@ -29,6 +29,7 @@ class QueryRateLimitTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('pennant.default', 'database');
         $this->enableMiddleware();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');

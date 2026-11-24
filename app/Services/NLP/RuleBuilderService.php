@@ -4,10 +4,10 @@ namespace App\Services\NLP;
 
 use App\Traits\NLPConceptLookup;
 use App\Traits\RuleBuilder;
+use App\Services\Features\FeatureResolver;
 use App\Services\NLP\Constraints\ConstraintAccumulator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use Laravel\Pennant\Feature;
 
 /**
  * RuleBuilderService parses a natural language query string into a structured array of rules.
@@ -25,8 +25,10 @@ class RuleBuilderService
     private bool $hasEntityAgeConstraints = false;
     private bool $hasEntityTimeConstraints = false;
 
-    public function __construct(private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder())
-    {
+    public function __construct(
+        private DemographicsBuilder $demographicsBuilder = new DemographicsBuilder(),
+        private FeatureResolver $featureResolver = new FeatureResolver()
+    ) {
     }
 
     private function normaliseImplicitOrScope(string $query): string
@@ -214,7 +216,7 @@ class RuleBuilderService
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
 
-        $buildDemographics = Feature::active('query-builder-use-demographic-rule');
+        $buildDemographics = $this->featureResolver->active('query-builder-use-demographic-rule');
 
         $query = $this->normaliseEitherOrScope($query);
         $query = $this->normaliseImplicitOrScope($query);

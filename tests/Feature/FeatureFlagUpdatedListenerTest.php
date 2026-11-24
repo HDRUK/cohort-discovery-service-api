@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\RefreshLatestDistributionsView;
+use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
@@ -13,7 +14,7 @@ class FeatureFlagUpdatedListenerTest extends TestCase
     {
         Queue::fake();
 
-        Feature::activateForEveryone('distribution-use-central-domain');
+        Feature::for(null)->activate('distribution-use-central-domain');
 
         Queue::assertPushed(RefreshLatestDistributionsView::class);
     }
@@ -22,16 +23,25 @@ class FeatureFlagUpdatedListenerTest extends TestCase
     {
         Queue::fake();
 
-        Feature::deactivateForEveryone('distribution-use-central-domain');
+        Feature::for(null)->deactivate('distribution-use-central-domain');
 
         Queue::assertPushed(RefreshLatestDistributionsView::class);
+    }
+
+    public function test_a_scoped_override_does_not_dispatch_a_view_refresh(): void
+    {
+        Queue::fake();
+
+        Feature::for(User::factory()->make(['id' => 123456]))->activate('distribution-use-central-domain');
+
+        Queue::assertNotPushed(RefreshLatestDistributionsView::class);
     }
 
     public function test_toggling_an_unrelated_flag_does_not_dispatch_a_view_refresh(): void
     {
         Queue::fake();
 
-        Feature::activateForEveryone('some-other-feature');
+        Feature::for(null)->activate('some-other-feature');
 
         Queue::assertNotPushed(RefreshLatestDistributionsView::class);
     }
