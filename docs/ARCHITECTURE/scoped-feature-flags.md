@@ -101,6 +101,8 @@ The refresh is therefore not triggered by seeding, tinker, tests, a direct `Feat
 
 ## Endpoints
 
+The admin endpoints are authorised by `FeaturePolicy::manage`, which allows the `admin` role.
+
 | Method | Path | Who | Does |
 |---|---|---|---|
 | GET | `/api/v1/features` | Any signed-in user | The caller's **effective** value for every flag: `{name: bool}`. |

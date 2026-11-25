@@ -8,19 +8,23 @@ use App\Models\Workgroup;
 use App\Services\Features\FeatureAdminService;
 use App\Services\Features\FeatureResolver;
 use App\Traits\Responses;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Laravel\Pennant\Feature;
 
 class FeatureController extends Controller
 {
+    use AuthorizesRequests;
     use Responses;
 
     public function __construct(
         private FeatureResolver $resolver,
-        private FeatureAdminService $admin
+        private FeatureAdminService $adminService
     ) {
     }
 
@@ -31,25 +35,25 @@ class FeatureController extends Controller
 
     public function update(Request $request, string $name): JsonResponse
     {
-        if (! $this->isAdmin()) {
-            return $this->ForbiddenResponse();
-        }
-
-        if (! $this->admin->exists($name)) {
-            return $this->NotFoundResponse();
-        }
-
         try {
+            $this->authorize('manage', Feature::class);
+
+            if (! $this->adminService->exists($name)) {
+                return $this->NotFoundResponse();
+            }
+
             $validated = $request->validate([
                 'enabled' => ['required', 'boolean'],
             ]);
+
+            $this->adminService->setGlobal($name, (bool) $validated['enabled']);
+
+            return $this->OKResponse([]);
+        } catch (AuthorizationException) {
+            return $this->ForbiddenResponse();
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
         }
-
-        $this->admin->setGlobal($name, (bool) $validated['enabled']);
-
-        return $this->OKResponse([]);
     }
 
     /**
@@ -65,12 +69,10 @@ class FeatureController extends Controller
      */
     public function overrides(Request $request): JsonResponse
     {
-        if (! $this->isAdmin()) {
-            return $this->ForbiddenResponse();
-        }
-
         try {
-            $overrides = collect($this->admin->overrides());
+            $this->authorize('manage', Feature::class);
+
+            $overrides = collect($this->adminService->overrides());
 
             $users = User::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['users']))->unique())
                 ->orderBy('name')
@@ -108,6 +110,8 @@ class FeatureController extends Controller
                     ->values()
                     ->all()
             );
+        } catch (AuthorizationException) {
+            return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
             Log::error('FeatureController@overrides - failed (exception: '.$e->getMessage().')');
 
@@ -144,19 +148,17 @@ class FeatureController extends Controller
      */
     public function replaceOverrides(Request $request, string $name): JsonResponse
     {
-        if (! $this->isAdmin()) {
-            return $this->ForbiddenResponse();
-        }
-
-        if (! $this->admin->exists($name)) {
-            return $this->NotFoundResponse();
-        }
-
-        if (! $this->resolver->isOverridable($name)) {
-            return $this->ValidationErrorResponse(['feature' => ['This flag can only be set globally.']]);
-        }
-
         try {
+            $this->authorize('manage', Feature::class);
+
+            if (! $this->adminService->exists($name)) {
+                return $this->NotFoundResponse();
+            }
+
+            if (! $this->resolver->isOverridable($name)) {
+                return $this->ValidationErrorResponse(['feature' => ['This flag can only be set globally.']]);
+            }
+
             $validated = $request->validate([
                 'users' => ['present', 'array'],
                 'users.*.id' => ['required', 'integer', 'distinct', 'exists:users,id'],
@@ -165,23 +167,18 @@ class FeatureController extends Controller
                 'workgroups.*.id' => ['required', 'integer', 'distinct', 'exists:workgroups,id'],
                 'workgroups.*.enabled' => ['required', 'boolean'],
             ]);
-        } catch (ValidationException $e) {
-            return $this->ValidationErrorResponse($e->errors());
-        }
 
-        try {
-            $this->admin->replaceOverrides($name, $validated['users'], $validated['workgroups']);
+            $this->adminService->replaceOverrides($name, $validated['users'], $validated['workgroups']);
 
             return $this->OKResponse([]);
+        } catch (AuthorizationException) {
+            return $this->ForbiddenResponse();
+        } catch (ValidationException $e) {
+            return $this->ValidationErrorResponse($e->errors());
         } catch (\Throwable $e) {
             Log::error('FeatureController@replaceOverrides - failed (exception: '.$e->getMessage().')');
 
             return $this->ErrorResponse();
         }
-    }
-
-    private function isAdmin(): bool
-    {
-        return (bool) Auth::user()?->hasRole('admin');
     }
 }

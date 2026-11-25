@@ -380,7 +380,10 @@ class FeatureOverridesTest extends TestCase
 
     public function test_non_admin_cannot_manage_overrides(): void
     {
-        $this->actingAsJwt($this->target)->getJson(self::BASE_URL.'/overrides')->assertForbidden();
+        $this->actingAsJwt($this->target)
+            ->getJson(self::BASE_URL.'/overrides')
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'forbidden', 'data' => null]);
 
         $this->actingAsJwt($this->target)
             ->putJson(self::BASE_URL.'/'.self::FLAG.'/overrides', [
