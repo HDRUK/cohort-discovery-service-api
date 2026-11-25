@@ -19,7 +19,6 @@ class HorizonAccessTest extends TestCase
         config([
             'app.env' => 'production',
             'horizon.token_cookie' => self::COOKIE,
-            'horizon.open_outside_production' => false,
         ]);
 
         $this->enableMiddleware();
@@ -98,25 +97,18 @@ class HorizonAccessTest extends TestCase
         $this->assertFalse(Gate::forUser(null)->allows('viewHorizon'));
     }
 
-    public function test_staging_is_denied_by_default(): void
+    public function test_staging_is_denied_without_an_admin_token(): void
     {
         config(['app.env' => 'staging']);
 
         $this->get('/horizon')->assertForbidden();
     }
 
-    public function test_staging_is_open_when_opted_in(): void
+    public function test_an_admin_token_cookie_is_allowed_in_staging(): void
     {
-        config(['app.env' => 'staging', 'horizon.open_outside_production' => true]);
+        config(['app.env' => 'staging']);
 
-        $this->get('/horizon')->assertOk();
-    }
-
-    public function test_the_opt_in_flag_does_not_open_production(): void
-    {
-        config(['horizon.open_outside_production' => true]);
-
-        $this->get('/horizon')->assertForbidden();
+        $this->withTokenCookie($this->makeJwtToken($this->adminUser()))->get('/horizon')->assertOk();
     }
 
     public function test_an_admin_token_cookie_is_allowed_in_standalone_mode(): void

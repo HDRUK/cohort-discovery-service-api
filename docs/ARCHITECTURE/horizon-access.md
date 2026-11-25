@@ -12,8 +12,7 @@ Horizon is restricted to users with the `admin` role. There is no separate Horiz
 ## Environments
 
 - `local` is always open (Horizon's own check).
-- Production is admin-only with no exceptions.
-- Any other environment (staging, UAT) is admin-only unless `HORIZON_OPEN_OUTSIDE_PRODUCTION=true`, which opens it to everyone. The flag has no effect in production.
+- Every other environment (dev, preprod, production) is admin-only, with no exceptions and no opt-out.
 
 ## Constraints
 
