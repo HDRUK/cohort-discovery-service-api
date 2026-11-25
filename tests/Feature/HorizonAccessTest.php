@@ -26,6 +26,7 @@ class HorizonAccessTest extends TestCase
 
     public function tearDown(): void
     {
+        ServiceAccount::truncate();
         Feature::purge(AuthenticateHorizonServiceAccount::PROTECTION_FEATURE);
 
         parent::tearDown();

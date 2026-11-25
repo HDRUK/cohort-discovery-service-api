@@ -16,6 +16,7 @@ class ServiceCallerAuthTest extends TestCase
     {
         parent::setUp();
 
+        ServiceAccount::truncate();
         $this->enableMiddleware();
         config(['system.basic_auth_enabled' => true]);
     }
@@ -51,6 +52,24 @@ class ServiceCallerAuthTest extends TestCase
 
         $response->assertOk();
         Queue::assertPushed(TaskCleanupJob::class);
+    }
+
+    public function test_service_caller_rejects_the_horizon_service_account(): void
+    {
+        Queue::fake();
+
+        ServiceAccount::factory()->create([
+            'name' => ServiceAccount::HORIZON,
+            'client_id' => 'horizon-client',
+            'client_secret' => 'horizon-secret',
+        ]);
+
+        $header = 'Basic '.base64_encode('horizon-client:horizon-secret');
+
+        $response = $this->withHeader('Authorization', $header)->postJson($this->url);
+
+        $response->assertUnauthorized();
+        Queue::assertNothingPushed();
     }
 
     public function test_service_caller_rejects_collection_host_credentials(): void

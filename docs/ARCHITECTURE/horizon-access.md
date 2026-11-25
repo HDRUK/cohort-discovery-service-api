@@ -6,7 +6,7 @@ Horizon is protected by HTTP Basic auth using a dedicated service account named 
 
 Open `/horizon`. Enter the service account's client ID as the username and its client secret as the password. The browser resends them on the dashboard's own `/horizon/api/...` calls, so nothing is stored in a session and nothing appears in a URL, request logs or the `request_audits` table.
 
-Only the account named `horizon` is accepted. Other service accounts, such as the scheduler's or a collection host's, are rejected even though their credentials are valid elsewhere. `CLIENT_BASIC_AUTH_ENABLED=false` does not open Horizon.
+Only the account named `horizon` is accepted. Other service accounts, such as the scheduler's or a collection host's, are rejected even though their credentials are valid elsewhere. The reverse also holds: `ServiceAccountBasicAuth`, which guards `POST /v1/services/caller/{command}`, rejects the `horizon` account, so the credentials typed into a browser cannot run service commands. `CLIENT_BASIC_AUTH_ENABLED=false` does not open Horizon.
 
 ## Creating the account
 

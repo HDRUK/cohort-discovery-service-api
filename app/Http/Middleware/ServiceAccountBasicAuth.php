@@ -26,7 +26,9 @@ class ServiceAccountBasicAuth
             return $this->UnauthorisedResponse();
         }
 
-        $serviceAccount = ServiceAccount::where('client_id', $credentials->clientId)->first();
+        $serviceAccount = ServiceAccount::where('client_id', $credentials->clientId)
+            ->where('name', '!=', ServiceAccount::HORIZON)
+            ->first();
 
         if (! $serviceAccount || ! Hash::check($credentials->clientSecret, $serviceAccount->client_secret)) {
             \Log::error('Service account is not authorised', ['client_id' => $credentials->clientId]);

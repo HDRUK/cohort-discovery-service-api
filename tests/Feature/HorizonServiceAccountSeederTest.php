@@ -16,6 +16,13 @@ class HorizonServiceAccountSeederTest extends TestCase
         ServiceAccount::truncate();
     }
 
+    public function tearDown(): void
+    {
+        ServiceAccount::truncate();
+
+        parent::tearDown();
+    }
+
     public function test_it_creates_the_horizon_service_account_when_missing(): void
     {
         $this->seed(HorizonServiceAccountSeeder::class);
