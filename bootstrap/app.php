@@ -6,6 +6,7 @@ use App\Http\Middleware\DecodeJwt;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Laravel\Horizon\Exceptions\ForbiddenException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
         //$middleware->append(\Hdruk\LaravelPluginCore\Middleware\InjectPlugins::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (ForbiddenException $e) {
+            return response()->json([
+                'message' => 'Horizon is restricted to administrators. Log in to the web app as an admin on this host, then try again.',
+            ], 403);
+        });
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
             return true;
         });

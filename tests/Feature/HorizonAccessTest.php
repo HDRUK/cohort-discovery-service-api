@@ -42,6 +42,24 @@ class HorizonAccessTest extends TestCase
         $this->get('/horizon')->assertForbidden();
     }
 
+    public function test_a_denied_request_explains_that_horizon_is_for_administrators(): void
+    {
+        $this->get('/horizon')
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'Horizon is restricted to administrators. Log in to the web app as an admin on this host, then try again.']);
+    }
+
+    public function test_a_denied_non_admin_request_does_not_expose_a_trace(): void
+    {
+        config(['app.debug' => true]);
+
+        $this->withTokenCookie($this->makeJwtToken(User::factory()->create()))
+            ->get('/horizon')
+            ->assertForbidden()
+            ->assertJsonMissingPath('trace')
+            ->assertJsonMissingPath('exception');
+    }
+
     public function test_a_valid_token_for_a_user_without_the_admin_role_is_denied(): void
     {
         $user = User::factory()->create();
