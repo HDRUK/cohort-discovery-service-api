@@ -7,13 +7,13 @@ use App\Models\Omop\Concept;
 use App\Models\Omop\ConceptAncestor;
 use App\Services\NLP\NLPConceptExtractor;
 use App\Services\Activity\ActivityLogger;
+use App\Services\Features\FeatureResolver;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Laravel\Pennant\Feature;
 
 /**
  * @OA\Tag(
@@ -95,8 +95,12 @@ class OmopController extends Controller
         return response()->json($desc);
     }
 
-    public function searchConcepts(Request $request, ActivityLogger $activityLogger, NLPConceptExtractor $extractor): JsonResponse
-    {
+    public function searchConcepts(
+        Request $request,
+        ActivityLogger $activityLogger,
+        NLPConceptExtractor $extractor,
+        FeatureResolver $featureResolver
+    ): JsonResponse {
         try {
             $perPage          = $this->resolvePerPage(100, true);
             $page             = max(1, (int) $request->input('page', 1));
@@ -105,8 +109,8 @@ class OmopController extends Controller
             $includeAncestors = $request->boolean('include_ancestors', false);
             $search           = $request->only(['concept_id', 'concept_name']);
 
-            $useCollectionsInSearch = Feature::active('query-builder-use-collections-in-search');
-            $useStatsInOrdering     = Feature::active('query-builder-use-stats-in-ordering');
+            $useCollectionsInSearch = $featureResolver->active('query-builder-use-collections-in-search');
+            $useStatsInOrdering     = $featureResolver->active('query-builder-use-stats-in-ordering');
 
             $collectionIds = [];
             if (! empty($collectionPids)) {

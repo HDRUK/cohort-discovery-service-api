@@ -28,10 +28,11 @@ class QueryParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Config::set('pennant.default', 'database');
         Config::set('services.nlp.base_uri', self::NLP_BASE);
-        Feature::deactivateForEveryone('query-builder-use-stats-in-ordering');
-        Feature::deactivateForEveryone('query-builder-use-collections-in-search');
-        Feature::deactivateForEveryone('query-builder-use-demographic-rule');
+        Feature::deactivate('query-builder-use-stats-in-ordering');
+        Feature::deactivate('query-builder-use-collections-in-search');
+        Feature::deactivate('query-builder-use-demographic-rule');
     }
 
     private function parsedResult(\Illuminate\Testing\TestResponse $response): array
