@@ -32,17 +32,17 @@ class FeaturesTest extends TestCase
     {
         $this->assertSame('database', config('pennant.default'));
 
-        Feature::activate('test-feature-one');
-        Feature::deactivate('test-feature-two');
+        Feature::activate('in-app-messenger');
+        Feature::deactivate('access-banner');
 
         $this->assertDatabaseHas('features', [
-            'name' => 'test-feature-one',
+            'name' => 'in-app-messenger',
             'scope' => '__laravel_null',
             'value' => 'true',
         ]);
 
         $this->assertDatabaseHas('features', [
-            'name' => 'test-feature-two',
+            'name' => 'access-banner',
             'scope' => '__laravel_null',
             'value' => 'false',
         ]);
@@ -54,23 +54,23 @@ class FeaturesTest extends TestCase
 
         $content = $response->json('data');
 
-        $this->assertSame(true, $content['test-feature-one']);
-        $this->assertSame(false, $content['test-feature-two']);
+        $this->assertSame(true, $content['in-app-messenger']);
+        $this->assertSame(false, $content['access-banner']);
     }
 
     public function test_it_can_update_feature_status(): void
     {
-        Feature::deactivate('test-feature-three');
+        Feature::deactivate('query-builder-use-race');
 
         $response = $this->actingAsJwt($this->user, [])
-            ->putJson(self::BASE_URL . '/test-feature-three', [
+            ->putJson(self::BASE_URL . '/query-builder-use-race', [
                 'enabled' => true,
             ]);
 
         $response->assertOk();
 
         $this->assertDatabaseHas('features', [
-            'name' => 'test-feature-three',
+            'name' => 'query-builder-use-race',
             'scope' => '__laravel_null',
             'value' => 'true',
         ]);
@@ -83,31 +83,61 @@ class FeaturesTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('activity_log', [
-            'properties->feature' => 'test-feature-three',
+            'properties->feature' => 'query-builder-use-race',
             'properties->before->enabled' => false,
             'properties->after->enabled' => true,
         ]);
 
         $response = $this->actingAsJwt($this->user, [])
-            ->putJson(self::BASE_URL . '/test-feature-three', [
+            ->putJson(self::BASE_URL . '/query-builder-use-race', [
                 'enabled' => false,
             ]);
 
         $response->assertOk();
 
         $this->assertDatabaseHas('features', [
-            'name' => 'test-feature-three',
+            'name' => 'query-builder-use-race',
             'scope' => '__laravel_null',
             'value' => 'false',
         ]);
 
         $this->assertDatabaseHas('activity_log', [
-            'properties->feature' => 'test-feature-three',
+            'properties->feature' => 'query-builder-use-race',
             'properties->before->enabled' => true,
             'properties->after->enabled' => false,
         ]);
 
         $this->assertDatabaseCount('activity_log', 2);
+    }
+
+    public function test_updating_an_unknown_flag_is_not_found(): void
+    {
+        $this->actingAsJwt($this->user, [])
+            ->putJson(self::BASE_URL . '/unknown-flag', [
+                'enabled' => true,
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('features', ['name' => 'unknown-flag']);
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
+    public function test_list_returns_the_callers_effective_values(): void
+    {
+        Feature::deactivate('query-builder-use-location');
+
+        $member = User::factory()->create();
+        Feature::for($member)->activate('query-builder-use-location');
+
+        $this->actingAsJwt($member, [])
+            ->getJson(self::BASE_URL)
+            ->assertOk()
+            ->assertJsonPath('data.query-builder-use-location', true);
+
+        $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL)
+            ->assertOk()
+            ->assertJsonPath('data.query-builder-use-location', false);
     }
 
     public function test_it_prevents_creating_new_feature(): void
@@ -123,19 +153,19 @@ class FeaturesTest extends TestCase
 
     public function test_non_admin_cannot_update_feature_status(): void
     {
-        Feature::deactivate('test-feature-five');
+        Feature::deactivate('query-builder-use-value-as-number');
 
         $nonAdmin = User::factory()->create();
 
         $response = $this->actingAsJwt($nonAdmin, [])
-            ->putJson(self::BASE_URL . '/test-feature-five', [
+            ->putJson(self::BASE_URL . '/query-builder-use-value-as-number', [
                 'enabled' => true,
             ]);
 
         $response->assertForbidden();
 
         $this->assertDatabaseMissing('features', [
-            'name' => 'test-feature-five',
+            'name' => 'query-builder-use-value-as-number',
             'scope' => '__laravel_null',
             'value' => 'true',
         ]);

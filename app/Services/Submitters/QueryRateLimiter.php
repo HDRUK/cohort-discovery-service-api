@@ -4,13 +4,17 @@ namespace App\Services\Submitters;
 
 use App\Models\Query;
 use App\Models\User;
-use Laravel\Pennant\Feature;
+use App\Services\Features\FeatureResolver;
 
 class QueryRateLimiter
 {
+    public function __construct(private FeatureResolver $featureResolver)
+    {
+    }
+
     public function hasReachedMonthlyLimit(User $user): bool
     {
-        if (! Feature::active('query-rate-limit')) {
+        if (! $this->featureResolver->active('query-rate-limit', $user)) {
             return false;
         }
 
@@ -25,7 +29,7 @@ class QueryRateLimiter
     {
         $limit = config('api.monthly_query_limit');
         $used = $this->usedThisMonth($user);
-        $unlimited = ! Feature::active('query-rate-limit') || $this->isExempt($user);
+        $unlimited = ! $this->featureResolver->active('query-rate-limit', $user) || $this->isExempt($user);
 
         return [
             'limit' => $limit,

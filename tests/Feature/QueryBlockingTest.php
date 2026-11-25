@@ -8,12 +8,16 @@ use App\Models\Query;
 use App\Models\Result;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\Workgroup;
 use DB;
 use Laravel\Pennant\Feature;
 use Tests\TestCase;
+use Tests\Traits\GrantsCollectionAccess;
 
 class QueryBlockingTest extends TestCase
 {
+    use GrantsCollectionAccess;
+
     private const BASE_URL = '/api/v1/queries';
 
     private User $user;
@@ -36,6 +40,7 @@ class QueryBlockingTest extends TestCase
         Result::truncate();
         DB::table('task_runs')->truncate();
         DB::table('features')->truncate();
+        DB::table('user_has_workgroups')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $this->user = User::factory()->create();
@@ -63,6 +68,56 @@ class QueryBlockingTest extends TestCase
         $this->assertSame(
             'Location data not yet available',
             Result::where('task_id', $disabledTask->id)->value('message')
+        );
+    }
+
+    public function test_workgroup_override_enables_location_for_its_members_only(): void
+    {
+        Feature::deactivate('query-builder-use-location');
+
+        $collection = $this->makeCollection(['location_enabled' => true]);
+        $workgroup = Workgroup::firstOrCreate(['name' => 'UK-RESEARCH-TEST']);
+        Feature::for($workgroup)->activate('query-builder-use-location');
+
+        $member = User::factory()->create();
+        $member->assignRole('user');
+        $this->grantCollectionAccess($member, $collection);
+        $member->workgroups()->syncWithoutDetaching([$workgroup->id]);
+
+        $nonMember = User::factory()->create();
+        $nonMember->assignRole('user');
+        $this->grantCollectionAccess($nonMember, $collection);
+
+        $this->user = $member;
+        $this->submit($this->leaf('Location'), [$collection]);
+        $memberTask = Task::latest('id')->first();
+
+        $this->user = $nonMember;
+        $this->submit($this->leaf('Location'), [$collection]);
+        $nonMemberTask = Task::latest('id')->first();
+
+        $this->assertNull($memberTask->failed_at);
+        $this->assertNotNull($nonMemberTask->failed_at);
+        $this->assertSame(
+            'Location data not yet available',
+            Result::where('task_id', $nonMemberTask->id)->value('message')
+        );
+    }
+
+    public function test_user_override_off_blocks_death_despite_global_on(): void
+    {
+        Feature::activate('query-builder-use-death');
+        Feature::for($this->user)->deactivate('query-builder-use-death');
+
+        $collection = $this->makeCollection(['death_enabled' => true]);
+
+        $this->submit($this->leaf('Death'), [$collection]);
+
+        $task = Task::where('collection_id', $collection->id)->first();
+        $this->assertNotNull($task->failed_at);
+        $this->assertSame(
+            'Death-record data not yet available',
+            Result::where('task_id', $task->id)->value('message')
         );
     }
 

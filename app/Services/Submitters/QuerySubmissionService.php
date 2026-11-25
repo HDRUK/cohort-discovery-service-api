@@ -9,12 +9,12 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionBacklogLimiter;
+use App\Services\Features\FeatureResolver;
 use App\Support\QueryDefinitionInspector;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Str;
-use Laravel\Pennant\Feature;
 
 class QuerySubmissionService
 {
@@ -28,6 +28,7 @@ class QuerySubmissionService
         protected QueryDefinitionInspector $inspector,
         protected CollectionBacklogLimiter $backlogLimiter,
         protected ActivityLogger $activityLogger,
+        protected FeatureResolver $featureResolver,
     ) {
     }
 
@@ -76,14 +77,14 @@ class QuerySubmissionService
                 $pendingCounts = $this->backlogLimiter->pendingCountsFor($collections->pluck('id'));
 
                 // Determine, once, whether this query targets the location/death
-                // tables, and whether each is enabled globally via feature flag.
+                // tables, and whether each is enabled for this user via feature flag.
                 $categories = $this->inspector->categoriesUsed($data['definition']);
                 $usesLocation = in_array(MissingDataTable::Location->value, $categories, true)
                     || $this->inspector->usesDemographicLocation($data['definition']);
                 $usesDeath = in_array(MissingDataTable::Death->value, $categories, true)
                     || $this->inspector->usesDemographicDeath($data['definition']);
-                $locationFeatureOn = Feature::active('query-builder-use-location');
-                $deathFeatureOn = Feature::active('query-builder-use-death');
+                $locationFeatureOn = $this->featureResolver->active('query-builder-use-location', $user);
+                $deathFeatureOn = $this->featureResolver->active('query-builder-use-death', $user);
 
                 // Create tasks
                 $tasks = $collections->map(function ($collection) use (
@@ -104,7 +105,7 @@ class QuerySubmissionService
                     ]);
 
                     // Block the task for this collection when it queries a table
-                    // that is disabled globally (feature off) or missing for this
+                    // that is disabled for this user (feature off) or missing for this
                     // collection (flag off) - failing it with a clear reason.
                     $pendingCount = $pendingCounts[$collection->id] ?? 0;
 

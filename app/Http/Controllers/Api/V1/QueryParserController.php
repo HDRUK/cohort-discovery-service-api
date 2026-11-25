@@ -74,7 +74,8 @@ class QueryParserController extends Controller
             $query,
             $ignoreSynthetic,
             $preferNonSynthetic,
-            $collectionIds
+            $collectionIds,
+            $request->user()
         );
 
         $activityLogger->custom('queries', 'parsed', null, [

@@ -3,15 +3,16 @@
 namespace App\Services\NLP;
 
 use App\Models\NlpQueryLog;
+use App\Models\User;
+use App\Services\Features\FeatureResolver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Laravel\Pennant\Feature;
 
 class NLPConceptExtractor
 {
     protected string $baseUri;
 
-    public function __construct()
+    public function __construct(private FeatureResolver $featureResolver)
     {
         $this->baseUri = config('services.nlp.base_uri');
     }
@@ -32,11 +33,12 @@ class NLPConceptExtractor
         float $threshold = 50,
         int $max_matches = 10,
         array $collectionIds = [],
+        ?User $user = null,
     ): array {
         $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}&max_matches={$max_matches}", [
             'query'                => $query,
-            'use_stats_ordering'   => Feature::active('query-builder-use-stats-in-ordering'),
-            'use_collection_filter' => Feature::active('query-builder-use-collections-in-search'),
+            'use_stats_ordering'   => $this->featureResolver->active('query-builder-use-stats-in-ordering', $user),
+            'use_collection_filter' => $this->featureResolver->active('query-builder-use-collections-in-search', $user),
             'collection_ids'       => $collectionIds ?: null,
         ]);
 

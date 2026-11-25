@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Models\User;
 use Illuminate\Support\Facades\App;
 
 trait NLPConceptLookup
@@ -15,13 +16,13 @@ trait NLPConceptLookup
     protected array $nlpWarnings = [];
     protected ?array $nlpPayload = null;
 
-    protected function loadNlpEntities(string $query, float $threshold = 80, array $collectionIds = []): void
+    protected function loadNlpEntities(string $query, float $threshold = 80, array $collectionIds = [], ?User $user = null): void
     {
         \Log::info('Calling NLP Extractor with: "'.$query.'"');
 
         $nlp = App::make(\App\Services\NLP\NLPConceptExtractor::class);
 
-        $payload = $nlp->extract($query, $threshold, collectionIds: $collectionIds);
+        $payload = $nlp->extract($query, $threshold, collectionIds: $collectionIds, user: $user);
         \Log::info(json_encode(collect($payload)));
 
         $this->nlpPayload = $payload;

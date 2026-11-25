@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\ValidatableModel;
+use App\Traits\HasFeatureOverrides;
 use Hdruk\LaravelSearchAndFilter\Traits\Search;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Workgroup extends Model implements ValidatableModel
 {
+    use HasFeatureOverrides;
     use Search;
 
     public const DEFAULT_NAME = 'DEFAULT';
