@@ -123,9 +123,12 @@ class DemographicsBuilder
      * the tightest bound on each side and clamping to the configured
      * demographic age range.
      *
-     * @return array{0: int, 1: int}
+     * Returns null when the query has no age bound, so "no age asked for" is
+     * not confused with a real age band covering the full range.
+     *
+     * @return ?array{0: int, 1: int}
      */
-    private function collapseAge(array $constraints): array
+    private function collapseAge(array $constraints): ?array
     {
         $ageMin = config('system.demographic_age_min');
         $ageMax = config('system.demographic_age_max');
@@ -137,6 +140,10 @@ class DemographicsBuilder
 
         $mins = array_filter(array_column($constraints, 'min'), fn ($v) => $v !== null);
         $maxs = array_filter(array_column($constraints, 'max'), fn ($v) => $v !== null);
+
+        if (! $mins && ! $maxs) {
+            return null;
+        }
 
         $lo = $mins ? max($mins) : $ageMin;
         $hi = $maxs ? min($maxs) : $ageMax;
