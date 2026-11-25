@@ -70,7 +70,7 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => [\App\Http\Middleware\AuthenticateHorizonFromCookie::class, 'web'],
 
     /*
     |--------------------------------------------------------------------------
@@ -195,7 +195,9 @@ return [
         ],
     ],
 
-    'secret' => env('HORIZON_SECRET'),
+    'token_cookie' => env('COOKIE_TOKEN_NAME', 'token'),
+
+    'open_outside_production' => (bool) env('HORIZON_OPEN_OUTSIDE_PRODUCTION', false),
 
     'environments' => [
         'production' => [
