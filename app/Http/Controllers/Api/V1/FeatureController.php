@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
 use App\Services\Features\FeatureAdminService;
 use App\Services\Features\FeatureResolver;
 use App\Traits\Responses;
@@ -33,7 +32,7 @@ class FeatureController extends Controller
         return $this->OKResponse($this->resolver->all(Auth::user()));
     }
 
-    public function update(Request $request, string $name): JsonResponse
+    public function update(Request $request, string $name, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $this->authorize('manage', Feature::class);
@@ -53,6 +52,12 @@ class FeatureController extends Controller
             return $this->ForbiddenResponse();
         } catch (ValidationException $e) {
             return $this->ValidationErrorResponse($e->errors());
+        } catch (\Throwable $e) {
+            Log::error('FeatureController@update - failed (exception: '.$e->getMessage().')');
+
+            $activityLogger->failed('feature_flags', null, $e, ['feature' => $name], 'feature_flag_update_failed');
+
+            return $this->ErrorResponse();
         }
     }
 
@@ -72,44 +77,7 @@ class FeatureController extends Controller
         try {
             $this->authorize('manage', Feature::class);
 
-            $overrides = collect($this->adminService->overrides());
-
-            $users = User::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['users']))->unique())
-                ->orderBy('name')
-                ->get(['id', 'name', 'email']);
-            $workgroups = Workgroup::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['workgroups']))->unique())
-                ->orderBy('name')
-                ->get(['id', 'name']);
-
-            return $this->OKResponse(
-                $overrides
-                    ->map(fn (array $flag, string $name) => [
-                        'feature' => $name,
-                        'global' => $flag['global'],
-                        'overridable' => $flag['overridable'],
-                        'users' => $users
-                            ->filter(fn (User $user) => array_key_exists($user->id, $flag['users']))
-                            ->map(fn (User $user) => [
-                                'id' => $user->id,
-                                'name' => $user->name,
-                                'email' => $user->email,
-                                'enabled' => $flag['users'][$user->id],
-                            ])
-                            ->values()
-                            ->all(),
-                        'workgroups' => $workgroups
-                            ->filter(fn (Workgroup $workgroup) => array_key_exists($workgroup->id, $flag['workgroups']))
-                            ->map(fn (Workgroup $workgroup) => [
-                                'id' => $workgroup->id,
-                                'name' => $workgroup->name,
-                                'enabled' => $flag['workgroups'][$workgroup->id],
-                            ])
-                            ->values()
-                            ->all(),
-                    ])
-                    ->values()
-                    ->all()
-            );
+            return $this->OKResponse($this->adminService->overridesWithSubjects());
         } catch (AuthorizationException) {
             return $this->ForbiddenResponse();
         } catch (\Throwable $e) {
@@ -146,7 +114,7 @@ class FeatureController extends Controller
      *     @OA\Response(response=500, description="Unexpected error")
      * )
      */
-    public function replaceOverrides(Request $request, string $name): JsonResponse
+    public function replaceOverrides(Request $request, string $name, ActivityLogger $activityLogger): JsonResponse
     {
         try {
             $this->authorize('manage', Feature::class);
@@ -177,6 +145,8 @@ class FeatureController extends Controller
             return $this->ValidationErrorResponse($e->errors());
         } catch (\Throwable $e) {
             Log::error('FeatureController@replaceOverrides - failed (exception: '.$e->getMessage().')');
+
+            $activityLogger->failed('feature_flags', null, $e, ['feature' => $name], 'feature_flag_overrides_update_failed');
 
             return $this->ErrorResponse();
         }

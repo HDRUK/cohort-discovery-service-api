@@ -119,7 +119,9 @@ Error responses for `PUT /overrides`:
 
 The request reads the flag once, so its global row exists, then locks that row while it reads and replaces the overrides. Two admins saving the same flag at once are handled one after the other, and the second save replaces the first.
 
-Each change is written to the activity log under `feature_flags`, with event `override_set` or `override_cleared` and properties `{feature, subject_type, subject_id, before: {enabled}, after: {enabled}}`. `null` means "no override". Overrides that a request leaves as they were aren't logged.
+Each change is written to the activity log under `feature_flags`, with event `override_set` or `override_cleared` and properties `{feature, subject_type, subject_id, before: {enabled}, after: {enabled}}`. `null` means "no override". Overrides that a request leaves as they were aren't logged. A global `PUT` is logged as `updated` with `{feature, before: {enabled}, after: {enabled}}` only when the value changes.
+
+A failed write is logged with event `failed` and description `feature_flag_update_failed` (global) or `feature_flag_overrides_update_failed` (overrides), with properties `{feature, error: {class, message}}`. The entry is written after the transaction has rolled back, so it survives the failure. A failed `GET` of the overrides listing is only written to the Laravel log. Denied requests are not activity-logged: the request audit already records them with their 403 status.
 
 ## Data protection
 

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Jobs\RefreshLatestDistributionsView;
 use App\Models\User;
 use App\Models\Workgroup;
+use App\Services\Activity\ActivityLogger;
+use App\Services\Features\FeatureAdminService;
 use App\Services\Features\FeatureResolver;
 use Database\Seeders\FeatureSeeder;
 use DB;
@@ -211,6 +213,60 @@ class FeatureOverridesTest extends TestCase
         $this->actingAsJwt($this->target)->getJson(self::BASE_URL)->assertOk();
 
         $this->assertSame($firstRun, count(DB::getQueryLog()));
+    }
+
+    public function test_saving_an_unchanged_global_value_is_not_logged(): void
+    {
+        Queue::fake();
+
+        $this->setGlobal('distribution-use-central-domain', true)->assertOk();
+        $this->setGlobal('distribution-use-central-domain', true)->assertOk();
+
+        $this->assertDatabaseCount('activity_log', 1);
+        Queue::assertPushed(RefreshLatestDistributionsView::class, 1);
+    }
+
+    public function test_a_failed_global_update_is_logged_and_changes_nothing(): void
+    {
+        $this->mock(FeatureAdminService::class, function ($mock) {
+            $mock->shouldReceive('exists')->andReturn(true);
+            $mock->shouldReceive('setGlobal')->andThrow(new \RuntimeException('boom'));
+        });
+
+        $this->setGlobal(self::FLAG, true)->assertStatus(500);
+
+        $this->assertDatabaseCount('activity_log', 1);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'feature_flags',
+            'event' => 'failed',
+            'description' => 'feature_flag_update_failed',
+            'properties->feature' => self::FLAG,
+            'properties->error->class' => \RuntimeException::class,
+            'properties->error->message' => 'boom',
+        ]);
+        $this->assertOverride(null, 'false');
+    }
+
+    public function test_a_failed_overrides_update_rolls_back_but_is_still_logged(): void
+    {
+        $this->partialMock(ActivityLogger::class, function ($mock) {
+            $mock->shouldReceive('custom')->andThrow(new \RuntimeException('audit unavailable'));
+        });
+
+        $this->replaceOverrides(self::FLAG, [
+            'users' => [['id' => $this->target->id, 'enabled' => true]],
+            'workgroups' => [],
+        ])->assertStatus(500);
+
+        $this->assertOverride($this->target, null);
+        $this->assertDatabaseMissing('activity_log', ['event' => 'override_set']);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'feature_flags',
+            'event' => 'failed',
+            'description' => 'feature_flag_overrides_update_failed',
+            'properties->feature' => self::FLAG,
+            'properties->error->message' => 'audit unavailable',
+        ]);
     }
 
     public function test_global_toggle_leaves_overrides_in_place(): void

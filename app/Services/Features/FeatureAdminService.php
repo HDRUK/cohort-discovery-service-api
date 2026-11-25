@@ -26,7 +26,47 @@ class FeatureAdminService
         return in_array($feature, Feature::defined(), true);
     }
 
-    public function overrides(?string $feature = null): array
+    public function overridesWithSubjects(): array
+    {
+        $overrides = collect($this->overrideValues());
+
+        $users = User::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['users']))->unique())
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+        $workgroups = Workgroup::whereIn('id', $overrides->flatMap(fn (array $flag) => array_keys($flag['workgroups']))->unique())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return $overrides
+            ->map(fn (array $flag, string $name) => [
+                'feature' => $name,
+                'global' => $flag['global'],
+                'overridable' => $flag['overridable'],
+                'users' => $users
+                    ->filter(fn (User $user) => array_key_exists($user->id, $flag['users']))
+                    ->map(fn (User $user) => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'enabled' => $flag['users'][$user->id],
+                    ])
+                    ->values()
+                    ->all(),
+                'workgroups' => $workgroups
+                    ->filter(fn (Workgroup $workgroup) => array_key_exists($workgroup->id, $flag['workgroups']))
+                    ->map(fn (Workgroup $workgroup) => [
+                        'id' => $workgroup->id,
+                        'name' => $workgroup->name,
+                        'enabled' => $flag['workgroups'][$workgroup->id],
+                    ])
+                    ->values()
+                    ->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function overrideValues(?string $feature = null): array
     {
         $names = collect($feature ? [$feature] : Feature::defined())->sort()->values();
         $globals = Feature::values($names->all());
@@ -54,6 +94,10 @@ class FeatureAdminService
         DB::transaction(function () use ($name, $enabled) {
             $before = $this->lockedGlobalValue($name);
 
+            if ($before === $enabled) {
+                return;
+            }
+
             $enabled ? Feature::for(null)->activate($name) : Feature::for(null)->deactivate($name);
 
             $this->activityLogger->custom('feature_flags', 'updated', null, [
@@ -74,7 +118,7 @@ class FeatureAdminService
 
         DB::transaction(function () use ($name, $users, $workgroups) {
             $this->lockedGlobalValue($name);
-            $current = $this->overrides($name)[$name];
+            $current = $this->overrideValues($name)[$name];
 
             $this->syncOverrides($name, User::class, $current['users'], $users);
             $this->syncOverrides($name, Workgroup::class, $current['workgroups'], $workgroups);
