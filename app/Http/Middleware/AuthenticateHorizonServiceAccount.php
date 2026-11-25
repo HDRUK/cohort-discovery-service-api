@@ -27,7 +27,7 @@ class AuthenticateHorizonServiceAccount
             return response()->json(
                 ['message' => 'Horizon requires the horizon service account credentials.'],
                 Response::HTTP_UNAUTHORIZED,
-                ['WWW-Authenticate' => 'Basic realm="Horizon"']
+                ['WWW-Authenticate' => 'Basic realm="Horizon (username: client ID, password: client secret)"']
             );
         }
 

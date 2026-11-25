@@ -52,7 +52,7 @@ class HorizonAccessTest extends TestCase
 
         $this->get('/horizon')
             ->assertUnauthorized()
-            ->assertHeader('WWW-Authenticate', 'Basic realm="Horizon"');
+            ->assertHeader('WWW-Authenticate', 'Basic realm="Horizon (username: client ID, password: client secret)"');
     }
 
     public function test_a_wrong_secret_is_challenged(): void
