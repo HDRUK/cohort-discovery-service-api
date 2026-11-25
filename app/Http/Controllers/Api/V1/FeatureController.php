@@ -11,7 +11,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Laravel\Pennant\Feature;
@@ -29,7 +28,7 @@ class FeatureController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return $this->OKResponse($this->resolver->all(Auth::user()));
+        return $this->OKResponse($this->resolver->all());
     }
 
     public function update(Request $request, string $name, ActivityLogger $activityLogger): JsonResponse

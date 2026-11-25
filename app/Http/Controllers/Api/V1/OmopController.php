@@ -109,8 +109,8 @@ class OmopController extends Controller
             $includeAncestors = $request->boolean('include_ancestors', false);
             $search           = $request->only(['concept_id', 'concept_name']);
 
-            $useCollectionsInSearch = $featureResolver->active('query-builder-use-collections-in-search', $request->user());
-            $useStatsInOrdering     = $featureResolver->active('query-builder-use-stats-in-ordering', $request->user());
+            $useCollectionsInSearch = $featureResolver->active('query-builder-use-collections-in-search');
+            $useStatsInOrdering     = $featureResolver->active('query-builder-use-stats-in-ordering');
 
             $collectionIds = [];
             if (! empty($collectionPids)) {

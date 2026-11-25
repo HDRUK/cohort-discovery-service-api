@@ -2,7 +2,6 @@
 
 namespace App\Services\NLP;
 
-use App\Models\User;
 use App\Traits\NLPConceptLookup;
 use App\Traits\RuleBuilder;
 use App\Services\Features\FeatureResolver;
@@ -211,14 +210,13 @@ class RuleBuilderService
         string $query,
         bool $ignoreSynthetic = false,
         bool $preferNonSynthetic = true,
-        array $collectionIds = [],
-        ?User $user = null
+        array $collectionIds = []
     ): array {
         $this->hasEntityAgeConstraints = false;
         $this->hasEntityTimeConstraints = false;
         $constraints = new ConstraintAccumulator();
 
-        $buildDemographics = $this->featureResolver->active('query-builder-use-demographic-rule', $user);
+        $buildDemographics = $this->featureResolver->active('query-builder-use-demographic-rule');
 
         $query = $this->normaliseEitherOrScope($query);
         $query = $this->normaliseImplicitOrScope($query);
@@ -231,7 +229,6 @@ class RuleBuilderService
         $this->loadNlpEntities(
             $query,
             collectionIds: $collectionIds,
-            user: $user,
         );
         $this->mergeNlpWarnings($warnings);
 

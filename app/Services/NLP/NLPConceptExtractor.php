@@ -3,7 +3,6 @@
 namespace App\Services\NLP;
 
 use App\Models\NlpQueryLog;
-use App\Models\User;
 use App\Services\Features\FeatureResolver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -33,12 +32,11 @@ class NLPConceptExtractor
         float $threshold = 50,
         int $max_matches = 10,
         array $collectionIds = [],
-        ?User $user = null,
     ): array {
         $response = Http::post("{$this->baseUri}/extract?threshold={$threshold}&max_matches={$max_matches}", [
             'query'                => $query,
-            'use_stats_ordering'   => $this->featureResolver->active('query-builder-use-stats-in-ordering', $user),
-            'use_collection_filter' => $this->featureResolver->active('query-builder-use-collections-in-search', $user),
+            'use_stats_ordering'   => $this->featureResolver->active('query-builder-use-stats-in-ordering'),
+            'use_collection_filter' => $this->featureResolver->active('query-builder-use-collections-in-search'),
             'collection_ids'       => $collectionIds ?: null,
         ]);
 

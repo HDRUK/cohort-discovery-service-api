@@ -12,7 +12,7 @@ Any feature flag that isn't [global-only](#global-only-flags) can be switched on
 
 Clearing an override deletes the row, so the user or workgroup falls back to the next level down. `workgroups.active` is not taken into account, which matches how it is treated elsewhere.
 
-The user is always passed in explicitly. With no user (queued jobs, console commands, BUNNY polling) only the global value applies.
+The user defaults to the signed-in user. Pass one explicitly only when acting for someone other than the caller, as `QuerySubmissionService` and `QueryRateLimiter` do. With no user (queued jobs, console commands, BUNNY polling) only the global value applies.
 
 ## Global-only flags
 
@@ -81,7 +81,7 @@ Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()
 
 ### Rules that keep overrides intact
 
-- **Read user-facing flags through `FeatureResolver`, never `Feature::for($user)->value()`.** Pennant holds one value per flag and scope and can't say whether a user has an override without storing a row. `FeatureResolver` reads the global values through Pennant and the override rows with one query. Pass the user explicitly.
+- **Read user-facing flags through `FeatureResolver`, never `Feature::for($user)->value()`.** Pennant holds one value per flag and scope and can't say whether a user has an override without storing a row. `FeatureResolver` reads the global values through Pennant and the override rows with one query. It defaults to the signed-in user.
 - **Never use `activateForEveryone` / `deactivateForEveryone` in application code.** They run `UPDATE features SET value = ? WHERE name = ?`, which overwrites every override. `PUT /v1/features/{name}` writes only the global row, with `Feature::for(null)->activate()`.
 - **Never use `Feature::globally()`.** It stores under `__laravel_global`, a scope nothing reads.
 - **Pennant must use the `database` store.** The resolver reads the `features` table directly.

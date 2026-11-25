@@ -3,19 +3,20 @@
 namespace App\Services\Features;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
 
 class FeatureResolver
 {
-    public function active(string $feature, ?User $user): bool
+    public function active(string $feature, ?User $user = null): bool
     {
-        return $this->valuesFor([$feature], $user)[$feature];
+        return $this->valuesFor([$feature], $user ?? Auth::user())[$feature];
     }
 
-    public function all(?User $user): array
+    public function all(?User $user = null): array
     {
-        return $this->valuesFor(Feature::defined(), $user);
+        return $this->valuesFor(Feature::defined(), $user ?? Auth::user());
     }
 
     public function isOverridable(string $feature): bool
