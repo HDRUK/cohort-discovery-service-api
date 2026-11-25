@@ -82,6 +82,7 @@ Writes go through Pennant: `Feature::for($subject)->activate()`, `->deactivate()
 ### Rules that keep overrides intact
 
 - **Read user-facing flags through `FeatureResolver`, never `Feature::for($user)->value()`.** Pennant holds one value per flag and scope and can't say whether a user has an override without storing a row. `FeatureResolver` reads the global values through Pennant and the override rows with one query. It defaults to the signed-in user.
+- **The resolver reads each flag's override rows once per request.** It is bound as a scoped singleton, so listing many users, as the users index does for the query quota, doesn't query the `features` table per user. `FeatureUpdated`, `FeatureUpdatedForAllScopes` and `FeatureDeleted` flush it. Writing to the `features` table directly bypasses that within the request, so go through Pennant.
 - **Never use `activateForEveryone` / `deactivateForEveryone` in application code.** They run `UPDATE features SET value = ? WHERE name = ?`, which overwrites every override. `PUT /v1/features/{name}` writes only the global row, with `Feature::for(null)->activate()`.
 - **Never use `Feature::globally()`.** It stores under `__laravel_global`, a scope nothing reads.
 - **Pennant must use the `database` store.** The resolver reads the `features` table directly.

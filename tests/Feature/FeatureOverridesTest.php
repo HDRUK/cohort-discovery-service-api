@@ -269,6 +269,30 @@ class FeatureOverridesTest extends TestCase
         ]);
     }
 
+    public function test_the_resolver_reads_overrides_once_however_many_users_it_serves(): void
+    {
+        User::factory()->count(4)->create();
+        $users = User::with('workgroups')->get();
+        $resolver = app(FeatureResolver::class);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $users->each(fn (User $user) => $resolver->active(self::OTHER_FLAG, $user));
+
+        $this->assertCount(1, DB::getQueryLog());
+    }
+
+    public function test_the_resolver_sees_an_override_written_after_it_cached_its_rows(): void
+    {
+        $resolver = app(FeatureResolver::class);
+
+        $this->assertFalse($resolver->active(self::FLAG, $this->target));
+
+        Feature::for($this->target)->activate(self::FLAG);
+
+        $this->assertTrue($resolver->active(self::FLAG, $this->target));
+    }
+
     public function test_global_toggle_leaves_overrides_in_place(): void
     {
         Feature::for($this->target)->activate(self::FLAG);

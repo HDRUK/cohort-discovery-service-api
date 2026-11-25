@@ -3,12 +3,15 @@
 namespace App\Services\Features;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Laravel\Pennant\Feature;
 
 class FeatureResolver
 {
+    private array $overridesByFeature = [];
+
     public function active(string $feature, ?User $user = null): bool
     {
         return $this->valuesFor([$feature], $user ?? Auth::user())[$feature];
@@ -24,14 +27,23 @@ class FeatureResolver
         return config("features.flags.{$feature}.overridable", true);
     }
 
+    public function flush(): void
+    {
+        $this->overridesByFeature = [];
+    }
+
     private function valuesFor(array $features, ?User $user): array
     {
+        $this->loadOverrides($features);
+
         $userScope = Feature::serializeScope($user);
-        $overrides = $this->overrideValues(array_filter($features, $this->isOverridable(...)), $user);
+        $subjectScopes = $user
+            ? array_map(Feature::serializeScope(...), [$user, ...$user->workgroups->all()])
+            : [];
 
         return collect(Feature::values($features))
-            ->map(function (bool $global, string $name) use ($overrides, $userScope) {
-                $values = $overrides->get($name, collect());
+            ->map(function (bool $global, string $name) use ($subjectScopes, $userScope) {
+                $values = ($this->overridesByFeature[$name] ?? collect())->only($subjectScopes);
 
                 return $values->get($userScope)
                     ?? ($values->isEmpty() ? $global : $values->contains(true));
@@ -39,22 +51,30 @@ class FeatureResolver
             ->all();
     }
 
-    private function overrideValues(array $features, ?User $user)
+    private function loadOverrides(array $features): void
     {
-        if (! $user || $features === []) {
-            return collect();
-        }
-
-        $scopes = array_map(
-            Feature::serializeScope(...),
-            [$user, ...$user->workgroups->all()]
+        $missing = array_diff(
+            array_filter($features, $this->isOverridable(...)),
+            array_keys($this->overridesByFeature)
         );
 
-        return DB::table(config('pennant.stores.database.table', 'features'))
-            ->whereIn('name', $features)
-            ->whereIn('scope', $scopes)
+        if ($missing === []) {
+            return;
+        }
+
+        $rows = DB::table(config('pennant.stores.database.table', 'features'))
+            ->whereIn('name', $missing)
+            ->where('scope', '!=', Feature::serializeScope(null))
             ->get(['name', 'scope', 'value'])
-            ->groupBy('name')
-            ->map(fn ($rows) => $rows->mapWithKeys(fn ($row) => [$row->scope => (bool) json_decode($row->value)]));
+            ->groupBy('name');
+
+        foreach ($missing as $name) {
+            $this->overridesByFeature[$name] = $this->valuesByScope($rows->get($name, collect()));
+        }
+    }
+
+    private function valuesByScope(Collection $rows): Collection
+    {
+        return $rows->mapWithKeys(fn ($row) => [$row->scope => (bool) json_decode($row->value)]);
     }
 }
