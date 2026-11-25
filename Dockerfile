@@ -2,7 +2,7 @@
 FROM dunglas/frankenphp:php8.4-trixie
 
 ENV COMPOSER_PROCESS_TIMEOUT=600
-ENV REBUILD_DB=1
+ENV REBUILD_DB=0
 
 WORKDIR /var/www
 
@@ -71,10 +71,10 @@ COPY ./init/php.development.ini /usr/local/etc/php/php.ini
 COPY . /var/www
 
 # Composer & Laravel
-RUN --mount=type=secret,id=github_token \
-    mkdir -p /tmp/composer \
-    && GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-    && printf '%s' "{\"github-oauth\":{\"github.com\":\"${GITHUB_TOKEN}\"}}" > /tmp/composer/auth.json \
+RUN --mount=type=secret,id=github_token,required=false \
+    if [ -s /run/secrets/github_token ]; then \
+        export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}"; \
+    fi \
     && export COMPOSER_HOME=/tmp/composer \
     && composer install --no-interaction --prefer-dist --optimize-autoloader \
     && chmod -R 777 storage bootstrap/cache \

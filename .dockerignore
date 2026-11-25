@@ -1,0 +1,8 @@
+.env*
+!.env.example
+storage/*.key
+storage/oauth-*.key
+vendor
+node_modules
+.git
+.phpunit.cache
