@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             CustodianSeeder::class,
             FeatureSeeder::class,
             PersonalAccessClientSeeder::class,
+            HorizonServiceAccountSeeder::class,
         ]);
 
     }

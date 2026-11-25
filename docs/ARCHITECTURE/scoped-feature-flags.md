@@ -25,6 +25,7 @@ The user defaults to the signed-in user. Pass one explicitly only when acting fo
 | `collection-task-backlog-limit` | Read in BUNNY polling, the backlog monitor, distributions and query submission. |
 | `distribution-use-central-domain` | Read only in a queued job. |
 | `constrain-for-bunny-v1` | Describes what the collections' BUNNY can run, not who is asking. An override could let someone build queries that BUNNY v1 can't run, and the API doesn't check them. See `collection-capabilities.md`. |
+| `horizon-protection` | Read on the Horizon route, where there is no user. It turns the Horizon login on or off for everyone, so a per-user or per-workgroup override is meaningless. See `horizon-access.md`. |
 
 For these flags:
 - `FeatureResolver` returns the global value and ignores any override rows. Call sites that never have a user, such as `ClickController`, read them with `Feature::active()`.

@@ -70,7 +70,7 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => ['web', \App\Http\Middleware\AuthenticateHorizonServiceAccount::class],
 
     /*
     |--------------------------------------------------------------------------
@@ -194,8 +194,6 @@ return [
             'nice' => 0,
         ],
     ],
-
-    'secret' => env('HORIZON_SECRET'),
 
     'environments' => [
         'production' => [

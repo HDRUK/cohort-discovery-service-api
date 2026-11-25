@@ -23,5 +23,6 @@ return [
         'query-builder-use-race' => ['default' => true],
         'query-rate-limit' => ['default' => false],
         'collection-task-backlog-limit' => ['default' => false, 'overridable' => false],
+        'horizon-protection' => ['default' => true, 'overridable' => false],
     ],
 ];

@@ -10,6 +10,8 @@ class ServiceAccount extends Model
     /** @use HasFactory<\Database\Factories\ServiceAccountFactory> */
     use HasFactory;
 
+    public const HORIZON = 'horizon';
+
     protected $fillable = [
         'name',
         'client_id',
