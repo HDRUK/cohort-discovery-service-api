@@ -3,6 +3,7 @@ run-name: ${{ github.actor }} triggered quality check pipeline
 on:
   push:
   pull_request:
+  workflow_call:
 
 jobs:
   test:
