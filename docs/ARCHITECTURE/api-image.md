@@ -25,4 +25,4 @@ Nothing mode-specific is baked in at build time. The same image runs in either m
 
 ## Publishing
 
-`.github/workflows/publish-ghcr.yml` runs on `v*` tags. It calls `ci.yml` first and builds and pushes only if CI passes. The job uses only the automatic `GITHUB_TOKEN` and must not be given other secrets.
+`.github/workflows/publish-ghcr.yml` runs on `v*` tags. It calls `ci.yml` first and builds and pushes only if CI passes. The `publish` job uses only the automatic `GITHUB_TOKEN` and must not be given other secrets. The `ci` job has read-only `contents` permission and, as on every push, resolves the `dev` environment's secrets (the OAuth keys the tests need) through its own `environment: dev`. That environment has no protection rules or branch policy, so tag runs are not blocked.
