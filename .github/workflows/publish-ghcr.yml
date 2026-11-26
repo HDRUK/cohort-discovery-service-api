@@ -2,6 +2,8 @@ name: Publish image to GHCR
 
 on:
   push:
+    branches:
+      - fix/DP-0000-buildable-image
     tags:
       - 'v*'
 
@@ -32,4 +34,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/hdruk/cohort-discovery-api:${{ github.ref_name }}
+          tags: ghcr.io/hdruk/cohort-discovery-api:${{ github.ref_type == 'tag' && github.ref_name || 'buildable-image-test' }}
