@@ -81,6 +81,7 @@ class CustodianNetwork extends Model implements ValidatableModel
         };
     }
 
+    /** @return HasManyThrough<Custodian, CustodianNetworkHasCustodian, $this> */
     public function custodians(): HasManyThrough
     {
         return $this->hasManyThrough(
