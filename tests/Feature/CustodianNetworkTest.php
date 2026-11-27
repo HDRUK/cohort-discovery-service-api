@@ -176,4 +176,75 @@ class CustodianNetworkTest extends TestCase
             'name' => $contentFirst['name'],
         ]);
     }
+
+    public function test_it_lists_only_the_networks_custodians(): void
+    {
+        $network = CustodianNetwork::factory()->create();
+        $member = Custodian::factory()->create();
+        $outsider = Custodian::factory()->create();
+
+        CustodianNetworkHasCustodian::create([
+            'custodian_id' => $member->id,
+            'network_id' => $network->id,
+        ]);
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$network->id.'/custodians');
+        $response->assertStatus(200);
+
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertEquals([$member->id], $ids);
+        $this->assertNotContains($outsider->id, $ids);
+        $this->assertEquals(1, $response->json('data.total'));
+    }
+
+    public function test_it_pages_the_networks_custodians(): void
+    {
+        $network = CustodianNetwork::factory()->create();
+
+        foreach (Custodian::factory()->count(3)->create() as $custodian) {
+            CustodianNetworkHasCustodian::create([
+                'custodian_id' => $custodian->id,
+                'network_id' => $network->id,
+            ]);
+        }
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$network->id.'/custodians?per_page=2&page=2');
+        $response->assertStatus(200);
+
+        $this->assertCount(1, $response->json('data.data'));
+        $this->assertEquals(3, $response->json('data.total'));
+        $this->assertEquals(2, $response->json('data.per_page'));
+        $this->assertEquals(2, $response->json('data.current_page'));
+    }
+
+    public function test_it_searches_the_networks_custodians_by_name(): void
+    {
+        $network = CustodianNetwork::factory()->create();
+        $wanted = Custodian::factory()->create(['name' => 'Northern Trust']);
+        $other = Custodian::factory()->create(['name' => 'Southern Trust']);
+
+        foreach ([$wanted, $other] as $custodian) {
+            CustodianNetworkHasCustodian::create([
+                'custodian_id' => $custodian->id,
+                'network_id' => $network->id,
+            ]);
+        }
+
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/'.$network->id.'/custodians?name[]=Northern');
+        $response->assertStatus(200);
+
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertEquals([$wanted->id], $ids);
+    }
+
+    public function test_it_rejects_custodians_of_an_unknown_network(): void
+    {
+        $response = $this->actingAsJwt($this->user, [])
+            ->getJson(self::BASE_URL.'/999999/custodians');
+
+        $response->assertStatus(422);
+    }
 }

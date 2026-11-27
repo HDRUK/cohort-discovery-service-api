@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
 use App\Models\CustodianNetwork;
 use App\Services\Activity\ActivityLogger;
+use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Str;
@@ -18,6 +19,7 @@ use Str;
  */
 class CustodianNetworkController extends Controller
 {
+    use HelperFunctions;
     use Responses;
 
     /**
@@ -93,6 +95,105 @@ class CustodianNetworkController extends Controller
             return $this->OKResponse($network);
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/custodian_networks/{id}/custodians",
+     *     summary="Get the custodians in a custodian network, paginated",
+     *     tags={"CustodianNetworks"},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="name[]",
+     *         in="query",
+     *         required=false,
+     *         description="Search by custodian name",
+     *
+     *         @OA\Schema(type="string", example="Health Data Research UK")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         description="Defaults to config api.per_page, capped at 100",
+     *
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of the network's custodians",
+     *
+     *         @OA\JsonContent(
+     *
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer", example=1),
+     *                 @OA\Property(property="per_page", type="integer", example=25),
+     *                 @OA\Property(property="total", type="integer", example=1),
+     *                 @OA\Property(property="last_page", type="integer", example=1),
+     *                 @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Custodian"))
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=422, description="Unknown network id")
+     * )
+     */
+    public function custodians(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
+        $validated = $request->validated();
+
+        try {
+            $network = CustodianNetwork::find($validated['id']);
+            if (! $network) {
+                return $this->NotFoundResponse();
+            }
+
+            $custodians = $network->custodians()
+                ->searchViaRequest()
+                ->applySorting()
+                ->paginate($this->resolvePerPage());
+
+            $activityLogger->viewed('custodians', $network, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $custodians->total(),
+                    'returned' => $custodians->count(),
+                    'page' => $custodians->currentPage(),
+                    'per_page' => $custodians->perPage(),
+                ],
+            ]);
+
+            return $this->OKResponse($custodians);
+        } catch (\Throwable $e) {
+            \Log::error('CustodianNetworkController@custodians - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+
+            return $this->ErrorResponse($e->getMessage());
         }
     }
 
