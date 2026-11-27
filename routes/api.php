@@ -196,6 +196,7 @@ Route::middleware(['decode.jwt'])->group(function () {
     // Custodian Networks - "public" routes.
     Route::get('/v1/custodian_networks', [CustodianNetworkController::class, 'index']);
     Route::get('/v1/custodian_networks/{id}', [CustodianNetworkController::class, 'show']);
+    Route::get('/v1/custodian_networks/{id}/custodians', [CustodianNetworkController::class, 'custodians']);
 });
 
 Route::prefix('auth')->group(function () {

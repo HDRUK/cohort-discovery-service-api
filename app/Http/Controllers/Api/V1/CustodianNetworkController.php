@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
+use App\Models\Custodian;
 use App\Models\CustodianNetwork;
+use App\Models\CustodianNetworkHasCustodian;
 use App\Services\Activity\ActivityLogger;
+use App\Traits\HelperFunctions;
 use App\Traits\Responses;
 use Illuminate\Http\JsonResponse;
 use Str;
@@ -18,6 +21,7 @@ use Str;
  */
 class CustodianNetworkController extends Controller
 {
+    use HelperFunctions;
     use Responses;
 
     /**
@@ -94,6 +98,35 @@ class CustodianNetworkController extends Controller
         } catch (\Throwable $e) {
             return $this->NotFoundResponse();
         }
+    }
+
+    public function custodians(
+        ModelBackedRequest $request,
+        int $id,
+        ActivityLogger $activityLogger
+    ): JsonResponse {
+        $validated = $request->validated();
+        $network = CustodianNetwork::findOrFail($validated['id']);
+
+        $custodians = Custodian::whereIn(
+            'id',
+            CustodianNetworkHasCustodian::where('network_id', $network->id)->select('custodian_id')
+        )
+            ->searchViaRequest()
+            ->applySorting()
+            ->paginate($this->resolvePerPage());
+
+        $activityLogger->viewed('custodians', $network, [
+            'filters' => $request->query(),
+            'result' => [
+                'total' => $custodians->total(),
+                'returned' => $custodians->count(),
+                'page' => $custodians->currentPage(),
+                'per_page' => $custodians->perPage(),
+            ],
+        ]);
+
+        return $this->OKResponse($custodians);
     }
 
     /**
