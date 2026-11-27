@@ -100,6 +100,68 @@ class CustodianNetworkController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/v1/custodian_networks/{id}/custodians",
+     *     summary="Get the custodians in a custodian network, paginated",
+     *     tags={"CustodianNetworks"},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="name[]",
+     *         in="query",
+     *         required=false,
+     *         description="Search by custodian name",
+     *
+     *         @OA\Schema(type="string", example="Health Data Research UK")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         description="Defaults to config api.per_page, capped at 100",
+     *
+     *         @OA\Schema(type="integer", example=25)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of the network's custodians",
+     *
+     *         @OA\JsonContent(
+     *
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer", example=1),
+     *                 @OA\Property(property="per_page", type="integer", example=25),
+     *                 @OA\Property(property="total", type="integer", example=1),
+     *                 @OA\Property(property="last_page", type="integer", example=1),
+     *                 @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Custodian"))
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=422, description="Unknown network id")
+     * )
+     */
     public function custodians(
         ModelBackedRequest $request,
         int $id,
