@@ -166,24 +166,35 @@ class CustodianNetworkController extends Controller
         ActivityLogger $activityLogger
     ): JsonResponse {
         $validated = $request->validated();
-        $network = CustodianNetwork::findOrFail($validated['id']);
 
-        $custodians = $network->custodians()
-            ->searchViaRequest()
-            ->applySorting()
-            ->paginate($this->resolvePerPage());
+        try {
+            $network = CustodianNetwork::find($validated['id']);
+            if (! $network) {
+                return $this->NotFoundResponse();
+            }
 
-        $activityLogger->viewed('custodians', $network, [
-            'filters' => $request->query(),
-            'result' => [
-                'total' => $custodians->total(),
-                'returned' => $custodians->count(),
-                'page' => $custodians->currentPage(),
-                'per_page' => $custodians->perPage(),
-            ],
-        ]);
+            $custodians = $network->custodians()
+                ->searchViaRequest()
+                ->applySorting()
+                ->paginate($this->resolvePerPage());
 
-        return $this->OKResponse($custodians);
+            $activityLogger->viewed('custodians', $network, [
+                'filters' => $request->query(),
+                'result' => [
+                    'total' => $custodians->total(),
+                    'returned' => $custodians->count(),
+                    'page' => $custodians->currentPage(),
+                    'per_page' => $custodians->perPage(),
+                ],
+            ]);
+
+            return $this->OKResponse($custodians);
+        } catch (\Throwable $e) {
+            \Log::error('CustodianNetworkController@custodians - failed: ' .
+                json_encode($validated) . ' (exception: ' . $e->getMessage() . ')');
+
+            return $this->ErrorResponse($e->getMessage());
+        }
     }
 
     /**
