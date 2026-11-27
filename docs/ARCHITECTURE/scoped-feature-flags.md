@@ -24,6 +24,7 @@ The user defaults to the signed-in user. Pass one explicitly only when acting fo
 | `flatten-nested-groups` | Read in translate and in BUNNY polling, which must agree. |
 | `collection-task-backlog-limit` | Read in BUNNY polling, the backlog monitor, distributions and query submission. |
 | `distribution-use-central-domain` | Read only in a queued job. |
+| `query-record-counting` | Read only in BUNNY polling. See `record-counting.md`. |
 | `constrain-for-bunny-v1` | Describes what the collections' BUNNY can run, not who is asking. An override could let someone build queries that BUNNY v1 can't run, and the API doesn't check them. See `collection-capabilities.md`. |
 
 For these flags:
@@ -52,6 +53,7 @@ In the API:
 | `flatten-nested-groups` | `QueryController@translate`, `TaskController@nextJob` | No, global-only |
 | `collection-task-backlog-limit` | `CollectionBacklogLimiter` (BUNNY polling, the backlog monitor, distributions and query submission) | No, global-only |
 | `distribution-use-central-domain` | `RefreshLatestDistributionsView` job | No, global-only |
+| `query-record-counting` | `RecordCountUnits` (BUNNY polling) | No, global-only |
 
 The last three are read where there is no user. Honouring an override in only some of the places they are read would make those places disagree. For example, a user's translate preview would differ from what BUNNY runs.
 

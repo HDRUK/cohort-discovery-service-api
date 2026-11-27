@@ -11,6 +11,7 @@ use App\Models\Result;
 use App\Models\Task;
 use App\Models\TaskRun;
 use App\Models\User;
+use App\Services\QueryContext\Contexts\Bunny\RecordCountUnits;
 use App\Services\QueryContext\QueryContextManager;
 use App\Services\QueryContext\QueryContextType;
 use Carbon\Carbon;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Laravel\Pennant\Feature;
 use Tests\TestCase;
 use Tests\Traits\GrantsCollectionAccess;
 
@@ -174,6 +176,102 @@ class TaskControllerTest extends TestCase
         ]);
 
         $this->assertNotNull($task->fresh()->completed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_stores_the_person_count_and_record_counts_when_bunny_counts_by_unit()
+    {
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+
+        $response = $this->postJson(
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
+            ['status' => 'ok', 'queryResult' => ['count' => ['person' => 40, 'specimen' => 150], 'datasetCount' => 0]]
+        );
+
+        $response->assertCreated();
+
+        $result = Result::where('task_id', $task->id)->firstOrFail();
+        $this->assertSame(40, $result->count);
+        $this->assertSame(['specimen' => 150], $result->metadata['record_counts']);
+        $this->assertSame(0, $result->metadata['datasetCount']);
+
+        $task->refresh();
+        $this->assertNotNull($task->completed_at);
+        $this->assertNull($task->failed_at);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_a_count_by_unit_without_a_person_count()
+    {
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+
+        $response = $this->postJson(
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
+            ['queryResult' => ['count' => ['specimen' => 150]]]
+        );
+
+        $response->assertStatus(400)
+            ->assertJson(['data' => 'Invalid or missing count in queryResult.']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_a_count_by_unit_with_a_non_numeric_count()
+    {
+        $task = Task::factory()->create();
+        $collection = Collection::find($task->collection_id);
+
+        $response = $this->postJson(
+            self::BASE_URL."/result/{$task->pid}/{$collection->pid}",
+            ['queryResult' => ['count' => ['person' => 40, 'specimen' => 'lots']]]
+        );
+
+        $response->assertStatus(400)
+            ->assertJson(['data' => 'Invalid or missing count in queryResult.']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_asks_bunny_to_count_specimens_when_record_counting_is_on()
+    {
+        Feature::activate(RecordCountUnits::FEATURE);
+
+        $response = $this->pollForSpecimenOnlyTask();
+
+        $response->assertOk()->assertJsonPath('count_units', ['Specimen']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_does_not_ask_bunny_to_count_records_when_record_counting_is_off()
+    {
+        Feature::deactivate(RecordCountUnits::FEATURE);
+
+        $response = $this->pollForSpecimenOnlyTask();
+
+        $response->assertOk()->assertJsonMissingPath('count_units');
+    }
+
+    private function pollForSpecimenOnlyTask(): \Illuminate\Testing\TestResponse
+    {
+        $collection = Collection::factory()->bunny()->create();
+        $query = Query::factory()->create();
+        Task::factory()->create([
+            'collection_id' => $collection->id,
+            'query_id' => $query->id,
+            'task_type' => 'a',
+        ]);
+
+        $mock = $this->createMock(QueryContextManager::class);
+        $mock->method('handle')->willReturn([
+            'groups_oper' => 'OR',
+            'groups' => [[
+                'rules_oper' => 'AND',
+                'rules' => [['varname' => 'OMOP', 'varcat' => 'Specimen', 'type' => 'TEXT', 'oper' => '=', 'value' => '4046263']],
+            ]],
+        ]);
+        $this->app->instance(QueryContextManager::class, $mock);
+
+        return $this->getJson(self::BASE_URL."/nextjob/{$collection->pid}");
     }
 
     #[\PHPUnit\Framework\Attributes\Test]

@@ -14,6 +14,7 @@ use App\Models\TaskRun;
 use App\Services\Activity\ActivityLogger;
 use App\Services\Collections\CollectionBacklogLimiter;
 use App\Services\Collections\CollectionPollRecorder;
+use App\Services\QueryContext\Contexts\Bunny\RecordCountUnits;
 use App\Services\QueryContext\QueryContextManager;
 use App\Support\CollectionPollTarget;
 use App\Traits\HelperFunctions;
@@ -227,7 +228,8 @@ class TaskController extends Controller
         QueryContextManager $contextManager,
         ActivityLogger $activityLogger,
         CollectionPollRecorder $pollRecorder,
-        CollectionBacklogLimiter $backlogLimiter
+        CollectionBacklogLimiter $backlogLimiter,
+        RecordCountUnits $recordCountUnits
     ): JsonResponse|Response {
         // note - it'd be better if BUNNY could give us a worker ID in the headers
         // - also could give us some information like the BUNNY version it is using (git sha?)
@@ -470,6 +472,8 @@ class TaskController extends Controller
             return $this->BadRequestResponseExtended('Context manager failed to translate query');
         }
 
+        $countUnits = $recordCountUnits->forCohort($translatedQuery);
+
         // response needed by Bunny
         return $this->OKResponseSimple([
             'task_id' => $task->id,
@@ -480,6 +484,7 @@ class TaskController extends Controller
             'collection' => $collection->pid,
             'protocol_version' => 'v2', // ??
             'char_salt' => bin2hex(random_bytes(4)), // ??
+            ...($countUnits ? ['count_units' => $countUnits] : []),
         ]);
     }
 
@@ -580,13 +585,14 @@ class TaskController extends Controller
                 $queryResult = $request->input('queryResult');
 
                 $isFailedResult = in_array($status, ['error', 'failed'], true);
+                $recordCounts = [];
 
                 if (! $isFailedResult) {
-                    if (! is_array($queryResult) || ! isset($queryResult['count']) || ! is_numeric($queryResult['count'])) {
+                    if (! is_array($queryResult) || ! isset($queryResult['count'])) {
                         throw new \InvalidArgumentException('Invalid or missing count in queryResult.');
                     }
 
-                    $count = (int) $queryResult['count'];
+                    [$count, $recordCounts] = $this->splitPersonAndRecordCounts($queryResult['count']);
                 } else {
                     $queryResult = is_array($queryResult) ? $queryResult : [];
                     $count = isset($queryResult['count']) && is_numeric($queryResult['count'])
@@ -611,6 +617,9 @@ class TaskController extends Controller
                 );
 
                 $metadata = collect($queryResult)->except('count')->toArray();
+                if ($recordCounts !== []) {
+                    $metadata['record_counts'] = $recordCounts;
+                }
                 $storedFiles = [];
 
                 foreach ($metadata['files'] ?? [] as $file) {
@@ -733,6 +742,25 @@ class TaskController extends Controller
 
             return $this->ErrorResponse($e->getMessage());
         }
+    }
+
+    private function splitPersonAndRecordCounts(mixed $count): array
+    {
+        if (is_numeric($count)) {
+            return [(int) $count, []];
+        }
+
+        $isCountByUnit = is_array($count)
+            && isset($count['person'])
+            && collect($count)->every(fn ($value) => is_numeric($value));
+
+        if (! $isCountByUnit) {
+            throw new \InvalidArgumentException('Invalid or missing count in queryResult.');
+        }
+
+        $recordCounts = collect($count)->except('person')->map(fn ($value) => (int) $value)->all();
+
+        return [(int) $count['person'], $recordCounts];
     }
 
 
