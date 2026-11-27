@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ModelBackedRequest;
-use App\Models\Custodian;
 use App\Models\CustodianNetwork;
-use App\Models\CustodianNetworkHasCustodian;
 use App\Services\Activity\ActivityLogger;
 use App\Traits\HelperFunctions;
 use App\Traits\Responses;
@@ -170,10 +168,7 @@ class CustodianNetworkController extends Controller
         $validated = $request->validated();
         $network = CustodianNetwork::findOrFail($validated['id']);
 
-        $custodians = Custodian::whereIn(
-            'id',
-            CustodianNetworkHasCustodian::where('network_id', $network->id)->select('custodian_id')
-        )
+        $custodians = $network->custodians()
             ->searchViaRequest()
             ->applySorting()
             ->paginate($this->resolvePerPage());

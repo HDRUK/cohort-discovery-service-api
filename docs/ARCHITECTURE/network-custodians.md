@@ -21,6 +21,6 @@ An unknown network id fails validation with 422, as `show` does: `ModelBackedReq
 - `GET /custodian_networks` and `GET /custodian_networks/{id}` embed every custodian of a network, with no paging or search.
 - `GET /custodians` searches by name but can't filter by network, and adding paging to it would change an existing v1 response.
 
-The query selects custodians whose id is in the network's `custodian_network_has_custodians` rows, rather than going through the `custodians()` has-many-through relation, so search and sort run against the `custodians` table alone with no joined, ambiguous columns.
+The query goes through the network's `custodians()` has-many-through relation. Search (`name`) and sort (`name`) can't be ambiguous across the join, because `custodian_network_has_custodians` has no `name` column. Each custodian in the response carries `laravel_through_key` (the network id), as in `show`.
 
 It sits with the other read routes for networks, so any signed-in user can call it, matching `index` and `show`.
